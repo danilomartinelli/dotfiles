@@ -356,7 +356,6 @@ configure_git() {
     export XDG_CONFIG_HOME="$HOME/.config"
     mkdir -p "$XDG_CONFIG_HOME" && chmod -R 775 "$XDG_CONFIG_HOME"
     git config --global commit.gpgsign false
-    git config --global gpg.format openpgp
     if ! git config --global core.attributesfile >/dev/null; then
       touch "$HOME/.gitattributes"
       git config --global core.attributesfile "$HOME/.gitattributes"

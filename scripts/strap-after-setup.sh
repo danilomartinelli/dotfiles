@@ -11,25 +11,7 @@ if [ "${MACOS:-0}" -gt 0 ] || [ "$(uname)" = "Darwin" ]; then
   else
     echo "Not admin. Skipping macos.sh. Set \$STRAP_ADMIN to run macos.sh."
   fi
-  # Configure 1Password SSH agent path for consistency with Linux
-  # https://developer.1password.com/docs/ssh/get-started
-  mkdir -p ~/.1password && ln -s \
-    ~/Library/Group\ Containers/2BUA8C4S2C.com.1password/t/agent.sock \
-    ~/.1password/agent.sock
 fi
-
-### Install Hatch
-if type pipx &>/dev/null && ! type hatch &>/dev/null; then
-  echo "Installing Hatch with pipx."
-  pipx install "hatch>=1,<2"
-else
-  echo "Skipping Hatch install."
-fi
-
-### Install VSCode extensions
-for i in {code,code-exploration,code-insiders,code-server,codium}; do
-  "$HOME"/.dotfiles/scripts/vscode-extensions.sh "$i"
-done
 
 ### Set shell
 if [ "$STRAP_SUDO" -gt 0 ]; then

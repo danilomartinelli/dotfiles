@@ -7,9 +7,6 @@ disabled = true
 [nodejs]
 format = "via [node.js ($version )]($style)"
 
-[python]
-python_binary = "python3"
-
 [shell]
 bash_indicator = "bash "
 disabled = false

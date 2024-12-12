@@ -53,7 +53,9 @@ if [[ -d $HOMEBREW_PREFIX ]]; then
 fi
 
 ### exports
-if type codium &>/dev/null; then
+if type micro &>/dev/null; then
+  editor='micro --wait'
+elif type codium &>/dev/null; then
   editor='codium --wait'
 elif type code &>/dev/null; then
   editor='code --wait'
@@ -70,19 +72,11 @@ GNU_FINDUTILS_BIN_DIR=$HOMEBREW_PREFIX/opt/findutils/libexec/gnubin
 GNU_GREP_BIN_DIR=$HOMEBREW_PREFIX/opt/grep/libexec/gnubin
 GNU_SED_BIN_DIR=$HOMEBREW_PREFIX/opt/gsed/libexec/gnubin
 GNU_TAR_BIN_DIR=$HOMEBREW_PREFIX/opt/gnu-tar/libexec/gnubin
-PIPX_BIN_DIR=$HOME/.local/bin
-RUST_CARGO_BIN_DIR=$HOME/.cargo/bin
 export \
   EDITOR=$editor \
   GIT_EDITOR=$editor \
-  GPG_TTY=$TTY \
   HOMEBREW_NO_ANALYTICS=1 \
-  PATH=$PIPX_BIN_DIR:$RUST_CARGO_BIN_DIR:$GNU_COREUTILS_BIN_DIR:$GNU_FINDUTILS_BIN_DIR:$GNU_GREP_BIN_DIR:$GNU_SED_BIN_DIR:$GNU_TAR_BIN_DIR:$PATH \
-  PIPX_BIN_DIR=$PIPX_BIN_DIR
-
-### aliases
-alias python='python3'
-alias tg='terragrunt'
+  PATH=$GNU_COREUTILS_BIN_DIR:$GNU_FINDUTILS_BIN_DIR:$GNU_GREP_BIN_DIR:$GNU_SED_BIN_DIR:$GNU_TAR_BIN_DIR:$PATH
 
 ### prompt: https://starship.rs
 source <(starship init zsh)

@@ -32,7 +32,7 @@ defaults write com.apple.menuextra.clock IsAnalog -bool false
 defaults write com.apple.menuextra.clock DateFormat -string "EEE MMM d h:mm a"
 
 # Set the timezone; see `sudo systemsetup -listtimezones` for other values
-# sudo systemsetup -settimezone "America/New_York" >/dev/null
+sudo systemsetup -settimezone "America/Sao_Paulo" >/dev/null
 
 ###############################################################################
 # Peripherals                                                                 #
@@ -52,8 +52,8 @@ defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 defaults write NSGlobalDomain KeyRepeat -int 2
 defaults write NSGlobalDomain InitialKeyRepeat -int 15
 
-# Disable “natural” scrolling
-defaults write NSGlobalDomain com.apple.swipescrolldirection -bool false
+# Enable “natural” scrolling
+defaults write NSGlobalDomain com.apple.swipescrolldirection -bool true
 
 # Use keyboard navigation to move focus between controls (tab navigation)
 defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
@@ -97,7 +97,7 @@ defaults write com.apple.finder ShowStatusBar -bool true
 defaults write com.apple.finder ShowPathbar -bool true
 
 # Display full POSIX path as Finder window title
-# defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
 
 # Keep folders on top when sorting by name
 defaults write com.apple.finder _FXSortFoldersFirst -bool true
@@ -110,9 +110,6 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 
 # View files as list
 defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
-
-# Sort files by name in list view
-# TODO
 
 # Enable spring loading for directories
 defaults write NSGlobalDomain com.apple.springing.enabled -bool true
@@ -167,9 +164,6 @@ defaults write com.apple.dock mru-spaces -bool false
 
 # Remove the auto-hiding Dock delay
 defaults write com.apple.dock autohide-delay -float 0
-
-# Remove the animation when hiding/showing the Dock
-# defaults write com.apple.dock autohide-time-modifier -float 0
 
 # Automatically hide and show the Dock
 defaults write com.apple.dock autohide -bool true
