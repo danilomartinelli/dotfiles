@@ -42,12 +42,12 @@ cask 'spotify'                # Music streaming service
 # cask 'tableplus'            # Database management tool
 # cask 'todoist'              # Task and project management
 cask 'visual-studio-code'     # Code editor
-# cask 'vlc'                  # Media player
 cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
 # mas 'Yubico Authenticator', id: 1497506650 # 2FA app for YubiKey
 mas 'Xcode', id: 497799835                   # Apple's integrated development environment
+# mas 'Paste - Limitless Clipboard', id: 967805235 # Clipboard manager for macOS
 
 # VS Code extensions
 vscode "aaron-bond.better-comments"             # Improved commenting with highlights
