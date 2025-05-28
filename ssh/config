@@ -1,5 +1,10 @@
-# SSH Configuration - Global Settings
-# This will become ~/.ssh/config
+# Added by OrbStack: 'orb' SSH host for Linux machines
+# This only works if it's at the top of ssh_config (before any Host blocks).
+# This won't be added again if you remove it.
+Include ~/.orbstack/ssh/config
+
+# Does NOT change ABOVE this line
+# SSH Configuration - Dotfiles's Global Settings
 
 # Global defaults
 Host *
@@ -39,12 +44,12 @@ Host dev-*
     Port 22
     IdentityFile ~/.ssh/id_rsa_work
 
-# Staging servers  
+# Staging servers
 Host staging-*
     User deploy
     Port 22
     IdentityFile ~/.ssh/id_rsa_work
-    
+
 # Production (extra security)
 Host prod-*
     User deploy
