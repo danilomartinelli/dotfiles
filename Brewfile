@@ -1,7 +1,5 @@
 cask_args appdir: '/Applications'
 
-tap 'homebrew/bundle'
-
 # Command line tools
 # brew 'awscli'      # AWS Command Line Interface
 # brew 'cloudflared' # Cloudflare tunnel client

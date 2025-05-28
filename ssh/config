@@ -1,0 +1,57 @@
+# SSH Configuration - Global Settings
+# This will become ~/.ssh/config
+
+# Global defaults
+Host *
+    AddKeysToAgent yes
+    UseKeychain yes
+    IdentitiesOnly yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 10
+    Compression yes
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%r@%h:%p
+    ControlPersist 600
+
+# Include local configurations if needed (not tracked by git)
+# Include ~/.ssh/config_local
+
+# === GITHUB CONFIGURATIONS ===
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_rsa
+
+Host github-personal
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_rsa_personal
+
+Host github-work
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_rsa_work
+
+# === COMMON PATTERNS ===
+# Development servers
+Host dev-*
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_work
+
+# Staging servers  
+Host staging-*
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_work
+    
+# Production (extra security)
+Host prod-*
+    User deploy
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_work
+    StrictHostKeyChecking yes
+
+# Default fallback
+Host *
+    User $(whoami)

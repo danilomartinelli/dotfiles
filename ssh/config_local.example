@@ -1,0 +1,31 @@
+# Local SSH Configuration
+# Copy this to ~/.ssh/config_local and customize
+
+# === WORK SERVERS ===
+Host work-staging
+    HostName staging.work.com
+    User deploy
+    IdentityFile ~/.ssh/id_rsa_work
+
+Host work-prod
+    HostName prod.work.com
+    User deploy
+    IdentityFile ~/.ssh/id_rsa_work
+
+# === CLIENT SERVERS ===
+Host client1-prod
+    HostName prod.client1.com
+    User admin
+    IdentityFile ~/.ssh/id_rsa_client1
+
+# === PERSONAL SERVERS ===
+Host vps
+    HostName your-vps.com
+    User root
+    Port 2222
+    IdentityFile ~/.ssh/id_rsa_personal
+
+Host homelab
+    HostName 192.168.1.100
+    User pi
+    IdentityFile ~/.ssh/id_rsa_personal
