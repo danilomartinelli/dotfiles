@@ -3,13 +3,17 @@
 echo "› setting up ssh configuration"
 
 SSH_DIR="$HOME/.ssh"
-DOTFILES_SSH="$(dirname "$0")"
+DOTFILES_SSH="$HOME/.dotfiles/ssh"
 
 # Create SSH directory with correct permissions
 if [ ! -d "$SSH_DIR" ]; then
     mkdir -p "$SSH_DIR"
     chmod 700 "$SSH_DIR"
 fi
+
+# Remove existing files/links
+[ -f "$SSH_DIR/config" ] && rm "$SSH_DIR/config"
+[ -L "$SSH_DIR/config" ] && rm "$SSH_DIR/config"
 
 # Create symlinks
 ln -s "$DOTFILES_SSH/config" "$SSH_DIR/config"

@@ -125,7 +125,7 @@
     "*.css": "tailwindcss",
     ".prettierrc": "json",
     "*rc.symlink": "shellscript",
-		"*.json.symlink": "jsonc"
+		"*.json.symlink": "json"
   },
 
   // ============================== //
