@@ -62,20 +62,6 @@ defaults write com.apple.dock wvous-bl-modifier -int 0
 defaults write com.apple.dock wvous-br-corner -int 1
 defaults write com.apple.dock wvous-br-modifier -int 0
 
-# === SAFARI (Development) ===
-# Hide Safari's bookmark bar
-defaults write com.apple.Safari.plist ShowFavoritesBar -bool false
-
-# Enable Safari's debug menu
-defaults write com.apple.Safari.SandboxBroker ShowDevelopMenu -bool true
-defaults write com.apple.Safari.plist IncludeDevelopMenu -bool true
-defaults write com.apple.Safari.plist WebKitDeveloperExtrasEnabledPreferenceKey -bool true
-defaults write com.apple.Safari.plist "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true
-defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
-
-# Show full URL in Safari address bar
-defaults write com.apple.Safari ShowFullURLInSmartSearchField -bool true
-
 # === SECURITY & PRIVACY ===
 # Use AirDrop over every interface
 defaults write com.apple.NetworkBrowser BrowseAllInterfaces 1
@@ -100,3 +86,6 @@ mkdir -p ~/Code
 
 # Create local environment file (not commited)
 touch ~/.localrc
+
+# Restart Services
+killall SystemUIServer Finder Dock ControlStrip 2>/dev/null
