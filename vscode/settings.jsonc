@@ -1,0 +1,248 @@
+{
+  // ============================== //
+  //      Appearance & Themes       //
+  // ============================== //
+  // Color and icon themes for a modern, high-contrast look
+  "window.autoDetectColorScheme": true,
+  "workbench.preferredDarkColorTheme": "Monokai Pro",
+  "workbench.preferredLightColorTheme": "Monokai Pro Light",
+  "workbench.iconTheme": "Monokai Pro Icons",
+  "workbench.activityBar.location": "top",
+  "workbench.sideBar.location": "right",
+  "breadcrumbs.enabled": false,
+  "workbench.startupEditor": "none",
+  "window.restoreWindows": "none",
+  "workbench.tree.enableStickyScroll": true,
+  "workbench.editor.labelFormat": "short",
+
+  // ============================== //
+  //         Editor & Layout        //
+  // ============================== //
+  // Font, ligatures, and layout for readability and productivity
+  "editor.fontFamily": "'Fira Code Mono', monospace",
+  "editor.fontLigatures": true,
+  "editor.fontSize": 14,
+  "editor.lineHeight": 1.8,
+  "editor.wordWrap": "on",
+  "editor.wordWrapColumn": 180,
+  "editor.rulers": [100, 180], // Linter lines limit at 100 and viewport width limit at 180
+  "editor.lineNumbers": "on",
+  "editor.detectIndentation": true,
+  "editor.tabSize": 2,
+  "editor.insertSpaces": false,
+  "editor.minimap.enabled": false,
+  "editor.cursorSmoothCaretAnimation": "on", // Smooth cursor movement
+  "editor.smoothScrolling": true, // Smooth scroll
+  "editor.stickyScroll.enabled": true,
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.suggestOnTriggerCharacters": false,
+  "editor.renderLineHighlight": "gutter",
+
+  // ============================== //
+  //          Git & Source Control       //
+  // ============================== //
+  // Git integration and source control features
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.autoStash": true,
+  "git.enableSmartCommit": true,
+  "git.ignoreRebaseWarning": true,
+  "git.mergeEditor": true,
+
+  // ============================== //
+  //      Formatting & Linting      //
+  // ============================== //
+  // Use Prettier and ESLint for consistent code style
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always",
+    "source.organizeImports": "always",
+    "source.addMissingImports": "always",
+    "source.fixAll.eslint": "always",
+    "source.fixAll.prettier": "always"
+  },
+  "eslint.format.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "prettier.requireConfig": true,
+  "prettier.tabWidth": 2,
+  "prettier.singleQuote": true,
+  "prettier.trailingComma": "all",
+  "prettier.printWidth": 100,
+
+  // ============================== //
+  //         Languages & Formatters       //
+  // ============================== //
+  // Languages and formatters for different types of files
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
+  },
+
+  // ============================== //
+  //         Terminal Setup         //
+  // ============================== //
+  // Consistent terminal look and feel
+  "terminal.integrated.fontFamily": "'Fira Code Mono', monospace",
+  "terminal.integrated.fontSize": 12,
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.env.osx": {},
+  "terminal.integrated.env.linux": {},
+  "terminal.integrated.showExitAlert": false,
+
+  // ============================== //
+  //        File Management         //
+  // ============================== //
+  // Autosave and whitespace rules
+  "files.autoSave": "off",
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.associations": {
+    ".env.*": "dotenv",
+    "*.md": "markdown",
+    "*.jsx": "javascriptreact",
+    "*.tsx": "typescriptreact",
+    "*.css": "tailwindcss",
+    ".prettierrc": "json",
+    "*rc.symlink": "shellscript",
+		"*.json.symlink": "jsonc"
+  },
+
+  // ============================== //
+  //      Sidebar & Explorer Setup  //
+  // ============================== //
+  // Control the desired layout and behavior of the sidebar and explorer
+  "explorer.sortOrder": "foldersNestsFiles",
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": ".eslint*, eslint*, prettier*, tsconfig*, vite*, pnpm-*, bun.lockb, package-lock*, nest*, turbo*, .*rc, mise.toml",
+    ".gitignore": ".gitignore, .gitattributes, .prettierignore, .dockerignore",
+    "tailwind.config.*": "tailwind.config*, postcss.config*",
+    ".env.local": ".env*",
+    ".env": ".env*"
+  },
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+
+  // ============================== //
+  //      IntelliSense & AI         //
+  // ============================== //
+  // Modern suggestions, inline AI, and parameter hints
+  "editor.quickSuggestions": {
+    "other": false,
+    "comments": false,
+    "strings": false
+  },
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact",
+    "mdx": "javascriptreact",
+    "phoenix-heex": "html",
+    "postcss": "css"
+  },
+  "editor.suggestSelection": "first",
+  "editor.inlineSuggest.enabled": true, // Inline AI/ghost text
+  "editor.parameterHints.enabled": true,
+  "typescript.suggestionActions.enabled": true,
+  "javascript.suggestionActions.enabled": true,
+
+  // ============================== //
+  //      Auto-import & Imports     //
+  // ============================== //
+  // Auto-import and imports settings
+  "javascript.updateImportsOnFileMove.enabled": "never",
+  "typescript.updateImportsOnFileMove.enabled": "never",
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "typescript.preferences.preferTypeOnlyAutoImports": true,
+
+  // ============================== //
+  //    Extension-Specific Config   //
+  // ============================== //
+  // Error Lens for inline errors
+  "errorLens.enabled": true,
+  "errorLens.fontWeight": "bold",
+  "errorLens.gutterIconsEnabled": true,
+
+  // SQLTools
+  "sqltools.useNodeRuntime": true,
+
+  // YAML
+  "yaml.validate": true,
+  "yaml.format.enable": true,
+
+  // Markdown All in One
+  "markdown.extension.preview.autoShowPreviewToSide": true,
+
+  // Path Intellisense
+  "path-intellisense.autoSlashAfterDirectory": true,
+
+  // NPM Intellisense
+  "npm-intellisense.importES6": true,
+  "npm-intellisense.scanDevDependencies": true,
+
+  // Tailwind
+  "tailwindCSS.experimental.classRegex": [
+    ["tv\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    "class:\\s*?[\"'`]([^\"'`]*).*?,"
+  ],
+  "tailwindCSS.includeLanguages": {
+    "elixir": "html",
+    "phoenix-heex": "html"
+  },
+  "tailwindCSS.classFunctions": ["cva", "cx"],
+
+  // GitLens
+  "gitlens.codeLens.recentChange.enabled": false,
+  "gitlens.advanced.messages": {
+    "suppressIntegrationRequestTimedOutWarning": true
+  },
+  "gitlens.telemetry.enabled": false,
+  "gitlens.ai.model": "anthropic:claude-3-5-sonnet-latest",
+
+  // GitHub
+  "github.gitAuthentication": true,
+  "github.showAvatar": true,
+  "github.gitProtocol": "https",
+
+  // Red Hat
+  "redhat.telemetry.enabled": false,
+
+  // ESLint
+  "eslint.options": {
+    "ignorePatterns": ["**/node_modules/**"]
+  },
+
+  // ============================== //
+  //      Additional Settings       //
+  // ============================== //
+  // Miscellaneous settings
+  "update.showReleaseNotes": false,
+  "telemetry.feedback.enabled": false,
+  "security.workspace.trust.untrustedFiles": "open",
+  "extensions.ignoreRecommendations": true,
+  "extensions.autoCheckUpdates": true,
+  "extensions.autoUpdate": "onlyEnabledExtensions",
+  "typescript.tsserver.log": "off",
+  "figma.autocompleteBlocks": true,
+  "editor.inlineSuggest.suppressSuggestions": true
+}
