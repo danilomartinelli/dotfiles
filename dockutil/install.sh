@@ -9,8 +9,8 @@ dockutil --remove all --no-restart
 # Add VS Code
 dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 
-# Add OrbStack
-dockutil --add "/Applications/OrbStack.app" --no-restart
+# Add System Settings
+dockutil --add "/Applications/Ajustes do Sistema.app" --no-restart
 
 # === FOLDERS SECTION (after the | separator) ===
 # Add Downloads folder

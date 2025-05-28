@@ -38,12 +38,12 @@ cask 'orbstack'               # Docker Desktop alternative for macOS
 # cask 'raycast'              # Spotlight alternative with extensions
 # cask 'readdle-spark'        # Email client with smart features
 # cask 'rectangle-pro'        # Window management tool
-# cask 'spotify'              # Music streaming service
+cask 'spotify'                # Music streaming service
 # cask 'tableplus'            # Database management tool
 # cask 'todoist'              # Task and project management
 cask 'visual-studio-code'     # Code editor
 # cask 'vlc'                  # Media player
-# cask 'zen'                  # Privacy-focused browser
+cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
 # mas 'Yubico Authenticator', id: 1497506650 # 2FA app for YubiKey
@@ -59,9 +59,10 @@ vscode "csstools.postcss"                       # PostCSS language support
 vscode "dbaeumer.vscode-eslint"                 # ESLint integration
 vscode "eamodio.gitlens"                        # Git supercharged - history, blame, and more
 vscode "esbenp.prettier-vscode"                 # Code formatter
-vscode "figma.figma-vscode-extension"           # Figma integration for design tokens
+vscode "figma.figma-vscode-extension"           	# Figma integration for design tokens
 vscode "formulahendry.auto-close-tag"           # Auto close HTML/XML tags
 vscode "formulahendry.auto-rename-tag"          # Auto rename paired HTML/XML tags
+vscode "github.copilot"                         # AI-powered code completion
 vscode "jock.svg"                               # SVG viewer and editor
 vscode "mechatroner.rainbow-csv"                # CSV/TSV syntax highlighting
 vscode "mikestead.dotenv"                       # .env file syntax highlighting
