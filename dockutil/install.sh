@@ -6,11 +6,17 @@ echo "› configuring dock (minimal)"
 # Clear everything
 dockutil --remove all --no-restart
 
+# Add Zen
+dockutil --add "/Applications/Zen.app" --no-restart
+
 # Add VS Code
 dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 
+# Add Spotify
+dockutil --add "/Applications/Spotify.app" --no-restart
+
 # Add System Settings
-dockutil --add "/Applications/Ajustes do Sistema.app" --no-restart
+dockutil --add "/Applications/System Settings.app" --no-restart
 
 # === FOLDERS SECTION (after the | separator) ===
 # Add Downloads folder
