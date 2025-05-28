@@ -12,6 +12,19 @@ dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 # Add OrbStack
 dockutil --add "/Applications/OrbStack.app" --no-restart
 
+# === FOLDERS SECTION (after the | separator) ===
+# Add Downloads folder
+dockutil --add "$HOME/Downloads" --view list --display folder --section others --no-restart
+
+# Add Code folder (if it exists)
+if [ -d "$HOME/Code" ]; then
+    dockutil --add "$HOME/Code" --view list --display folder --section others --no-restart
+else
+    echo "  → ~/Code folder not found, creating it"
+    mkdir -p "$HOME/Code"
+    dockutil --add "$HOME/Code" --view list --display folder --section others --no-restart
+fi
+
 # Restart Dock to apply changes
 killall Dock
 

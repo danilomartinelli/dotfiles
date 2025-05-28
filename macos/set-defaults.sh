@@ -92,3 +92,15 @@ touch ~/.localrc
 
 # Restart Services
 killall SystemUIServer Finder Dock ControlStrip 2>/dev/null
+
+# === MISSION CONTROL SETTINGS ===
+echo "  → configuring Mission Control"
+
+# Enable Mission Control
+defaults write com.apple.dock mcx-expose-disabled -bool false
+
+# Don't automatically rearrange spaces based on most recent use
+defaults write com.apple.dock mru-spaces -bool false
+
+# Group windows by application in Mission Control
+defaults write com.apple.dock expose-group-by-app -bool true
