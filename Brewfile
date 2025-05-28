@@ -22,6 +22,7 @@ brew 'wget'          # File download utility
 # cask 'android-studio'       # Android development IDE
 # cask 'apidog'               # API development and testing tool
 # cask 'bartender'            # Menu bar organization tool
+# cask 'beeper'            		# Universal chat app powered by Matrix
 # cask 'bitwarden'            # Password manager
 # cask 'cleanshot'            # Screenshot and screen recording tool
 # cask 'figma'                # Design and prototyping tool
@@ -42,7 +43,6 @@ cask 'orbstack'               # Docker Desktop alternative for macOS
 # cask 'todoist'              # Task and project management
 cask 'visual-studio-code'     # Code editor
 # cask 'vlc'                  # Media player
-# cask 'whatsapp'             # Messaging app
 # cask 'zen'                  # Privacy-focused browser
 
 # Mac App Store applications
