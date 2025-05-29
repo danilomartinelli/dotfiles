@@ -24,11 +24,8 @@ brew 'wget'          # File download utility
 # cask 'android-studio'       # Android development IDE
 # cask 'apidog'               # API development and testing tool
 # cask 'bartender'            # Menu bar organization tool
-cask 'beeper'            		  # Universal chat app powered by Matrix
-cask 'bitwarden'              # Password manager
 cask 'chatgpt' 						    # ChatGPT desktop client
-# cask 'cleanshot'            # Screenshot and screen recording tool
-# cask 'figma'                # Design and prototyping tool
+cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
@@ -41,7 +38,7 @@ cask 'orbstack'               # Docker Desktop alternative for macOS
 # cask 'protonvpn'            # VPN client
 # cask 'raycast'              # Spotlight alternative with extensions
 # cask 'readdle-spark'        # Email client with smart features
-# cask 'rectangle-pro'        # Window management tool
+cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
 # cask 'tableplus'            # Database management tool
 # cask 'todoist'              # Task and project management
@@ -49,9 +46,10 @@ cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
-mas 'Yubico Authenticator', id: 1497506650 # 2FA app for YubiKey
-mas 'Xcode', id: 497799835                   # Apple's integrated development environment
-# mas 'Paste - Limitless Clipboard', id: 967805235 # Clipboard manager for macOS
+mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
+mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
+mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
+mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
 
 # VS Code extensions
 vscode "aaron-bond.better-comments"             # Improved commenting with highlights
@@ -63,7 +61,7 @@ vscode "csstools.postcss"                       # PostCSS language support
 vscode "dbaeumer.vscode-eslint"                 # ESLint integration
 vscode "eamodio.gitlens"                        # Git supercharged - history, blame, and more
 vscode "esbenp.prettier-vscode"                 # Code formatter
-vscode "figma.figma-vscode-extension"           	# Figma integration for design tokens
+vscode "figma.figma-vscode-extension"           # Figma integration for design tokens
 vscode "formulahendry.auto-close-tag"           # Auto close HTML/XML tags
 vscode "formulahendry.auto-rename-tag"          # Auto rename paired HTML/XML tags
 vscode "github.copilot"                         # AI-powered code completion
@@ -82,6 +80,7 @@ vscode "mtxr.sqltools"                          # Database management and query 
 vscode "mtxr.sqltools-driver-mysql"             # MySQL driver for SQLTools
 vscode "mtxr.sqltools-driver-pg"                # PostgreSQL driver for SQLTools
 vscode "mtxr.sqltools-driver-sqlite"            # SQLite driver for SQLTools
+vscode "openai.chatgpt" 											  # ChatGPT integration for VS Code
 vscode "redhat.vscode-yaml"                     # YAML language support
 vscode "tamasfe.even-better-toml"               # TOML language support
 vscode "usernamehw.errorlens"                   # Inline error highlighting
