@@ -15,6 +15,12 @@ dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 # Add Ghostty
 dockutil --add "/Applications/Ghostty.app" --no-restart
 
+# Add Lens
+dockutil --add "/Applications/Lens.app" --no-restart
+
+# Add Spark Desktop
+dockutil --add "/Applications/Spark Desktop.app" --no-restart
+
 # Add Spotify
 dockutil --add "/Applications/Spotify.app" --no-restart
 

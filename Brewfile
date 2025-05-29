@@ -18,11 +18,12 @@ brew 'python-yq'  	 # Command-line YAML processor using jq
 brew 'spaceman-diff' # Diff images from the command line
 brew 'usage'         # Tool for working with usage-spec CLIs
 brew 'vim'           # Highly configurable text editor built
+brew 'watchman'      # File watching service for triggering actions on file changes
 brew 'wget'          # File download utility
 
 # Desktop applications
 cask 'android-studio'         # Android development IDE
-# cask 'apidog'               # API development and testing tool
+cask 'apidog'               # API development and testing tool
 # cask 'bartender'            # Menu bar organization tool
 cask 'chatgpt' 						    # ChatGPT desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
@@ -34,12 +35,12 @@ cask 'lens'                   # Kubernetes IDE
 # cask 'ngrok'                # Secure tunnel to localhost
 # cask 'obsidian'             # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
-# cask 'protonvpn'            # VPN client
-# cask 'raycast'              # Spotlight alternative with extensions
+cask 'protonvpn'            # VPN client
+cask 'raycast'              # Spotlight alternative with extensions
 cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
-# cask 'tableplus'            # Database management tool
+cask 'tableplus'            # Database management tool
 # cask 'todoist'              # Task and project management
 cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
