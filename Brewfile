@@ -1,8 +1,8 @@
 cask_args appdir: '/Applications'
 
 # Command line tools
-# brew 'awscli'      # AWS Command Line Interface
-# brew 'cloudflared' # Cloudflare tunnel client
+brew 'awscli'      # AWS Command Line Interface
+brew 'cloudflared' # Cloudflare tunnel client
 brew 'coreutils'     # GNU File, Shell, and Text utilities
 brew 'dockutil'      # Command line utility for managing macOS dock items
 brew 'duti'					 # Set default applications for file types
@@ -24,7 +24,7 @@ brew 'wget'          # File download utility
 # Desktop applications
 cask 'android-studio'         # Android development IDE
 cask 'apidog'                 # API development and testing tool
-# cask 'bartender'            # Menu bar organization tool
+cask 'archiver'               # File archiving and compression tool
 cask 'chatgpt' 						    # ChatGPT desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
@@ -32,8 +32,8 @@ cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
 cask 'lens'                   # Kubernetes IDE
-# cask 'ngrok'                # Secure tunnel to localhost
-# cask 'obsidian'             # Knowledge management and note-taking
+cask 'ngrok'                  # Secure tunnel to localhost
+cask 'obsidian'               # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
 cask 'protonvpn'              # VPN client
 cask 'raycast'                # Spotlight alternative with extensions
@@ -41,7 +41,6 @@ cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
 cask 'tableplus'              # Database management tool
-# cask 'todoist'              # Task and project management
 cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
 
