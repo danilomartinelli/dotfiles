@@ -11,8 +11,11 @@ NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
 [tools]
 bun = "{{ env['BUN_VERSION'] | default(value='1.2') }}"
 node = "{{ env['NODE_VERSION'] | default(value='lts') }}"
+npm = "{{ env['NPM_VERSION'] | default(value='11.4') }}"
 pnpm = "{{ env['PNPM_VERSION'] | default(value='10') }}"
 yarn = "{{ env['YARN_VERSION'] | default(value='4.9') }}"
+
+"npm:eas-cli" = "latest"
 
 [tasks.info]
 description = "Print project information"

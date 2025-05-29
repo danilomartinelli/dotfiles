@@ -21,7 +21,7 @@ brew 'vim'           # Highly configurable text editor built
 brew 'wget'          # File download utility
 
 # Desktop applications
-# cask 'android-studio'       # Android development IDE
+cask 'android-studio'         # Android development IDE
 # cask 'apidog'               # API development and testing tool
 # cask 'bartender'            # Menu bar organization tool
 cask 'chatgpt' 						    # ChatGPT desktop client
@@ -30,14 +30,13 @@ cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
-# cask 'gitkraken'            # Git GUI client
-# cask 'lens'                 # Kubernetes IDE
+cask 'lens'                   # Kubernetes IDE
 # cask 'ngrok'                # Secure tunnel to localhost
 # cask 'obsidian'             # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
 # cask 'protonvpn'            # VPN client
 # cask 'raycast'              # Spotlight alternative with extensions
-# cask 'readdle-spark'        # Email client with smart features
+cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
 # cask 'tableplus'            # Database management tool
