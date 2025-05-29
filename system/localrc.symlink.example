@@ -1,0 +1,3 @@
+export AWS_ACCESS_KEY_ID="your-aws-key"
+export GITHUB_TOKEN="your-github-token"
+export DATABASE_URL="your-db-connection"
