@@ -1,0 +1,34 @@
+function kubecontext-from-env() {
+  local context_name="$1"
+  local env_var="$2"
+
+  if [ -z "$context_name" ] || [ -z "$env_var" ]; then
+    echo "❌ Uso: kubecontext-from-env <nome_do_contexto> <NOME_DA_VARIAVEL>"
+    return 1
+  fi
+
+  local kube_b64="${(P)env_var}"
+
+  if [ -z "$kube_b64" ]; then
+    echo "❌ Variável '$env_var' não está definida ou está vazia."
+    return 1
+  fi
+
+  local target_dir="$HOME/.kube/contexts"
+  local target_file="$target_dir/${context_name}.yaml"
+
+  mkdir -p "$target_dir"
+
+  echo "$kube_b64" | base64 -d > "$target_file" || {
+    echo "❌ Falha ao decodificar o kubeconfig."
+    return 1
+  }
+
+  export KUBECONFIG="$target_file"
+
+  # Renomeia o contexto atual para o nome fornecido
+  kubectl config rename-context "$(kubectl config current-context 2>/dev/null)" "$context_name" 2>/dev/null
+
+  echo "✅ Contexto '$context_name' configurado e salvo em '$target_file'"
+  echo "👉 Para usar depois: export KUBECONFIG=$target_file"
+}
