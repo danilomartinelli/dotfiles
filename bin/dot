@@ -65,5 +65,4 @@ echo "› script/install"
 $ZSH/script/install
 
 # Reload shell
-echo "› source ~/.zshrc"
-source ~/.zshrc
+echo "Please, run: source ~/.zshrc"
