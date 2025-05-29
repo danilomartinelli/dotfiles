@@ -63,3 +63,7 @@ brew upgrade
 # Install software
 echo "› script/install"
 $ZSH/script/install
+
+# Reload shell
+echo "› source ~/.zshrc"
+source ~/.zshrc
