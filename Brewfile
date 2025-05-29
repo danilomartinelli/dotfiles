@@ -5,6 +5,7 @@ cask_args appdir: '/Applications'
 # brew 'cloudflared' # Cloudflare tunnel client
 brew 'coreutils'     # GNU File, Shell, and Text utilities
 brew 'dockutil'      # Command line utility for managing macOS dock items
+brew 'duti'					 # Set default applications for file types
 brew 'git'           # Version control system
 brew 'git-lfs'       # Git Large File Storage
 brew 'helm'          # Kubernetes package manager
@@ -13,6 +14,7 @@ brew 'imagemagick'   # Image manipulation library and tools
 brew 'jq'            # Command-line JSON processor
 brew 'mas'           # Mac App Store command line interface
 brew 'mise'          # Runtime version manager (successor to asdf)
+brew 'python-yq'  	 # Command-line YAML processor using jq
 brew 'spaceman-diff' # Diff images from the command line
 brew 'usage'         # Tool for working with usage-spec CLIs
 brew 'vim'           # Highly configurable text editor built
@@ -26,9 +28,10 @@ brew 'wget'          # File download utility
 # cask 'bitwarden'            # Password manager
 # cask 'cleanshot'            # Screenshot and screen recording tool
 # cask 'figma'                # Design and prototyping tool
-cask 'font-fira-code'         # Programming font with ligatures
-cask 'font-fira-mono'         # Monospace programming font
-# cask 'ghostty'              # Modern terminal emulator
+cask 'font-fira-code'         # Programming font with ligatures (All styles)
+cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
+cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
+cask 'ghostty'                # Modern terminal emulator
 # cask 'gitkraken'            # Git GUI client
 # cask 'lens'                 # Kubernetes IDE
 # cask 'ngrok'                # Secure tunnel to localhost

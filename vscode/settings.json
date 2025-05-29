@@ -19,7 +19,7 @@
   //         Editor & Layout        //
   // ============================== //
   // Font, ligatures, and layout for readability and productivity
-  "editor.fontFamily": "'Fira Code Mono', monospace",
+  "editor.fontFamily": "'Fira Code', monospace",
   "editor.fontLigatures": true,
   "editor.fontSize": 14,
   "editor.lineHeight": 1.8,
@@ -103,7 +103,7 @@
   //         Terminal Setup         //
   // ============================== //
   // Consistent terminal look and feel
-  "terminal.integrated.fontFamily": "'Fira Code Mono', monospace",
+  "terminal.integrated.fontFamily": "'JetBrains Mono', monospace",
   "terminal.integrated.fontSize": 12,
   "terminal.integrated.defaultProfile.osx": "zsh",
   "terminal.integrated.env.osx": {},
