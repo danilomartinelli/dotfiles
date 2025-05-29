@@ -1,7 +1,7 @@
 # Função para carregar secrets do Bitwarden no ambiente
 load_bws_env() {
   local env_output
-  env_output=$(bws secret list --output env 2>/dev/null)
+  env_output=$(~/.dotfiles/bin/bws secret list --output env 2>/dev/null)
 
   if [[ -n "$env_output" ]]; then
     # Exporta cada linha como variável de ambiente
