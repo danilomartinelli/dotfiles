@@ -1,6 +1,7 @@
 min_version = "2025.5.14"
 
 [env]
+_.file = ".env"
 
 # Use the project name derived from the current directory
 PROJECT_NAME = "{{ config_root | basename }}"
@@ -8,14 +9,38 @@ PROJECT_NAME = "{{ config_root | basename }}"
 # Use 'development' as default to NODE_ENV if not set
 NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
 
+# Automatic virtualenv activation
+_.python.venv = { path = ".venv", create = true }
+
 [tools]
+# Node
 bun = "{{ env['BUN_VERSION'] | default(value='1.2') }}"
 node = "{{ env['NODE_VERSION'] | default(value='lts') }}"
 npm = "{{ env['NPM_VERSION'] | default(value='11.4') }}"
 pnpm = "{{ env['PNPM_VERSION'] | default(value='10') }}"
 yarn = "{{ env['YARN_VERSION'] | default(value='4.9') }}"
 
+# Terraform
+terraform = "{{ env['TF_VERSION'] | default(value='1') }}"
+
+# Global Libs
 "npm:eas-cli" = "latest"
+
+# Python
+python = "{{ get_env(name='PYTHON_VERSION', default='3.11') }}"
+ruff = "latest"
+
+# GoLang
+go = "{{ env['GOLANG_VERSION'] | default(value='1.21') }}"
+
+# Elixir
+erlang = "{{ env['ERLANG_VERSION'] | default(value='26') }}"
+elixir = "{{ env['ELIXIR_VERSION'] | default(value='1.18') }}"
+
+# Rust
+rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
+
+# General Tasks
 
 [tasks.info]
 description = "Print project information"
@@ -23,3 +48,33 @@ run = '''
 echo "Project: $PROJECT_NAME"
 echo "NODE_ENV: $NODE_ENV"
 '''
+
+# Terraform Tasks
+
+[tasks."terraform:init"]
+description = "Initializes a Terraform working directory"
+run = "terraform -chdir=terraform init"
+
+[tasks."terraform:plan"]
+description = "Generates an execution plan for Terraform"
+run = "terraform -chdir=terraform plan"
+
+[tasks."terraform:apply"]
+description = "Applies the changes required to reach the desired state of the configuration"
+run = "terraform -chdir=terraform apply"
+
+[tasks."terraform:destroy"]
+description = "Destroy Terraform-managed infrastructure"
+run = "terraform -chdir=terraform destroy"
+
+[tasks."terraform:validate"]
+description = "Validates the Terraform files"
+run = "terraform -chdir=terraform validate"
+
+[tasks."terraform:format"]
+description = "Formats the Terraform files"
+run = "terraform -chdir=terraform fmt"
+
+[tasks."terraform:check"]
+description = "Checks the Terraform files"
+depends = ["terraform:format", "terraform:validate"]

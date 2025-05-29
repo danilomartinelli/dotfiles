@@ -1,25 +1,27 @@
 cask_args appdir: '/Applications'
 
 # Command line tools
-brew 'awscli'      # AWS Command Line Interface
-brew 'cloudflared' # Cloudflare tunnel client
-brew 'coreutils'     # GNU File, Shell, and Text utilities
-brew 'dockutil'      # Command line utility for managing macOS dock items
-brew 'duti'					 # Set default applications for file types
-brew 'git'           # Version control system
-brew 'git-lfs'       # Git Large File Storage
-brew 'helm'          # Kubernetes package manager
-brew 'helmfile'      # Deploy and manage Helm charts
-brew 'imagemagick'   # Image manipulation library and tools
-brew 'jq'            # Command-line JSON processor
-brew 'mas'           # Mac App Store command line interface
-brew 'mise'          # Runtime version manager (successor to asdf)
-brew 'python-yq'  	 # Command-line YAML processor using jq
-brew 'spaceman-diff' # Diff images from the command line
-brew 'usage'         # Tool for working with usage-spec CLIs
-brew 'vim'           # Highly configurable text editor built
-brew 'watchman'      # File watching service for triggering actions on file changes
-brew 'wget'          # File download utility
+brew 'awscli'      			# AWS Command Line Interface
+brew 'cloudflared' 			# Cloudflare tunnel client
+brew 'coreutils'     		# GNU File, Shell, and Text utilities
+brew 'dockutil'      		# Command line utility for managing macOS dock items
+brew 'duti'					 		# Set default applications for file types
+brew 'git'           		# Version control system
+brew 'git-lfs'       		# Git Large File Storage
+brew 'helm'          		# Kubernetes package manager
+brew 'helmfile'      		# Deploy and manage Helm charts
+brew 'imagemagick'   		# Image manipulation library and tools
+brew 'jq'            		# Command-line JSON processor
+brew 'kubernetes-cli' 	# Kubernetes command line tools
+brew 'kustomize'    		# Kubernetes configuration management tool
+brew 'mas'           		# Mac App Store command line interface
+brew 'mise'          		# Runtime version manager (successor to asdf)
+brew 'python-yq'  	 		# Command-line YAML processor using jq
+brew 'spaceman-diff' 		# Diff images from the command line
+brew 'usage'         		# Tool for working with usage-spec CLIs
+brew 'vim'           		# Highly configurable text editor built
+brew 'watchman'      		# File watching service for triggering actions on file changes
+brew 'wget'          		# File download utility
 
 # Desktop applications
 cask 'android-studio'         # Android development IDE
