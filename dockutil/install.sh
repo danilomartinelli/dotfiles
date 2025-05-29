@@ -15,8 +15,14 @@ dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 # Add Ghostty
 dockutil --add "/Applications/Ghostty.app" --no-restart
 
+# Add TablePlus
+dockutil --add "/Applications/TablePlus.app" --no-restart
+
 # Add Lens
 dockutil --add "/Applications/Lens.app" --no-restart
+
+# Add Apidog
+dockutil --add "/Applications/Apidog.app" --no-restart
 
 # Add Spark Desktop
 dockutil --add "/Applications/Spark Desktop.app" --no-restart
