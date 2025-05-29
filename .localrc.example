@@ -1,3 +1,2 @@
-export AWS_ACCESS_KEY_ID="your-aws-key"
-export GITHUB_TOKEN="your-github-token"
-export DATABASE_URL="your-db-connection"
+export BWS_ACCESS_TOKEN="<ACCESS_TOKEN>"
+export BWS_PROJECT_ID="<PROJECT_ID>"

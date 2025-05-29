@@ -1,0 +1,13 @@
+function bwsenv() {
+  local project_id="${BWS_PROJECT_ID}"
+
+  if [ -z "$project_id" ]; then
+    echo "echo '❌ BWS_PROJECT_ID não está definido.'" >&2
+    return 1
+  fi
+
+  bws secret list "$project_id" -o json | jq -r '.[] | "export \(.key | gsub(" "; "_"))=\"\(.value)\""' || {
+    echo "echo '❌ Falha ao carregar secrets.'" >&2
+    return 1
+  }
+}
