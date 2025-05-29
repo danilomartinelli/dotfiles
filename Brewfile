@@ -24,8 +24,9 @@ brew 'wget'          # File download utility
 # cask 'android-studio'       # Android development IDE
 # cask 'apidog'               # API development and testing tool
 # cask 'bartender'            # Menu bar organization tool
-# cask 'beeper'            		# Universal chat app powered by Matrix
-# cask 'bitwarden'            # Password manager
+cask 'beeper'            		  # Universal chat app powered by Matrix
+cask 'bitwarden'              # Password manager
+cask 'chatgpt' 						    # ChatGPT desktop client
 # cask 'cleanshot'            # Screenshot and screen recording tool
 # cask 'figma'                # Design and prototyping tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
@@ -48,7 +49,7 @@ cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
-# mas 'Yubico Authenticator', id: 1497506650 # 2FA app for YubiKey
+mas 'Yubico Authenticator', id: 1497506650 # 2FA app for YubiKey
 mas 'Xcode', id: 497799835                   # Apple's integrated development environment
 # mas 'Paste - Limitless Clipboard', id: 967805235 # Clipboard manager for macOS
 

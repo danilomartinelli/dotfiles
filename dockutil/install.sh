@@ -12,6 +12,9 @@ dockutil --add "/Applications/Zen.app" --no-restart
 # Add VS Code
 dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 
+# Add Ghostty
+dockutil --add "/Applications/Ghostty.app" --no-restart
+
 # Add Spotify
 dockutil --add "/Applications/Spotify.app" --no-restart
 
