@@ -84,12 +84,6 @@ sudo networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4
 # Show ~/Library folder (for development)
 chflags nohidden ~/Library && xattr -d com.apple.FinderInfo ~/Library 2>/dev/null
 
-# Create common development directories
-mkdir -p ~/Code
-
-# Create local environment file (not commited)
-touch ~/.localrc
-
 # Restart Services
 killall SystemUIServer Finder Dock ControlStrip 2>/dev/null
 
