@@ -1,0 +1,18 @@
+use_aws_profile() {
+  local name="$1"
+  local upper_name="${name:u}"
+  local var="AWS_PROFILE_${upper_name}"
+
+  if [[ -z "${(P)var}" ]]; then
+    echo "❌ Variável $var não encontrada."
+    return 1
+  fi
+
+  local TMP_AWS_DIR
+  TMP_AWS_DIR=$(mktemp -d)
+
+  echo "${(P)var}" | base64 --decode > "$TMP_AWS_DIR/credentials"
+
+  export AWS_SHARED_CREDENTIALS_FILE="$TMP_AWS_DIR/credentials"
+  echo "✅ AWS profile ativado para $name → $AWS_SHARED_CREDENTIALS_FILE"
+}
