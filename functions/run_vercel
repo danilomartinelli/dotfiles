@@ -1,0 +1,13 @@
+run_vercel() {
+  local name="${1:-$CURRENT_VERCEL_CLI}"
+  shift
+  local upper_name="${name:u}"
+  local var="VERCEL_CLI_${upper_name}"
+
+  if [[ -z "${(P)var}" ]]; then
+    echo "❌ Variável $var não encontrada."
+    return 1
+  fi
+
+  vercel --token="${(P)var}" "$@"
+}

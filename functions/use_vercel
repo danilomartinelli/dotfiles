@@ -1,6 +1,5 @@
 use_vercel() {
   local name="$1"
-  shift
   local upper_name="${name:u}"
   local var="VERCEL_CLI_${upper_name}"
 
@@ -9,5 +8,7 @@ use_vercel() {
     return 1
   fi
 
-  vercel --token="${(P)var}" "$@"
+  export CURRENT_VERCEL_CLI="$name"
+
+  echo "✅ Vercel sendo direcionado para $name. Você deve utilizar run_vercel para executar comandos."
 }

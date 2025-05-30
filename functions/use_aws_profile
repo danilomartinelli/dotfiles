@@ -13,6 +13,8 @@ use_aws_profile() {
 
   echo "${(P)var}" | base64 --decode > "$TMP_AWS_DIR/credentials"
 
+  export CURRENT_AWS_PROFILE="$name"
   export AWS_SHARED_CREDENTIALS_FILE="$TMP_AWS_DIR/credentials"
+
   echo "✅ AWS profile ativado para $name → $AWS_SHARED_CREDENTIALS_FILE"
 }
