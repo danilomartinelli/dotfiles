@@ -1,6 +1,12 @@
 run_vercel() {
-  local name="${1:-$CURRENT_VERCEL_CLI}"
   shift
+
+  if [[ -z "$CURRENT_VERCEL_CLI" ]]; then
+    echo "❌ Você deve definir o Vercel CLI atual usando use_vercel primeiro."
+    return 1
+  fi
+
+  local name="$CURRENT_VERCEL_CLI"
   local upper_name="${name:u}"
   local var="VERCEL_CLI_${upper_name}"
 
