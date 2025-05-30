@@ -25,6 +25,7 @@ terraform = "{{ env['TF_VERSION'] | default(value='1') }}"
 
 # Global Libs
 "npm:eas-cli" = "latest"
+"npm:vercel" = "latest"
 
 # Python
 python = "{{ get_env(name='PYTHON_VERSION', default='3.11') }}"

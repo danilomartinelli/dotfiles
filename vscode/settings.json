@@ -160,6 +160,14 @@
   "editor.parameterHints.enabled": true,
   "typescript.suggestionActions.enabled": true,
   "javascript.suggestionActions.enabled": true,
+  "mcp": {
+    "servers": {
+      "console-ninja": {
+        "command": "npx",
+        "args": ["-y", "-c", "node ~/.console-ninja/mcp/"]
+      }
+    }
+  },
 
   // ============================== //
   //      Auto-import & Imports     //
