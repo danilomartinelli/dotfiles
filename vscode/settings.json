@@ -160,30 +160,6 @@
   "editor.parameterHints.enabled": true,
   "typescript.suggestionActions.enabled": true,
   "javascript.suggestionActions.enabled": true,
-  "mcp": {
-    "inputs": [
-      {
-        "type": "promptString",
-        "id": "anthropic-key",
-        "description": "Anthropic API Key",
-        "password": true
-      }
-    ],
-    "servers": {
-      "console-ninja": {
-        "command": "npx",
-        "args": ["-y", "-c", "node ~/.console-ninja/mcp/"]
-      },
-      "taskmaster-ai": {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "--package=task-master-ai", "task-master-ai"],
-        "env": {
-          "ANTHROPIC_API_KEY": "${input:anthropic-key}"
-        }
-      }
-    }
-  },
 
   // ============================== //
   //      Auto-import & Imports     //
@@ -246,20 +222,42 @@
   "gitlens.telemetry.enabled": false,
   "gitlens.ai.model": "anthropic:claude-3-5-sonnet-latest",
 
+  // Chat
+  "chat.mcp.enabled": true,
+  "chat.mcp.discovery.enabled": false,
+  "chat.editor.fontFamily": "'Fira Code', monospace",
+
+  // MCP
+  "mcp": {
+    "inputs": [
+      {
+        "type": "promptString",
+        "id": "anthropic-key",
+        "description": "Anthropic API Key",
+        "password": true
+      }
+    ],
+    "servers": {
+      "console-ninja": {
+        "command": "npx",
+        "args": ["-y", "-c", "node ~/.console-ninja/mcp/"]
+      },
+      "taskmaster-ai": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "--package=task-master-ai", "task-master-ai"],
+        "env": {
+          "ANTHROPIC_API_KEY": "${input:anthropic-key}"
+        }
+      }
+    }
+  },
+
   // GitHub Copilot
   "github.copilot.chat.localeOverride": "pt-br",
-  "github.copilot.chat.completionContext.typescript.mode": "on",
   "github.copilot.nextEditSuggestions.fixes": true,
-  "github.copilot.chat.codesearch.enabled": true,
-  "github.copilot.chat.agent.thinkingTool": true,
-  "github.copilot.chat.editor.temporalContext.enabled": true,
-  "github.copilot.chat.edits.temporalContext.enabled": true,
-  "github.copilot.chat.generateTests.codeLens": true,
-  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
-  "github.copilot.chat.languageContext.inline.typescript.enabled": true,
-  "github.copilot.chat.languageContext.typescript.enabled": true,
-  "github.copilot.chat.search.keywordSuggestions": true,
   "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.chat.followUps": "firstOnly",
   "github.copilot.enable": {
     "*": true
   },
@@ -267,7 +265,7 @@
   // GitHub
   "github.gitAuthentication": true,
   "github.showAvatar": true,
-  "github.gitProtocol": "https",
+  "github.gitProtocol": "ssh",
 
   // Red Hat
   "redhat.telemetry.enabled": false,
