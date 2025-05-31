@@ -226,6 +226,7 @@
   "chat.mcp.enabled": true,
   "chat.mcp.discovery.enabled": false,
   "chat.editor.fontFamily": "'Fira Code', monospace",
+  "chat.tools.autoApprove": true,
 
   // MCP
   "mcp": {
@@ -234,6 +235,18 @@
         "type": "promptString",
         "id": "anthropic-key",
         "description": "Anthropic API Key",
+        "password": true
+      },
+      {
+        "type": "promptString",
+        "id": "perplexity-key",
+        "description": "Perplexity API Key",
+        "password": true
+      },
+      {
+        "type": "promptString",
+        "id": "openai-key",
+        "description": "OpenAI API Key",
         "password": true
       }
     ],
@@ -247,17 +260,22 @@
         "command": "npx",
         "args": ["-y", "--package=task-master-ai", "task-master-ai"],
         "env": {
-          "ANTHROPIC_API_KEY": "${input:anthropic-key}"
+          "ANTHROPIC_API_KEY": "${input:anthropic-key}",
+          "PERPLEXITY_API_KEY": "${input:perplexity-key}",
+          "OPENAI_API_KEY": "${input:openai-key}"
         }
       }
     }
   },
 
   // GitHub Copilot
-  "github.copilot.chat.localeOverride": "pt-br",
   "github.copilot.nextEditSuggestions.fixes": true,
   "github.copilot.nextEditSuggestions.enabled": true,
-  "github.copilot.chat.followUps": "firstOnly",
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.chat.agent.thinkingTool": true,
+  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
+  "github.copilot.chat.followUps": "always",
+  "github.copilot.chat.localeOverride": "pt-br",
   "github.copilot.enable": {
     "*": true
   },

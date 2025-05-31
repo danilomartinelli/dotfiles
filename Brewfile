@@ -8,6 +8,7 @@ brew 'dockutil'      		# Command line utility for managing macOS dock items
 brew 'duti'					 		# Set default applications for file types
 brew 'git'           		# Version control system
 brew 'git-lfs'       		# Git Large File Storage
+brew 'gh'           		# GitHub CLI for managing repositories
 brew 'helm'          		# Kubernetes package manager
 brew 'helmfile'      		# Deploy and manage Helm charts
 brew 'imagemagick'   		# Image manipulation library and tools
