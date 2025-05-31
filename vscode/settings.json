@@ -194,7 +194,7 @@
   "yaml.format.enable": true,
 
   // Markdown All in One
-  "markdown.extension.preview.autoShowPreviewToSide": true,
+  "markdown.extension.preview.autoShowPreviewToSide": false,
 
   // Path Intellisense
   "path-intellisense.autoSlashAfterDirectory": true,
