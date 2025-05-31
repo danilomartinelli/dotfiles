@@ -1,1 +1,1 @@
-echo 'eval "$(gh copilot alias -- zsh)"'
+eval "$(gh copilot alias -- zsh)"
