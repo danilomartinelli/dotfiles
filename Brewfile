@@ -52,6 +52,7 @@ mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
 mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
 mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
+mas 'Steam Link', id: 1246969117             			# Remote gaming client for Steam
 
 # VS Code extensions
 vscode "aaron-bond.better-comments"             # Improved commenting with highlights
