@@ -68,6 +68,7 @@ vscode "figma.figma-vscode-extension"           # Figma integration for design t
 vscode "formulahendry.auto-close-tag"           # Auto close HTML/XML tags
 vscode "formulahendry.auto-rename-tag"          # Auto rename paired HTML/XML tags
 vscode "github.copilot"                         # AI-powered code completion
+vscode "jakeBecker.elixir-ls"         					# Elixir language server support"
 vscode "jock.svg"                               # SVG viewer and editor
 vscode "mechatroner.rainbow-csv"                # CSV/TSV syntax highlighting
 vscode "mikestead.dotenv"                       # .env file syntax highlighting
@@ -84,6 +85,7 @@ vscode "mtxr.sqltools-driver-mysql"             # MySQL driver for SQLTools
 vscode "mtxr.sqltools-driver-pg"                # PostgreSQL driver for SQLTools
 vscode "mtxr.sqltools-driver-sqlite"            # SQLite driver for SQLTools
 vscode "openai.chatgpt" 											  # ChatGPT integration for VS Code
+vscode "phoenixframework.phoenix" 					    # Phoenix framework support
 vscode "redhat.vscode-yaml"                     # YAML language support
 vscode "tamasfe.even-better-toml"               # TOML language support
 vscode "usernamehw.errorlens"                   # Inline error highlighting
