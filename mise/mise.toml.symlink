@@ -23,12 +23,6 @@ yarn = "{{ env['YARN_VERSION'] | default(value='4.9') }}"
 # Terraform
 terraform = "{{ env['TF_VERSION'] | default(value='1') }}"
 
-# Global Libs
-"npm:eas-cli" = "latest"
-"npm:vercel" = "latest"
-"npm:task-master-ai" = "latest"
-"npm:nx" = "latest"
-
 # Python
 python = "{{ get_env(name='PYTHON_VERSION', default='3.11') }}"
 ruff = "latest"
@@ -37,11 +31,18 @@ ruff = "latest"
 go = "{{ env['GOLANG_VERSION'] | default(value='1.21') }}"
 
 # Elixir
-erlang = "{{ env['ERLANG_VERSION'] | default(value='26') }}"
+erlang = "{{ env['ERLANG_VERSION'] | default(value='27') }}"
 elixir = "{{ env['ELIXIR_VERSION'] | default(value='1.18') }}"
 
 # Rust
 rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
+
+# Global Libs - NPM
+
+"npm:eas-cli" = "latest"
+"npm:vercel" = "latest"
+"npm:task-master-ai" = "latest"
+"npm:nx" = "latest"
 
 # General Tasks
 
