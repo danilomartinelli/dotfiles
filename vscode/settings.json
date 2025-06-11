@@ -153,6 +153,7 @@
     "javascript": "javascriptreact",
     "mdx": "javascriptreact",
     "phoenix-heex": "html",
+    "html-eex": "html",
     "postcss": "css"
   },
   "editor.suggestSelection": "first",

@@ -43,6 +43,7 @@ cask 'raycast'                # Spotlight alternative with extensions
 cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
+cask 'steam'                  # Gaming platform
 cask 'tableplus'              # Database management tool
 cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
