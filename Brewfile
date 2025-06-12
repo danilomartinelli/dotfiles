@@ -38,6 +38,7 @@ cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'obsidian'               # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
+cask 'pdf-expert' 					  # PDF reader and editor
 cask 'protonvpn'              # VPN client
 cask 'raycast'                # Spotlight alternative with extensions
 cask 'readdle-spark'          # Email client with smart features
