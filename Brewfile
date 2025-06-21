@@ -28,13 +28,13 @@ brew 'wget'          		# File download utility
 cask 'android-studio'         # Android development IDE
 cask 'apidog'                 # API development and testing tool
 cask 'archiver'               # File archiving and compression tool
+cask 'calibre'                # eBook management
 cask 'chatgpt' 						    # ChatGPT desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
-cask 'kindle'                 # Kindle eBook reader
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'obsidian'               # Knowledge management and note-taking
