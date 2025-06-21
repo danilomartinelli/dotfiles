@@ -51,11 +51,12 @@ cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
-mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
-mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
+mas 'Kindle', id: 302584613 											# Kindle eBook reader
 mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
 mas 'Steam Link', id: 1246969117             			# Remote gaming client for Steam
+mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
+mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
 
 # VS Code extensions
 vscode "aaron-bond.better-comments"             # Improved commenting with highlights
