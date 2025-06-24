@@ -45,7 +45,6 @@ cask 'raycast'                # Spotlight alternative with extensions
 cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
-cask 'steam'                  # Gaming platform
 cask 'tableplus'              # Database management tool
 cask 'visual-studio-code'     # Code editor
 cask 'zen'                    # Privacy-focused browser
@@ -54,7 +53,6 @@ cask 'zen'                    # Privacy-focused browser
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
 mas 'Kindle', id: 302584613 											# Kindle eBook reader
 mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
-mas 'Steam Link', id: 1246969117             			# Remote gaming client for Steam
 mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
 mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
 
