@@ -35,6 +35,7 @@ cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'				# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
+cask 'imazing' 							 	# iOS device management tool
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'obsidian'               # Knowledge management and note-taking
