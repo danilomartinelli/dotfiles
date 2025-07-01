@@ -17,6 +17,7 @@ brew 'kubernetes-cli' 	# Kubernetes command line tools
 brew 'kustomize'    		# Kubernetes configuration management tool
 brew 'mas'           		# Mac App Store command line interface
 brew 'mise'          		# Runtime version manager (successor to asdf)
+brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
 brew 'usage'         		# Tool for working with usage-spec CLIs
