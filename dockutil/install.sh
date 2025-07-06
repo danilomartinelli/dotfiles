@@ -9,8 +9,8 @@ dockutil --remove all --no-restart
 # Add Zen
 dockutil --add "/Applications/Zen.app" --no-restart
 
-# Add VS Code
-dockutil --add "/Applications/Visual Studio Code.app" --no-restart
+# Add Windsurf
+dockutil --add "/Applications/Windsurf.app" --no-restart
 
 # Add Ghostty
 dockutil --add "/Applications/Ghostty.app" --no-restart
@@ -23,6 +23,12 @@ dockutil --add "/Applications/Lens.app" --no-restart
 
 # Add Apidog
 dockutil --add "/Applications/Apidog.app" --no-restart
+
+# Add Obsidian
+dockutil --add "/Applications/Obsidian.app" --no-restart
+
+# Add ChatGPT
+dockutil --add "/Applications/ChatGPT.app" --no-restart
 
 # Add Spark Desktop
 dockutil --add "/Applications/Spark Desktop.app" --no-restart

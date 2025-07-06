@@ -33,27 +33,25 @@ curl "https://raw.githubusercontent.com/github/linguist/master/lib/linguist/lang
 
 echo "✓ windsurf set as default editor for code files"
 
-surf --install-extension aaron-bond.better-comments
-surf --install-extension bradlc.vscode-tailwindcss
-surf --install-extension christian-kohler.path-intellisense
-surf --install-extension csstools.postcss
-surf --install-extension dbaeumer.vscode-eslint
-surf --install-extension eamodio.gitlens
-surf --install-extension esbenp.prettier-vscode
-surf --install-extension figma.figma-vscode-extension
-surf --install-extension formulahendry.auto-close-tag
-surf --install-extension formulahendry.auto-rename-tag
-surf --install-extension jock.svg
-surf --install-extension mechatroner.rainbow-csv
-surf --install-extension mikestead.dotenv
-surf --install-extension monokai.theme-monokai-pro-vscode
-surf --install-extension ms-vscode.vscode-typescript-next
-surf --install-extension redhat.vscode-yaml
-surf --install-extension tamasfe.even-better-toml
-surf --install-extension usernamehw.errorlens
-surf --install-extension waderyan.gitblame
-surf --install-extension wallabyjs.console-ninja
-surf --install-extension wix.vscode-import-cost
-surf --install-extension yoavbls.pretty-ts-errors
-
-surf --update-extensions
+surf --install-extension aaron-bond.better-comments --force
+surf --install-extension bradlc.vscode-tailwindcss --force
+surf --install-extension christian-kohler.path-intellisense --force
+surf --install-extension csstools.postcss --force
+surf --install-extension dbaeumer.vscode-eslint --force
+surf --install-extension eamodio.gitlens --force
+surf --install-extension esbenp.prettier-vscode --force
+surf --install-extension figma.figma-vscode-extension --force
+surf --install-extension formulahendry.auto-close-tag --force
+surf --install-extension formulahendry.auto-rename-tag --force
+surf --install-extension jock.svg --force
+surf --install-extension mechatroner.rainbow-csv --force
+surf --install-extension mikestead.dotenv --force
+surf --install-extension monokai.theme-monokai-pro-vscode --force
+surf --install-extension ms-vscode.vscode-typescript-next --force
+surf --install-extension redhat.vscode-yaml --force
+surf --install-extension tamasfe.even-better-toml --force
+surf --install-extension usernamehw.errorlens --force
+surf --install-extension waderyan.gitblame --force
+surf --install-extension wallabyjs.console-ninja --force
+surf --install-extension wix.vscode-import-cost --force
+surf --install-extension yoavbls.pretty-ts-errors --force
