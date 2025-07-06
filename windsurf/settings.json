@@ -89,9 +89,6 @@
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "[markdown]": {
-    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
-  },
 
   // ============================== //
   //         Terminal Setup         //
@@ -168,9 +165,9 @@
   // Auto-import and imports settings
   "javascript.updateImportsOnFileMove.enabled": "never",
   "typescript.updateImportsOnFileMove.enabled": "never",
-  "javascript.suggest.autoImports": true,
-  "typescript.suggest.autoImports": true,
-  "typescript.preferences.preferTypeOnlyAutoImports": true,
+  "javascript.suggest.autoImports": false,
+  "typescript.suggest.autoImports": false,
+  "typescript.preferences.preferTypeOnlyAutoImports": false,
 
   // ============================== //
   //    Extension-Specific Config   //
@@ -187,23 +184,6 @@
   "errorLens.fontWeight": "bold",
   "errorLens.gutterIconsEnabled": true,
 
-  // SQLTools
-  "sqltools.useNodeRuntime": true,
-
-  // YAML
-  "yaml.validate": true,
-  "yaml.format.enable": true,
-
-  // Markdown All in One
-  "markdown.extension.preview.autoShowPreviewToSide": false,
-
-  // Path Intellisense
-  "path-intellisense.autoSlashAfterDirectory": true,
-
-  // NPM Intellisense
-  "npm-intellisense.importES6": true,
-  "npm-intellisense.scanDevDependencies": true,
-
   // Tailwind
   "tailwindCSS.experimental.classRegex": [
     ["tv\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
@@ -215,79 +195,10 @@
   },
   "tailwindCSS.classFunctions": ["cva", "cx"],
 
-  // GitLens
-  "gitlens.codeLens.recentChange.enabled": false,
-  "gitlens.advanced.messages": {
-    "suppressIntegrationRequestTimedOutWarning": true
-  },
-  "gitlens.telemetry.enabled": false,
-  "gitlens.ai.model": "anthropic:claude-3-5-sonnet-latest",
-
-  // Chat
-  "chat.mcp.enabled": true,
-  "chat.mcp.discovery.enabled": false,
-  "chat.editor.fontFamily": "'Fira Code', monospace",
-  "chat.tools.autoApprove": true,
-
-  // MCP
-  "mcp": {
-    "inputs": [
-      {
-        "type": "promptString",
-        "id": "anthropic-key",
-        "description": "Anthropic API Key",
-        "password": true
-      },
-      {
-        "type": "promptString",
-        "id": "perplexity-key",
-        "description": "Perplexity API Key",
-        "password": true
-      },
-      {
-        "type": "promptString",
-        "id": "openai-key",
-        "description": "OpenAI API Key",
-        "password": true
-      }
-    ],
-    "servers": {
-      "console-ninja": {
-        "command": "npx",
-        "args": ["-y", "-c", "node ~/.console-ninja/mcp/"]
-      },
-      "taskmaster-ai": {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "--package=task-master-ai", "task-master-ai"],
-        "env": {
-          "ANTHROPIC_API_KEY": "${input:anthropic-key}",
-          "PERPLEXITY_API_KEY": "${input:perplexity-key}",
-          "OPENAI_API_KEY": "${input:openai-key}"
-        }
-      }
-    }
-  },
-
-  // GitHub Copilot
-  "github.copilot.nextEditSuggestions.fixes": true,
-  "github.copilot.nextEditSuggestions.enabled": true,
-  "github.copilot.chat.codesearch.enabled": true,
-  "github.copilot.chat.agent.thinkingTool": true,
-  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
-  "github.copilot.chat.followUps": "always",
-  "github.copilot.chat.localeOverride": "pt-br",
-  "github.copilot.enable": {
-    "*": true
-  },
-
   // GitHub
   "github.gitAuthentication": true,
   "github.showAvatar": true,
   "github.gitProtocol": "ssh",
-
-  // Red Hat
-  "redhat.telemetry.enabled": false,
 
   // ESLint
   "eslint.options": {
@@ -298,7 +209,6 @@
   //      Additional Settings       //
   // ============================== //
   // Miscellaneous settings
-  "update.showReleaseNotes": false,
   "telemetry.feedback.enabled": false,
   "security.workspace.trust.untrustedFiles": "open"
 }

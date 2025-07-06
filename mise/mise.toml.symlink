@@ -3,14 +3,14 @@ min_version = "2025.5.14"
 [env]
 _.file = ".env"
 
+# Automatic virtualenv activation
+_.python.venv = { path = ".venv", create = true }
+
 # Use the project name derived from the current directory
 PROJECT_NAME = "{{ config_root | basename }}"
 
 # Use 'development' as default to NODE_ENV if not set
 NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
-
-# Automatic virtualenv activation
-_.python.venv = { path = ".venv", create = true }
 
 [tools]
 # Node
@@ -82,3 +82,6 @@ run = "terraform -chdir=terraform fmt"
 [tasks."terraform:check"]
 description = "Checks the Terraform files"
 depends = ["terraform:format", "terraform:validate"]
+
+[settings]
+idiomatic_version_file_enable_tools = ["node"]
