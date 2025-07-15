@@ -33,6 +33,7 @@ curl "https://raw.githubusercontent.com/github/linguist/master/lib/linguist/lang
 
 echo "✓ windsurf set as default editor for code files"
 
+# The 'force' flag is a workaround to prevent the script from failing if the extension is already installed
 surf --install-extension aaron-bond.better-comments --force
 surf --install-extension bradlc.vscode-tailwindcss --force
 surf --install-extension christian-kohler.path-intellisense --force
@@ -52,6 +53,5 @@ surf --install-extension redhat.vscode-yaml --force
 surf --install-extension tamasfe.even-better-toml --force
 surf --install-extension usernamehw.errorlens --force
 surf --install-extension waderyan.gitblame --force
-surf --install-extension wallabyjs.console-ninja --force
 surf --install-extension wix.vscode-import-cost --force
 surf --install-extension yoavbls.pretty-ts-errors --force

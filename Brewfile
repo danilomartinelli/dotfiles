@@ -20,6 +20,7 @@ brew 'mise'          		# Runtime version manager (successor to asdf)
 brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
+brew 'terragrunt'				# Terraform wrapper
 brew 'usage'         		# Tool for working with usage-spec CLIs
 brew 'vim'           		# Highly configurable text editor built
 brew 'watchman'      		# File watching service for triggering actions on file changes

@@ -54,14 +54,17 @@
   // ============================== //
   // Use Prettier and ESLint for consistent code style
   "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.codeActionsOnSave": {
-    "source.fixAll": "always",
-    "source.organizeImports": "always",
-    "source.addMissingImports": "always",
-    "source.fixAll.eslint": "always",
-    "source.fixAll.prettier": "always"
+    "source.fixAll": "explicit",
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.prettier": "explicit",
+    "source.fixAll.ts": "explicit",
+    "source.addMissingImports": "explicit",
+    // Do not mess with imports
+    "source.organizeImports": "never"
   },
   "eslint.format.enable": true,
   "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
@@ -162,12 +165,20 @@
   // ============================== //
   //      Auto-import & Imports     //
   // ============================== //
-  // Auto-import and imports settings
-  "javascript.updateImportsOnFileMove.enabled": "never",
-  "typescript.updateImportsOnFileMove.enabled": "never",
+  // We don't use VSCode auto-imports, we use Prettier and ESLint instead
+  "typescript.preferences.preferTypeOnlyAutoImports": false,
   "javascript.suggest.autoImports": false,
   "typescript.suggest.autoImports": false,
-  "typescript.preferences.preferTypeOnlyAutoImports": false,
+  "javascript.suggest.includeCompletionsForImportStatements": false,
+  "typescript.suggest.includeCompletionsForImportStatements": false,
+  "javascript.updateImportsOnFileMove.enabled": "never",
+  "typescript.updateImportsOnFileMove.enabled": "never",
+  "javascript.updateImportsOnPaste.enabled": false,
+  "typescript.updateImportsOnPaste.enabled": false,
+  "javascript.suggest.paths": false,
+  "typescript.suggest.paths": false,
+  "typescript.tsserver.web.typeAcquisition.enabled": false,
+  "typescript.preferences.includePackageJsonAutoImports": "off",
 
   // ============================== //
   //    Extension-Specific Config   //
@@ -175,9 +186,6 @@
   "extensions.ignoreRecommendations": true,
   "extensions.autoCheckUpdates": true,
   "extensions.autoUpdate": "onlyEnabledExtensions",
-
-  // Figma
-  "figma.autocompleteBlocks": true,
 
   // Error Lens for inline errors
   "errorLens.enabled": true,

@@ -1,5 +1,2 @@
 # Add Windsurf (surf)
 export PATH="/Applications/Windsurf.app/Contents/Resources/app/bin:$PATH"
-
-# IDE Extensions Stuff
-export PATH="~/.console-ninja/.bin:$PATH"
