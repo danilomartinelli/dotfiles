@@ -19,7 +19,7 @@ Host *
     ControlPersist 600
 
 # Include local configurations if needed (not tracked by git)
-# Include ~/.ssh/config_local
+Include ~/.ssh/config_local
 
 # === GITHUB CONFIGURATIONS ===
 Host github.com

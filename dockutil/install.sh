@@ -9,8 +9,8 @@ dockutil --remove all --no-restart
 # Add Zen
 dockutil --add "/Applications/Zen.app" --no-restart
 
-# Add Windsurf
-dockutil --add "/Applications/Windsurf.app" --no-restart
+# Add Cursor
+dockutil --add "/Applications/Cursor.app" --no-restart
 
 # Add Ghostty
 dockutil --add "/Applications/Ghostty.app" --no-restart
@@ -24,14 +24,20 @@ dockutil --add "/Applications/Lens.app" --no-restart
 # Add Apidog
 dockutil --add "/Applications/Apidog.app" --no-restart
 
-# Add Obsidian
-dockutil --add "/Applications/Obsidian.app" --no-restart
+# Add OrbStack
+dockutil --add "/Applications/OrbStack.app" --no-restart
 
-# Add ChatGPT
-dockutil --add "/Applications/ChatGPT.app" --no-restart
+# Add Figma
+dockutil --add "/Applications/Figma.app" --no-restart
+
+# Add Claude
+dockutil --add "/Applications/Claude.app" --no-restart
 
 # Add Spark Desktop
 dockutil --add "/Applications/Spark Desktop.app" --no-restart
+
+# Add Todoist
+dockutil --add "/Applications/Todoist.app" --no-restart
 
 # Add Spotify
 dockutil --add "/Applications/Spotify.app" --no-restart
@@ -55,4 +61,4 @@ fi
 # Restart Dock to apply changes
 killall Dock
 
-echo "✓ dock configured with VS Code and OrbStack"
+echo "✓ dock configured"

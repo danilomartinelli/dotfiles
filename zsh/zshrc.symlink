@@ -49,5 +49,6 @@ zle -N down-line-or-beginning-search
 bindkey "^[[A" up-line-or-beginning-search # Up
 bindkey "^[[B" down-line-or-beginning-search # Down
 
-# Added by Windsurf
-export PATH="/Users/danilomartinelli/.codeium/windsurf/bin:$PATH"
+# Task Master aliases
+alias tm='task-master'
+alias taskmaster='task-master'

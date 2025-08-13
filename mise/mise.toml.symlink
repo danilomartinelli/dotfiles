@@ -26,6 +26,7 @@ terraform = "{{ env['TF_VERSION'] | default(value='1') }}"
 # Python
 python = "{{ get_env(name='PYTHON_VERSION', default='3.11') }}"
 ruff = "latest"
+uv = "latest"
 
 # GoLang
 go = "{{ env['GOLANG_VERSION'] | default(value='1.21') }}"
@@ -43,6 +44,7 @@ rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
 "npm:vercel" = "latest"
 "npm:task-master-ai" = "latest"
 "npm:nx" = "latest"
+"npm:@anthropic-ai/claude-code" = "latest"
 
 # General Tasks
 
