@@ -17,8 +17,6 @@
   "workbench.editor.limit.value": 10,
   "workbench.activityBar.location": "default",
   "workbench.statusBar.visible": true,
-  "workbench.editor.untitled.hint": "hidden",
-  "workbench.editor.binaryDiffEditor.layout": "inline",
 
   // ============================== //
   //         Editor & Layout        //
@@ -43,8 +41,6 @@
   "editor.renderWhitespace": "selection",
   "editor.scrollBeyondLastLine": false,
   "editor.links": true,
-  "editor.multiCursorModifier": "ctrlCmd",
-  "editor.formatOnSaveMode": "modificationsIfAvailable",
   "editor.bracketPairColorization.enabled": true,
   "editor.guides.bracketPairs": "active",
   "editor.stickyScroll.enabled": true,
@@ -69,7 +65,6 @@
     "editor.formatOnType": false,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
-      "source.fixAll.prettier": "explicit"
     }
   },
   "[javascriptreact]": {
@@ -79,7 +74,6 @@
     "editor.formatOnType": false,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
-      "source.fixAll.prettier": "explicit"
     }
   },
   "[typescript]": {
@@ -89,7 +83,6 @@
     "editor.formatOnType": false,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
-      "source.fixAll.prettier": "explicit"
     }
   },
   "[typescriptreact]": {
@@ -99,7 +92,6 @@
     "editor.formatOnType": false,
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "explicit",
-      "source.fixAll.prettier": "explicit"
     }
   },
   "[json]": {
@@ -172,7 +164,7 @@
   "terminal.integrated.cursorBlinking": true,
   "terminal.integrated.copyOnSelection": true,
   "terminal.integrated.persistentSessionReviveProcess": "never",
-  "terminal.integrated.enableMultiLinePasteWarning": false,
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
 
   // ============================== //
   //        File Management         //
@@ -423,24 +415,6 @@
   "explorer.confirmDelete": false,
   "explorer.compactFolders": false,
 
-  // ============================== //
-  //      IntelliSense & AI         //
-  // ============================== //
-  // Cursor AI
-  "cursor.aiEnabled": true,
-  "cursor.copilotEnabled": true,
-  "cursor.chat.enabled": true,
-  "cursor.chat.showSuggestions": true,
-  "cursor.chat.defaultModel": "auto",
-  "cursor.inlineCompletion.enabled": true,
-  "cursor.inlineCompletion.delay": 200,
-  "cursor.inlineCompletion.triggerAutomatically": true,
-  "cursor.general.disableIndexing": false,
-  "cursor.cpp.disableIndexing": false,
-  "cursor.python.disableIndexing": false,
-  "cursor.typescript.disableIndexing": false,
-  "cursor.codebase.includeNodeModules": false,
-
   // Quick Suggestions
   "editor.quickSuggestions": {
     "other": "inline",
@@ -528,14 +502,11 @@
   "editor.suggest.showColors": true,
   "editor.suggest.showFiles": true,
   "editor.suggest.showReferences": true,
-  "editor.suggest.showCustomColors": true,
   "editor.suggest.showFolders": true,
   "editor.suggest.showTypeParameters": true,
   "editor.suggest.showSnippets": true,
   "editor.suggest.showUsers": true,
   "editor.suggest.showIssues": true,
-
-  "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
 
   // ============================== //
   //    Extension-Specific Config   //
@@ -557,9 +528,6 @@
 
   // Import Cost
   "importCost.showCalculatingDecoration": true,
-  "importCost.largePackageColor": "#d44e40",
-  "importCost.mediumPackageColor": "#7cc36e",
-  "importCost.smallPackageColor": "#7cc36e",
 
   // Better Comments
   "better-comments.tags": [
@@ -635,5 +603,7 @@
   "cursor.composer.textSizeScale": 0.85,
   "cursor.composer.queueMessageDefaultBehavior": "queue",
   "cursor.composer.shouldAllowCustomModes": true,
-  "cursor.diffs.useCharacterLevelDiffs": true
+  "cursor.diffs.useCharacterLevelDiffs": true,
+  "update.releaseTrack": "prerelease",
+  "cSpell.language": "en,pt,pt-BR"
 }
