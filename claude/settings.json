@@ -1,0 +1,7 @@
+{
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); battery_info=''; if [[ $(uname) == 'Darwin' ]] && [[ $(sysctl -n hw.model 2>/dev/null) == *'Book'* ]]; then battery_level=$(pmset -g batt | grep -o '[0-9]*%' | head -1); if [[ -n \"$battery_level\" ]]; then battery_info=\"$battery_level \"; fi; fi; current_dir=$(basename \"$(echo \"$input\" | jq -r '.workspace.current_dir')\"); git_info=''; if git rev-parse --git-dir >/dev/null 2>&1; then branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null); if [[ -n \"$branch\" ]]; then if [[ -z $(git status --porcelain 2>/dev/null) ]]; then git_status=\"$branch\"; else git_status=\"$branch*\"; fi; unpushed=$(git cherry -v 2>/dev/null | wc -l | tr -d ' '); if [[ \"$unpushed\" -gt 0 ]]; then git_info=\" on $git_status ($unpushed unpushed)\"; else git_info=\" on $git_status\"; fi; fi; fi; printf \"%sin %s%s\" \"$battery_info\" \"$current_dir\" \"$git_info\""
+  }
+}

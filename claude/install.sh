@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# Only run on macOS
+if [ "$(uname -s)" != "Darwin" ]; then
+  exit 0
+fi
+
+# Check if Claude command is available
+if ! command -v claude &> /dev/null; then
+    echo "⚠️  claude command not found in PATH"
+    echo "Add Claude to PATH'"
+    exit 1
+fi
+
+echo "› setting up claude configuration..."
+
+# Define paths
+CLAUDE_ROOT_DIR="$HOME/.claude"
+CLAUDE_AGENT_DIR="$HOME/.claude/agents"
+CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
+DOTFILES_DIR="$HOME/.dotfiles/claude"
+
+# Create Claude root directory if it doesn't exist
+mkdir -p "$CLAUDE_ROOT_DIR"
+
+# Create directories in dotfiles if they don't exist
+mkdir -p "$DOTFILES_DIR/agents"
+mkdir -p "$DOTFILES_DIR/commands"
+
+# Remove existing files/links
+[ -f "$CLAUDE_ROOT_DIR/settings.json" ] && rm "$CLAUDE_ROOT_DIR/settings.json"
+[ -L "$CLAUDE_ROOT_DIR/settings.json" ] && rm "$CLAUDE_ROOT_DIR/settings.json"
+[ -f "$CLAUDE_ROOT_DIR/settings.local.json" ] && rm "$CLAUDE_ROOT_DIR/settings.local.json"
+[ -L "$CLAUDE_ROOT_DIR/settings.local.json" ] && rm "$CLAUDE_ROOT_DIR/settings.local.json"
+[ -d "$CLAUDE_AGENT_DIR" ] && rm -rf "$CLAUDE_AGENT_DIR"
+[ -L "$CLAUDE_AGENT_DIR" ] && rm "$CLAUDE_AGENT_DIR"
+[ -d "$CLAUDE_COMMANDS_DIR" ] && rm -rf "$CLAUDE_COMMANDS_DIR"
+[ -L "$CLAUDE_COMMANDS_DIR" ] && rm "$CLAUDE_COMMANDS_DIR"
+
+# Create symlinks
+ln -s "$DOTFILES_DIR/settings.json" "$CLAUDE_ROOT_DIR/settings.json"
+ln -s "$DOTFILES_DIR/settings.local.json" "$CLAUDE_ROOT_DIR/settings.local.json"
+ln -s "$DOTFILES_DIR/agents" "$CLAUDE_AGENT_DIR"
+ln -s "$DOTFILES_DIR/commands" "$CLAUDE_COMMANDS_DIR"
+
+echo "✓ claude symlinks created"
+
+echo ""
+echo "✅ Installation complete!"
+echo "You can start Claude by running 'claude' in your terminal."

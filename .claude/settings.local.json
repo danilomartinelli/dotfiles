@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/danilomartinelli/Library/Application Support/Code/User/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
