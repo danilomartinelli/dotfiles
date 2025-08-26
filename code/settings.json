@@ -341,8 +341,8 @@
   // ========================================
   // WORKBENCH & UI
   // ========================================
-  "workbench.colorTheme": "macOS Modern Dark - Xcode Default",
-  "workbench.iconTheme": "file-icons",
+  "workbench.colorTheme": "Monokai Pro (Filter Octagon)",
+  "workbench.iconTheme": "Monokai Pro (Filter Octagon) Icons",
   "workbench.productIconTheme": "fluent-icons",
   "workbench.startupEditor": "none",
   "workbench.editor.enablePreview": false,
@@ -356,9 +356,6 @@
   "workbench.tree.indent": 16,
   "workbench.tree.renderIndentGuides": "always",
   "workbench.editor.labelFormat": "short",
-
-  // Activity Bar
-  "workbench.activityBar.visible": true,
   "workbench.statusBar.visible": true,
 
   // ========================================
@@ -404,9 +401,16 @@
       "strings": "off",
       "other": "off"
     }
-  }
+  },
+
 
   // ========================================
   // CUSTOM
   // ========================================
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.copilot.chat.agent.autoFix": false,
+    "github.copilot.chat.agent.runTasks": false,
+    "github.copilot.chat.codeGeneration.useInstructionFiles": false,
+    "github.copilot.chat.customInstructionsInSystemMessage": false,
+    "github.copilot.chat.localeOverride": "pt-br"
 }

@@ -65,7 +65,7 @@ extensions=(
   "codezombiech.gitignore"
   "csstools.postcss"
   "dbaeumer.vscode-eslint"
-  "davidbwaters.macos-modern-theme"
+  "monokai.theme-monokai-pro-vscode"
   "docker.docker"
   "eamodio.gitlens"
   "esbenp.prettier-vscode"

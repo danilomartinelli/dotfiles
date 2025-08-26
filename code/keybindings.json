@@ -44,5 +44,13 @@
     {
       "key": "cmd+k cmd+c",
       "command": "claude.openChat"
+    },
+    {
+        "key": "shift+enter",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+            "text": "\\\r\n"
+        },
+        "when": "terminalFocus"
     }
 ]
