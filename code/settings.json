@@ -41,7 +41,7 @@
     "source.organizeImports": "explicit",
     "source.sortImports": "never"
   },
-  
+
   // Fallback - usa formatter nativo quando não há extensão
   "editor.defaultFormatter": null,
   "javascript.format.enable": true,
@@ -498,7 +498,6 @@
       "iconColour": "#FFC107"
     },
     "WARNING": {
-      "icon": "warning",
       "foreground": "#000000",
       "background": "#FF9800",
       "iconColour": "#FF9800"
@@ -670,7 +669,7 @@
   "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
   "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
   "javascript.inlayHints.parameterNames.enabled": "literals",
-  
+
   // Configurações de formatação nativa (fallback quando não há Prettier)
   "javascript.format.semicolons": "remove",
   "typescript.format.semicolons": "remove",
