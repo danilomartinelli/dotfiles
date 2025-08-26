@@ -7,14 +7,14 @@
   "editor.fontLigatures": true,
   "editor.lineHeight": 1.6,
   "editor.letterSpacing": 0.5,
-  
+
   // Cursor & Navigation
   "editor.cursorBlinking": "smooth",
   "editor.cursorSmoothCaretAnimation": "on",
   "editor.smoothScrolling": true,
   "editor.stickyScroll.enabled": true,
   "editor.stickyTabStops": true,
-  
+
   // Auto-complete & IntelliSense
   "editor.suggestSelection": "first",
   "editor.acceptSuggestionOnCommitCharacter": true,
@@ -31,7 +31,7 @@
   "editor.wordBasedSuggestions": "matchingDocuments",
   "editor.parameterHints.enabled": true,
   "editor.inlineSuggest.enabled": true,
-  
+
   // Formatação & Linting
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
@@ -41,7 +41,7 @@
     "source.organizeImports": "explicit",
     "source.sortImports": "explicit"
   },
-  
+
   // Visual & UI
   "editor.minimap.enabled": true,
   "editor.minimap.renderCharacters": false,
@@ -54,7 +54,7 @@
   "editor.linkedEditing": true,
   "editor.hover.delay": 300,
   "editor.hover.sticky": true,
-  
+
   // Produtividade
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
@@ -68,11 +68,11 @@
   "editor.copyWithSyntaxHighlighting": true,
   "editor.largeFileOptimizations": true,
   "editor.maxTokenizationLineLength": 10000,
-  
+
   // Find & Replace
   "editor.find.autoFindInSelection": "multiline",
   "editor.find.seedSearchStringFromSelection": "selection",
-  
+
   // ========================================
   // FILES & WORKSPACE
   // ========================================
@@ -82,7 +82,7 @@
   "files.trimFinalNewlines": true,
   "files.insertFinalNewline": true,
   "files.encoding": "utf8",
-  
+
   // File Nesting (antfu.file-nesting)
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
@@ -97,7 +97,7 @@
     "*.tsx": "${capture}.css, ${capture}.module.css",
     "*.jsx": "${capture}.css, ${capture}.module.css"
   },
-  
+
   // Exclusões
   "files.exclude": {
     "**/.git": false,
@@ -108,7 +108,7 @@
     "**/.next": true,
     "**/.turbo": true
   },
-  
+
   "search.exclude": {
     "**/node_modules": true,
     "**/dist": true,
@@ -117,7 +117,7 @@
     "**/coverage": true,
     "**/.git": true
   },
-  
+
   // ========================================
   // TERMINAL
   // ========================================
@@ -133,7 +133,7 @@
   "terminal.integrated.env.osx": {
     "FIG_NEW_SESSION": "1"
   },
-  
+
   // ========================================
   // GIT & CONTROLE DE VERSÃO
   // ========================================
@@ -143,22 +143,22 @@
   "git.postCommitCommand": "push",
   "git.openRepositoryInParentFolders": "always",
   "git.mergeEditor": true,
-  
+
   // GitLens
   "gitlens.hovers.currentLine.over": "line",
   "gitlens.codeLens.enabled": false,
   "gitlens.currentLine.enabled": true,
   "gitlens.currentLine.pullRequests.enabled": false,
   "gitlens.statusBar.enabled": false,
-  
+
   // ========================================
   // EXTENSÕES ESPECÍFICAS
   // ========================================
-  
+
   // Claude Code
   "claude.api.enableCaching": true,
   "claude.experimental.enableMultilineCompletions": true,
-  
+
   // ESLint
   "eslint.validate": [
     "javascript",
@@ -169,7 +169,7 @@
   "eslint.format.enable": true,
   "eslint.lintTask.enable": true,
   "eslint.codeActionsOnSave.mode": "problems",
-  
+
   // Prettier
   "prettier.semi": false,
   "prettier.singleQuote": true,
@@ -197,7 +197,7 @@
   "[css]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  
+
   // Tailwind CSS
   "tailwindCSS.includeLanguages": {
     "typescript": "javascript",
@@ -209,7 +209,7 @@
     ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
   ],
   "tailwindCSS.emmetCompletions": true,
-  
+
   // Todo Tree
   "todo-tree.general.tags": [
     "TODO",
@@ -257,12 +257,12 @@
       "iconColour": "cyan"
     }
   },
-  
+
   // Turbo Console Log
   "turboConsoleLog.logMessagePrefix": "🔥",
   "turboConsoleLog.includeFileNameAndLineNum": true,
   "turboConsoleLog.delimiterInsideMessage": " | ",
-  
+
   // Path Intellisense
   "path-intellisense.autoSlashAfterDirectory": true,
   "path-intellisense.extensionOnImport": false,
@@ -271,33 +271,33 @@
     "@": "${workspaceFolder}/src",
     "~": "${workspaceFolder}/src"
   },
-  
+
   // NPM Intellisense
   "npm-intellisense.importQuotes": "'",
   "npm-intellisense.importLinebreak": ";",
   "npm-intellisense.importDeclarationType": "const",
-  
+
   // REST Client
   "rest-client.enableTelemetry": false,
   "rest-client.timeoutInMilliseconds": 10000,
   "rest-client.followredirect": true,
   "rest-client.previewResponseInUntitledDocument": false,
-  
+
   // Jest
   "jest.autoRun": {
     "watch": false,
     "onSave": "test-file"
   },
   "jest.showCoverageOnLoad": true,
-  
+
   // Live Server
   "liveServer.settings.donotShowInfoMsg": true,
   "liveServer.settings.donotVerifyTags": true,
-  
+
   // Playwright
   "playwright.reuseBrowser": true,
   "playwright.showTrace": true,
-  
+
   // Error Lens
   "errorLens.enabled": true,
   "errorLens.fontSize": "12",
@@ -307,17 +307,17 @@
   "errorLens.enabledDiagnosticLevels": ["error", "warning"],
   "errorLens.excludeBySource": ["eslint(prettier/prettier)"],
   "errorLens.delay": 100,
-  
+
   // Import Cost
   "importCost.showCalculatingDecoration": true,
   "importCost.largePackageColor": "#d44e40",
   "importCost.mediumPackageColor": "#b8860b",
   "importCost.smallPackageColor": "#7cc36e",
-  
+
   // Pretty TypeScript Errors
   "pretty-ts-errors.showFullErrorMessage": false,
   "pretty-ts-errors.errorForeground": "#ff6464",
-  
+
   // Remote Development
   "remote.SSH.defaultExtensions": [
     "esbenp.prettier-vscode",
@@ -325,19 +325,19 @@
   ],
   "remote.SSH.connectTimeout": 30,
   "remote.SSH.maxReconnectionAttempts": 6,
-  
+
   // Docker
   "docker.showStartPage": false,
   "docker.dockerComposeBuild": true,
-  
+
   // Kubernetes
   "vs-kubernetes": {
     "vs-kubernetes.crd-code-completion": "enabled"
   },
-  
+
   // AWS Toolkit
   "aws.telemetry": false,
-  
+
   // ========================================
   // WORKBENCH & UI
   // ========================================
@@ -356,18 +356,18 @@
   "workbench.tree.indent": 16,
   "workbench.tree.renderIndentGuides": "always",
   "workbench.editor.labelFormat": "short",
-  
+
   // Activity Bar
   "workbench.activityBar.visible": true,
   "workbench.statusBar.visible": true,
-  
+
   // ========================================
   // SEGURANÇA & TELEMETRIA
   // ========================================
   "security.workspace.trust.untrustedFiles": "open",
   "telemetry.telemetryLevel": "off",
   "redhat.telemetry.enabled": false,
-  
+
   // ========================================
   // TYPESCRIPT & JAVASCRIPT
   // ========================================
@@ -378,7 +378,7 @@
   "javascript.suggest.autoImports": true,
   "typescript.tsserver.log": "off",
   "javascript.validate.enable": false,
-  
+
   // ========================================
   // EMMET
   // ========================================
@@ -388,7 +388,7 @@
   },
   "emmet.showExpandedAbbreviation": "always",
   "emmet.triggerExpansionOnTab": true,
-  
+
   // ========================================
   // MARKDOWN
   // ========================================
