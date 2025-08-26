@@ -8,7 +8,7 @@ fi
 echo "› setting up code configuration"
 
 # Define paths
-CODE_DIR="$HOME/Library/Library/Application Support/Code/User"
+CODE_DIR="$HOME/Library/Application Support/Code/User"
 DOTFILES_CODE="$HOME/.dotfiles/code"
 
 # Create Code User directory if it doesn't exist
