@@ -1,10 +1,10 @@
 #!/bin/sh
 
 DOTFILES_CLAUDE_CODE="$HOME/.dotfiles/claude-code"
-CLAUDE_CODE_CONFIG_FILE="$HOME/.config/claude-code/config.json"
+CLAUDE_CODE_CONFIG_FILE="$HOME/.claude/settings.local.json"
 
 # Create config directory if it doesn't exist
-mkdir -p "$HOME/.config/claude-code"
+mkdir -p "$HOME/.claude"
 
 # Remove existing files/links
 [ -f "$CLAUDE_CODE_CONFIG_FILE" ] && rm "$CLAUDE_CODE_CONFIG_FILE"

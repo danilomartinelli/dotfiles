@@ -30,20 +30,20 @@ brew 'wget'          		# File download utility
 cask 'android-studio'         # Android development IDE
 cask 'apidog'                 # API development and testing tool
 cask 'archiver'               # File archiving and compression tool
-cask 'claude' 				  # Claude desktop client
+cask 'claude' 				  			# Claude desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'cursor'                 # AI-powered code editor
 cask 'figma'                  # Design tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
-cask 'font-maple-mono'		  # Maple Mono font for terminal (Italic)
+cask 'font-maple-mono'		  	# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
-cask 'imazing' 				  # iOS device management tool
+cask 'imazing' 				  			# iOS device management tool
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
-cask 'obsidian'               # Knowledge management and note-taking
+cask 'notion'                 # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
-cask 'pdf-expert' 			  # PDF reader and editor
+cask 'pdf-expert' 			  		# PDF reader and editor
 cask 'protonvpn'              # VPN client
 cask 'todoist-app'            # Task management tool
 cask 'raycast'                # Spotlight alternative with extensions

@@ -1,0 +1,15 @@
+{
+    "permissions": {
+        "allow": [
+        "Bash(osascript:*)",
+        "Bash(brew install:*)",
+        "Bash(brew reinstall:*)",
+        "Bash(brew update:*)"
+        ],
+        "deny": [],
+        "ask": [
+            "Bash(rm:*)",
+            "Bash(brew uninstall:*)"
+        ]
+    }
+}
