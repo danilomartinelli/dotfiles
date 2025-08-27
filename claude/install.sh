@@ -30,8 +30,6 @@ mkdir -p "$DOTFILES_DIR/commands"
 # Remove existing files/links
 [ -f "$CLAUDE_ROOT_DIR/settings.json" ] && rm "$CLAUDE_ROOT_DIR/settings.json"
 [ -L "$CLAUDE_ROOT_DIR/settings.json" ] && rm "$CLAUDE_ROOT_DIR/settings.json"
-[ -f "$CLAUDE_ROOT_DIR/settings.local.json" ] && rm "$CLAUDE_ROOT_DIR/settings.local.json"
-[ -L "$CLAUDE_ROOT_DIR/settings.local.json" ] && rm "$CLAUDE_ROOT_DIR/settings.local.json"
 [ -d "$CLAUDE_AGENT_DIR" ] && rm -rf "$CLAUDE_AGENT_DIR"
 [ -L "$CLAUDE_AGENT_DIR" ] && rm "$CLAUDE_AGENT_DIR"
 [ -d "$CLAUDE_COMMANDS_DIR" ] && rm -rf "$CLAUDE_COMMANDS_DIR"
@@ -39,7 +37,6 @@ mkdir -p "$DOTFILES_DIR/commands"
 
 # Create symlinks
 ln -s "$DOTFILES_DIR/settings.json" "$CLAUDE_ROOT_DIR/settings.json"
-ln -s "$DOTFILES_DIR/settings.local.json" "$CLAUDE_ROOT_DIR/settings.local.json"
 ln -s "$DOTFILES_DIR/agents" "$CLAUDE_AGENT_DIR"
 ln -s "$DOTFILES_DIR/commands" "$CLAUDE_COMMANDS_DIR"
 
