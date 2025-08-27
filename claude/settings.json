@@ -25,9 +25,5 @@
   },
   "enableAllProjectMcpServers": true,
   "autoUpdates": true,
-  "preferredNotifChannel": "ghostty",
-  "statusLine": {
-    "type": "command",
-    "command": "input=$(cat); current_dir=$(echo \"$input\" | jq -r '.workspace.current_dir'); model=$(echo \"$input\" | jq -r '.model.display_name'); git_info=''; if [ -d \"$current_dir/.git\" ]; then cd \"$current_dir\" && branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo 'detached'); status=$(git status --porcelain 2>/dev/null); if [ -z \"$status\" ]; then git_info=\" on \\033[1;32m$branch\\033[0m\"; else git_info=\" on \\033[1;31m$branch\\033[0m\"; fi; unpushed=$(git cherry -v origin/$branch 2>/dev/null | wc -l | xargs); if [ \"$unpushed\" -gt 0 ]; then git_info=\"$git_info with \\033[1;35m$unpushed unpushed\\033[0m\"; fi; fi; printf \"\\033[1;36m$(basename \"$current_dir\")\\033[0m$git_info | $model\""
-  }
+  "preferredNotifChannel": "ghostty"
 }
