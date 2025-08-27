@@ -45,7 +45,6 @@ cask 'notion'                 # Knowledge management and note-taking
 cask 'orbstack'               # Docker Desktop alternative for macOS
 cask 'pdf-expert' 			  		# PDF reader and editor
 cask 'protonvpn'              # VPN client
-cask 'todoist-app'            # Task management tool
 cask 'raycast'                # Spotlight alternative with extensions
 cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
