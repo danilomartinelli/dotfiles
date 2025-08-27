@@ -271,12 +271,27 @@
   "github.copilot.enable": {
     "*": true,
     "markdown": true,
-    "plaintext": false
+    "plaintext": true,
+    "scminput": true
   },
   "github.copilot.advanced": {
     "agent.enabled": false,
     "authProvider": "github"
   },
+  "github.copilot.chat.agent.thinkingTool": true,
+  "github.copilot.chat.editor.temporalContext.enabled": true,
+  "github.copilot.chat.edits.temporalContext.enabled": true,
+  "github.copilot.chat.enableRetryAfterFilteredResponse": true,
+  "github.copilot.chat.generateTests.codeLens": true,
+  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
+  "github.copilot.chat.languageContext.inline.typescript.enabled": true,
+  "github.copilot.chat.languageContext.typescript.enabled": true,
+  "github.copilot.chat.newWorkspace.useContext7": true,
+  "github.copilot.chat.notebook.followCellExecution.enabled": true,
+  "github.copilot.chat.scopeSelection": true,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.chat.codesearch.enabled": true,
+  "chat.mcp.autostart": "newAndOutdated",
 
   // ESLint - OTIMIZADO COM FALLBACK
   "eslint.validate": [
