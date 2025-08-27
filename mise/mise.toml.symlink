@@ -44,7 +44,6 @@ rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
 "npm:vercel" = "latest"
 "npm:task-master-ai" = "latest"
 "npm:nx" = "latest"
-"npm:@anthropic-ai/claude-code" = "latest"
 
 # General Tasks
 

@@ -301,7 +301,7 @@
     "typescriptreact",
     "vue",
     "html",
-    "markdown",
+    // "markdown",
     "json",
     "jsonc"
   ],
@@ -315,8 +315,8 @@
     "typescript",
     "typescriptreact",
     "html",
-    "vue",
-    "markdown"
+    "vue"
+    // "markdown"
   ],
   "eslint.quiet": false,
 
@@ -394,7 +394,7 @@
     "editor.formatOnSave": true
   },
   "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.defaultFormatter": "DavidAnson.vscode-markdownlint",
     "editor.formatOnSave": true,
     "editor.unicodeHighlight.ambiguousCharacters": false,
     "editor.unicodeHighlight.invisibleCharacters": false,

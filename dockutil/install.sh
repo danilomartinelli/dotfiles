@@ -6,10 +6,10 @@ echo "› configuring dock (minimal)"
 # Clear everything
 dockutil --remove all --no-restart
 
-# Add Zen
-dockutil --add "/Applications/Zen.app" --no-restart
+# Add Arc
+dockutil --add "/Applications/Arc.app" --no-restart
 
-# Add Cursor
+# Add Visual Studio Code
 dockutil --add "/Applications/Visual Studio Code.app" --no-restart
 
 # Add TablePlus

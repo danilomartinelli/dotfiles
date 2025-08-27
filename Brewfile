@@ -28,6 +28,7 @@ brew 'wget'          		# File download utility
 
 # Desktop applications
 cask 'android-studio'         # Android development IDE
+cask 'arc'                    # Privacy-focused browser
 cask 'apidog'                 # API development and testing tool
 cask 'archiver'               # File archiving and compression tool
 cask 'claude' 				  			# Claude desktop client
@@ -50,7 +51,6 @@ cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
 cask 'tableplus'              # Database management tool
-cask 'zen'                    # Privacy-focused browser
 
 # Mac App Store applications
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
