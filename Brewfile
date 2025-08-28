@@ -33,7 +33,6 @@ cask 'apidog'                 # API development and testing tool
 cask 'archiver'               # File archiving and compression tool
 cask 'claude' 				  			# Claude desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
-cask 'cursor'                 # AI-powered code editor
 cask 'figma'                  # Design tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'		  	# Maple Mono font for terminal (Italic)
