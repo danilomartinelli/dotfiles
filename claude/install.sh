@@ -9,7 +9,7 @@ fi
 if ! command -v claude &> /dev/null; then
     echo "⚠️  claude command not found in PATH"
     echo "Adding Claude to PATH..."
-    curl -fsSL claude.ai/install.sh | bash
+    curl -fsSL https://claude.ai/install.sh | bash -s latest
 fi
 
 echo "› setting up claude configuration..."
