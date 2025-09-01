@@ -6,7 +6,6 @@ Include ~/.orbstack/ssh/config
 # Does NOT change ABOVE this line
 # SSH Configuration - Dotfiles's Global Settings
 
-# Global defaults
 Host *
     AddKeysToAgent yes
     UseKeychain yes

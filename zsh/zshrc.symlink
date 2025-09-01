@@ -52,3 +52,4 @@ bindkey "^[[B" down-line-or-beginning-search # Down
 # Task Master aliases
 alias tm='task-master'
 alias taskmaster='task-master'
+
