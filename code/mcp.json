@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "claude-code-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@steipete/claude-code-mcp@latest"],
+      "env": {
+        "CLAUDE_CLI_NAME": "/Users/danilomartinelli/.local/bin/claude"
+      }
+    }
+  }
+}

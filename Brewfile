@@ -2,7 +2,6 @@ cask_args appdir: '/Applications'
 
 # Command line tools
 brew 'awscli'      			# AWS Command Line Interface
-brew 'cloudflared' 			# Cloudflare tunnel client
 brew 'coreutils'     		# GNU File, Shell, and Text utilities
 brew 'dockutil'      		# Command line utility for managing macOS dock items
 brew 'duti'					 		# Set default applications for file types
