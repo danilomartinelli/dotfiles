@@ -53,3 +53,4 @@ bindkey "^[[B" down-line-or-beginning-search # Down
 alias tm='task-master'
 alias taskmaster='task-master'
 
+export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"

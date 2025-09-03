@@ -9,13 +9,17 @@ Include ~/.orbstack/ssh/config
 Host *
     AddKeysToAgent yes
     UseKeychain yes
-    IdentitiesOnly yes
+    # IdentitiesOnly yes
     ServerAliveInterval 60
-    ServerAliveCountMax 10
-    Compression yes
+    ServerAliveCountMax 3
+    # Compression yes
     ControlMaster auto
-    ControlPath ~/.ssh/control-%r@%h:%p
+    ControlPath ~/.ssh/sockets/%r@%h-%p
     ControlPersist 600
+    ConnectTimeout 10
+    TCPKeepAlive yes
+    ForwardX11 no
+    StrictHostKeyChecking accept-new
 
 # Include local configurations if needed (not tracked by git)
 Include ~/.ssh/config_local

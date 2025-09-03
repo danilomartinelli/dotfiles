@@ -219,7 +219,8 @@
     "**/__pycache__": true,
     "**/*.pyc": true,
     "**/logs": true,
-    "**/*.log": true
+    "**/*.log": true,
+    "**/.nx": true
   },
 
   "search.exclude": {
@@ -710,5 +711,6 @@
   // ========================================
   // MISC
   // ========================================
-  "docker.extension.enableComposeLanguageServer": false
+  "docker.extension.enableComposeLanguageServer": false,
+  "explorer.confirmPasteNative": false
 }
