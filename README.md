@@ -1,379 +1,387 @@
-IT IS A WORK IN PROGRESS REPOSITORY
+# danilomartinelli's dotfiles
 
-# [WIP] danilomartinelli dotfiles
+> Personal macOS development environment configuration for JavaScript/TypeScript, DevOps, and infrastructure management.
 
-My MacOS Environment Setup as Software Engineer at Witek - Focused on JavaScript/TypeScript development, DevOps, and infrastructure management.
+## 🚀 Quick Start
 
-## Install
+### Prerequisites
 
-Run this:
+- macOS (tested on Darwin 24.5.0)
+- Git
+- Command Line Tools for Xcode (`xcode-select --install`)
+
+### Installation
 
 ```bash
+# Clone the repository
 git clone https://github.com/danilomartinelli/dotfiles.git ~/.dotfiles
+
+# Navigate to dotfiles
 cd ~/.dotfiles
+
+# Run the bootstrap script (first-time setup)
 script/bootstrap
+
+# This will:
+# - Set up git configuration (prompts for name/email)
+# - Create symlinks for all config files
+# - Install Homebrew and all dependencies
+# - Configure macOS defaults
 ```
 
-This will symlink the appropriate files in `.dotfiles` to your home directory. Everything is configured and tweaked within `~/.dotfiles`.
+### Quick Update Command
 
-## Configuration Structure
+```bash
+# Update dotfiles, brew packages, and run all installers
+bin/dot
+```
 
-### Main Configuration (`zsh/zshrc.symlink`)
+## 📂 Repository Structure
 
-The heart of the setup is `zsh/zshrc.symlink`, which automatically loads all `.zsh` files from the dotfiles directory. Here's how it works:
+```text
+.dotfiles/
+├── bin/                 # Custom executable scripts
+├── functions/           # ZSH functions (auto-loaded)
+├── */                   # Topic directories
+│   ├── install.sh       # Installation script for the topic
+│   ├── *.symlink        # Files to be symlinked to ~
+│   ├── *.zsh           # ZSH configs (auto-loaded)
+│   ├── path.zsh        # PATH modifications
+│   ├── aliases.zsh     # Command aliases
+│   └── completion.zsh  # Shell completions
+├── Brewfile            # Homebrew packages and apps
+└── script/             # Setup and management scripts
+```
 
-**Environment Variables:**
-- `$ZSH` - Points to your dotfiles directory (`~/.dotfiles`)
-- `$PROJECTS` - Your main projects folder (`~/Code`) for quick navigation
+## 🛠 Installed Tools
 
-**Loading Order:**
-1. **Path files** (`*/path.zsh`) - Load first to set up PATH
-2. **Main files** (`*.zsh`) - Core functionality and aliases  
-3. **Completion files** (`*/completion.zsh`) - Load last for autocomplete
+### Command Line Tools (via Homebrew)
 
-### Secret Environment Variables (`.localrc`)
+| Tool | Description |
+|------|-------------|
+| `awscli` | AWS Command Line Interface |
+| `coreutils` | GNU File, Shell, and Text utilities |
+| `dockutil` | Manage macOS dock items |
+| `duti` | Set default applications for file types |
+| `git` & `git-lfs` | Version control with large file support |
+| `gh` | GitHub CLI |
+| `helm` & `helmfile` | Kubernetes package management |
+| `imagemagick` | Image manipulation |
+| `jq` & `yq` | JSON/YAML processors |
+| `kubernetes-cli` & `kustomize` | Kubernetes tools |
+| `mas` | Mac App Store CLI |
+| `mise` | Runtime version manager |
+| `pandoc` | Document converter |
+| `spaceman-diff` | Visual diff for images |
+| `terragrunt` | Terraform wrapper |
+| `vim` | Text editor |
+| `watchman` | File watching service |
+| `wget` | File download utility |
+
+### Desktop Applications
+
+| Application | Description |
+|------------|-------------|
+| **Development** |  |
+| Android Studio | Android development IDE |
+| Xcode | Apple development IDE |
+| Ghostty | Modern terminal emulator |
+| OrbStack | Docker Desktop alternative |
+| Lens | Kubernetes IDE |
+| TablePlus | Database management |
+| Ngrok | Secure tunnels to localhost |
+| **Productivity** |  |
+| Arc | Privacy-focused browser |
+| Claude | AI assistant desktop client |
+| Notion | Knowledge management |
+| Raycast | Spotlight replacement with extensions |
+| Rectangle Pro | Window management |
+| Paste | Clipboard manager |
+| **Design & Media** |  |
+| Figma | Design tool |
+| CleanShot | Screenshot and recording |
+| PDF Expert | PDF editor |
+| **Communication** |  |
+| Readdle Spark | Smart email client |
+| **Security** |  |
+| Bitwarden | Password manager |
+| ProtonVPN | VPN client |
+| Yubico Authenticator | 2FA with YubiKey |
+| **Other** |  |
+| Spotify | Music streaming |
+| Kindle | eBook reader |
+| Archiver | File compression |
+| iMazing | iOS device management |
+| Apidog | API development and testing |
+
+### Development Runtimes (via Mise)
+
+Mise automatically manages versions for:
+
+- **Node.js** (LTS) with Bun, npm, pnpm, yarn
+- **Python** (3.11) with ruff, uv
+- **Go** (1.21)
+- **Rust** (1.83.0)
+- **Elixir** (1.18) with Erlang (27)
+- **Terraform** (latest)
+
+Global npm packages:
+
+- `eas-cli` - Expo Application Services
+- `vercel` - Vercel CLI
+- `nx` - Monorepo tool
+
+## ⌨️ Aliases & Functions
+
+### Git Aliases
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `gl` | `git pull --prune` | Pull with pruning |
+| `glog` | Enhanced git log | Pretty git log with graph |
+| `gp` | `git push origin HEAD` | Push current branch |
+| `gd` | `git diff --color` | Colored diff |
+| `gc` | `git commit -v` | Commit with verbose |
+| `gca` | `git commit -v -a` | Commit all with verbose |
+| `gco` | `git checkout` | Checkout |
+| `gcb` | `git copy-branch-name` | Copy current branch name |
+| `gb` | `git branch` | List branches |
+| `gs` | `git status -sb` | Short status |
+| `gac` | `git add -A && git commit -v` | Add all and commit |
+| `ge` | `git-edit-new` | Edit new files |
+
+### System Aliases
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `reload!` | `. ~/.zshrc` | Reload shell configuration |
+| `cls` | `clear` | Clear screen |
+| `ls` | `gls -F --color` | Colorized ls with indicators |
+| `l` | `gls -lAh --color` | Long format with hidden files |
+| `ll` | `gls -l --color` | Long format |
+| `la` | `gls -A --color` | All files |
+
+### Docker Aliases
+
+| Alias | Command |
+|-------|---------|
+| `d` | `docker` |
+| `dc` | `docker-compose` |
+
+### Platform-Specific
+
+| Alias | Command | Description |
+|-------|---------|-------------|
+| `ios` | Opens iOS Simulator | Launch iOS Simulator |
+| `android` | `emulator -list-avds \| head -1 \| xargs emulator -avd` | Launch Android emulator |
+| `sshclean` | `rm -f ~/.ssh/sockets/*` | Clean SSH sockets |
+
+### Custom Functions
+
+| Function | Description | Usage |
+|----------|-------------|-------|
+| `c` | Jump to project directory | `c project-name` |
+| `extract` | Extract any archive file | `extract file.zip` |
+| `gf` | Switch git branch | `gf branch-name` |
+| `use_kubeconfig` | Switch Kubernetes config | `use_kubeconfig config-name` |
+| `use_aws_profile` | Switch AWS profile | `use_aws_profile profile-name` |
+| `use_vercel` | Load Vercel env | `use_vercel` |
+| `run_vercel` | Run with Vercel env | `run_vercel command` |
+
+## 🔐 Secret Management
+
+### Local Secrets (.localrc)
 
 Store sensitive environment variables in `~/.localrc` (not tracked in git):
 
 ```bash
-# ~/.localrc
-export AWS_ACCESS_KEY_ID="your-aws-key"
-export GITHUB_TOKEN="your-github-token"
-export DATABASE_URL="your-db-connection"
+# Create your local configuration file
+touch ~/.localrc
+
+# Add your secrets
+echo 'export GITHUB_TOKEN="your-token"' >> ~/.localrc
+echo 'export AWS_ACCESS_KEY_ID="your-key"' >> ~/.localrc
+echo 'export DATABASE_URL="your-connection-string"' >> ~/.localrc
 ```
 
-### Project Organization
+This file is automatically sourced by `.zshrc` on shell startup.
 
-Create your main projects directory:
-```bash
-mkdir -p ~/Code
-```
+### Bitwarden Secrets (BWS)
 
-Now you can quickly jump to projects with tab completion: `c [tab]`
+The dotfiles include Bitwarden Secrets integration for centralized secret management:
 
-### Topical Organization
+1. **Setup**: The `bws` binary is included in `bin/`
+2. **Auto-loading**: Secrets are automatically loaded on shell startup via `bws/env.zsh`
+3. **Manual reload**: Run `load_bws_env` to refresh secrets
 
-Each topic gets its own directory with specific files:
-
-```
-topic/
-├── *.zsh          # Any files ending in .zsh get loaded into your environment
-├── path.zsh       # Any file named path.zsh is loaded first and expected to setup $PATH
-├── completion.zsh # Any file named completion.zsh is loaded last for autocomplete
-└── install.sh     # Any file named install.sh is executed when you run script/install
-```
-
-**Example topics in this dotfiles:**
-- `zsh/` - Shell configuration and aliases
-- `git/` - Git aliases and configuration  
-- `macos/` - macOS system defaults
-- `homebrew/` - Package management
-- `vscode/` - Editor settings and extensions
-
-### Better History Navigation
-
-The main config includes enhanced history search:
-- **Up/Down arrows** - Search through history based on current input
-- **Shared history** - Commands shared across all terminal sessions
-- **Timestamps** - Track when commands were executed
-- **Deduplication** - No duplicate commands in history
-
-### Maintenance
-
-`dot` is a simple script that installs some dependencies, sets sane macOS defaults, and so on. Tweak this script, and occasionally run `dot` from time to time to keep your environment fresh and up-to-date. You can find this script in `bin/`.
-
-## Features
-
-- **Complete development environment** with modern tools and workflows
-- **zsh with plugins** for enhanced productivity ([See Components/zsh section](#zsh))
-  - matches case insensitive for lowercase
-  - fix pasting with tabs doesn't perform completion
-  - don't nice background tasks
-  - allow functions to have local options
-  - allow functions to have local traps
-  - share history between sessions
-  - add timestamps to history
-  - adds history incrementally and share it across sessions
-  - don't record dupes in history
-  - don't expand aliases _before_ completion has finished
-- **VS Code optimized** for JavaScript/TypeScript and DevOps workflows
-- **Homebrew bundle** for automated software installation
-- **Security-focused** with VPN, password management, and 2FA
-
-## Software Stack
-
-### Development Tools
-- **VS Code** - Primary code editor with 26+ extensions
-- **Android Studio** - Mobile development
-- **Figma** - Design and prototyping
-- **GitKraken** - Git GUI client
-- **TablePlus** - Database management
-
-### DevOps & Infrastructure
-- **Docker** (OrbStack) - Container management
-- **Kubernetes** (Lens, Helm, Helmfile) - Container orchestration
-- **AWS CLI** - Cloud infrastructure
-- **Cloudflare Tunnel** - Secure connections
-- **ngrok** - Local tunnel exposure
-
-### Command Line Tools
-- **mise** - Runtime version manager (replaces asdf)
-- **git + git-lfs** - Version control
-- **jq** - JSON processor
-- **imagemagick** - Image manipulation
-- **wget** - File downloads
-
-### Productivity Apps
-- **Raycast** - Enhanced Spotlight with extensions
-- **Rectangle Pro** - Window management
-- **CleanShot** - Screenshots and screen recording
-- **Fantastical** - Calendar management
-- **Todoist** - Task management
-- **Obsidian** - Knowledge management
-
-### Communication & Organization
-- **Readdle Spark** - Email client
-- **WhatsApp** - Messaging
-- **Cardhop** - Contact management
-- **Bartender** - Menu bar organization
-
-### Security & Privacy
-- **Bitwarden** - Password manager
-- **ProtonVPN** - VPN client
-- **Yubico Authenticator** - 2FA with YubiKey
-- **Zen Browser** - Privacy-focused browsing
-
-## VS Code Extensions
-
-Optimized setup with 26 extensions for JavaScript/TypeScript development:
-
-### Essential Development
-- **ESLint** + **Prettier** - Code quality and formatting
-- **TypeScript Next** - Latest TypeScript features  
-- **Console Ninja** - Advanced debugging
-- **Error Lens** - Inline error highlighting
-
-### Git Integration
-- **GitLens** - Git supercharged
-- **Git Blame** - Inline annotations
-
-### Productivity Enhancers
-- **Path IntelliSense** - File path autocomplete
-- **NPM IntelliSense** - Package autocomplete
-- **Import Cost** - Bundle size visualization
-- **Auto Close/Rename Tag** - HTML/XML helpers
-
-### Framework Support
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Native Tools** - Mobile development
-- **PostCSS** - CSS preprocessing
-
-### DevOps & Infrastructure
-- **Docker** - Container support
-- **Remote Development** - SSH, containers, WSL
-- **YAML** + **TOML** - Configuration files
-- **SQLTools** - Database management (MySQL, PostgreSQL, SQLite)
-
-## CheatSheet
-
-### Navigation
-| Command   | Description                                    |
-| --------- | ---------------------------------------------- |
-| `c [tab]` | Quick navigation to projects in `~/Code`      |
-| `..`      | Go up one directory                            |
-| `...`     | Go up two directories                          |
-
-### Shell Management  
-| Alias     | Command      | Description                                    |
-| --------- | ------------ | ---------------------------------------------- |
-| `reload!` | `. ~/.zshrc` | Reload all zsh settings in the current session |
-| `cls`     | `clear`      | Clear the session buffer                       |
-
-### Git Shortcuts
-| Alias     | Command              | Description                     |
-| --------- | -------------------- | ------------------------------- |
-| `gs`      | `git status`         | Check repository status         |
-| `ga`      | `git add`            | Stage files                     |
-| `gc`      | `git commit`         | Commit changes                  |
-| `gp`      | `git push`           | Push to remote                  |
-| `gl`      | `git pull`           | Pull from remote                |
-
-### Project Management
-```bash
-# Quick project setup
-cd ~/Code
-mkdir my-new-project
-cd my-new-project
-git init
-
-# Navigate from anywhere
-c my-new-project  # Tab completion works!
-```
-
-### Environment Variables
-```bash
-# Check current environment
-echo $ZSH          # ~/.dotfiles
-echo $PROJECTS     # ~/Code  
-
-# Add secrets to ~/.localrc (not tracked)
-echo 'export API_KEY="secret"' >> ~/.localrc
-source ~/.localrc
-```
-
-## Components
-
-### zsh
-
-Enhanced shell experience with automatic loading system:
-
-- **[zsh-better-history](https://coderwall.com/p/jpj_6q/zsh-better-history-searching-with-arrow-keys)** - Smart history navigation
-- **Case insensitive matching** for lowercase input
-- **Tab completion fixes** - No unwanted expansions during paste
-- **Session history sharing** - Commands available across all terminals
-- **Timestamped history** - Track when commands were executed
-- **Incremental updates** - History saved immediately, not on exit
-- **Duplicate prevention** - Clean, organized command history
-
-### git
-
-Git workflow optimization:
-- **Custom aliases** for common operations
-- **Enhanced git status** and log formatting
-- **Branch management** helpers
-- **Integration with GitLens** and GitKraken
-
-### homebrew  
-
-Package management automation:
-- **Brewfile** with 60+ packages and applications
-- **Automatic installation** via `script/bootstrap`
-- **Extension management** for VS Code
-- **Mac App Store** integration
-
-### vscode
-
-Editor configuration for JavaScript/TypeScript development:
-- **26 curated extensions** for modern web development
-- **Optimized settings** for productivity
-- **DevOps tooling** integration
-- **Theme and font** consistency
-
-### macos
-
-System preferences and defaults:
-- **Productivity settings** - Dock, Finder, keyboard
-- **Developer optimizations** - File visibility, permissions
-- **Security configurations** - Privacy and access controls
-- **Performance tuning** - Animation speeds, energy settings
-
-### Example Topic Structure
-
-Want to add your own topic? Here's the pattern:
+To use BWS:
 
 ```bash
-# Create topic directory
-mkdir -p ~/.dotfiles/nodejs
+# List all secrets (requires authentication)
+bws secret list
 
-# Add path configuration
-echo 'export PATH="$HOME/.npm-global/bin:$PATH"' > ~/.dotfiles/nodejs/path.zsh
+# Secrets are automatically exported as environment variables
+echo $YOUR_SECRET_NAME
+```
 
-# Add aliases and functions  
-cat > ~/.dotfiles/nodejs/nodejs.zsh << 'EOF'
-alias ni="npm install"
-alias nid="npm install --save-dev" 
-alias nig="npm install --global"
-alias nrs="npm run start"
-alias nrd="npm run dev"
+## 🗂 Creating New Topics
+
+To add a new tool or configuration:
+
+1. **Create a topic directory**:
+
+```bash
+mkdir ~/.dotfiles/your-tool
+```
+
+2. **Add configuration files**:
+
+```bash
+# Symlinked configuration
+echo "config" > ~/.dotfiles/your-tool/config.symlink
+
+# Shell configuration
+echo "alias yt='your-tool'" > ~/.dotfiles/your-tool/aliases.zsh
+
+# PATH modifications
+echo 'export PATH="/path/to/your-tool:$PATH"' > ~/.dotfiles/your-tool/path.zsh
+
+# Installation script
+cat > ~/.dotfiles/your-tool/install.sh << 'EOF'
+#!/bin/sh
+echo "› Installing your-tool"
+# Installation commands here
 EOF
-
-# Add completions
-echo 'eval "$(npm completion bash)"' > ~/.dotfiles/nodejs/completion.zsh
-
-# Add installation script
-cat > ~/.dotfiles/nodejs/install.sh << 'EOF'
-#!/bin/bash
-# Install global npm packages
-npm install -g typescript@latest
-npm install -g @vercel/cli
-EOF
+chmod +x ~/.dotfiles/your-tool/install.sh
 ```
 
-After creating files, restart your shell or run `source ~/.zshrc` to load changes.
+3. **Run the installer**:
 
-### Brewfile Structure
-
-```ruby
-# Command line tools (11 packages)
-brew 'awscli', 'cloudflared', 'git', 'git-lfs', 'helm', 'helmfile', 
-     'imagemagick', 'jq', 'mas', 'mise', 'wget'
-
-# Desktop applications (23 apps)
-cask 'android-studio', 'apidog', 'bartender', 'bitwarden', 'cardhop',
-     'cleanshot', 'fantastical', 'figma', 'font-fira-code', 'font-fira-mono',
-     'ghostty', 'gitkraken', 'lens', 'ngrok', 'obsidian', 'orbstack',
-     'protonvpn', 'raycast', 'readdle-spark', 'rectangle-pro', 'spotify',
-     'tableplus', 'todoist', 'visual-studio-code', 'vlc', 'whatsapp', 'zen'
-
-# Mac App Store (2 apps)
-mas 'Yubico Authenticator', 'Xcode'
-
-# VS Code Extensions (26 extensions)
-# See full list in Brewfile
+```bash
+~/.dotfiles/your-tool/install.sh
+# Or run all installers
+script/install
 ```
 
-## Project Structure
+## 🔧 Configuration Details
 
+### ZSH Loading Order
+
+The `.zshrc` loads configuration files in this specific order:
+
+1. **Environment**: Sets `$ZSH` and `$PROJECTS` variables
+2. **Local secrets**: Sources `~/.localrc` if it exists
+3. **Path files**: All `*/path.zsh` files (PATH setup)
+4. **Main configs**: All `*.zsh` files except path and completion
+5. **Completions**: All `*/completion.zsh` files (after compinit)
+
+### Symlink Management
+
+Files with `.symlink` extension are automatically linked to your home directory:
+
+- `git/gitconfig.symlink` → `~/.gitconfig`
+- `zsh/zshrc.symlink` → `~/.zshrc`
+- `mise/mise.toml.symlink` → `~/.mise.toml`
+
+### Git Configuration
+
+Git uses a split configuration:
+
+- Public settings: `git/gitconfig.symlink`
+- Private settings: `git/gitconfig.local.symlink` (generated on bootstrap)
+  - Contains your name, email, and credential helper
+
+### SSH Configuration
+
+SSH setup includes:
+
+- OrbStack container access
+- Multiple GitHub account support
+- Development/staging/production server configs
+- Connection keepalive settings
+- Socket cleanup alias
+
+### macOS Defaults
+
+The `macos/set-defaults.sh` script configures:
+
+- System preferences
+- Finder settings
+- Dock configuration
+- Security preferences
+
+## 📦 Custom Scripts
+
+The `bin/` directory contains custom utilities:
+
+### Git Utilities
+
+- `git-amend` - Amend the last commit
+- `git-credit` - Credit an author on commits
+- `git-delete-local-merged` - Delete merged branches
+- `git-nuke` - Remove a branch locally and remotely
+- `git-promote` - Promote a branch to main
+- `git-rank-contributors` - Rank git contributors
+- `git-undo` - Undo the last commit
+
+### System Utilities
+
+- `battery-status` - Check battery status
+- `dns-flush` - Flush DNS cache
+- `dot` - Update dotfiles and dependencies
+- `e` - Open in $EDITOR
+- `ee` - Open current directory in $EDITOR
+
+## 🔄 Maintenance
+
+### Update Everything
+
+```bash
+# Pull latest dotfiles, update brew, and run installers
+bin/dot
 ```
-~/.dotfiles/
-├── Brewfile                    # Package management
-├── script/
-│   ├── bootstrap              # Initial setup script
-│   └── install                # Install all topic dependencies
-├── bin/
-│   └── dot                    # Update/maintenance script
-├── zsh/
-│   ├── zshrc.symlink         # Main shell configuration
-│   ├── aliases.zsh           # Shell aliases
-│   └── completion.zsh        # Tab completions
-├── git/
-│   ├── gitconfig.symlink     # Git configuration
-│   └── gitignore.symlink     # Global git ignore
-├── vscode/
-│   ├── settings.json         # VS Code settings
-│   ├── keybindings.json      # Custom shortcuts
-│   └── snippets/             # Code snippets
-├── macos/
-│   ├── set-defaults.sh       # System preferences
-│   └── dock.sh               # Dock configuration  
-└── topic/
-    ├── *.zsh                 # Loaded into environment
-    ├── path.zsh              # Loaded first (PATH setup)
-    ├── completion.zsh        # Loaded last (completions)
-    └── install.sh            # Executed on script/install
+
+### Update Specific Components
+
+```bash
+# Update Homebrew packages
+brew update && brew upgrade
+
+# Update dotfiles only
+git -C ~/.dotfiles pull
+
+# Reinstall dotfiles
+~/.dotfiles/script/bootstrap
+
+# Run all installers
+~/.dotfiles/script/install
 ```
 
-### Key Directories
+### Add New Homebrew Packages
 
-- **`~/Code/`** - Your main projects directory (customizable via `$PROJECTS`)
-- **`~/.localrc`** - Private environment variables (not tracked by git)
-- **`~/.dotfiles/`** - This repository (accessible via `$ZSH`)
+```bash
+# Install a new package
+brew install package-name
 
-### File Naming Conventions
+# Add it to Brewfile for persistence
+echo "brew 'package-name'" >> ~/.dotfiles/Brewfile
+```
 
-- **`.symlink`** - Files that get symlinked to `$HOME`
-- **`*.zsh`** - Shell scripts loaded automatically  
-- **`path.zsh`** - PATH modifications (loaded first)
-- **`completion.zsh`** - Tab completions (loaded last)
-- **`install.sh`** - Installation scripts for topics
+## 🤝 Contributing
 
-## Installation Notes
+Feel free to fork this repository and customize it for your own use. If you have improvements that might benefit others, please submit a pull request!
 
-- **Fonts**: Fira Code and Fira Mono included for optimal coding experience
-- **Runtime Management**: Using `mise` instead of `asdf` for better performance
-- **Container Platform**: OrbStack preferred over Docker Desktop for macOS
-- **Terminal**: Ghostty as modern terminal emulator
+## 📝 Notes
 
----
+- This setup is specifically tailored for macOS development
+- The configuration assumes you're using ZSH as your shell
+- Many tools and configurations are specific to JavaScript/TypeScript and DevOps workflows
+- Always review scripts before running them on your system
 
-**Stack Focus**: JavaScript/TypeScript • DevOps • Cloud Infrastructure • Security
+## 📄 License
+
+This repository contains personal configuration files. Feel free to use any part of this setup in your own dotfiles!
+
+## 🙏 Acknowledgments
+
+Inspired by and borrowed from many amazing dotfiles repositories in the community.
