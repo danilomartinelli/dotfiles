@@ -1,0 +1,104 @@
+# AWS helper functions
+
+# List available AWS profiles from environment
+list_aws_profiles() {
+  echo "Available AWS profiles:"
+  env | grep '^AWS_PROFILE_' | sed 's/AWS_PROFILE_/  - /' | sed 's/=.*//' | tr '[:upper:]' '[:lower:]'
+}
+
+# Clear current AWS profile
+clear_aws_profile() {
+  if [[ -n "$AWS_SHARED_CREDENTIALS_FILE" ]]; then
+    # Remove temporary credentials file
+    local dir=$(dirname "$AWS_SHARED_CREDENTIALS_FILE")
+    rm -rf "$dir" 2>/dev/null
+  fi
+  
+  unset CURRENT_AWS_PROFILE
+  unset AWS_SHARED_CREDENTIALS_FILE
+  unset AWS_PROFILE
+  
+  echo "✅ AWS profile cleared"
+}
+
+# Show current AWS profile
+current_aws_profile() {
+  if [[ -n "$CURRENT_AWS_PROFILE" ]]; then
+    echo "Current AWS profile: $CURRENT_AWS_PROFILE"
+    if command -v aws &> /dev/null; then
+      aws sts get-caller-identity 2>/dev/null || echo "⚠️  Unable to verify AWS credentials"
+    fi
+  else
+    echo "No AWS profile currently active"
+    echo "Use 'use_aws_profile <name>' to activate a profile"
+    echo "Use 'list_aws_profiles' to see available profiles"
+  fi
+}
+
+# Quick AWS profile switcher with fzf
+aws_profile() {
+  if ! command -v fzf &> /dev/null; then
+    echo "⚠️  fzf is required for this function"
+    echo "Install with: brew install fzf"
+    return 1
+  fi
+  
+  local profile
+  profile=$(list_aws_profiles | grep -E '^\s+-' | sed 's/  - //' | fzf --prompt="Select AWS profile: ")
+  
+  if [[ -n "$profile" ]]; then
+    use_aws_profile "$profile"
+  fi
+}
+
+# Validate AWS credentials
+validate_aws() {
+  if ! command -v aws &> /dev/null; then
+    echo "⚠️  AWS CLI is not installed"
+    return 1
+  fi
+  
+  echo "Validating AWS credentials..."
+  if aws sts get-caller-identity &>/dev/null; then
+    echo "✅ AWS credentials are valid"
+    aws sts get-caller-identity
+  else
+    echo "❌ AWS credentials are invalid or expired"
+    return 1
+  fi
+}
+
+# AWS SSO login helper
+aws_sso_login() {
+  local profile="${1:-default}"
+  
+  if ! command -v aws &> /dev/null; then
+    echo "⚠️  AWS CLI is not installed"
+    return 1
+  fi
+  
+  aws sso login --profile "$profile"
+  echo "✅ SSO login completed for profile: $profile"
+}
+
+# Export AWS credentials as environment variables
+export_aws_creds() {
+  if [[ -z "$AWS_SHARED_CREDENTIALS_FILE" ]]; then
+    echo "❌ No AWS profile is currently active"
+    echo "Use 'use_aws_profile <name>' to activate a profile first"
+    return 1
+  fi
+  
+  # Parse credentials file and export as environment variables
+  if [[ -f "$AWS_SHARED_CREDENTIALS_FILE" ]]; then
+    export AWS_ACCESS_KEY_ID=$(grep aws_access_key_id "$AWS_SHARED_CREDENTIALS_FILE" | awk '{print $3}')
+    export AWS_SECRET_ACCESS_KEY=$(grep aws_secret_access_key "$AWS_SHARED_CREDENTIALS_FILE" | awk '{print $3}')
+    export AWS_SESSION_TOKEN=$(grep aws_session_token "$AWS_SHARED_CREDENTIALS_FILE" | awk '{print $3}')
+    
+    echo "✅ AWS credentials exported as environment variables"
+    echo "  AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN"
+  else
+    echo "❌ Credentials file not found"
+    return 1
+  fi
+}

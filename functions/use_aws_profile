@@ -1,20 +1,48 @@
 use_aws_profile() {
   local name="$1"
+  
+  # Validate input
+  if [[ -z "$name" ]]; then
+    echo "❌ Error: Profile name is required"
+    echo "Usage: use_aws_profile <profile_name>"
+    return 1
+  fi
+  
   local upper_name="${name:u}"
   local var="AWS_PROFILE_${upper_name}"
 
+  # Check if environment variable exists
   if [[ -z "${(P)var}" ]]; then
-    echo "❌ Variável $var não encontrada."
+    echo "❌ Variable $var not found."
+    echo "Available AWS profiles:"
+    env | grep '^AWS_PROFILE_' | sed 's/AWS_PROFILE_/  - /' | sed 's/=.*//'
     return 1
   fi
 
+  # Create temporary directory for credentials
   local TMP_AWS_DIR
-  TMP_AWS_DIR=$(mktemp -d)
+  TMP_AWS_DIR=$(mktemp -d) || {
+    echo "❌ Failed to create temporary directory"
+    return 1
+  }
 
-  echo "${(P)var}" | base64 --decode > "$TMP_AWS_DIR/credentials"
+  # Decode and save credentials
+  echo "${(P)var}" | base64 --decode > "$TMP_AWS_DIR/credentials" || {
+    echo "❌ Failed to decode AWS credentials"
+    rm -rf "$TMP_AWS_DIR"
+    return 1
+  }
 
+  # Set environment variables
   export CURRENT_AWS_PROFILE="$name"
   export AWS_SHARED_CREDENTIALS_FILE="$TMP_AWS_DIR/credentials"
+  export AWS_PROFILE="default"  # Use default profile from credentials file
 
-  echo "✅ AWS profile ativado para $name → $AWS_SHARED_CREDENTIALS_FILE"
+  echo "✅ AWS profile activated for $name → $AWS_SHARED_CREDENTIALS_FILE"
+  
+  # Show current identity
+  if command -v aws &> /dev/null; then
+    echo "Current identity:"
+    aws sts get-caller-identity 2>/dev/null | grep -E '(UserId|Account|Arn)' | sed 's/^/  /'
+  fi
 }

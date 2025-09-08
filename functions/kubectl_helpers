@@ -1,0 +1,107 @@
+# Kubectl helper functions
+
+# Quick pod shell access
+ksh() {
+  local pod="$1"
+  local container="$2"
+  
+  if [[ -z "$pod" ]]; then
+    echo "Usage: ksh <pod> [container]"
+    echo "Opens a shell in the specified pod"
+    return 1
+  fi
+  
+  if [[ -n "$container" ]]; then
+    kubectl exec -it "$pod" -c "$container" -- /bin/bash 2>/dev/null || \
+    kubectl exec -it "$pod" -c "$container" -- /bin/sh
+  else
+    kubectl exec -it "$pod" -- /bin/bash 2>/dev/null || \
+    kubectl exec -it "$pod" -- /bin/sh
+  fi
+}
+
+# Get pod logs with fzf selection
+klogs() {
+  local pod
+  pod=$(kubectl get pods --no-headers | awk '{print $1}' | fzf --prompt="Select pod: ")
+  
+  if [[ -n "$pod" ]]; then
+    kubectl logs -f "$pod"
+  fi
+}
+
+# Quick namespace switcher with fzf
+knamespace() {
+  local namespace
+  namespace=$(kubectl get namespaces --no-headers | awk '{print $1}' | fzf --prompt="Select namespace: ")
+  
+  if [[ -n "$namespace" ]]; then
+    kubectl config set-context --current --namespace="$namespace"
+    echo "✅ Switched to namespace: $namespace"
+  fi
+}
+
+# Delete all pods in current namespace (with confirmation)
+kdeleteallpods() {
+  echo "⚠️  This will delete all pods in the current namespace!"
+  echo -n "Are you sure? (yes/no): "
+  read -r confirmation
+  
+  if [[ "$confirmation" == "yes" ]]; then
+    kubectl delete pods --all
+  else
+    echo "Cancelled"
+  fi
+}
+
+# Get events sorted by timestamp
+kevents() {
+  kubectl get events --sort-by='.lastTimestamp' "$@"
+}
+
+# Quick pod restart by deleting it
+krestart() {
+  local pod="$1"
+  
+  if [[ -z "$pod" ]]; then
+    echo "Usage: krestart <pod>"
+    echo "Restarts a pod by deleting it"
+    return 1
+  fi
+  
+  kubectl delete pod "$pod"
+  echo "✅ Pod $pod deleted for restart"
+}
+
+# Show resource usage
+kresources() {
+  kubectl top nodes
+  echo ""
+  kubectl top pods
+}
+
+# Export current context kubeconfig
+kexport() {
+  local output="${1:-kubeconfig.yaml}"
+  kubectl config view --minify --raw > "$output"
+  echo "✅ Kubeconfig exported to $output"
+}
+
+# List all container images in current namespace
+kimages() {
+  kubectl get pods -o jsonpath="{.items[*].spec.containers[*].image}" | tr -s '[[:space:]]' '\n' | sort | uniq
+}
+
+# Wait for pod to be ready
+kwait() {
+  local pod="$1"
+  local timeout="${2:-300}"
+  
+  if [[ -z "$pod" ]]; then
+    echo "Usage: kwait <pod> [timeout_seconds]"
+    echo "Waits for a pod to be ready"
+    return 1
+  fi
+  
+  kubectl wait --for=condition=ready pod/"$pod" --timeout="${timeout}s"
+}
