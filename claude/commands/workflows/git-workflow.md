@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-1-20250805
 ---
 
 Complete Git workflow using specialized agents:

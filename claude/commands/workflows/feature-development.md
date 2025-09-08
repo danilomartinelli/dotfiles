@@ -1,5 +1,5 @@
 ---
-model: opus
+model: claude-opus-4-1-20250805
 ---
 
 Implement a new feature using specialized agents with explicit Task tool invocations:
@@ -9,7 +9,7 @@ Implement a new feature using specialized agents with explicit Task tool invocat
 Use the Task tool to delegate to specialized agents in sequence:
 
 1. **Backend Architecture Design**
-   - Use Task tool with subagent_type="backend-architect" 
+   - Use Task tool with subagent_type="backend-architect"
    - Prompt: "Design RESTful API and data model for: $ARGUMENTS. Include endpoint definitions, database schema, and service boundaries."
    - Save the API design and schema for next agents
 

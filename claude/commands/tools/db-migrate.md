@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Database Migration Strategy and Implementation
@@ -7,9 +7,11 @@ model: sonnet
 You are a database migration expert specializing in zero-downtime deployments, data integrity, and multi-database environments. Create comprehensive migration scripts with rollback strategies, validation checks, and performance optimization.
 
 ## Context
+
 The user needs help with database migrations that ensure data integrity, minimize downtime, and provide safe rollback options. Focus on production-ready migration strategies that handle edge cases and large datasets.
 
 ## Requirements
+
 $ARGUMENTS
 
 ## Instructions
@@ -19,25 +21,26 @@ $ARGUMENTS
 Analyze the required database changes:
 
 **Schema Changes**
+
 - **Table Operations**
   - Create new tables
   - Drop unused tables
   - Rename tables
   - Alter table engines/options
-  
+
 - **Column Operations**
   - Add columns (nullable vs non-nullable)
   - Drop columns (with data preservation)
   - Rename columns
   - Change data types
   - Modify constraints
-  
+
 - **Index Operations**
   - Create indexes (online vs offline)
   - Drop indexes
   - Modify index types
   - Add composite indexes
-  
+
 - **Constraint Operations**
   - Foreign keys
   - Unique constraints
@@ -45,12 +48,13 @@ Analyze the required database changes:
   - Default values
 
 **Data Migrations**
+
 - **Transformations**
   - Data type conversions
   - Normalization/denormalization
   - Calculated fields
   - Data cleaning
-  
+
 - **Relationships**
   - Moving data between tables
   - Splitting/merging tables
@@ -62,17 +66,18 @@ Analyze the required database changes:
 Implement migrations without service interruption:
 
 **Expand-Contract Pattern**
+
 ```sql
 -- Phase 1: Expand (backward compatible)
 ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE;
 CREATE INDEX CONCURRENTLY idx_users_email_verified ON users(email_verified);
 
 -- Phase 2: Migrate Data (in batches)
-UPDATE users 
+UPDATE users
 SET email_verified = (email_confirmation_token IS NOT NULL)
 WHERE id IN (
-  SELECT id FROM users 
-  WHERE email_verified IS NULL 
+  SELECT id FROM users
+  WHERE email_verified IS NULL
   LIMIT 10000
 );
 
@@ -81,6 +86,7 @@ ALTER TABLE users DROP COLUMN email_confirmation_token;
 ```
 
 **Blue-Green Schema Migration**
+
 ```python
 # Step 1: Create new schema version
 def create_v2_schema():
@@ -96,7 +102,7 @@ def create_v2_schema():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             metadata JSONB DEFAULT '{}'
         );
-        
+
         CREATE INDEX idx_v2_orders_customer ON v2_orders(customer_id);
         CREATE INDEX idx_v2_orders_status ON v2_orders(status);
     """)
@@ -108,7 +114,7 @@ def enable_dual_writes():
     """
     # Trigger-based approach
     execute("""
-        CREATE OR REPLACE FUNCTION sync_orders_to_v2() 
+        CREATE OR REPLACE FUNCTION sync_orders_to_v2()
         RETURNS TRIGGER AS $$
         BEGIN
             INSERT INTO v2_orders (
@@ -121,7 +127,7 @@ def enable_dual_writes():
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-        
+
         CREATE TRIGGER sync_orders_trigger
         AFTER INSERT OR UPDATE ON orders
         FOR EACH ROW EXECUTE FUNCTION sync_orders_to_v2();
@@ -134,13 +140,13 @@ def backfill_data():
     """
     batch_size = 10000
     last_id = None
-    
+
     while True:
         query = """
             INSERT INTO v2_orders (
                 id, customer_id, total_amount, status, created_at
             )
-            SELECT 
+            SELECT
                 id, customer_id, amount, state, created
             FROM orders
             WHERE ($1::uuid IS NULL OR id > $1)
@@ -149,16 +155,16 @@ def backfill_data():
             ON CONFLICT (id) DO NOTHING
             RETURNING id
         """
-        
+
         results = execute(query, [last_id, batch_size])
         if not results:
             break
-            
+
         last_id = results[-1]['id']
         time.sleep(0.1)  # Prevent overload
 
 # Step 4: Switch reads
-# Step 5: Switch writes  
+# Step 5: Switch writes
 # Step 6: Drop old schema
 ```
 
@@ -167,6 +173,7 @@ def backfill_data():
 Generate version-controlled migration files:
 
 **SQL Migrations**
+
 ```sql
 -- migrations/001_add_user_preferences.up.sql
 BEGIN;
@@ -206,6 +213,7 @@ COMMIT;
 ```
 
 **Framework Migrations (Rails/Django/Laravel)**
+
 ```python
 # Django migration
 from django.db import migrations, models
@@ -221,16 +229,16 @@ class Migration(migrations.Migration):
             name='UserPreferences',
             fields=[
                 ('user', models.OneToOneField(
-                    'User', 
-                    on_delete=models.CASCADE, 
+                    'User',
+                    on_delete=models.CASCADE,
                     primary_key=True
                 )),
                 ('theme', models.CharField(
-                    max_length=20, 
+                    max_length=20,
                     default='light'
                 )),
                 ('language', models.CharField(
-                    max_length=10, 
+                    max_length=10,
                     default='en',
                     db_index=True
                 )),
@@ -245,13 +253,13 @@ class Migration(migrations.Migration):
                 )),
             ],
         ),
-        
+
         # Custom SQL for complex operations
         migrations.RunSQL(
             sql=[
                 """
                 -- Forward migration
-                UPDATE products 
+                UPDATE products
                 SET price_cents = CAST(price * 100 AS INTEGER)
                 WHERE price_cents IS NULL;
                 """,
@@ -259,7 +267,7 @@ class Migration(migrations.Migration):
             reverse_sql=[
                 """
                 -- Reverse migration
-                UPDATE products 
+                UPDATE products
                 SET price = CAST(price_cents AS DECIMAL) / 100
                 WHERE price IS NULL;
                 """,
@@ -273,20 +281,21 @@ class Migration(migrations.Migration):
 Implement comprehensive validation:
 
 **Pre-Migration Validation**
+
 ```python
 def validate_pre_migration():
     """
     Check data integrity before migration
     """
     checks = []
-    
+
     # Check for NULL values in required fields
     null_check = execute("""
         SELECT COUNT(*) as count
         FROM users
         WHERE email IS NULL OR username IS NULL
     """)[0]['count']
-    
+
     if null_check > 0:
         checks.append({
             'check': 'null_values',
@@ -294,7 +303,7 @@ def validate_pre_migration():
             'message': f'{null_check} users with NULL email/username',
             'action': 'Fix NULL values before migration'
         })
-    
+
     # Check for duplicate values
     duplicate_check = execute("""
         SELECT email, COUNT(*) as count
@@ -302,15 +311,15 @@ def validate_pre_migration():
         GROUP BY email
         HAVING COUNT(*) > 1
     """)
-    
+
     if duplicate_check:
         checks.append({
             'check': 'duplicates',
-            'status': 'FAILED', 
+            'status': 'FAILED',
             'message': f'{len(duplicate_check)} duplicate emails found',
             'action': 'Resolve duplicates before adding unique constraint'
         })
-    
+
     # Check foreign key integrity
     orphan_check = execute("""
         SELECT COUNT(*) as count
@@ -318,7 +327,7 @@ def validate_pre_migration():
         LEFT JOIN users u ON o.user_id = u.id
         WHERE u.id IS NULL
     """)[0]['count']
-    
+
     if orphan_check > 0:
         checks.append({
             'check': 'orphaned_records',
@@ -326,44 +335,45 @@ def validate_pre_migration():
             'message': f'{orphan_check} orders with non-existent users',
             'action': 'Clean up orphaned records'
         })
-    
+
     return checks
 ```
 
 **Post-Migration Validation**
+
 ```python
 def validate_post_migration():
     """
     Verify migration success
     """
     validations = []
-    
+
     # Row count validation
     old_count = execute("SELECT COUNT(*) FROM orders")[0]['count']
     new_count = execute("SELECT COUNT(*) FROM v2_orders")[0]['count']
-    
+
     validations.append({
         'check': 'row_count',
         'expected': old_count,
         'actual': new_count,
         'status': 'PASS' if old_count == new_count else 'FAIL'
     })
-    
+
     # Checksum validation
     old_checksum = execute("""
-        SELECT 
+        SELECT
             SUM(CAST(amount AS DECIMAL)) as total,
             COUNT(DISTINCT customer_id) as customers
         FROM orders
     """)[0]
-    
+
     new_checksum = execute("""
-        SELECT 
+        SELECT
             SUM(total_amount) as total,
-            COUNT(DISTINCT customer_id) as customers  
+            COUNT(DISTINCT customer_id) as customers
         FROM v2_orders
     """)[0]
-    
+
     validations.append({
         'check': 'data_integrity',
         'status': 'PASS' if old_checksum == new_checksum else 'FAIL',
@@ -372,7 +382,7 @@ def validate_post_migration():
             'new': new_checksum
         }
     })
-    
+
     return validations
 ```
 
@@ -381,12 +391,13 @@ def validate_post_migration():
 Implement safe rollback strategies:
 
 **Automatic Rollback**
+
 ```python
 class MigrationRunner:
     def __init__(self, migration):
         self.migration = migration
         self.checkpoint = None
-        
+
     def run_with_rollback(self):
         """
         Execute migration with automatic rollback on failure
@@ -394,29 +405,29 @@ class MigrationRunner:
         try:
             # Create restore point
             self.checkpoint = self.create_checkpoint()
-            
+
             # Run pre-checks
             pre_checks = self.migration.validate_pre()
             if any(c['status'] == 'FAILED' for c in pre_checks):
                 raise MigrationError("Pre-validation failed", pre_checks)
-            
+
             # Execute migration
             with transaction.atomic():
                 self.migration.forward()
-                
+
                 # Run post-checks
                 post_checks = self.migration.validate_post()
                 if any(c['status'] == 'FAILED' for c in post_checks):
                     raise MigrationError("Post-validation failed", post_checks)
-                    
+
             # Clean up checkpoint after success
             self.cleanup_checkpoint()
-            
+
         except Exception as e:
             logger.error(f"Migration failed: {e}")
             self.rollback()
             raise
-            
+
     def rollback(self):
         """
         Restore to checkpoint
@@ -426,6 +437,7 @@ class MigrationRunner:
 ```
 
 **Manual Rollback Scripts**
+
 ```bash
 #!/bin/bash
 # rollback_migration.sh
@@ -457,6 +469,7 @@ echo "Rollback completed successfully"
 Minimize migration impact:
 
 **Batch Processing**
+
 ```python
 def migrate_large_table(batch_size=10000):
     """
@@ -464,7 +477,7 @@ def migrate_large_table(batch_size=10000):
     """
     total_rows = execute("SELECT COUNT(*) FROM source_table")[0]['count']
     processed = 0
-    
+
     while processed < total_rows:
         # Process batch
         execute("""
@@ -476,18 +489,19 @@ def migrate_large_table(batch_size=10000):
             LIMIT %s
             ON CONFLICT DO NOTHING
         """, [processed, batch_size])
-        
+
         processed += batch_size
-        
+
         # Progress tracking
         progress = (processed / total_rows) * 100
         logger.info(f"Migration progress: {progress:.1f}%")
-        
+
         # Prevent overload
         time.sleep(0.5)
 ```
 
 **Index Management**
+
 ```sql
 -- Drop indexes before bulk insert
 ALTER TABLE large_table DROP INDEX idx_column1;
@@ -506,6 +520,7 @@ CREATE INDEX CONCURRENTLY idx_column2 ON large_table(column2);
 Handle modern database migrations across SQL, NoSQL, and hybrid environments:
 
 **Advanced Multi-Database Migration Framework**
+
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional
@@ -524,15 +539,15 @@ class DatabaseAdapter(ABC):
     @abstractmethod
     async def connect(self, connection_string: str):
         pass
-    
+
     @abstractmethod
     async def execute_migration(self, operation: MigrationOperation):
         pass
-    
+
     @abstractmethod
     async def validate_migration(self, operation: MigrationOperation) -> bool:
         pass
-    
+
     @abstractmethod
     async def rollback_migration(self, operation: MigrationOperation):
         pass
@@ -541,15 +556,15 @@ class MongoDBAdapter(DatabaseAdapter):
     def __init__(self):
         self.client = None
         self.db = None
-    
+
     async def connect(self, connection_string: str):
         from motor.motor_asyncio import AsyncIOMotorClient
         self.client = AsyncIOMotorClient(connection_string)
         self.db = self.client.get_default_database()
-    
+
     async def execute_migration(self, operation: MigrationOperation):
         collection = self.db[operation.collection_or_table]
-        
+
         if operation.operation_type == 'add_field':
             await self._add_field(collection, operation)
         elif operation.operation_type == 'rename_field':
@@ -560,42 +575,42 @@ class MongoDBAdapter(DatabaseAdapter):
             await self._create_index(collection, operation)
         elif operation.operation_type == 'schema_validation':
             await self._add_schema_validation(collection, operation)
-    
+
     async def _add_field(self, collection, operation):
         """Add new field to all documents"""
         field_name = operation.data['field_name']
         default_value = operation.data.get('default_value')
-        
+
         # Add field to documents that don't have it
         result = await collection.update_many(
             {field_name: {"$exists": False}},
             {"$set": {field_name: default_value}}
         )
-        
+
         return {
             'matched_count': result.matched_count,
             'modified_count': result.modified_count
         }
-    
+
     async def _rename_field(self, collection, operation):
         """Rename field across all documents"""
         old_name = operation.data['old_name']
         new_name = operation.data['new_name']
-        
+
         result = await collection.update_many(
             {old_name: {"$exists": True}},
             {"$rename": {old_name: new_name}}
         )
-        
+
         return {
             'matched_count': result.matched_count,
             'modified_count': result.modified_count
         }
-    
+
     async def _migrate_data(self, collection, operation):
         """Transform data during migration"""
         pipeline = operation.data['pipeline']
-        
+
         # Use aggregation pipeline for complex transformations
         cursor = collection.aggregate([
             {"$match": operation.conditions or {}},
@@ -606,13 +621,13 @@ class MongoDBAdapter(DatabaseAdapter):
                 "whenMatched": "replace"
             }}
         ])
-        
+
         return [doc async for doc in cursor]
-    
+
     async def _add_schema_validation(self, collection, operation):
         """Add JSON schema validation to collection"""
         schema = operation.data['schema']
-        
+
         await self.db.command({
             "collMod": operation.collection_or_table,
             "validator": {"$jsonSchema": schema},
@@ -623,25 +638,25 @@ class MongoDBAdapter(DatabaseAdapter):
 class DynamoDBAdapter(DatabaseAdapter):
     def __init__(self):
         self.dynamodb = None
-    
+
     async def connect(self, connection_string: str):
         import boto3
         self.dynamodb = boto3.resource('dynamodb')
-    
+
     async def execute_migration(self, operation: MigrationOperation):
         table = self.dynamodb.Table(operation.collection_or_table)
-        
+
         if operation.operation_type == 'add_gsi':
             await self._add_global_secondary_index(table, operation)
         elif operation.operation_type == 'migrate_data':
             await self._migrate_table_data(table, operation)
         elif operation.operation_type == 'update_capacity':
             await self._update_capacity(table, operation)
-    
+
     async def _add_global_secondary_index(self, table, operation):
         """Add Global Secondary Index"""
         gsi_spec = operation.data['gsi_specification']
-        
+
         table.update(
             GlobalSecondaryIndexUpdates=[
                 {
@@ -649,26 +664,26 @@ class DynamoDBAdapter(DatabaseAdapter):
                 }
             ]
         )
-    
+
     async def _migrate_table_data(self, table, operation):
         """Migrate data between DynamoDB tables"""
         scan_kwargs = {
             'ProjectionExpression': operation.data.get('projection'),
             'FilterExpression': operation.conditions
         }
-        
+
         target_table = self.dynamodb.Table(operation.data['target_table'])
-        
+
         # Scan source table and write to target
         while True:
             response = table.scan(**scan_kwargs)
-            
+
             # Transform and write items
             with target_table.batch_writer() as batch:
                 for item in response['Items']:
                     transformed_item = self._transform_item(item, operation.data['transformation'])
                     batch.put_item(Item=transformed_item)
-            
+
             if 'LastEvaluatedKey' not in response:
                 break
             scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
@@ -676,15 +691,15 @@ class DynamoDBAdapter(DatabaseAdapter):
 class CassandraAdapter(DatabaseAdapter):
     def __init__(self):
         self.session = None
-    
+
     async def connect(self, connection_string: str):
         from cassandra.cluster import Cluster
         from cassandra.auth import PlainTextAuthProvider
-        
+
         # Parse connection string for auth
         cluster = Cluster(['127.0.0.1'])
         self.session = cluster.connect()
-    
+
     async def execute_migration(self, operation: MigrationOperation):
         if operation.operation_type == 'add_column':
             await self._add_column(operation)
@@ -692,16 +707,16 @@ class CassandraAdapter(DatabaseAdapter):
             await self._create_materialized_view(operation)
         elif operation.operation_type == 'migrate_data':
             await self._migrate_data(operation)
-    
+
     async def _add_column(self, operation):
         """Add column to Cassandra table"""
         table = operation.collection_or_table
         column_name = operation.data['column_name']
         column_type = operation.data['column_type']
-        
+
         cql = f"ALTER TABLE {table} ADD {column_name} {column_type}"
         self.session.execute(cql)
-    
+
     async def _create_materialized_view(self, operation):
         """Create materialized view for denormalization"""
         view_spec = operation.data['view_specification']
@@ -718,15 +733,15 @@ class CrossPlatformMigrator:
             'redis': RedisAdapter(),
             'elasticsearch': ElasticsearchAdapter()
         }
-    
+
     async def migrate_between_platforms(self, source_config, target_config, migration_spec):
         """Migrate data between different database platforms"""
         source_adapter = self.adapters[source_config['type']]
         target_adapter = self.adapters[target_config['type']]
-        
+
         await source_adapter.connect(source_config['connection_string'])
         await target_adapter.connect(target_config['connection_string'])
-        
+
         # Execute migration plan
         for step in migration_spec['steps']:
             if step['type'] == 'extract':
@@ -735,7 +750,7 @@ class CrossPlatformMigrator:
                 data = await self._transform_data(data, step)
             elif step['type'] == 'load':
                 await self._load_data(target_adapter, data, step)
-    
+
     async def _extract_data(self, adapter, step):
         """Extract data from source database"""
         extraction_op = MigrationOperation(
@@ -745,17 +760,17 @@ class CrossPlatformMigrator:
             conditions=step.get('conditions'),
             batch_size=step.get('batch_size', 1000)
         )
-        
+
         return await adapter.execute_migration(extraction_op)
-    
+
     async def _transform_data(self, data, step):
         """Transform data between formats"""
         transformation_rules = step['transformation_rules']
-        
+
         transformed_data = []
         for record in data:
             transformed_record = {}
-            
+
             for target_field, source_mapping in transformation_rules.items():
                 if isinstance(source_mapping, str):
                     # Simple field mapping
@@ -771,11 +786,11 @@ class CrossPlatformMigrator:
                         separator = source_mapping.get('separator', ' ')
                         values = [str(record.get(field, '')) for field in fields]
                         transformed_record[target_field] = separator.join(values)
-            
+
             transformed_data.append(transformed_record)
-        
+
         return transformed_data
-    
+
     async def _load_data(self, adapter, data, step):
         """Load data into target database"""
         load_op = MigrationOperation(
@@ -784,24 +799,24 @@ class CrossPlatformMigrator:
             data={'records': data},
             batch_size=step.get('batch_size', 1000)
         )
-        
+
         return await adapter.execute_migration(load_op)
 
 # Example usage
 async def migrate_sql_to_nosql():
     """Example: Migrate from PostgreSQL to MongoDB"""
     migrator = CrossPlatformMigrator()
-    
+
     source_config = {
         'type': 'postgresql',
         'connection_string': 'postgresql://user:pass@localhost/db'
     }
-    
+
     target_config = {
         'type': 'mongodb',
         'connection_string': 'mongodb://localhost:27017/db'
     }
-    
+
     migration_spec = {
         'steps': [
             {
@@ -836,7 +851,7 @@ async def migrate_sql_to_nosql():
             }
         ]
     }
-    
+
     await migrator.migrate_between_platforms(source_config, target_config, migration_spec)
 ```
 
@@ -845,6 +860,7 @@ async def migrate_sql_to_nosql():
 Integrate with enterprise migration tools and real-time sync:
 
 **Atlas Schema Migrations (MongoDB)**
+
 ```javascript
 // atlas-migration.js
 const { MongoClient } = require('mongodb');
@@ -854,29 +870,29 @@ class AtlasMigration {
         this.client = new MongoClient(connectionString);
         this.migrations = new Map();
     }
-    
+
     register(version, migration) {
         this.migrations.set(version, migration);
     }
-    
+
     async migrate() {
         await this.client.connect();
         const db = this.client.db();
-        
+
         // Get current version
         const versionsCollection = db.collection('schema_versions');
         const currentVersion = await versionsCollection
             .findOne({}, { sort: { version: -1 } });
-        
+
         const startVersion = currentVersion?.version || 0;
-        
+
         // Run pending migrations
         for (const [version, migration] of this.migrations) {
             if (version > startVersion) {
                 console.log(`Running migration ${version}`);
-                
+
                 const session = this.client.startSession();
-                
+
                 try {
                     await session.withTransaction(async () => {
                         await migration.up(db, session);
@@ -903,13 +919,13 @@ class AtlasMigration {
 // Example MongoDB schema migration
 const migration_001 = {
     checksum: 'sha256:abc123...',
-    
+
     async up(db, session) {
         // Add new field to existing documents
         await db.collection('users').updateMany(
             { email_verified: { $exists: false } },
-            { 
-                $set: { 
+            {
+                $set: {
                     email_verified: false,
                     verification_token: null,
                     verification_expires: null
@@ -917,13 +933,13 @@ const migration_001 = {
             },
             { session }
         );
-        
+
         // Create new index
         await db.collection('users').createIndex(
             { email_verified: 1, verification_expires: 1 },
             { session }
         );
-        
+
         // Add schema validation
         await db.command({
             collMod: 'users',
@@ -934,32 +950,32 @@ const migration_001 = {
                     properties: {
                         email: { bsonType: 'string' },
                         email_verified: { bsonType: 'bool' },
-                        verification_token: { 
-                            bsonType: ['string', 'null'] 
+                        verification_token: {
+                            bsonType: ['string', 'null']
                         }
                     }
                 }
             }
         }, { session });
     },
-    
+
     async down(db, session) {
         // Remove schema validation
         await db.command({
             collMod: 'users',
             validator: {}
         }, { session });
-        
+
         // Drop index
         await db.collection('users').dropIndex(
             { email_verified: 1, verification_expires: 1 },
             { session }
         );
-        
+
         // Remove fields
         await db.collection('users').updateMany(
             {},
-            { 
+            {
                 $unset: {
                     email_verified: '',
                     verification_token: '',
@@ -973,6 +989,7 @@ const migration_001 = {
 ```
 
 **Change Data Capture (CDC) for Real-time Sync**
+
 ```python
 # cdc-migration.py
 import asyncio
@@ -988,7 +1005,7 @@ class CDCMigrationManager:
         self.producer = None
         self.schema_registry = None
         self.active_migrations = {}
-    
+
     async def setup_cdc_pipeline(self):
         """Setup Change Data Capture pipeline"""
         # Kafka consumer for CDC events
@@ -1000,28 +1017,28 @@ class CDCMigrationManager:
             group_id='migration-consumer',
             value_deserializer=lambda m: json.loads(m.decode('utf-8'))
         )
-        
+
         # Kafka producer for processed events
         self.producer = KafkaProducer(
             bootstrap_servers=self.config['kafka_brokers'],
             value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
-        
+
         # Schema registry for data validation
         self.schema_registry = SchemaRegistryClient({
             'url': self.config['schema_registry_url']
         })
-    
+
     async def process_cdc_events(self):
         """Process CDC events and apply to target databases"""
         for message in self.consumer:
             event = message.value
-            
+
             # Parse CDC event
             operation = event['operation']  # INSERT, UPDATE, DELETE
             table = event['table']
             data = event['data']
-            
+
             # Check if this table has active migration
             if table in self.active_migrations:
                 migration_config = self.active_migrations[table]
@@ -1029,12 +1046,12 @@ class CDCMigrationManager:
             else:
                 # Standard replication
                 await self.replicate_change(event)
-    
+
     async def apply_migration_transformation(self, event, migration_config):
         """Apply data transformation during migration"""
         transformation_rules = migration_config['transformation_rules']
         target_tables = migration_config['target_tables']
-        
+
         # Transform data according to migration rules
         transformed_data = {}
         for target_field, rule in transformation_rules.items():
@@ -1048,11 +1065,11 @@ class CDCMigrationManager:
                     func = getattr(self, f'transform_{func_name}')
                     args = [event['data'].get(arg) for arg in rule['args']]
                     transformed_data[target_field] = func(*args)
-        
+
         # Apply to target tables
         for target_table in target_tables:
             await self.apply_to_target(target_table, event['operation'], transformed_data)
-    
+
     async def setup_debezium_connector(self, source_db_config):
         """Configure Debezium for CDC"""
         connector_config = {
@@ -1075,7 +1092,7 @@ class CDCMigrationManager:
                 "transforms.route.replacement": "database.changes"
             }
         }
-        
+
         # Submit connector to Kafka Connect
         import requests
         response = requests.post(
@@ -1083,12 +1100,13 @@ class CDCMigrationManager:
             json=connector_config,
             headers={'Content-Type': 'application/json'}
         )
-        
+
         if response.status_code != 201:
             raise Exception(f"Failed to create connector: {response.text}")
 ```
 
 **Advanced Monitoring and Observability**
+
 ```python
 class EnterpriseeMigrationMonitor:
     def __init__(self, config):
@@ -1100,13 +1118,13 @@ class EnterpriseeMigrationMonitor:
             'completed_migrations': {},
             'failed_migrations': {}
         }
-    
+
     def setup_metrics_client(self):
         """Setup Prometheus/Datadog metrics client"""
         from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry
-        
+
         registry = CollectorRegistry()
-        
+
         self.metrics = {
             'migration_duration': Histogram(
                 'migration_duration_seconds',
@@ -1138,35 +1156,35 @@ class EnterpriseeMigrationMonitor:
                 registry=registry
             )
         }
-        
+
         return registry
-    
+
     async def track_migration_progress(self, migration_id):
         """Real-time migration progress tracking"""
         migration = self.migration_state['current_migrations'][migration_id]
-        
+
         while migration['status'] == 'running':
             # Calculate progress metrics
             progress_stats = await self.calculate_progress_stats(migration)
-            
+
             # Update Prometheus metrics
             self.metrics['rows_migrated'].labels(
                 migration_id=migration_id,
                 table_name=migration['table']
             ).inc(progress_stats['rows_processed_delta'])
-            
+
             self.metrics['data_lag'].labels(
                 migration_id=migration_id
             ).set(progress_stats['lag_seconds'])
-            
+
             # Check for anomalies
             await self.detect_migration_anomalies(migration_id, progress_stats)
-            
+
             # Generate alerts if needed
             await self.check_alert_conditions(migration_id, progress_stats)
-            
+
             await asyncio.sleep(30)  # Check every 30 seconds
-    
+
     async def detect_migration_anomalies(self, migration_id, stats):
         """AI-powered anomaly detection for migrations"""
         # Simple statistical anomaly detection
@@ -1176,21 +1194,21 @@ class EnterpriseeMigrationMonitor:
                 f"Migration {migration_id} is running slower than expected",
                 {'stats': stats}
             )
-        
+
         if stats['error_rate'] > 0.01:  # 1% error rate threshold
             await self.trigger_alert(
                 'migration_high_error_rate',
                 f"Migration {migration_id} has high error rate: {stats['error_rate']}",
                 {'stats': stats}
             )
-        
+
         if stats['memory_usage'] > 0.8:  # 80% memory usage
             await self.trigger_alert(
                 'migration_high_memory',
                 f"Migration {migration_id} is using high memory: {stats['memory_usage']}",
                 {'stats': stats}
             )
-    
+
     async def setup_migration_dashboard(self):
         """Setup Grafana dashboard for migration monitoring"""
         dashboard_config = {
@@ -1240,7 +1258,7 @@ class EnterpriseeMigrationMonitor:
                 ]
             }
         }
-        
+
         # Submit dashboard to Grafana API
         import requests
         response = requests.post(
@@ -1251,7 +1269,7 @@ class EnterpriseeMigrationMonitor:
                 'Content-Type': 'application/json'
             }
         )
-        
+
         return response.json()
 ```
 
@@ -1260,30 +1278,31 @@ class EnterpriseeMigrationMonitor:
 Handle event-driven architecture migrations:
 
 **Event Store Migration Strategy**
+
 ```python
 class EventStoreMigrator:
     def __init__(self, event_store_config):
         self.event_store = EventStore(event_store_config)
         self.event_transformers = {}
         self.aggregate_rebuilders = {}
-    
+
     def register_event_transformer(self, event_type, transformer):
         """Register transformation for specific event type"""
         self.event_transformers[event_type] = transformer
-    
+
     def register_aggregate_rebuilder(self, aggregate_type, rebuilder):
         """Register rebuilder for aggregate snapshots"""
         self.aggregate_rebuilders[aggregate_type] = rebuilder
-    
+
     async def migrate_events(self, from_version, to_version):
         """Migrate events from one schema version to another"""
         # Get all events that need migration
         events_cursor = self.event_store.get_events_by_version_range(
             from_version, to_version
         )
-        
+
         migrated_events = []
-        
+
         async for event in events_cursor:
             if event.event_type in self.event_transformers:
                 transformer = self.event_transformers[event.event_type]
@@ -1292,26 +1311,26 @@ class EventStoreMigrator:
             else:
                 # No transformation needed
                 migrated_events.append(event)
-        
+
         # Write migrated events to new stream
         await self.event_store.append_events(
             f"migration-{to_version}",
             migrated_events
         )
-        
+
         # Rebuild aggregates with new events
         await self.rebuild_aggregates(migrated_events)
-    
+
     async def rebuild_aggregates(self, events):
         """Rebuild aggregate snapshots from migrated events"""
         aggregates_to_rebuild = set()
-        
+
         for event in events:
             aggregates_to_rebuild.add(event.aggregate_id)
-        
+
         for aggregate_id in aggregates_to_rebuild:
             aggregate_type = self.get_aggregate_type(aggregate_id)
-            
+
             if aggregate_type in self.aggregate_rebuilders:
                 rebuilder = self.aggregate_rebuilders[aggregate_type]
                 await rebuilder.rebuild(aggregate_id)
@@ -1330,7 +1349,7 @@ class UserEventTransformer:
                 'email': old_data['email'],
                 'created_at': old_data['created_at']
             }
-            
+
             return Event(
                 event_id=event.event_id,
                 event_type='UserCreated',
@@ -1339,7 +1358,7 @@ class UserEventTransformer:
                 data=new_data,
                 metadata=event.metadata
             )
-        
+
         return event
 ```
 
@@ -1348,6 +1367,7 @@ class UserEventTransformer:
 Automate cloud database migrations with infrastructure as code:
 
 **AWS Database Migration with CDK**
+
 ```typescript
 // aws-db-migration.ts
 import * as cdk from 'aws-cdk-lib';
@@ -1361,7 +1381,7 @@ import * as sfnTasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 export class DatabaseMigrationStack extends cdk.Stack {
     constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
-        
+
         // Create VPC for migration
         const vpc = new ec2.Vpc(this, 'MigrationVPC', {
             maxAzs: 2,
@@ -1378,7 +1398,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
                 }
             ]
         });
-        
+
         // DMS Replication Instance
         const replicationInstance = new dms.CfnReplicationInstance(this, 'ReplicationInstance', {
             replicationInstanceClass: 'dms.t3.medium',
@@ -1389,7 +1409,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             publiclyAccessible: false,
             replicationSubnetGroupIdentifier: this.createSubnetGroup(vpc).ref
         });
-        
+
         // Source and Target Endpoints
         const sourceEndpoint = new dms.CfnEndpoint(this, 'SourceEndpoint', {
             endpointType: 'source',
@@ -1400,7 +1420,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             username: 'migration_user',
             password: 'migration_password'
         });
-        
+
         const targetEndpoint = new dms.CfnEndpoint(this, 'TargetEndpoint', {
             endpointType: 'target',
             engineName: 'postgres',
@@ -1410,7 +1430,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             username: 'migration_user',
             password: 'migration_password'
         });
-        
+
         // Migration Task
         const migrationTask = new dms.CfnReplicationTask(this, 'MigrationTask', {
             replicationTaskIdentifier: 'full-load-and-cdc',
@@ -1470,11 +1490,11 @@ export class DatabaseMigrationStack extends cdk.Stack {
                 }
             })
         });
-        
+
         // Migration orchestration with Step Functions
         this.createMigrationOrchestration(migrationTask);
     }
-    
+
     private createSubnetGroup(vpc: ec2.Vpc): dms.CfnReplicationSubnetGroup {
         return new dms.CfnReplicationSubnetGroup(this, 'ReplicationSubnetGroup', {
             replicationSubnetGroupDescription: 'Subnet group for DMS',
@@ -1482,7 +1502,7 @@ export class DatabaseMigrationStack extends cdk.Stack {
             subnetIds: vpc.privateSubnets.map(subnet => subnet.subnetId)
         });
     }
-    
+
     private createMigrationOrchestration(migrationTask: dms.CfnReplicationTask): void {
         // Lambda functions for migration steps
         const startMigrationFunction = new lambda.Function(this, 'StartMigration', {
@@ -1495,12 +1515,12 @@ import json
 def handler(event, context):
     dms = boto3.client('dms')
     task_arn = event['task_arn']
-    
+
     response = dms.start_replication_task(
         ReplicationTaskArn=task_arn,
         StartReplicationTaskType='start-replication'
     )
-    
+
     return {
         'statusCode': 200,
         'task_arn': task_arn,
@@ -1508,7 +1528,7 @@ def handler(event, context):
     }
             `)
         });
-        
+
         const checkMigrationStatusFunction = new lambda.Function(this, 'CheckMigrationStatus', {
             runtime: lambda.Runtime.PYTHON_3_9,
             handler: 'index.handler',
@@ -1519,7 +1539,7 @@ import json
 def handler(event, context):
     dms = boto3.client('dms')
     task_arn = event['task_arn']
-    
+
     response = dms.describe_replication_tasks(
         Filters=[
             {
@@ -1528,10 +1548,10 @@ def handler(event, context):
             }
         ]
     )
-    
+
     task = response['ReplicationTasks'][0]
     status = task['Status']
-    
+
     return {
         'task_arn': task_arn,
         'task_status': status,
@@ -1539,27 +1559,27 @@ def handler(event, context):
     }
             `)
         });
-        
+
         // Step Function definition
         const startMigrationTask = new sfnTasks.LambdaInvoke(this, 'StartMigrationTask', {
             lambdaFunction: startMigrationFunction,
             inputPath: '$',
             outputPath: '$'
         });
-        
+
         const checkStatusTask = new sfnTasks.LambdaInvoke(this, 'CheckMigrationStatusTask', {
             lambdaFunction: checkMigrationStatusFunction,
             inputPath: '$',
             outputPath: '$'
         });
-        
+
         const waitTask = new stepfunctions.Wait(this, 'WaitForMigration', {
             time: stepfunctions.WaitTime.duration(cdk.Duration.minutes(5))
         });
-        
+
         const migrationComplete = new stepfunctions.Succeed(this, 'MigrationComplete');
         const migrationFailed = new stepfunctions.Fail(this, 'MigrationFailed');
-        
+
         // Define state machine
         const definition = startMigrationTask
             .next(waitTask)
@@ -1570,7 +1590,7 @@ def handler(event, context):
                           .when(stepfunctions.Condition.stringEquals('$.task_status', 'stopped'), migrationComplete)
                           .otherwise(migrationFailed))
                 .otherwise(waitTask));
-        
+
         new stepfunctions.StateMachine(this, 'MigrationStateMachine', {
             definition: definition,
             timeout: cdk.Duration.hours(24)
@@ -1599,6 +1619,7 @@ Focus on zero-downtime migrations with comprehensive validation, automated rollb
 This command integrates seamlessly with other development workflow commands to create a comprehensive database-first development pipeline:
 
 ### Integration with API Development (`/api-scaffold`)
+
 ```python
 # integrated-db-api-config.py
 class IntegratedDatabaseApiConfig:
@@ -1606,7 +1627,7 @@ class IntegratedDatabaseApiConfig:
         self.api_config = self.load_api_config()        # From /api-scaffold
         self.db_config = self.load_db_config()          # From /db-migrate
         self.migration_config = self.load_migration_config()
-    
+
     def generate_api_aware_migrations(self):
         """Generate migrations that consider API endpoints and schemas"""
         return {
@@ -1620,12 +1641,12 @@ DO $$
 BEGIN
     -- Verify API endpoints that depend on this schema
     IF EXISTS (
-        SELECT 1 FROM api_endpoints 
+        SELECT 1 FROM api_endpoints
         WHERE schema_dependencies @> '["users", "profiles"]'
         AND is_active = true
     ) THEN
         RAISE NOTICE 'Found active API endpoints depending on this schema';
-        
+
         -- Create migration strategy with API versioning
         CREATE TABLE IF NOT EXISTS api_migration_log (
             id SERIAL PRIMARY KEY,
@@ -1635,11 +1656,11 @@ BEGIN
             rollback_script TEXT,
             created_at TIMESTAMP DEFAULT NOW()
         );
-        
+
         -- Log this migration for API tracking
         INSERT INTO api_migration_log (
-            migration_name, 
-            api_version, 
+            migration_name,
+            api_version,
             schema_changes
         ) VALUES (
             'api_aware_schema_update',
@@ -1653,8 +1674,8 @@ END $$;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS new_field VARCHAR(255);
 
 -- Create view for API backward compatibility
-CREATE OR REPLACE VIEW users_api_v1 AS 
-SELECT 
+CREATE OR REPLACE VIEW users_api_v1 AS
+SELECT
     id,
     username,
     email,
@@ -1669,7 +1690,7 @@ GRANT SELECT ON users_api_v1 TO {self.api_config.get("db_user", "api_service")};
 
 COMMIT;
             """,
-            
+
             # Database connection pool optimization for API
             'connection_pool_config': {
                 'fastapi': f"""
@@ -1682,7 +1703,7 @@ class DatabaseConfig:
     def __init__(self):
         self.database_url = "{self.db_config.get('url', 'postgresql://localhost/app')}"
         self.api_config = {self.api_config}
-        
+
     def create_engine(self):
         return create_engine(
             self.database_url,
@@ -1693,7 +1714,7 @@ class DatabaseConfig:
             pool_recycle=3600,
             echo={str(self.api_config.get('debug', False)).lower()}
         )
-    
+
     def get_session_maker(self):
         engine = self.create_engine()
         return sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -1706,16 +1727,16 @@ async def get_db_with_migration_check():
             text("SELECT COUNT(*) FROM schema_migrations WHERE is_running = true")
         )
         running_migrations = result.scalar()
-        
+
         if running_migrations > 0:
             raise HTTPException(
                 status_code=503,
                 detail="Database migrations in progress. API temporarily unavailable."
             )
-        
+
         yield session
                 """,
-                
+
                 'express': f"""
 // Express.js with database migration awareness
 const {{ Pool }} = require('pg');
@@ -1730,10 +1751,10 @@ class DatabaseManager {{
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
         }});
-        
+
         this.migrationStatus = new Map();
     }}
-    
+
     async checkMigrationStatus() {{
         try {{
             const client = await this.pool.connect();
@@ -1741,26 +1762,26 @@ class DatabaseManager {{
                 'SELECT COUNT(*) as count FROM schema_migrations WHERE is_running = true'
             );
             client.release();
-            
+
             return result.rows[0].count === '0';
         }} catch (error) {{
             console.error('Failed to check migration status:', error);
             return false;
         }}
     }}
-    
+
     // Middleware to check migration status
     migrationStatusMiddleware() {{
         return async (req, res, next) => {{
             const isSafe = await this.checkMigrationStatus();
-            
+
             if (!isSafe) {{
                 return res.status(503).json({{
                     error: 'Database migrations in progress',
                     message: 'API temporarily unavailable during database updates'
                 }});
             }}
-            
+
             next();
         }};
     }}
@@ -1771,7 +1792,7 @@ app.use('/api', dbManager.migrationStatusMiddleware());
                 """
             }
         }
-    
+
     def generate_api_schema_sync(self):
         """Generate API schema synchronization with database"""
         return f"""
@@ -1784,7 +1805,7 @@ class ApiSchemaSync:
     def __init__(self, api_base_url="{self.api_config.get('base_url', 'http://localhost:8000')}"):
         self.api_base_url = api_base_url
         self.db_config = {self.db_config}
-    
+
     async def notify_api_of_schema_change(self, migration_name, schema_changes):
         '''Notify API service of database schema changes'''
         async with aiohttp.ClientSession() as session:
@@ -1793,7 +1814,7 @@ class ApiSchemaSync:
                 'schema_changes': schema_changes,
                 'timestamp': datetime.now().isoformat()
             }}
-            
+
             try:
                 async with session.post(
                     f"{{self.api_base_url}}/internal/schema-update",
@@ -1806,7 +1827,7 @@ class ApiSchemaSync:
                         print(f"Failed to notify API: {{response.status}}")
             except Exception as e:
                 print(f"Error notifying API: {{e}}")
-    
+
     async def validate_api_compatibility(self, proposed_changes):
         '''Validate that proposed schema changes won't break API'''
         async with aiohttp.ClientSession() as session:
@@ -1825,6 +1846,7 @@ class ApiSchemaSync:
 ```
 
 ### Complete Workflow Integration
+
 ```python
 # complete-database-workflow.py
 class CompleteDatabaseWorkflow:
@@ -1838,38 +1860,38 @@ class CompleteDatabaseWorkflow:
             'frontend': self.load_frontend_config(), # From /frontend-optimize
             'database': self.load_db_config()        # From /db-migrate
         }
-    
+
     async def execute_complete_workflow(self):
         console.log("🚀 Starting complete database migration workflow...")
-        
+
         # 1. Pre-migration Security Scan
         security_scan = await self.run_security_scan()
         console.log("✅ Database security scan completed")
-        
+
         # 2. API Compatibility Check
         api_compatibility = await self.check_api_compatibility()
         console.log("✅ API compatibility verified")
-        
+
         # 3. Container-based Migration Testing
         container_tests = await self.run_container_tests()
         console.log("✅ Container-based migration tests passed")
-        
+
         # 4. Production Migration with Monitoring
         migration_result = await self.run_production_migration()
         console.log("✅ Production migration completed")
-        
+
         # 5. Frontend Cache Invalidation
         cache_invalidation = await self.invalidate_frontend_caches()
         console.log("✅ Frontend caches invalidated")
-        
+
         # 6. Kubernetes Deployment Update
         k8s_deployment = await self.update_k8s_deployment()
         console.log("✅ Kubernetes deployment updated")
-        
+
         # 7. Post-migration Testing Pipeline
         post_migration_tests = await self.run_post_migration_tests()
         console.log("✅ Post-migration tests completed")
-        
+
         return {
             'status': 'success',
             'workflow_id': self.generate_workflow_id(),

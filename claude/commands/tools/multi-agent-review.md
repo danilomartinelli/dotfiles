@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 Perform comprehensive multi-agent code review with specialized reviewers:
@@ -9,7 +9,9 @@ Perform comprehensive multi-agent code review with specialized reviewers:
 ## Review Process
 
 ### 1. Code Quality Review
+
 Use Task tool with subagent_type="code-reviewer" to examine:
+
 - Code style and readability
 - Adherence to SOLID principles
 - Design patterns and anti-patterns
@@ -20,7 +22,9 @@ Use Task tool with subagent_type="code-reviewer" to examine:
 Prompt: "Perform detailed code review of: $ARGUMENTS. Focus on maintainability, readability, and best practices. Provide specific line-by-line feedback where appropriate."
 
 ### 2. Security Review
+
 Use Task tool with subagent_type="security-auditor" to check:
+
 - Authentication and authorization flaws
 - Input validation and sanitization
 - SQL injection and XSS vulnerabilities
@@ -31,7 +35,9 @@ Use Task tool with subagent_type="security-auditor" to check:
 Prompt: "Conduct security review of: $ARGUMENTS. Identify vulnerabilities, security risks, and OWASP compliance issues. Provide severity ratings and remediation steps."
 
 ### 3. Architecture Review
+
 Use Task tool with subagent_type="architect-reviewer" to evaluate:
+
 - Service boundaries and coupling
 - Scalability considerations
 - Design pattern appropriateness

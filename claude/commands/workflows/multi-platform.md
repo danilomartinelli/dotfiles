@@ -1,10 +1,11 @@
 ---
-model: opus
+model: claude-opus-4-1-20250805
 ---
 
 Build the same feature across multiple platforms:
 
 Run in parallel:
+
 - frontend-developer: Web implementation
 - mobile-developer: Mobile app implementation
 - api-documenter: API documentation

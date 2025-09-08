@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 Optimize application stack using specialized optimization agents:
@@ -9,7 +9,9 @@ Optimize application stack using specialized optimization agents:
 ## Optimization Strategy
 
 ### 1. Database Optimization
+
 Use Task tool with subagent_type="database-optimizer" to:
+
 - Analyze query performance and execution plans
 - Optimize indexes and table structures
 - Implement caching strategies
@@ -17,6 +19,7 @@ Use Task tool with subagent_type="database-optimizer" to:
 - Suggest schema improvements
 
 Prompt: "Optimize database layer for: $ARGUMENTS. Analyze and improve:
+
 1. Slow query identification and optimization
 2. Index analysis and recommendations
 3. Schema optimization for performance
@@ -24,7 +27,9 @@ Prompt: "Optimize database layer for: $ARGUMENTS. Analyze and improve:
 5. Caching strategy implementation"
 
 ### 2. Application Performance
+
 Use Task tool with subagent_type="performance-engineer" to:
+
 - Profile application code
 - Identify CPU and memory bottlenecks
 - Optimize algorithms and data structures
@@ -32,6 +37,7 @@ Use Task tool with subagent_type="performance-engineer" to:
 - Improve async/concurrent operations
 
 Prompt: "Optimize application performance for: $ARGUMENTS. Focus on:
+
 1. Code profiling and bottleneck identification
 2. Algorithm optimization
 3. Memory usage optimization
@@ -39,7 +45,9 @@ Prompt: "Optimize application performance for: $ARGUMENTS. Focus on:
 5. Application-level caching"
 
 ### 3. Frontend Optimization
+
 Use Task tool with subagent_type="frontend-developer" to:
+
 - Reduce bundle sizes
 - Implement lazy loading
 - Optimize rendering performance
@@ -47,6 +55,7 @@ Use Task tool with subagent_type="frontend-developer" to:
 - Implement efficient state management
 
 Prompt: "Optimize frontend performance for: $ARGUMENTS. Improve:
+
 1. Bundle size reduction strategies
 2. Lazy loading implementation
 3. Rendering optimization
@@ -56,11 +65,13 @@ Prompt: "Optimize frontend performance for: $ARGUMENTS. Improve:
 ## Consolidated Optimization Plan
 
 ### Performance Baseline
+
 - Current performance metrics
 - Identified bottlenecks
 - User experience impact
 
 ### Optimization Roadmap
+
 1. **Quick Wins** (< 1 day)
    - Simple query optimizations
    - Basic caching implementation
@@ -77,12 +88,14 @@ Prompt: "Optimize frontend performance for: $ARGUMENTS. Improve:
    - Full caching layer
 
 ### Expected Improvements
+
 - Database query time reduction: X%
 - API response time improvement: X%
 - Frontend load time reduction: X%
 - Overall user experience impact
 
 ### Implementation Priority
+
 - Ordered list of optimizations by impact/effort ratio
 - Dependencies between optimizations
 - Risk assessment for each change

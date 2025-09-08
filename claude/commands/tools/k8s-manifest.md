@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: claude-sonnet-4-20250514
 ---
 
 # Kubernetes Manifest Generation
@@ -7,9 +7,11 @@ model: sonnet
 You are a Kubernetes expert specializing in creating production-ready manifests, Helm charts, and cloud-native deployment configurations. Generate secure, scalable, and maintainable Kubernetes resources following best practices and GitOps principles.
 
 ## Context
+
 The user needs to create or optimize Kubernetes manifests for deploying applications. Focus on production readiness, security hardening, resource optimization, observability, and multi-environment configurations.
 
 ## Requirements
+
 $ARGUMENTS
 
 ## Instructions
@@ -19,6 +21,7 @@ $ARGUMENTS
 Analyze the application to determine Kubernetes requirements:
 
 **Framework-Specific Analysis**
+
 ```python
 import yaml
 import json
@@ -86,7 +89,7 @@ class AdvancedK8sAnalyzer:
                 'resources': {'cpu': '300m', 'memory': '512Mi'}
             }
         }
-    
+
     def analyze_application(self, app_path: str) -> Dict[str, Any]:
         """
         Advanced application analysis with framework detection
@@ -104,27 +107,27 @@ class AdvancedK8sAnalyzer:
             'observability_needs': self._analyze_observability(app_path),
             'scaling_strategy': self._recommend_scaling(app_path, framework)
         }
-        
+
         return analysis
-    
+
     def _detect_framework(self, app_path: str) -> str:
         """Detect application framework for optimized deployments"""
         app_path = Path(app_path)
-        
+
         for framework, config in self.framework_patterns.items():
             if all((app_path / f).exists() for f in config['files'][:1]):
                 if any((app_path / f).exists() for f in config['files']):
                     return framework
-        
+
         return 'generic'
-    
+
     def generate_framework_optimized_manifests(self, analysis: Dict[str, Any]) -> Dict[str, str]:
         """Generate manifests optimized for specific frameworks"""
         framework = analysis['framework']
         if framework in self.framework_patterns:
             return self._generate_specialized_manifests(framework, analysis)
         return self._generate_generic_manifests(analysis)
-    
+
     def _detect_app_type(self, app_path):
         """Detect application type and stack"""
         indicators = {
@@ -134,18 +137,18 @@ class AdvancedK8sAnalyzer:
             'worker': ['worker.py', 'consumer.js', 'processor.go'],
             'frontend': ['package.json', 'webpack.config.js', 'angular.json']
         }
-        
+
         detected_types = []
         for app_type, files in indicators.items():
             if any((Path(app_path) / f).exists() for f in files):
                 detected_types.append(app_type)
-                
+
         return detected_types
-    
+
     def _identify_services(self, app_path):
         """Identify microservices structure"""
         services = []
-        
+
         # Check docker-compose.yml
         compose_file = Path(app_path) / 'docker-compose.yml'
         if compose_file.exists():
@@ -159,7 +162,7 @@ class AdvancedK8sAnalyzer:
                         'environment': config.get('environment', {}),
                         'volumes': config.get('volumes', [])
                     })
-        
+
         return services
 ```
 
@@ -168,6 +171,7 @@ class AdvancedK8sAnalyzer:
 Create production-ready Deployment manifests:
 
 **Deployment Template**
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -312,6 +316,7 @@ spec:
 Generate Service and networking resources:
 
 **Service Configuration**
+
 ```yaml
 apiVersion: v1
 kind: Service
@@ -357,6 +362,7 @@ spec:
 ```
 
 **Ingress Configuration**
+
 ```yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -392,6 +398,7 @@ spec:
 Create ConfigMaps and Secrets:
 
 **ConfigMap Generator**
+
 ```python
 def generate_configmap(app_name, config_data):
     """
@@ -409,7 +416,7 @@ def generate_configmap(app_name, config_data):
         },
         'data': {}
     }
-    
+
     # Handle different config formats
     for key, value in config_data.items():
         if isinstance(value, dict):
@@ -421,7 +428,7 @@ def generate_configmap(app_name, config_data):
         else:
             # Plain string
             configmap['data'][key] = str(value)
-    
+
     return yaml.dump(configmap)
 
 def generate_secret(app_name, secret_data):
@@ -429,7 +436,7 @@ def generate_secret(app_name, secret_data):
     Generate Secret manifest
     """
     import base64
-    
+
     secret = {
         'apiVersion': 'v1',
         'kind': 'Secret',
@@ -443,12 +450,12 @@ def generate_secret(app_name, secret_data):
         'type': 'Opaque',
         'data': {}
     }
-    
+
     # Base64 encode all values
     for key, value in secret_data.items():
         encoded = base64.b64encode(value.encode()).decode()
         secret['data'][key] = encoded
-    
+
     return yaml.dump(secret)
 ```
 
@@ -457,6 +464,7 @@ def generate_secret(app_name, secret_data):
 Configure persistent volumes:
 
 **StatefulSet with Storage**
+
 ```yaml
 apiVersion: apps/v1
 kind: StatefulSet
@@ -508,15 +516,16 @@ spec:
 Create production Helm charts:
 
 **Chart Structure**
+
 ```bash
 #!/bin/bash
 # generate-helm-chart.sh
 
 create_helm_chart() {
     local chart_name="$1"
-    
+
     mkdir -p "$chart_name"/{templates,charts}
-    
+
     # Chart.yaml
     cat > "$chart_name/Chart.yaml" << EOF
 apiVersion: v2
@@ -703,6 +712,7 @@ EOF
 Handle environment-specific configurations with GitOps:
 
 **FluxCD GitOps Setup**
+
 ```yaml
 # infrastructure/flux-system/gotk-sync.yaml
 apiVersion: source.toolkit.fluxcd.io/v1beta2
@@ -829,6 +839,7 @@ resources:
 Create comprehensive security-focused resources:
 
 **Pod Security Standards (PSS)**
+
 ```yaml
 # Namespace with Pod Security Standards
 apiVersion: v1
@@ -923,7 +934,7 @@ spec:
     - target: admission.k8s.gatekeeper.sh
       rego: |
         package requiredlabels
-        
+
         violation[{"msg": msg}] {
           required := input.parameters.labels
           provided := input.review.object.metadata.labels
@@ -964,7 +975,7 @@ data:
         (user=%user.name command=%proc.cmdline image=%container.image.repository)
       priority: WARNING
       tags: [network, mitre_lateral_movement]
-    
+
     - rule: Unexpected Outbound Connection
       desc: An unexpected outbound connection was established
       condition: >
@@ -1020,6 +1031,7 @@ spec:
 Configure comprehensive monitoring, logging, and tracing:
 
 **OpenTelemetry Integration**
+
 ```yaml
 # OpenTelemetry Collector
 apiVersion: opentelemetry.io/v1alpha1
@@ -1051,7 +1063,7 @@ spec:
         auth_type: "serviceAccount"
         endpoint: "${env:K8S_NODE_NAME}:10250"
         insecure_skip_verify: true
-    
+
     processors:
       batch:
         timeout: 1s
@@ -1071,7 +1083,7 @@ spec:
             - k8s.namespace.name
             - k8s.node.name
             - k8s.pod.start_time
-    
+
     exporters:
       prometheus:
         endpoint: "0.0.0.0:8889"
@@ -1081,7 +1093,7 @@ spec:
           insecure: true
       loki:
         endpoint: http://loki:3100/loki/api/v1/push
-    
+
     service:
       pipelines:
         traces:
@@ -1160,7 +1172,7 @@ spec:
       annotations:
         summary: "High error rate detected"
         description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
-    
+
     - alert: HighResponseTime
       expr: |
         histogram_quantile(0.95,
@@ -1173,7 +1185,7 @@ spec:
       annotations:
         summary: "High response time detected"
         description: "95th percentile response time is {{ $value }}s for {{ $labels.job }}"
-    
+
     - alert: PodCrashLooping
       expr: |
         increase(kube_pod_container_status_restarts_total{pod=~"${APP_NAME}-.*"}[1h]) > 5
@@ -1211,7 +1223,7 @@ data:
           },
           {
             "title": "Response Time",
-            "type": "graph", 
+            "type": "graph",
             "targets": [
               {
                 "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"${APP_NAME}\"}[5m]))",
@@ -1233,6 +1245,7 @@ data:
 Prepare manifests for enterprise GitOps:
 
 **Multi-Cluster ArgoCD Application**
+
 ```yaml
 # Application Set for Multi-Environment Deployment
 apiVersion: argoproj.io/v1alpha1
@@ -1412,6 +1425,7 @@ spec:
 Validate generated manifests:
 
 **Manifest Validation Script**
+
 ```python
 #!/usr/bin/env python3
 import yaml
@@ -1425,16 +1439,16 @@ class ManifestValidator:
             config.load_incluster_config()
         except:
             config.load_kube_config()
-        
+
         self.api_client = client.ApiClient()
-    
+
     def validate_manifest(self, manifest_file):
         """
         Validate Kubernetes manifest
         """
         with open(manifest_file) as f:
             manifests = list(yaml.safe_load_all(f))
-        
+
         results = []
         for manifest in manifests:
             result = {
@@ -1443,51 +1457,51 @@ class ManifestValidator:
                 'valid': False,
                 'errors': []
             }
-            
+
             # Dry run validation
             try:
                 self._dry_run_apply(manifest)
                 result['valid'] = True
             except ApiException as e:
                 result['errors'].append(str(e))
-            
+
             # Security checks
             security_issues = self._check_security(manifest)
             if security_issues:
                 result['errors'].extend(security_issues)
-            
+
             # Best practices checks
             bp_issues = self._check_best_practices(manifest)
             if bp_issues:
                 result['errors'].extend(bp_issues)
-            
+
             results.append(result)
-        
+
         return results
-    
+
     def _check_security(self, manifest):
         """Check security best practices"""
         issues = []
-        
+
         if manifest.get('kind') == 'Deployment':
             spec = manifest.get('spec', {}).get('template', {}).get('spec', {})
-            
+
             # Check security context
             if not spec.get('securityContext'):
                 issues.append("Missing pod security context")
-            
+
             # Check container security
             for container in spec.get('containers', []):
                 if not container.get('securityContext'):
                     issues.append(f"Container {container['name']} missing security context")
-                
+
                 sec_ctx = container.get('securityContext', {})
                 if not sec_ctx.get('runAsNonRoot'):
                     issues.append(f"Container {container['name']} not configured to run as non-root")
-                
+
                 if not sec_ctx.get('readOnlyRootFilesystem'):
                     issues.append(f"Container {container['name']} has writable root filesystem")
-        
+
         return issues
 ```
 
@@ -1496,6 +1510,7 @@ class ManifestValidator:
 Implement intelligent scaling strategies:
 
 **KEDA Autoscaling**
+
 ```yaml
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
@@ -1573,6 +1588,7 @@ spec:
 Modern deployment pipeline integration:
 
 **GitHub Actions Workflow**
+
 ```yaml
 # .github/workflows/deploy.yml
 name: Deploy to Kubernetes
@@ -1595,32 +1611,32 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    
+
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Setup GitVersion
       uses: gittools/actions/gitversion/setup@v0.9.15
       with:
         versionSpec: '5.x'
-    
+
     - name: Determine Version
       uses: gittools/actions/gitversion/execute@v0.9.15
       id: gitversion
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    
+
     - name: Log in to Container Registry
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -1635,30 +1651,30 @@ jobs:
         build-args: |
           VERSION=${{ steps.gitversion.outputs.semVer }}
           COMMIT_SHA=${{ github.sha }}
-    
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}'
         format: 'sarif'
         output: 'trivy-results.sarif'
-    
+
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results.sarif'
-    
+
     - name: Install kubectl and kustomize
       run: |
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         chmod +x kubectl && sudo mv kubectl /usr/local/bin/
         curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
         sudo mv kustomize /usr/local/bin/
-    
+
     - name: Validate Kubernetes manifests
       run: |
         kubectl --dry-run=client --validate=true apply -k k8s/overlays/staging
-    
+
     - name: Deploy to staging
       if: github.ref == 'refs/heads/main'
       run: |
@@ -1666,7 +1682,7 @@ jobs:
         kustomize edit set image app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.gitversion.outputs.semVer }}
         kubectl apply -k .
         kubectl rollout status deployment/${APP_NAME} -n staging --timeout=300s
-    
+
     - name: Run integration tests
       if: github.ref == 'refs/heads/main'
       run: |
@@ -1674,7 +1690,7 @@ jobs:
         kubectl wait --for=condition=available --timeout=300s deployment/${APP_NAME} -n staging
         # Run tests
         npm run test:integration
-    
+
     - name: Deploy to production
       if: github.ref == 'refs/heads/main' && success()
       run: |
@@ -1702,6 +1718,7 @@ jobs:
 ### Complete Cloud-Native Deployment Workflow
 
 **Enterprise Kubernetes Pipeline**
+
 ```bash
 # 1. Generate cloud-native API scaffolding
 /api-scaffold
@@ -1730,6 +1747,7 @@ service_mesh: true
 ```
 
 **Integrated Kubernetes Configuration**
+
 ```python
 # k8s-integration-config.py - Shared across all commands
 class IntegratedKubernetesConfig:
@@ -1738,7 +1756,7 @@ class IntegratedKubernetesConfig:
         self.container_config = self.load_container_config() # From /docker-optimize
         self.security_config = self.load_security_config() # From /security-scan
         self.test_config = self.load_test_config()         # From /test-harness
-        
+
     def generate_application_manifests(self):
         """Generate complete K8s manifests for the application stack"""
         manifests = {
@@ -1753,11 +1771,11 @@ class IntegratedKubernetesConfig:
             'autoscaling': self.generate_autoscaling_manifests()
         }
         return manifests
-    
+
     def generate_deployment_manifests(self):
         """Generate deployment manifests from API and container configs"""
         deployments = []
-        
+
         # API deployment
         if self.api_config.get('framework'):
             api_deployment = {
@@ -1792,13 +1810,13 @@ class IntegratedKubernetesConfig:
                 }
             }
             deployments.append(api_deployment)
-        
+
         return deployments
-    
+
     def generate_pod_spec(self):
         """Generate optimized pod specification"""
         containers = []
-        
+
         # Main application container
         app_container = {
             'name': 'app',
@@ -1820,14 +1838,14 @@ class IntegratedKubernetesConfig:
             'volumeMounts': self.generate_volume_mounts()
         }
         containers.append(app_container)
-        
+
         # Sidecar containers (monitoring, security, etc.)
         if self.should_include_monitoring_sidecar():
             containers.append(self.generate_monitoring_sidecar())
-        
+
         if self.should_include_security_sidecar():
             containers.append(self.generate_security_sidecar())
-        
+
         pod_spec = {
             'serviceAccountName': f"{self.api_config['name']}-sa",
             'securityContext': self.generate_pod_security_context(),
@@ -1839,13 +1857,13 @@ class IntegratedKubernetesConfig:
             'affinity': self.generate_affinity_rules(),
             'topologySpreadConstraints': self.generate_topology_constraints()
         }
-        
+
         return pod_spec
-    
+
     def generate_security_context(self):
         """Generate container security context from security scan results"""
         security_level = self.security_config.get('level', 'standard')
-        
+
         base_context = {
             'allowPrivilegeEscalation': False,
             'readOnlyRootFilesystem': True,
@@ -1855,7 +1873,7 @@ class IntegratedKubernetesConfig:
                 'drop': ['ALL']
             }
         }
-        
+
         if security_level == 'enterprise':
             base_context.update({
                 'seccompProfile': {'type': 'RuntimeDefault'},
@@ -1864,11 +1882,12 @@ class IntegratedKubernetesConfig:
                     'add': ['NET_BIND_SERVICE'] if self.api_config.get('privileged_port') else []
                 }
             })
-        
+
         return base_context
 ```
 
 **Database Integration with Kubernetes**
+
 ```yaml
 # database-k8s-manifests.yaml - From /db-migrate + /k8s-manifest
 apiVersion: v1
@@ -1895,13 +1914,13 @@ data:
     effective_cache_size = 1GB
     work_mem = 4MB
     maintenance_work_mem = 64MB
-    
+
     # Security settings from /security-scan
     ssl = on
     log_connections = on
     log_disconnections = on
     log_statement = 'all'
-    
+
     # Monitoring settings
     shared_preload_libraries = 'pg_stat_statements'
     track_activity_query_size = 2048
@@ -2058,6 +2077,7 @@ spec:
 ```
 
 **Frontend + Backend Integration**
+
 ```yaml
 # fullstack-k8s-deployment.yaml - Integration across all commands
 apiVersion: v1
@@ -2264,6 +2284,7 @@ spec:
 ```
 
 **Security Integration**
+
 ```yaml
 # security-k8s-manifests.yaml - From /security-scan integration
 apiVersion: v1
@@ -2420,6 +2441,7 @@ spec:
 ```
 
 **Monitoring and Observability Integration**
+
 ```yaml
 # monitoring-k8s-manifests.yaml - Complete observability stack
 apiVersion: v1
@@ -2502,7 +2524,7 @@ data:
         Log_Level     info
         Daemon        off
         Parsers_File  parsers.conf
-    
+
     [INPUT]
         Name              tail
         Path              /var/log/containers/*.log
@@ -2511,7 +2533,7 @@ data:
         Refresh_Interval  5
         Mem_Buf_Limit     5MB
         Skip_Long_Lines   On
-    
+
     [FILTER]
         Name                kubernetes
         Match               kube.*
@@ -2519,7 +2541,7 @@ data:
         Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
         Merge_Log           On
-    
+
     [OUTPUT]
         Name  es
         Match *
@@ -2529,6 +2551,7 @@ data:
 ```
 
 **Auto-scaling Integration**
+
 ```yaml
 # autoscaling-k8s-manifests.yaml - Intelligent scaling based on multiple metrics
 apiVersion: autoscaling/v2
@@ -2628,6 +2651,7 @@ spec:
 ```
 
 **CI/CD Integration Pipeline**
+
 ```yaml
 # .github/workflows/k8s-deployment.yml
 name: Kubernetes Deployment Pipeline
@@ -2649,45 +2673,45 @@ jobs:
       contents: read
       packages: read
       id-token: write
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     # 1. Setup kubectl and helm
     - name: Setup kubectl
       uses: azure/setup-kubectl@v3
       with:
         version: 'v1.28.0'
-    
+
     - name: Setup Helm
       uses: azure/setup-helm@v3
       with:
         version: 'v3.12.0'
-    
+
     # 2. Authenticate with cluster
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         aws-region: us-west-2
-    
+
     - name: Update kubeconfig
       run: |
         aws eks update-kubeconfig --region us-west-2 --name ${{ env.CLUSTER_NAME }}
-    
+
     # 3. Validate manifests
     - name: Validate Kubernetes manifests
       run: |
         # Validate syntax
         kubectl --dry-run=client apply -f k8s/
-        
+
         # Security validation with kubesec
         docker run --rm -v $(pwd):/workspace kubesec/kubesec:latest scan /workspace/k8s/*.yaml
-        
+
         # Policy validation with OPA Gatekeeper
         conftest verify --policy opa-policies/ k8s/
-    
+
     # 4. Deploy to staging
     - name: Deploy to staging
       if: github.ref == 'refs/heads/develop'
@@ -2695,27 +2719,27 @@ jobs:
         # Update image tags
         sed -i "s|registry.company.com/api:.*|registry.company.com/api:${{ github.sha }}|g" k8s/api-deployment.yaml
         sed -i "s|registry.company.com/frontend:.*|registry.company.com/frontend:${{ github.sha }}|g" k8s/frontend-deployment.yaml
-        
+
         # Apply manifests to staging namespace
         kubectl apply -f k8s/ --namespace=staging
-        
+
         # Wait for rollout to complete
         kubectl rollout status deployment/api-deployment --namespace=staging --timeout=300s
         kubectl rollout status deployment/frontend-deployment --namespace=staging --timeout=300s
-    
+
     # 5. Run integration tests
     - name: Run integration tests
       if: github.ref == 'refs/heads/develop'
       run: |
         # Wait for services to be ready
         kubectl wait --for=condition=ready pod -l app=api --namespace=staging --timeout=300s
-        
+
         # Get service URLs
         API_URL=$(kubectl get service api-service --namespace=staging -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-        
+
         # Run tests from /test-harness
         pytest tests/integration/ --api-url="http://${API_URL}:8000" -v
-    
+
     # 6. Deploy to production (on main branch)
     - name: Deploy to production
       if: github.ref == 'refs/heads/main'
@@ -2723,30 +2747,30 @@ jobs:
         # Update image tags
         sed -i "s|registry.company.com/api:.*|registry.company.com/api:${{ github.sha }}|g" k8s/api-deployment.yaml
         sed -i "s|registry.company.com/frontend:.*|registry.company.com/frontend:${{ github.sha }}|g" k8s/frontend-deployment.yaml
-        
+
         # Apply manifests to production namespace with rolling update
         kubectl apply -f k8s/ --namespace=production
-        
+
         # Monitor rollout
         kubectl rollout status deployment/api-deployment --namespace=production --timeout=600s
         kubectl rollout status deployment/frontend-deployment --namespace=production --timeout=600s
-        
+
         # Verify deployment health
         kubectl get pods --namespace=production -l app=api
         kubectl get pods --namespace=production -l app=frontend
-    
+
     # 7. Post-deployment verification
     - name: Post-deployment verification
       if: github.ref == 'refs/heads/main'
       run: |
         # Health checks
         kubectl exec -n production deployment/api-deployment -- curl -f http://localhost:8000/health
-        
+
         # Performance baseline check
         kubectl run --rm -i --tty load-test --image=loadimpact/k6:latest --restart=Never -- run - <<EOF
         import http from 'k6/http';
         import { check } from 'k6';
-        
+
         export let options = {
           stages: [
             { duration: '2m', target: 100 },
@@ -2754,7 +2778,7 @@ jobs:
             { duration: '2m', target: 0 },
           ],
         };
-        
+
         export default function () {
           let response = http.get('http://api-service.production.svc.cluster.local:8000/health');
           check(response, {
@@ -2763,7 +2787,7 @@ jobs:
           });
         }
         EOF
-    
+
     # 8. Cleanup on failure
     - name: Rollback on failure
       if: failure()
@@ -2771,7 +2795,7 @@ jobs:
         # Rollback to previous version
         kubectl rollout undo deployment/api-deployment --namespace=production
         kubectl rollout undo deployment/frontend-deployment --namespace=production
-        
+
         # Notify team
         echo "Deployment failed and rolled back" >> $GITHUB_STEP_SUMMARY
 ```
