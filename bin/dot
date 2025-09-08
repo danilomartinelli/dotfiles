@@ -44,13 +44,7 @@ export ZSH=$HOME/.dotfiles
 echo "› git pull"
 git -C $ZSH pull
 
-# Set macOS defaults
-$ZSH/macos/set-defaults.sh
-
-# Set macOS hostname
-$ZSH/macos/set-hostname.sh
-
-# Install homebrew
+# Install homebrew first (needed for other installers)
 $ZSH/homebrew/install.sh 2>&1
 
 # Upgrade homebrew

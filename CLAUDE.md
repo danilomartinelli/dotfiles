@@ -49,15 +49,40 @@ Key environment variables:
 - `$ZSH` - Points to `~/.dotfiles` directory
 - `$PROJECTS` - Main projects folder (`~/Code`)
 
+**Important**: Folders starting with underscore (`_*`) are completely ignored by the loading system. This includes `_docs/`, `_archive/`, etc.
+
 ### Directory Structure
 
-Each directory represents a topic area with its own configuration:
-- `install.sh` - Installation script for that topic
-- `*.symlink` - Files to be symlinked to home directory (without the .symlink extension)
-- `*.zsh` - Configuration files auto-loaded by zshrc
-- `path.zsh` - PATH modifications for that topic
-- `aliases.zsh` - Command aliases
-- `completion.zsh` - Shell completions
+Each directory represents a topic area with its own configuration following this standard structure:
+
+```
+topic/
+├── install.sh       # Installation script (optional)
+├── *.symlink        # Files to be symlinked to ~/ (e.g., config.symlink → ~/.config)
+├── path.zsh         # PATH modifications (optional, loaded first)
+├── aliases.zsh      # Command aliases (optional)
+├── env.zsh          # Environment variables (optional)
+├── completion.zsh   # Shell completions (optional, loaded last)
+├── *.zsh            # Other configuration files (auto-loaded)
+└── config/          # Non-symlinked config files (optional)
+```
+
+**File Naming Conventions:**
+- `install.sh` - Standard name for installation scripts
+- `*.symlink` - Files that will be symlinked to home directory
+- `path.zsh` - Must be named exactly this for PATH modifications
+- `aliases.zsh` - Standard name for command aliases
+- `completion.zsh` - Must be named exactly this for completions
+- Files starting with `_` are ignored even in regular folders
+
+**Special Cases:**
+- `ssh/config` and `ghostty/config` - Handled by their install.sh scripts (special locations)
+- `code/settings.json` and `code/keybindings.json` - Copied by install.sh, not symlinked
+- `mise/mise.zsh` - Special initialization file that activates mise in the shell (not just aliases)
+  - This pattern is unique to mise as it needs to hook into the shell
+- `macos/` - Contains set-defaults.sh and set-hostname.sh which are called by macos/install.sh
+  - Note: These scripts must keep their exact names as they contain specific functionality
+  - The install.sh wrapper prevents duplicate execution when running `bin/dot`
 
 ### Symlink Management
 

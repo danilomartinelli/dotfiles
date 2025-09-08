@@ -42,16 +42,35 @@ bin/dot
 .dotfiles/
 ├── bin/                 # Custom executable scripts
 ├── functions/           # ZSH functions (auto-loaded)
-├── */                   # Topic directories
-│   ├── install.sh       # Installation script for the topic
-│   ├── *.symlink        # Files to be symlinked to ~
-│   ├── *.zsh           # ZSH configs (auto-loaded)
-│   ├── path.zsh        # PATH modifications
-│   ├── aliases.zsh     # Command aliases
-│   └── completion.zsh  # Shell completions
+├── script/              # Setup and management scripts
+├── _docs/               # Documentation (ignored by installers)
+├── */                   # Topic directories (see below)
 ├── Brewfile            # Homebrew packages and apps
-└── script/             # Setup and management scripts
+├── CLAUDE.md           # Claude AI instructions
+└── localrc.example     # Template for local secrets
 ```
+
+### Topic Directory Structure
+
+Each topic follows this standard structure:
+
+```text
+topic/
+├── install.sh       # Installation script (optional)
+├── *.symlink        # Files to be symlinked to ~
+├── path.zsh         # PATH modifications (loaded first)
+├── aliases.zsh      # Command aliases
+├── env.zsh          # Environment variables
+├── completion.zsh   # Shell completions (loaded last)
+└── *.zsh           # Other configs (auto-loaded)
+```
+
+**⚠️ Important Architecture Rules:**
+- Folders starting with `_` are completely ignored (e.g., `_docs/`, `_archive/`)
+- Files starting with `_` are ignored even in regular folders
+- Standard file names must be exact: `path.zsh`, `aliases.zsh`, `completion.zsh`
+- Installation scripts must be named `install.sh`
+- Files ending in `.symlink` are automatically linked to home directory
 
 ## 🛠 Installed Tools
 
