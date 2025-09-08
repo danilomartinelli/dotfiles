@@ -128,15 +128,16 @@ fi
 installed=0
 failed=0
 
-for ext in "${extensions[@]}"; do
-  echo "Installing: $ext"
-  if code --install-extension "$ext" --force 2>/dev/null; then
-    ((installed++))
-  else
-    echo "  ⚠️  Failed to install: $ext"
-    ((failed++))
-  fi
-done
+# TODO: Re-enable extension installation after fixing issues with some extensions interrupting the Electron's process
+# for ext in "${extensions[@]}"; do
+#   echo "Installing: $ext"
+#   if code --install-extension "$ext" --force 2>/dev/null; then
+#     ((installed++))
+#   else
+#     echo "  ⚠️  Failed to install: $ext"
+#     ((failed++))
+#   fi
+# done
 
 echo ""
 echo "✅ Installation complete!"
