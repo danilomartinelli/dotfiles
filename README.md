@@ -192,36 +192,58 @@ Global npm packages:
 
 ### Local Secrets (.localrc)
 
-Store sensitive environment variables in `~/.localrc` (not tracked in git):
+All sensitive environment variables should be stored in `~/.localrc` (not tracked in git). This file is automatically sourced by `.zshrc` on shell startup, making all variables available in your shell sessions.
+
+#### Setting Up .localrc
 
 ```bash
 # Create your local configuration file
 touch ~/.localrc
+chmod 600 ~/.localrc  # Restrict permissions for security
 
-# Add your secrets
-echo 'export GITHUB_TOKEN="your-token"' >> ~/.localrc
-echo 'export AWS_ACCESS_KEY_ID="your-key"' >> ~/.localrc
-echo 'export DATABASE_URL="your-connection-string"' >> ~/.localrc
+# Add your secrets and environment variables
+cat >> ~/.localrc << 'EOF'
+# API Keys and Tokens
+export GITHUB_TOKEN="your-github-token"
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-..."
+
+# AWS Credentials
+export AWS_ACCESS_KEY_ID="your-key-id"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_DEFAULT_REGION="us-east-1"
+
+# Database Connections
+export DATABASE_URL="postgresql://user:pass@host:5432/db"
+export REDIS_URL="redis://localhost:6379"
+
+# Application Secrets
+export JWT_SECRET="your-jwt-secret"
+export SESSION_SECRET="your-session-secret"
+
+# Custom Configuration
+export MY_APP_ENV="development"
+export API_BASE_URL="https://api.example.com"
+EOF
 ```
 
-This file is automatically sourced by `.zshrc` on shell startup.
+#### Best Practices
 
-### Bitwarden Secrets (BWS)
+- **Security**: Always use `chmod 600 ~/.localrc` to ensure only you can read the file
+- **Organization**: Group related variables with comments
+- **Updates**: Variables are loaded on shell startup; run `reload!` (alias for `source ~/.zshrc`) to apply changes immediately
+- **Backup**: Keep a secure backup of your secrets in a password manager (like Bitwarden)
 
-The dotfiles include Bitwarden Secrets integration for centralized secret management:
+#### Example .localrc Template
 
-1. **Setup**: The `bws` binary is included in `bin/`
-2. **Auto-loading**: Secrets are automatically loaded on shell startup via `bws/env.zsh`
-3. **Manual reload**: Run `load_bws_env` to refresh secrets
-
-To use BWS:
+A template file is provided at `localrc.example` to help you get started:
 
 ```bash
-# List all secrets (requires authentication)
-bws secret list
-
-# Secrets are automatically exported as environment variables
-echo $YOUR_SECRET_NAME
+# Copy the template and customize it
+cp ~/.dotfiles/localrc.example ~/.localrc
+chmod 600 ~/.localrc
+# Edit with your actual values
+vim ~/.localrc
 ```
 
 ## 🗂 Creating New Topics
@@ -262,6 +284,15 @@ chmod +x ~/.dotfiles/your-tool/install.sh
 # Or run all installers
 script/install
 ```
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the `_docs/` folder:
+
+- **[📖 Documentation Overview](_docs/README.md)** - Complete guide with features, installation, and customization
+- **[🏗 Architecture](_docs/ARCHITECTURE.md)** - System design, component interactions, and data flow
+- **[📦 Installation Scripts](_docs/INSTALL_SCRIPTS.md)** - Detailed guide to all installation scripts
+- **[⚙️ Configuration Reference](_docs/CONFIGURATION.md)** - Complete configuration file reference
 
 ## 🔧 Configuration Details
 

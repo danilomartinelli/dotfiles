@@ -12,9 +12,14 @@ then
   source ~/.localrc
 fi
 
-# all of our zsh files
+# all of our zsh files (excluding folders starting with _)
 typeset -U config_files
-config_files=($ZSH/**/*.zsh)
+config_files=()
+for dir in $ZSH/*; do
+  if [[ $(basename "$dir") != _* ]]; then
+    config_files+=($dir/**/*.zsh(N))
+  fi
+done
 
 # load the path files
 for file in ${(M)config_files:#*/path.zsh}
