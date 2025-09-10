@@ -106,7 +106,7 @@
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,
   "explorer.fileNesting.patterns": {
-    "//": "Last update at 08/09/2025, 17:20:46",
+    "//": "Last update at 10/09/2025, 09:09:59",
     ".clang-tidy": ".clang-format, .clangd, compile_commands.json",
     ".env": "*.env, .env.*, .envrc, env.d.ts",
     ".gitignore": ".gitattributes, .gitmodules, .gitmessage, .lfsconfig, .mailmap, .git-blame*",
@@ -206,19 +206,20 @@
 
   // Exclusões
   "files.exclude": {
-    "**/.git": true,
-    "**/.DS_Store": true,
-    "**/node_modules": true,
-    "**/dist": true,
-    "**/build": true,
-    "**/.next": true,
-    "**/.turbo": true,
-    "**/.nx": true,
     "**/__pycache__": true,
-    "**/logs": true,
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.next": true,
+    "**/.nx": true,
+    "**/.turbo": true,
     "**/*.log": true,
     "**/*.pyc": true,
-    "**/*.venv": true
+    "**/*.venv": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/logs": true,
+    "**/node_modules": true,
+    "**tmp/": true
   },
 
   "search.exclude": {
@@ -604,7 +605,7 @@
   // Layout otimizado
   "workbench.sideBar.location": "right",
   "workbench.activityBar.location": "top",
-  "workbench.layoutControl.enabled": false,
+  "workbench.layoutControl.enabled": true,
   "workbench.editor.editorActionsLocation": "default",
 
   // Maximizar espaço
@@ -691,5 +692,6 @@
   "docker.extension.enableComposeLanguageServer": false,
   "explorer.confirmPasteNative": false,
   "gitlens.ai.model": "vscode",
-  "gitlens.ai.vscode.model": "copilot:gpt-4o-mini"
+  "gitlens.ai.vscode.model": "copilot:gpt-4o-mini",
+  "makefile.configureOnOpen": false
 }
