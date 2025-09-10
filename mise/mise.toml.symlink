@@ -41,7 +41,6 @@ rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
 # Global Libs - NPM
 
 "npm:eas-cli" = "latest"
-"npm:vercel" = "latest"
 "npm:nx" = "latest"
 
 # General Tasks

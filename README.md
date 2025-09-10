@@ -20,7 +20,7 @@ git clone https://github.com/danilomartinelli/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 
 # Run the bootstrap script (first-time setup)
-script/bootstrap
+_scripts/bootstrap
 
 # This will:
 # - Set up git configuration (prompts for name/email)
@@ -36,18 +36,23 @@ script/bootstrap
 bin/dot
 ```
 
+After the first execution, you will have a alias for the command above.
+
+```bash
+dot
+```
+
 ## 📂 Repository Structure
 
 ```text
 .dotfiles/
 ├── bin/                 # Custom executable scripts
 ├── functions/           # ZSH functions (auto-loaded)
-├── script/              # Setup and management scripts
-├── _docs/               # Documentation (ignored by installers)
+├── _scripts/              # Setup and management scripts
 ├── */                   # Topic directories (see below)
 ├── Brewfile            # Homebrew packages and apps
 ├── CLAUDE.md           # Claude AI instructions
-└── localrc.example     # Template for local secrets
+└── .localrc.example     # Template for local secrets
 ```
 
 ### Topic Directory Structure
@@ -66,6 +71,7 @@ topic/
 ```
 
 **⚠️ Important Architecture Rules:**
+
 - Folders starting with `_` are completely ignored (e.g., `_docs/`, `_archive/`)
 - Files starting with `_` are ignored even in regular folders
 - Standard file names must be exact: `path.zsh`, `aliases.zsh`, `completion.zsh`
@@ -202,10 +208,6 @@ Global npm packages:
 | `c` | Jump to project directory | `c project-name` |
 | `extract` | Extract any archive file | `extract file.zip` |
 | `gf` | Switch git branch | `gf branch-name` |
-| `use_kubeconfig` | Switch Kubernetes config | `use_kubeconfig config-name` |
-| `use_aws_profile` | Switch AWS profile | `use_aws_profile profile-name` |
-| `use_vercel` | Load Vercel env | `use_vercel` |
-| `run_vercel` | Run with Vercel env | `run_vercel command` |
 
 ## 🔐 Secret Management
 
@@ -255,11 +257,11 @@ EOF
 
 #### Example .localrc Template
 
-A template file is provided at `localrc.example` to help you get started:
+A template file is provided at `.localrc.example` to help you get started:
 
 ```bash
 # Copy the template and customize it
-cp ~/.dotfiles/localrc.example ~/.localrc
+cp ~/.dotfiles/.localrc.example ~/.localrc
 chmod 600 ~/.localrc
 # Edit with your actual values
 vim ~/.localrc
@@ -301,17 +303,8 @@ chmod +x ~/.dotfiles/your-tool/install.sh
 ```bash
 ~/.dotfiles/your-tool/install.sh
 # Or run all installers
-script/install
+_scripts/install
 ```
-
-## 📚 Documentation
-
-Comprehensive documentation is available in the `_docs/` folder:
-
-- **[📖 Documentation Overview](_docs/README.md)** - Complete guide with features, installation, and customization
-- **[🏗 Architecture](_docs/ARCHITECTURE.md)** - System design, component interactions, and data flow
-- **[📦 Installation Scripts](_docs/INSTALL_SCRIPTS.md)** - Detailed guide to all installation scripts
-- **[⚙️ Configuration Reference](_docs/CONFIGURATION.md)** - Complete configuration file reference
 
 ## 🔧 Configuration Details
 
@@ -401,10 +394,10 @@ brew update && brew upgrade
 git -C ~/.dotfiles pull
 
 # Reinstall dotfiles
-~/.dotfiles/script/bootstrap
+~/.dotfiles/_scripts/bootstrap
 
 # Run all installers
-~/.dotfiles/script/install
+~/.dotfiles/_scripts/install
 ```
 
 ### Add New Homebrew Packages

@@ -47,74 +47,6 @@ curl "https://raw.githubusercontent.com/github/linguist/master/lib/linguist/lang
 
 echo "✓ code set as default editor for code files"
 
-# Core Extensions - Alphabetical Order
-extensions=(
-  "1yib.rust-bundle"
-  "amazonwebservices.aws-toolkit-vscode"
-  "antfu.file-nesting"
-  "anthropic.claude-code"
-  "bierner.markdown-checkbox"
-  "bierner.markdown-emoji"
-  "bierner.markdown-footnotes"
-  "bierner.markdown-mermaid"
-  "bierner.markdown-preview-github-styles"
-  "bierner.markdown-yaml-preamble"
-  "bradlc.vscode-tailwindcss"
-  "chakrounanas.turbo-console-log"
-  "christian-kohler.npm-intellisense"
-  "christian-kohler.path-intellisense"
-  "codezombiech.gitignore"
-  "csstools.postcss"
-  "davidanson.vscode-markdownlint"
-  "dbaeumer.vscode-eslint"
-  "docker.docker"
-  "dustypomerleau.rust-syntax"
-  "eamodio.gitlens"
-  "esbenp.prettier-vscode"
-  "fill-labs.dependi"
-  "firsttris.vscode-jest-runner"
-  "formulahendry.auto-close-tag"
-  "formulahendry.auto-rename-tag"
-  "github.copilot"
-  "github.copilot-chat"
-  "golang.go"
-  "gruntfuggly.todo-tree"
-  "hashicorp.terraform"
-  "humao.rest-client"
-  "jock.svg"
-  "miguelsolorio.fluent-icons"
-  "mikestead.dotenv"
-  "monokai.theme-monokai-pro-vscode"
-  "ms-azuretools.vscode-containers"
-  "ms-kubernetes-tools.vscode-kubernetes-tools"
-  "ms-playwright.playwright"
-  "ms-python.debugpy"
-  "ms-python.python"
-  "ms-python.vscode-pylance"
-  "ms-python.vscode-python-envs"
-  "ms-vscode-remote.remote-containers"
-  "ms-vscode-remote.remote-ssh"
-  "ms-vscode-remote.remote-ssh-edit"
-  "ms-vscode.live-server"
-  "ms-vscode.remote-explorer"
-  "ms-vscode.vscode-typescript-next"
-  "naumovs.color-highlight"
-  "nrwl.angular-console"
-  "orta.vscode-jest"
-  "pflannery.vscode-versionlens"
-  "redhat.vscode-yaml"
-  "ritwickdey.liveserver"
-  "robole.file-bunny"
-  "rust-lang.rust-analyzer"
-  "stivo.tailwind-fold"
-  "tamasfe.even-better-toml"
-  "tyriar.sort-lines"
-  "usernamehw.errorlens"
-  "waderyan.gitblame"
-  "wix.vscode-import-cost"
-  "yoavbls.pretty-ts-errors"
-)
-
 echo "› installing code extensions"
 
 # Check if code command is available
@@ -125,19 +57,8 @@ if ! command -v code &> /dev/null; then
 fi
 
 # Install all extensions
-installed=0
-failed=0
+cat $DOTFILES_CODE/vsc-extensions.txt | xargs -L 1 code --install-extension
 
-# TODO: Re-enable extension installation after fixing issues with some extensions interrupting the Electron's process
-# for ext in "${extensions[@]}"; do
-#   echo "Installing: $ext"
-#   if code --install-extension "$ext" --force 2>/dev/null; then
-#     ((installed++))
-#   else
-#     echo "  ⚠️  Failed to install: $ext"
-#     ((failed++))
-#   fi
-# done
 
 echo ""
 echo "✅ Installation complete!"

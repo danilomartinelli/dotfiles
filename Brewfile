@@ -20,6 +20,7 @@ brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
 brew 'terragrunt'				# Terraform wrapper
+brew 'xo/xo/usql'   		# Universal command-line interface for SQL databases
 brew 'usage'         		# Tool for working with usage-spec CLIs
 brew 'vim'           		# Highly configurable text editor built
 brew 'watchman'      		# File watching service for triggering actions on file changes
@@ -37,7 +38,6 @@ cask 'font-fira-code'         # Programming font with ligatures (All styles)
 cask 'font-maple-mono'		  	# Maple Mono font for terminal (Italic)
 cask 'font-jetbrains-mono'	  # JetBrains Mono font for terminal (Regular)
 cask 'ghostty'                # Modern terminal emulator
-cask 'imazing' 				  			# iOS device management tool
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'notion'                 # Knowledge management and note-taking
@@ -49,10 +49,13 @@ cask 'readdle-spark'          # Email client with smart features
 cask 'rectangle-pro'          # Window management tool
 cask 'spotify'                # Music streaming service
 cask 'tableplus'              # Database management tool
+cask 'visual-studio-code'     # Source code editor
+cask 'vlc'                    # Media player supporting various formats
 
 # Mac App Store applications
+mac 'Amphetamine', id: 937984704         	        # Keep your Mac awake
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
-mas 'Kindle', id: 302584613 											# Kindle eBook reader
+mas 'FileZilla', id: 1298486723 									# FTP client
 mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
 mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
 mas 'Xcode', id: 497799835                       	# Apple's integrated development environment

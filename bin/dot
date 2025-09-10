@@ -55,8 +55,8 @@ echo "› brew upgrade"
 brew upgrade
 
 # Install software
-echo "› script/install"
-$ZSH/script/install
+echo "› _scripts/install"
+$ZSH/_scripts/install
 
 # Reload shell
 echo "Please, run: source ~/.zshrc"

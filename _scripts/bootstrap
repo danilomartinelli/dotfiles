@@ -3,7 +3,7 @@
 # bootstrap installs things.
 
 cd "$(dirname "$0")/.."
-DOTFILES_ROOT=$(pwd -P)
+export DOTFILES_ROOT=$(pwd -P)
 
 set -e
 
@@ -137,7 +137,32 @@ install_dotfiles () {
   done
 }
 
+setup_env () {
+  if ! [ -f .localrc ]
+  then
+    info 'setup local environment'
+
+    cp .localrc.example .localrc
+    chmod 600 .localrc
+    ln -sf "$PWD/.localrc" "$HOME/.localrc"
+
+    success 'local environment configured'
+  fi
+}
+
+setup_macos () {
+  if [ "$(uname -s)" == "Darwin" ]
+  then
+    info 'setup macOS'
+    source _macos/install.sh
+    success 'macOS configured'
+  fi
+}
+
+setup_env
+setup_macos
 setup_gitconfig
+
 install_dotfiles
 
 # If we're on a Mac, let's install and setup homebrew.

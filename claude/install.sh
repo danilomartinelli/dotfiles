@@ -40,9 +40,7 @@ ln -s "$DOTFILES_DIR/commands" "$CLAUDE_COMMANDS_DIR"
 echo "✓ claude symlinks created"
 
 # Add MCP integrations
-claude mcp add -s user context7 -- npx -y @upstash/context7-mcp@latest
 claude mcp add -s user playwright -- npx -y @playwright/mcp@latest
-claude mcp add -s user magic -- npx -y @21st-dev/magic@latest --api-key $MAGIC_MCP_API_KEY
 
 echo ""
 echo "✅ Installation complete!"

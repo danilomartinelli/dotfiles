@@ -1,6 +1,12 @@
-git/gitconfig.local.symlink
+# Envs
+*local*
+!*.example
+
+# Package managers
 Brewfile.lock.json
-*localrc*
-!localrc.example
-!.localrc.example
+
+# IDEs, editors and AI assistants
+.vscode/
+.idea/
 .claude/
+CLAUDE.md

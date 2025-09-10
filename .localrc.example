@@ -1,14 +1,18 @@
 #!/usr/bin/env zsh
 # Local configuration for environment-specific settings
-# Copy this file to ~/.localrc and customize with your values
+# The bootstrap script will automatically create a copy of this file
+# as .localrc and symlink it to ~/.localrc
 #
-# IMPORTANT: Never commit ~/.localrc to version control!
+# IMPORTANT: Never commit .localrc with sensitive data to version control!
 # This file should contain sensitive information like API keys and passwords.
 #
-# Usage:
-#   cp ~/.dotfiles/localrc.example ~/.localrc
-#   chmod 600 ~/.localrc
-#   vim ~/.localrc
+# Setup (handled by bootstrap):
+#   1. Copies .localrc.example → .localrc
+#   2. Creates symlink .localrc → ~/.localrc
+#   3. Sets proper permissions (600)
+#
+# Manual editing after bootstrap:
+#   vim ~/.dotfiles/.localrc  # or vim ~/.localrc (both work with symlink)
 #
 # After editing, reload your shell:
 #   source ~/.zshrc
