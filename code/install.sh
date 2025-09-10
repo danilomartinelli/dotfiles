@@ -59,11 +59,8 @@ fi
 # Install all extensions
 cat $DOTFILES_CODE/vsc-extensions.txt | xargs -L 1 code --install-extension
 
-
 echo ""
 echo "✅ Installation complete!"
-echo "   Installed: $installed extensions"
-[ $failed -gt 0 ] && echo "   Failed: $failed extensions"
 
 # Restart Code if it's running
 if pgrep -x "Code" > /dev/null; then
