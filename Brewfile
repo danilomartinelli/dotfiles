@@ -1,5 +1,8 @@
 cask_args appdir: '/Applications'
 
+# Taps
+brew tap xo/xo
+
 # Command line tools
 brew 'awscli'      			# AWS Command Line Interface
 brew 'coreutils'     		# GNU File, Shell, and Text utilities
@@ -20,7 +23,7 @@ brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
 brew 'terragrunt'				# Terraform wrapper
-brew 'xo/xo/usql'   		# Universal command-line interface for SQL databases
+brew 'usql'   		# Universal command-line interface for SQL databases
 brew 'usage'         		# Tool for working with usage-spec CLIs
 brew 'vim'           		# Highly configurable text editor built
 brew 'watchman'      		# File watching service for triggering actions on file changes
