@@ -6,6 +6,9 @@ set -e
 
 cd "$(dirname $0)"/..
 
+echo "> set taps"
+brew tap xo/xo
+
 echo "› brew bundle"
 brew bundle
 

@@ -1,8 +1,5 @@
 cask_args appdir: '/Applications'
 
-# Taps
-brew tap xo/xo
-
 # Command line tools
 brew 'awscli'      			# AWS Command Line Interface
 brew 'coreutils'     		# GNU File, Shell, and Text utilities
