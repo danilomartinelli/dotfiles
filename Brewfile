@@ -53,7 +53,7 @@ cask 'visual-studio-code'     # Source code editor
 cask 'vlc'                    # Media player supporting various formats
 
 # Mac App Store applications
-mac 'Amphetamine', id: 937984704         	        # Keep your Mac awake
+mas 'Amphetamine', id: 937984704         	        # Keep your Mac awake
 mas 'Bitwarden', id: 1352778147 							   	# Open-source password manager
 mas 'FileZilla', id: 1298486723 									# FTP client
 mas 'Paste - Limitless Clipboard', id: 967805235 	# Clipboard manager for macOS
