@@ -24,6 +24,9 @@ mkdir -p "$CODE_DIR"
 ln -s "$DOTFILES_CODE/settings.json" "$CODE_DIR/settings.json"
 ln -s "$DOTFILES_CODE/keybindings.json" "$CODE_DIR/keybindings.json"
 
+# TODO: Create symlink for mcp.json when we start using it
+# ln -s "$DOTFILES_CODE/mcp.json" "$CODE_DIR/mcp.json"
+
 echo "✓ code symlinks created"
 
 # Set default editor for code files
@@ -57,14 +60,9 @@ if ! command -v code &> /dev/null; then
 fi
 
 # Install all extensions
-cat $DOTFILES_CODE/vsc-extensions.txt | xargs -L 1 code --install-extension
+# Uncomment the line below to enable extension installation
+# TODO: re-enable this when we have a better way to manage extensions
+# cat $DOTFILES_CODE/vsc-extensions.txt | xargs -L 1 code --install-extension
 
 echo ""
 echo "✅ Installation complete!"
-
-# Restart Code if it's running
-if pgrep -x "Code" > /dev/null; then
-    echo ""
-    echo "› Code is running. Please restart it to apply all changes."
-    echo "  Press Cmd+Q and reopen Code."
-fi

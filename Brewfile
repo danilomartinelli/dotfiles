@@ -3,12 +3,12 @@ cask_args appdir: '/Applications'
 # Command line tools
 brew 'awscli'      			# AWS Command Line Interface
 brew 'coreutils'     		# GNU File, Shell, and Text utilities
-brew 'derailed/k9s/k9s' # Kubernetes CLI to manage clusters
 brew 'dockutil'      		# Command line utility for managing macOS dock items
 brew 'duti'					 		# Set default applications for file types
 brew 'git'           		# Version control system
 brew 'git-lfs'       		# Git Large File Storage
 brew 'gh'           		# GitHub CLI for managing repositories
+brew 'go-task'          # Task runner / build tool
 brew 'helm'          		# Kubernetes package manager
 brew 'helmfile'      		# Deploy and manage Helm charts
 brew 'imagemagick'   		# Image manipulation library and tools
@@ -20,7 +20,6 @@ brew 'mise'          		# Runtime version manager (successor to asdf)
 brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
-brew 'terragrunt'				# Terraform wrapper
 brew 'usql'   		      # Universal command-line interface for SQL databases
 brew 'usage'         		# Tool for working with usage-spec CLIs
 brew 'vim'           		# Highly configurable text editor built
@@ -32,8 +31,8 @@ brew 'wget'          		# File download utility
 cask 'android-studio'         # Android development IDE
 cask 'arc'                    # Privacy-focused browser
 cask 'apidog'                 # API development and testing tool
-cask 'archiver'               # File archiving and compression tool
-cask 'claude' 				  			# Claude desktop client
+cask 'archiver-app'           # File archiving and compression tool
+cask 'chatgpt' 				  			# ChatGPT desktop client
 cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'figma'                  # Design tool
 cask 'font-fira-code'         # Programming font with ligatures (All styles)
