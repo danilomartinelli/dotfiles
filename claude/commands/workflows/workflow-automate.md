@@ -1,5 +1,5 @@
 ---
-model: claude-opus-4-1-20250805
+model: claude-opus-4-1
 ---
 
 # Workflow Automation
@@ -7,11 +7,9 @@ model: claude-opus-4-1-20250805
 You are a workflow automation expert specializing in creating efficient CI/CD pipelines, GitHub Actions workflows, and automated development processes. Design and implement automation that reduces manual work, improves consistency, and accelerates delivery while maintaining quality and security.
 
 ## Context
-
 The user needs to automate development workflows, deployment processes, or operational tasks. Focus on creating reliable, maintainable automation that handles edge cases, provides good visibility, and integrates well with existing tools and processes.
 
 ## Requirements
-
 $ARGUMENTS
 
 ## Instructions
@@ -21,7 +19,6 @@ $ARGUMENTS
 Analyze existing processes and identify automation opportunities:
 
 **Workflow Discovery Script**
-
 ```python
 import os
 import yaml
@@ -41,22 +38,22 @@ class WorkflowAnalyzer:
             'tool_recommendations': [],
             'complexity_score': 0
         }
-
+        
         # Analyze different aspects
         analysis['build_process'] = self._analyze_build_process(project_path)
         analysis['test_process'] = self._analyze_test_process(project_path)
         analysis['deployment_process'] = self._analyze_deployment_process(project_path)
         analysis['code_quality'] = self._analyze_code_quality_checks(project_path)
-
+        
         # Generate recommendations
         self._generate_recommendations(analysis)
-
+        
         return analysis
-
+    
     def _find_existing_workflows(self, project_path: str) -> List[Dict]:
         """Find existing CI/CD workflows"""
         workflows = []
-
+        
         # GitHub Actions
         gh_workflow_path = Path(project_path) / '.github' / 'workflows'
         if gh_workflow_path.exists():
@@ -69,7 +66,7 @@ class WorkflowAnalyzer:
                         'file': str(workflow_file),
                         'triggers': list(workflow.get('on', {}).keys())
                     })
-
+        
         # GitLab CI
         gitlab_ci = Path(project_path) / '.gitlab-ci.yml'
         if gitlab_ci.exists():
@@ -81,7 +78,7 @@ class WorkflowAnalyzer:
                     'file': str(gitlab_ci),
                     'stages': config.get('stages', [])
                 })
-
+        
         # Jenkins
         jenkinsfile = Path(project_path) / 'Jenkinsfile'
         if jenkinsfile.exists():
@@ -90,13 +87,13 @@ class WorkflowAnalyzer:
                 'name': 'Jenkins Pipeline',
                 'file': str(jenkinsfile)
             })
-
+        
         return workflows
-
+    
     def _identify_manual_processes(self, project_path: str) -> List[Dict]:
         """Identify processes that could be automated"""
         manual_processes = []
-
+        
         # Check for manual build scripts
         script_patterns = ['build.sh', 'deploy.sh', 'release.sh', 'test.sh']
         for pattern in script_patterns:
@@ -108,7 +105,7 @@ class WorkflowAnalyzer:
                     'purpose': pattern.replace('.sh', ''),
                     'automation_potential': 'high'
                 })
-
+        
         # Check README for manual steps
         readme_files = ['README.md', 'README.rst', 'README.txt']
         for readme_name in readme_files:
@@ -121,13 +118,13 @@ class WorkflowAnalyzer:
                         'file': str(readme),
                         'indicators': 'Contains manual process documentation'
                     })
-
+        
         return manual_processes
-
+    
     def _generate_recommendations(self, analysis: Dict) -> None:
         """Generate automation recommendations"""
         recommendations = []
-
+        
         # CI/CD recommendations
         if not analysis['current_workflows']:
             recommendations.append({
@@ -137,7 +134,7 @@ class WorkflowAnalyzer:
                 'tools': ['GitHub Actions', 'GitLab CI', 'Jenkins'],
                 'effort': 'medium'
             })
-
+        
         # Build automation
         if analysis['build_process']['manual_steps']:
             recommendations.append({
@@ -147,7 +144,7 @@ class WorkflowAnalyzer:
                 'tools': ['Make', 'Gradle', 'npm scripts'],
                 'effort': 'low'
             })
-
+        
         # Test automation
         if not analysis['test_process']['automated_tests']:
             recommendations.append({
@@ -157,7 +154,7 @@ class WorkflowAnalyzer:
                 'tools': ['Jest', 'Pytest', 'JUnit'],
                 'effort': 'medium'
             })
-
+        
         # Deployment automation
         if analysis['deployment_process']['manual_deployment']:
             recommendations.append({
@@ -167,7 +164,7 @@ class WorkflowAnalyzer:
                 'tools': ['ArgoCD', 'Flux', 'Terraform'],
                 'effort': 'high'
             })
-
+        
         analysis['automation_opportunities'] = recommendations
 ```
 
@@ -176,7 +173,6 @@ class WorkflowAnalyzer:
 Create comprehensive GitHub Actions workflows:
 
 **Multi-Environment CI/CD Pipeline**
-
 ```yaml
 # .github/workflows/ci-cd.yml
 name: CI/CD Pipeline
@@ -381,13 +377,13 @@ jobs:
                 \"value\": \"${{ matrix.environment }}\"
               }]
             }]"
-
+          
           # Update service
           aws ecs update-service \
             --cluster ${{ matrix.environment }}-cluster \
             --service myapp-service \
             --task-definition myapp-${{ matrix.environment }}
-
+          
           # Get service URL
           echo "url=https://${{ matrix.environment }}.example.com" >> $GITHUB_OUTPUT
 
@@ -440,7 +436,6 @@ jobs:
 Automate release processes:
 
 **Semantic Release Workflow**
-
 ```yaml
 # .github/workflows/release.yml
 name: Release
@@ -490,10 +485,10 @@ jobs:
               repo: context.repo.repo,
               per_page: 1
             });
-
+            
             const latestRelease = releases[0];
             const changelog = await generateChangelog(latestRelease);
-
+            
             // Update release notes
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
@@ -504,7 +499,6 @@ jobs:
 ```
 
 **Release Configuration**
-
 ```javascript
 // .releaserc.js
 module.exports = {
@@ -534,7 +528,6 @@ module.exports = {
 Automate common development tasks:
 
 **Pre-commit Hooks**
-
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -596,7 +589,6 @@ repos:
 ```
 
 **Development Environment Setup**
-
 ```bash
 #!/bin/bash
 # scripts/setup-dev-environment.sh
@@ -608,7 +600,7 @@ echo "🚀 Setting up development environment..."
 # Check prerequisites
 check_prerequisites() {
     echo "Checking prerequisites..."
-
+    
     commands=("git" "node" "npm" "docker" "docker-compose")
     for cmd in "${commands[@]}"; do
         if ! command -v "$cmd" &> /dev/null; then
@@ -616,7 +608,7 @@ check_prerequisites() {
             exit 1
         fi
     done
-
+    
     echo "✅ All prerequisites installed"
 }
 
@@ -624,11 +616,11 @@ check_prerequisites() {
 install_dependencies() {
     echo "Installing dependencies..."
     npm ci
-
+    
     # Install global tools
     npm install -g @commitlint/cli @commitlint/config-conventional
     npm install -g semantic-release
-
+    
     # Install pre-commit
     pip install pre-commit
     pre-commit install
@@ -638,13 +630,13 @@ install_dependencies() {
 # Setup local services
 setup_services() {
     echo "Setting up local services..."
-
+    
     # Create docker network
     docker network create dev-network 2>/dev/null || true
-
+    
     # Start services
     docker-compose -f docker-compose.dev.yml up -d
-
+    
     # Wait for services
     echo "Waiting for services to be ready..."
     ./scripts/wait-for-services.sh
@@ -660,7 +652,7 @@ initialize_database() {
 # Setup environment variables
 setup_environment() {
     echo "Setting up environment variables..."
-
+    
     if [ ! -f .env.local ]; then
         cp .env.example .env.local
         echo "✅ Created .env.local from .env.example"
@@ -675,7 +667,7 @@ main() {
     setup_services
     setup_environment
     initialize_database
-
+    
     echo "✅ Development environment setup complete!"
     echo ""
     echo "Next steps:"
@@ -692,7 +684,6 @@ main
 Automate infrastructure provisioning:
 
 **Terraform Workflow**
-
 ```yaml
 # .github/workflows/terraform.yml
 name: Terraform
@@ -719,46 +710,46 @@ jobs:
     defaults:
       run:
         working-directory: terraform
-
+    
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
-
+      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
+      
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
-
+      
       - name: Terraform Init
         run: |
           terraform init \
             -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
             -backend-config="key=${{ github.repository }}/terraform.tfstate" \
             -backend-config="region=us-east-1"
-
+      
       - name: Terraform Validate
         run: terraform validate
-
+      
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan -out=tfplan -no-color | tee plan_output.txt
-
+          
           # Extract plan summary
           echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
           grep -E '(Plan:|No changes.|# )' plan_output.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
-
+      
       - name: Comment PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
@@ -768,16 +759,16 @@ jobs:
             \`\`\`
             ${process.env.PLAN_SUMMARY}
             \`\`\`
-
+            
             *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-
+            
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
             });
-
+      
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply tfplan
@@ -788,7 +779,6 @@ jobs:
 Automate monitoring setup:
 
 **Monitoring Stack Deployment**
-
 ```yaml
 # .github/workflows/monitoring.yml
 name: Deploy Monitoring
@@ -805,26 +795,26 @@ jobs:
   deploy-monitoring:
     name: Deploy Monitoring Stack
     runs-on: ubuntu-latest
-
+    
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Helm
         uses: azure/setup-helm@v3
         with:
           version: '3.12.0'
-
+      
       - name: Configure Kubernetes
         run: |
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
           export KUBECONFIG=kubeconfig
-
+      
       - name: Add Helm repositories
         run: |
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo add grafana https://grafana.github.io/helm-charts
           helm repo update
-
+      
       - name: Deploy Prometheus
         run: |
           helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
@@ -832,15 +822,15 @@ jobs:
             --create-namespace \
             --values monitoring/prometheus-values.yaml \
             --wait
-
+      
       - name: Deploy Grafana Dashboards
         run: |
           kubectl apply -f monitoring/dashboards/
-
+      
       - name: Deploy Alert Rules
         run: |
           kubectl apply -f monitoring/alerts/
-
+      
       - name: Setup Alert Routing
         run: |
           helm upgrade --install alertmanager prometheus-community/alertmanager \
@@ -853,7 +843,6 @@ jobs:
 Automate dependency updates:
 
 **Renovate Configuration**
-
 ```json
 {
   "extends": [
@@ -908,7 +897,6 @@ Automate dependency updates:
 Automate documentation generation:
 
 **Documentation Workflow**
-
 ```yaml
 # .github/workflows/docs.yml
 name: Documentation
@@ -925,32 +913,32 @@ jobs:
   generate-docs:
     name: Generate Documentation
     runs-on: ubuntu-latest
-
+    
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-
+      
       - name: Install dependencies
         run: npm ci
-
+      
       - name: Generate API docs
         run: |
           npm run docs:api
           npm run docs:typescript
-
+      
       - name: Generate architecture diagrams
         run: |
           npm install -g @mermaid-js/mermaid-cli
           mmdc -i docs/architecture.mmd -o docs/architecture.png
-
+      
       - name: Build documentation site
         run: |
           npm run docs:build
-
+      
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
@@ -960,7 +948,6 @@ jobs:
 ```
 
 **Documentation Generation Script**
-
 ```typescript
 // scripts/generate-docs.ts
 import { Application, TSConfigReader, TypeDocReader } from 'typedoc';
@@ -972,7 +959,7 @@ async function generateDocumentation() {
   const app = new Application();
   app.options.addReader(new TSConfigReader());
   app.options.addReader(new TypeDocReader());
-
+  
   app.bootstrap({
     entryPoints: ['src/index.ts'],
     out: 'docs/api',
@@ -982,18 +969,18 @@ async function generateDocumentation() {
     readme: 'README.md',
     plugin: ['typedoc-plugin-markdown']
   });
-
+  
   const project = app.convert();
   if (project) {
     await app.generateDocs(project, 'docs/api');
-
+    
     // Generate custom markdown docs
     await generateMarkdown(project, {
       output: 'docs/guides',
       includeExamples: true,
       generateTOC: true
     });
-
+    
     // Create API reference
     await createApiReference(project, {
       format: 'openapi',
@@ -1001,10 +988,10 @@ async function generateDocumentation() {
       includeSchemas: true
     });
   }
-
+  
   // Generate architecture documentation
   await generateArchitectureDocs();
-
+  
   // Generate deployment guides
   await generateDeploymentGuides();
 }
@@ -1019,7 +1006,7 @@ async function generateArchitectureDocs() {
       D --> F[Cache]
       D --> G[Message Queue]
   `;
-
+  
   // Save diagrams and generate documentation
   await fs.writeFile('docs/architecture.mmd', mermaidDiagrams);
 }
@@ -1030,7 +1017,6 @@ async function generateArchitectureDocs() {
 Automate security scanning and compliance:
 
 **Security Scanning Workflow**
-
 ```yaml
 # .github/workflows/security.yml
 name: Security Scan
@@ -1046,10 +1032,10 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
-
+    
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -1058,19 +1044,19 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
-
+      
       - name: Upload Trivy results
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
-
+      
       - name: Run Snyk security scan
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
-
+      
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -1080,13 +1066,13 @@ jobs:
           args: >
             --enableRetired
             --enableExperimental
-
+      
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
+      
       - name: Run Semgrep
         uses: returntocorp/semgrep-action@v1
         with:
@@ -1094,7 +1080,7 @@ jobs:
             p/security-audit
             p/secrets
             p/owasp-top-ten
-
+      
       - name: GitLeaks secret scanning
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -1106,7 +1092,6 @@ jobs:
 Create complex workflow orchestration:
 
 **Workflow Orchestrator**
-
 ```typescript
 // workflow-orchestrator.ts
 import { EventEmitter } from 'events';
@@ -1130,7 +1115,7 @@ export class WorkflowOrchestrator extends EventEmitter {
   ) {
     super();
   }
-
+  
   async execute(workflow: WorkflowStep): Promise<WorkflowResult> {
     const startTime = Date.now();
     const result: WorkflowResult = {
@@ -1138,7 +1123,7 @@ export class WorkflowOrchestrator extends EventEmitter {
       steps: [],
       duration: 0
     };
-
+    
     try {
       await this.executeStep(workflow, result);
     } catch (error) {
@@ -1146,36 +1131,36 @@ export class WorkflowOrchestrator extends EventEmitter {
       result.error = error;
       this.emit('workflow:failed', result);
     }
-
+    
     result.duration = Date.now() - startTime;
     this.emit('workflow:completed', result);
-
+    
     return result;
   }
-
+  
   private async executeStep(
     step: WorkflowStep,
     result: WorkflowResult,
     parentPath: string = ''
   ): Promise<void> {
     const stepPath = parentPath ? `${parentPath}.${step.name}` : step.name;
-
+    
     this.emit('step:start', { step: stepPath });
-
+    
     // Check condition
     if (step.condition && !step.condition()) {
       this.logger.info(`Skipping step ${stepPath} due to condition`);
       this.emit('step:skipped', { step: stepPath });
       return;
     }
-
+    
     const stepResult: StepResult = {
       name: step.name,
       path: stepPath,
       startTime: Date.now(),
       success: true
     };
-
+    
     try {
       if (step.action) {
         // Execute single action
@@ -1188,56 +1173,56 @@ export class WorkflowOrchestrator extends EventEmitter {
           await this.executeSequential(step.steps, result, stepPath);
         }
       }
-
+      
       stepResult.endTime = Date.now();
       stepResult.duration = stepResult.endTime - stepResult.startTime;
       result.steps.push(stepResult);
-
+      
       this.emit('step:complete', { step: stepPath, result: stepResult });
     } catch (error) {
       stepResult.success = false;
       stepResult.error = error;
       result.steps.push(stepResult);
-
+      
       this.emit('step:failed', { step: stepPath, error });
-
+      
       if (step.onError === 'fail') {
         throw error;
       }
     }
   }
-
+  
   private async executeAction(
     step: WorkflowStep,
     stepResult: StepResult
   ): Promise<void> {
     const timeout = step.timeout || this.config.defaultTimeout;
     const retries = step.retries || 0;
-
+    
     let lastError: Error;
-
+    
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const result = await Promise.race([
           step.action!(),
           this.createTimeout(timeout)
         ]);
-
+        
         stepResult.output = result;
         return;
       } catch (error) {
         lastError = error as Error;
-
+        
         if (attempt < retries) {
           this.logger.warn(`Step ${step.name} failed, retry ${attempt + 1}/${retries}`);
           await this.delay(this.calculateBackoff(attempt));
         }
       }
     }
-
+    
     throw lastError!;
   }
-
+  
   private async executeParallel(
     steps: WorkflowStep[],
     result: WorkflowResult,
@@ -1247,7 +1232,7 @@ export class WorkflowOrchestrator extends EventEmitter {
       steps.map(step => this.executeStep(step, result, parentPath))
     );
   }
-
+  
   private async executeSequential(
     steps: WorkflowStep[],
     result: WorkflowResult,
@@ -1257,17 +1242,17 @@ export class WorkflowOrchestrator extends EventEmitter {
       await this.executeStep(step, result, parentPath);
     }
   }
-
+  
   private createTimeout(ms: number): Promise<never> {
     return new Promise((_, reject) => {
       setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms);
     });
   }
-
+  
   private calculateBackoff(attempt: number): number {
     return Math.min(1000 * Math.pow(2, attempt), 30000);
   }
-
+  
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

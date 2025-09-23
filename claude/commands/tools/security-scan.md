@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-20250514
+model: claude-sonnet-4-0
 ---
 
 # Security Scan and Vulnerability Assessment
@@ -7,11 +7,9 @@ model: claude-sonnet-4-20250514
 You are a security expert specializing in application security, vulnerability assessment, and secure coding practices. Perform comprehensive security audits to identify vulnerabilities, provide remediation guidance, and implement security best practices.
 
 ## Context
-
 The user needs a thorough security analysis to identify vulnerabilities, assess risks, and implement protection measures. Focus on OWASP Top 10, dependency vulnerabilities, and security misconfigurations with actionable remediation steps.
 
 ## Requirements
-
 $ARGUMENTS
 
 ## Instructions
@@ -21,7 +19,6 @@ $ARGUMENTS
 Choose appropriate security scanning tools based on your technology stack and requirements:
 
 **Tool Selection Matrix**
-
 ```python
 security_tools = {
     'python': {
@@ -52,7 +49,7 @@ security_tools = {
             }
         }
     },
-
+    
     'javascript': {
         'sast': {
             'eslint_security': {
@@ -83,7 +80,7 @@ security_tools = {
             }
         }
     },
-
+    
     'container': {
         'trivy': {
             'image_scan': 'trivy image --format json --output trivy-image.json myimage:latest',
@@ -103,7 +100,7 @@ security_tools = {
             'best_for': 'Registry integration, automated scanning'
         }
     },
-
+    
     'infrastructure': {
         'checkov': {
             'command': 'checkov -d . --framework terraform --output json > checkov-report.json',
@@ -121,7 +118,7 @@ security_tools = {
             'best_for': 'Kubernetes manifest security and best practices'
         }
     },
-
+    
     'secrets': {
         'truffleHog': {
             'command': 'trufflehog git file://. --json > trufflehog-report.json',
@@ -143,7 +140,6 @@ security_tools = {
 ```
 
 **Multi-Tool Security Scanner**
-
 ```python
 import json
 import subprocess
@@ -172,77 +168,77 @@ class SecurityScanner:
         self.project_path = Path(project_path)
         self.findings = []
         self.scan_results = {}
-
+        
     def detect_project_type(self) -> List[str]:
         """Detect project technologies to choose appropriate scanners"""
         technologies = []
-
+        
         # Python
         if (self.project_path / 'requirements.txt').exists() or \
            (self.project_path / 'setup.py').exists() or \
            (self.project_path / 'pyproject.toml').exists():
             technologies.append('python')
-
+            
         # JavaScript/Node.js
         if (self.project_path / 'package.json').exists():
             technologies.append('javascript')
-
+            
         # Go
         if (self.project_path / 'go.mod').exists():
             technologies.append('golang')
-
+            
         # Docker
         if (self.project_path / 'Dockerfile').exists():
             technologies.append('container')
-
+            
         # Terraform
         if list(self.project_path.glob('*.tf')):
             technologies.append('terraform')
-
+            
         # Kubernetes
         if list(self.project_path.glob('*.yaml')) or list(self.project_path.glob('*.yml')):
             technologies.append('kubernetes')
-
+            
         return technologies
-
+    
     def run_comprehensive_scan(self) -> Dict[str, Any]:
         """Run all applicable security scanners"""
         technologies = self.detect_project_type()
-
+        
         scan_plan = {
             'timestamp': datetime.now().isoformat(),
             'technologies': technologies,
             'scanners_used': [],
             'findings': []
         }
-
+        
         # Always run secret detection
         self.run_secret_scan()
         scan_plan['scanners_used'].append('secret_detection')
-
+        
         # Technology-specific scans
         if 'python' in technologies:
             self.run_python_scans()
             scan_plan['scanners_used'].extend(['bandit', 'safety', 'pip_audit'])
-
+            
         if 'javascript' in technologies:
             self.run_javascript_scans()
             scan_plan['scanners_used'].extend(['eslint_security', 'npm_audit'])
-
+            
         if 'container' in technologies:
             self.run_container_scans()
             scan_plan['scanners_used'].append('trivy')
-
+            
         if 'terraform' in technologies:
             self.run_terraform_scans()
             scan_plan['scanners_used'].extend(['checkov', 'tfsec'])
-
+            
         # Generate unified report
         scan_plan['findings'] = self.findings
         scan_plan['summary'] = self.generate_summary()
-
+        
         return scan_plan
-
+    
     def run_secret_scan(self):
         """Run secret detection tools"""
         try:
@@ -251,7 +247,7 @@ class SecurityScanner:
                 'trufflehog', 'filesystem', str(self.project_path),
                 '--json', '--no-update'
             ], capture_output=True, text=True, timeout=300)
-
+            
             if result.stdout:
                 for line in result.stdout.strip().split('\n'):
                     if line:
@@ -271,14 +267,14 @@ class SecurityScanner:
                         ))
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             print("TruffleHog not available or scan failed")
-
+            
         try:
             # GitLeaks
             result = subprocess.run([
                 'gitleaks', 'detect', '--source', str(self.project_path),
                 '--report-format', 'json', '--no-git'
             ], capture_output=True, text=True, timeout=300)
-
+            
             if result.stdout:
                 findings = json.loads(result.stdout)
                 for finding in findings:
@@ -297,7 +293,7 @@ class SecurityScanner:
                     ))
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             print("GitLeaks not available or scan failed")
-
+    
     def run_python_scans(self):
         """Run Python-specific security scanners"""
         # Bandit
@@ -306,7 +302,7 @@ class SecurityScanner:
                 'bandit', '-r', str(self.project_path),
                 '-f', 'json', '--severity-level', 'medium'
             ], capture_output=True, text=True, timeout=300)
-
+            
             if result.stdout:
                 bandit_results = json.loads(result.stdout)
                 for result_item in bandit_results.get('results', []):
@@ -325,13 +321,13 @@ class SecurityScanner:
                     ))
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             print("Bandit not available or scan failed")
-
+        
         # Safety
         try:
             result = subprocess.run([
                 'safety', 'check', '--json'
             ], capture_output=True, text=True, timeout=300, cwd=self.project_path)
-
+            
             if result.stdout:
                 safety_results = json.loads(result.stdout)
                 for vuln in safety_results:
@@ -350,23 +346,23 @@ class SecurityScanner:
                     ))
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
             print("Safety not available or scan failed")
-
+    
     def generate_summary(self) -> Dict[str, Any]:
         """Generate summary statistics"""
         severity_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
         category_counts = {}
-
+        
         for finding in self.findings:
             severity_counts[finding.severity] = severity_counts.get(finding.severity, 0) + 1
             category_counts[finding.category] = category_counts.get(finding.category, 0) + 1
-
+        
         return {
             'total_findings': len(self.findings),
             'severity_breakdown': severity_counts,
             'category_breakdown': category_counts,
             'risk_score': self.calculate_risk_score(severity_counts)
         }
-
+    
     def calculate_risk_score(self, severity_counts: Dict[str, int]) -> int:
         """Calculate overall risk score (0-100)"""
         weights = {'CRITICAL': 10, 'HIGH': 7, 'MEDIUM': 4, 'LOW': 1}
@@ -376,7 +372,6 @@ class SecurityScanner:
 ```
 
 **SAST (Static Application Security Testing)**
-
 ```python
 # Enhanced code vulnerability patterns with tool-specific implementations
 security_rules = {
@@ -389,7 +384,7 @@ security_rules = {
         "severity": "CRITICAL",
         "cwe": "CWE-89",
         "fix": "Use parameterized queries or prepared statements"
-
+    
     "xss": {
         "patterns": [
             r"innerHTML\s*=\s*[^\"']*\+",
@@ -401,7 +396,7 @@ security_rules = {
         "cwe": "CWE-79",
         "fix": "Sanitize user input and use safe rendering methods"
     },
-
+    
     "hardcoded_secrets": {
         "patterns": [
             r"(?i)(api[_-]?key|apikey|secret|password)\s*[:=]\s*[\"'][^\"']{8,}[\"']",
@@ -413,7 +408,7 @@ security_rules = {
         "cwe": "CWE-798",
         "fix": "Use environment variables or secure key management service"
     },
-
+    
     "path_traversal": {
         "patterns": [
             r"\.\.\/",
@@ -425,7 +420,7 @@ security_rules = {
         "cwe": "CWE-22",
         "fix": "Validate and sanitize file paths"
     },
-
+    
     "insecure_random": {
         "patterns": [
             r"Math\.random\(\)",
@@ -443,7 +438,7 @@ def scan_code_vulnerabilities(file_path, content):
     Enhanced code vulnerability scanning with framework-specific patterns
     """
     vulnerabilities = []
-
+    
     for vuln_type, rule in security_rules.items():
         for pattern in rule['patterns']:
             matches = re.finditer(pattern, content, re.MULTILINE)
@@ -460,7 +455,7 @@ def scan_code_vulnerabilities(file_path, content):
                     'confidence': rule.get('confidence', 'medium'),
                     'owasp_category': rule.get('owasp', 'A03:2021-Injection')
                 })
-
+    
     return vulnerabilities
 
 # Framework-specific security patterns
@@ -485,7 +480,7 @@ framework_security_patterns = {
             'fix': 'Remove eval() usage and use safe alternatives'
         }
     },
-
+    
     'flask': {
         'debug_mode': {
             'pattern': r'debug\s*=\s*True',
@@ -500,7 +495,7 @@ framework_security_patterns = {
             'fix': 'Use render_template with static templates'
         }
     },
-
+    
     'react': {
         'dangerous_html': {
             'pattern': r'dangerouslySetInnerHTML',
@@ -515,7 +510,7 @@ framework_security_patterns = {
             'fix': 'Remove eval() usage'
         }
     },
-
+    
     'express': {
         'missing_helmet': {
             'pattern': r'express\(\)',
@@ -536,15 +531,15 @@ framework_security_patterns = {
 def scan_framework_vulnerabilities(framework, file_path, content):
     """Scan for framework-specific security issues"""
     vulnerabilities = []
-
+    
     if framework not in framework_security_patterns:
         return vulnerabilities
-
+    
     patterns = framework_security_patterns[framework]
-
+    
     for vuln_type, rule in patterns.items():
         matches = re.finditer(rule['pattern'], content, re.MULTILINE)
-
+        
         # Check for negative patterns (e.g., missing security middleware)
         if 'negative_pattern' in rule:
             if not re.search(rule['negative_pattern'], content):
@@ -569,12 +564,11 @@ def scan_framework_vulnerabilities(framework, file_path, content):
                     'fix': rule['fix'],
                     'framework': framework
                 })
-
+    
     return vulnerabilities
 ```
 
 **Advanced Dependency Vulnerability Scanning**
-
 ```python
 import subprocess
 import json
@@ -589,7 +583,7 @@ class DependencyScanner:
             'snyk': 'https://api.snyk.io/v1/test',
             'github': 'https://api.github.com/advisories'
         }
-
+    
     def scan_all_ecosystems(self, project_path: str) -> Dict[str, Any]:
         """Comprehensive dependency scanning across all package managers"""
         results = {
@@ -597,20 +591,20 @@ class DependencyScanner:
             'ecosystems': {},
             'summary': {'total_vulnerabilities': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
         }
-
+        
         # Detect and scan each ecosystem
         ecosystems = self.detect_ecosystems(project_path)
-
+        
         for ecosystem in ecosystems:
             results['ecosystems'][ecosystem] = self.scan_ecosystem(ecosystem, project_path)
             self.update_summary(results['summary'], results['ecosystems'][ecosystem])
-
+        
         return results
-
+    
     def detect_ecosystems(self, project_path: str) -> List[str]:
         """Detect package managers and dependency files"""
         ecosystems = []
-
+        
         ecosystem_files = {
             'npm': ['package.json', 'package-lock.json', 'yarn.lock'],
             'pip': ['requirements.txt', 'setup.py', 'pyproject.toml', 'Pipfile'],
@@ -622,13 +616,13 @@ class DependencyScanner:
             'go': ['go.mod', 'go.sum'],
             'rust': ['Cargo.toml', 'Cargo.lock']
         }
-
+        
         for ecosystem, files in ecosystem_files.items():
             if any(Path(project_path).glob(f) for f in files):
                 ecosystems.append(ecosystem)
-
+        
         return ecosystems
-
+    
     def scan_npm_dependencies(self, project_path: str) -> Dict[str, Any]:
         """Scan NPM dependencies using multiple tools"""
         results = {
@@ -637,7 +631,7 @@ class DependencyScanner:
             'total_packages': 0,
             'outdated_packages': []
         }
-
+        
         # NPM Audit
         try:
             npm_result = subprocess.run(
@@ -647,11 +641,11 @@ class DependencyScanner:
                 text=True,
                 timeout=120
             )
-
+            
             if npm_result.stdout:
                 audit_data = json.loads(npm_result.stdout)
                 results['tool_results']['npm_audit'] = audit_data
-
+                
                 for vuln_id, vuln in audit_data.get('vulnerabilities', {}).items():
                     results['vulnerabilities'].append({
                         'id': vuln_id,
@@ -666,7 +660,7 @@ class DependencyScanner:
                     })
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
             results['tool_results']['npm_audit'] = {'error': 'Failed to run npm audit'}
-
+        
         # Snyk scan (if available)
         try:
             snyk_result = subprocess.run(
@@ -676,11 +670,11 @@ class DependencyScanner:
                 text=True,
                 timeout=180
             )
-
+            
             if snyk_result.stdout:
                 snyk_data = json.loads(snyk_result.stdout)
                 results['tool_results']['snyk'] = snyk_data
-
+                
                 for vuln in snyk_data.get('vulnerabilities', []):
                     results['vulnerabilities'].append({
                         'id': vuln.get('id', ''),
@@ -695,9 +689,9 @@ class DependencyScanner:
                     })
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
             results['tool_results']['snyk'] = {'error': 'Snyk not available or failed'}
-
+        
         return results
-
+    
     def scan_python_dependencies(self, project_path: str) -> Dict[str, Any]:
         """Comprehensive Python dependency scanning"""
         results = {
@@ -705,7 +699,7 @@ class DependencyScanner:
             'vulnerabilities': [],
             'license_issues': []
         }
-
+        
         # Safety scan
         try:
             safety_result = subprocess.run(
@@ -715,11 +709,11 @@ class DependencyScanner:
                 text=True,
                 timeout=120
             )
-
+            
             if safety_result.stdout:
                 safety_data = json.loads(safety_result.stdout)
                 results['tool_results']['safety'] = safety_data
-
+                
                 for vuln in safety_data:
                     results['vulnerabilities'].append({
                         'package': vuln.get('package_name', ''),
@@ -732,7 +726,7 @@ class DependencyScanner:
                     })
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
             results['tool_results']['safety'] = {'error': 'Safety scan failed'}
-
+        
         # pip-audit scan
         try:
             pip_audit_result = subprocess.run(
@@ -742,11 +736,11 @@ class DependencyScanner:
                 text=True,
                 timeout=120
             )
-
+            
             if pip_audit_result.stdout:
                 pip_audit_data = json.loads(pip_audit_result.stdout)
                 results['tool_results']['pip_audit'] = pip_audit_data
-
+                
                 for vuln in pip_audit_data.get('vulnerabilities', []):
                     results['vulnerabilities'].append({
                         'package': vuln.get('package', ''),
@@ -759,9 +753,9 @@ class DependencyScanner:
                     })
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
             results['tool_results']['pip_audit'] = {'error': 'pip-audit not available'}
-
+        
         return results
-
+    
     def generate_remediation_plan(self, vulnerabilities: List[Dict]) -> Dict[str, Any]:
         """Generate prioritized remediation plan"""
         plan = {
@@ -770,12 +764,12 @@ class DependencyScanner:
             'long_term': [],
             'automation_scripts': {}
         }
-
+        
         # Sort by severity
         critical_high = [v for v in vulnerabilities if v.get('severity', '').upper() in ['CRITICAL', 'HIGH']]
         medium = [v for v in vulnerabilities if v.get('severity', '').upper() == 'MEDIUM']
         low = [v for v in vulnerabilities if v.get('severity', '').upper() == 'LOW']
-
+        
         # Immediate actions for critical/high
         for vuln in critical_high:
             plan['immediate_actions'].append({
@@ -786,7 +780,7 @@ class DependencyScanner:
                 'priority': 1,
                 'effort': 'Low'
             })
-
+        
         # Auto-update script
         plan['automation_scripts']['npm_auto_update'] = """
 #!/bin/bash
@@ -795,7 +789,7 @@ npm audit fix --force
 npm update
 npm audit
 """
-
+        
         plan['automation_scripts']['pip_auto_update'] = """
 #!/bin/bash
 # Automated Python dependency updates
@@ -803,7 +797,7 @@ pip install --upgrade pip
 pip-audit --fix
 safety check
 """
-
+        
         return plan
 
 # Example usage with specific package managers
@@ -849,7 +843,7 @@ def scan_container_vulnerabilities(image_name: str) -> Dict[str, Any]:
         'sbom': {},
         'compliance_checks': {}
     }
-
+    
     # Trivy scan
     try:
         trivy_result = subprocess.run([
@@ -857,11 +851,11 @@ def scan_container_vulnerabilities(image_name: str) -> Dict[str, Any]:
             '--security-checks', 'vuln,config,secret',
             image_name
         ], capture_output=True, text=True, timeout=300)
-
+        
         if trivy_result.stdout:
             trivy_data = json.loads(trivy_result.stdout)
             results['scan_results']['trivy'] = trivy_data
-
+            
             for result in trivy_data.get('Results', []):
                 for vuln in result.get('Vulnerabilities', []):
                     results['vulnerabilities'].append({
@@ -876,19 +870,19 @@ def scan_container_vulnerabilities(image_name: str) -> Dict[str, Any]:
                     })
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
         results['scan_results']['trivy'] = {'error': 'Trivy scan failed'}
-
+    
     # Generate SBOM (Software Bill of Materials)
     try:
         sbom_result = subprocess.run([
             'trivy', 'image', '--format', 'spdx-json',
             image_name
         ], capture_output=True, text=True, timeout=180)
-
+        
         if sbom_result.stdout:
             results['sbom'] = json.loads(sbom_result.stdout)
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, json.JSONDecodeError):
         results['sbom'] = {'error': 'SBOM generation failed'}
-
+    
     return results
 
 # Multi-ecosystem scanner
@@ -902,7 +896,7 @@ class UniversalDependencyScanner:
             'rust': self.scan_rust_dependencies,
             'container': self.scan_container_image
         }
-
+    
     def scan_python_dependencies(self, project_path: str) -> Dict[str, Any]:
         """
         Enhanced Python dependency scanning with multiple tools
@@ -913,12 +907,12 @@ class UniversalDependencyScanner:
             'license_compliance': [],
             'outdated_packages': []
         }
-
+        
         # Safety check
         try:
             safety_cmd = ['safety', 'check', '--json', '--full-report']
             result = subprocess.run(safety_cmd, capture_output=True, text=True, timeout=120)
-
+            
             if result.stdout:
                 safety_data = json.loads(result.stdout)
                 for vuln in safety_data:
@@ -934,12 +928,12 @@ class UniversalDependencyScanner:
                     })
         except Exception as e:
             results['safety_error'] = str(e)
-
+        
         # pip-audit
         try:
             pip_audit_cmd = ['pip-audit', '--format=json', '--desc']
             result = subprocess.run(pip_audit_cmd, capture_output=True, text=True, timeout=120)
-
+            
             if result.stdout:
                 pip_audit_data = json.loads(result.stdout)
                 for vuln in pip_audit_data.get('vulnerabilities', []):
@@ -956,18 +950,18 @@ class UniversalDependencyScanner:
                     })
         except Exception as e:
             results['pip_audit_error'] = str(e)
-
+        
         # License compliance check
         try:
             pip_licenses_result = subprocess.run(
                 ['pip-licenses', '--format=json'],
                 capture_output=True, text=True, timeout=60
             )
-
+            
             if pip_licenses_result.stdout:
                 licenses_data = json.loads(pip_licenses_result.stdout)
                 problematic_licenses = ['GPL', 'AGPL', 'SSPL', 'BUSL']
-
+                
                 for package in licenses_data:
                     license_name = package.get('License', 'Unknown')
                     if any(prob in license_name.upper() for prob in problematic_licenses):
@@ -980,9 +974,9 @@ class UniversalDependencyScanner:
                         })
         except Exception as e:
             results['license_error'] = str(e)
-
+        
         return results
-
+    
     def _map_safety_severity(self, vuln_id: str) -> str:
         """Map Safety vulnerability ID to severity level"""
         # Safety uses numeric IDs, we can implement CVSS mapping
@@ -991,7 +985,7 @@ class UniversalDependencyScanner:
         if any(pattern in vuln_id.lower() for pattern in high_risk_patterns):
             return 'CRITICAL'
         return 'HIGH'  # Default for Safety findings
-
+    
     def _calculate_severity_from_cvss(self, fix_versions: list) -> str:
         """Calculate severity based on fix version availability"""
         if not fix_versions:
@@ -1004,36 +998,34 @@ class UniversalDependencyScanner:
 Check for OWASP Top 10 vulnerabilities:
 
 **A01: Broken Access Control**
-
 ```python
 # Check for missing authentication
 def check_access_control():
     findings = []
-
+    
     # API endpoints without auth
     unprotected_endpoints = [
         {'path': '/api/admin/*', 'method': 'GET', 'auth': False},
         {'path': '/api/users/delete', 'method': 'POST', 'auth': False}
     ]
-
+    
     # Insecure direct object references
     idor_patterns = [
         r"user_id\s*=\s*request\.(GET|POST)\[",
         r"WHERE\s+id\s*=\s*\$_GET\[",
         r"findById\(req\.params\.id\)"
     ]
-
+    
     # Missing authorization checks
     missing_authz = [
         {'file': 'routes/admin.js', 'line': 45, 'issue': 'No role check'},
         {'file': 'api/delete.py', 'line': 12, 'issue': 'No ownership validation'}
     ]
-
+    
     return findings
 ```
 
 **A02: Cryptographic Failures**
-
 ```python
 # Check encryption and hashing
 crypto_issues = {
@@ -1057,7 +1049,6 @@ crypto_issues = {
 ```
 
 **A03: Injection**
-
 ```python
 # SQL Injection detection
 sql_injection_tests = [
@@ -1089,7 +1080,6 @@ command_injection = [
 Scan infrastructure and configuration:
 
 **Container Security**
-
 ```dockerfile
 # Dockerfile security scan
 FROM node:14  # ISSUE: Using non-specific tag
@@ -1123,7 +1113,6 @@ CMD ["node", "server.js"]
 ```
 
 **Kubernetes Security**
-
 ```yaml
 # Pod Security Policy
 apiVersion: policy/v1beta1
@@ -1156,7 +1145,6 @@ spec:
 Comprehensive API security testing:
 
 **Authentication & Authorization**
-
 ```python
 # JWT Security Issues
 jwt_vulnerabilities = {
@@ -1188,7 +1176,6 @@ rate_limit_config = {
 ```
 
 **Input Validation**
-
 ```python
 # API Input Validation Issues
 validation_issues = [
@@ -1214,7 +1201,6 @@ validation_issues = [
 Scan for exposed secrets and credentials:
 
 **Secret Patterns**
-
 ```python
 secret_patterns = {
     "aws_access_key": r"AKIA[0-9A-Z]{16}",
@@ -1233,23 +1219,23 @@ def scan_git_history():
     Scan git history for accidentally committed secrets
     """
     import subprocess
-
+    
     # Get all commits
     commits = subprocess.run(
         ['git', 'log', '--pretty=format:%H'],
         capture_output=True,
         text=True
     ).stdout.split('\n')
-
+    
     secrets_found = []
-
+    
     for commit in commits[:100]:  # Last 100 commits
         diff = subprocess.run(
             ['git', 'show', commit],
             capture_output=True,
             text=True
         ).stdout
-
+        
         for secret_type, pattern in secret_patterns.items():
             if re.search(pattern, diff):
                 secrets_found.append({
@@ -1257,7 +1243,7 @@ def scan_git_history():
                     'type': secret_type,
                     'action': 'Remove from history and rotate credential'
                 })
-
+    
     return secrets_found
 ```
 
@@ -1266,7 +1252,6 @@ def scan_git_history():
 Check HTTP security headers:
 
 **Header Configuration**
-
 ```python
 security_headers = {
     "Strict-Transport-Security": {
@@ -1312,7 +1297,6 @@ security_headers = {
 Provide intelligent, automated fixes with safety validation:
 
 **Smart Remediation Engine**
-
 ```python
 import ast
 import re
@@ -1337,32 +1321,32 @@ class AutomatedRemediationEngine:
         self.project_path = Path(project_path)
         self.backup_created = False
         self.applied_fixes = []
-
+        
     def create_safety_backup(self) -> str:
         """Create git branch backup before applying fixes"""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_branch = f'security_backup_{timestamp}'
-
+        
         try:
-            subprocess.run(['git', 'checkout', '-b', backup_branch],
+            subprocess.run(['git', 'checkout', '-b', backup_branch], 
                          cwd=self.project_path, check=True)
-            subprocess.run(['git', 'checkout', '-'],
+            subprocess.run(['git', 'checkout', '-'], 
                          cwd=self.project_path, check=True)
             self.backup_created = True
             return backup_branch
         except subprocess.CalledProcessError:
             raise Exception("Failed to create safety backup branch")
-
+    
     def apply_automated_fixes(self, vulnerabilities: List[Dict]) -> List[RemediationAction]:
         """Apply safe automated fixes"""
         if not self.backup_created:
             self.create_safety_backup()
-
+        
         actions = []
-
+        
         for vuln in vulnerabilities:
             action = self.generate_remediation_action(vuln)
-
+            
             if action.automated and action.risk_level in ['safe', 'low_risk']:
                 try:
                     success = self.apply_fix(action)
@@ -1373,14 +1357,14 @@ class AutomatedRemediationEngine:
                     print(f"Failed to apply fix for {action.vulnerability_id}: {e}")
             else:
                 actions.append(action)
-
+        
         return actions
-
+    
     def generate_remediation_action(self, vulnerability: Dict) -> RemediationAction:
         """Generate specific remediation action for vulnerability"""
         vuln_type = vulnerability.get('type', '')
         severity = vulnerability.get('severity', 'MEDIUM')
-
+        
         if vuln_type == 'vulnerable_dependency':
             return self._fix_vulnerable_dependency(vulnerability)
         elif vuln_type == 'sql_injection':
@@ -1391,13 +1375,13 @@ class AutomatedRemediationEngine:
             return self._fix_security_headers(vulnerability)
         else:
             return self._generic_fix(vulnerability)
-
+    
     def _fix_vulnerable_dependency(self, vuln: Dict) -> RemediationAction:
         """Fix vulnerable dependencies automatically"""
         package = vuln.get('package', '')
         current_version = vuln.get('version', '')
         fixed_version = vuln.get('fixed_version', 'latest')
-
+        
         # Determine package manager
         if (self.project_path / 'package.json').exists():
             update_command = f'npm install {package}@{fixed_version}'
@@ -1408,7 +1392,7 @@ class AutomatedRemediationEngine:
         else:
             ecosystem = 'unknown'
             update_command = f'# Update {package} to {fixed_version}'
-
+        
         return RemediationAction(
             vulnerability_id=vuln.get('id', ''),
             action_type='dependency_update',
@@ -1427,19 +1411,19 @@ class AutomatedRemediationEngine:
             ],
             rollback_plan=f'Revert to {package}@{current_version}'
         )
-
+    
     def _fix_sql_injection(self, vuln: Dict) -> RemediationAction:
         """Fix SQL injection vulnerabilities"""
         file_path = vuln.get('file_path', '')
         line_number = vuln.get('line_number', 0)
-
+        
         # Read the vulnerable code
         try:
             with open(self.project_path / file_path, 'r') as f:
                 lines = f.readlines()
-
+            
             vulnerable_line = lines[line_number - 1] if line_number > 0 else ''
-
+            
             # Generate fix based on language and framework
             if file_path.endswith('.py'):
                 fixed_code = self._fix_python_sql_injection(vulnerable_line)
@@ -1447,7 +1431,7 @@ class AutomatedRemediationEngine:
                 fixed_code = self._fix_javascript_sql_injection(vulnerable_line)
             else:
                 fixed_code = '# Manual fix required'
-
+            
             return RemediationAction(
                 vulnerability_id=vuln.get('id', ''),
                 action_type='code_fix',
@@ -1470,7 +1454,7 @@ class AutomatedRemediationEngine:
             )
         except Exception as e:
             return self._generic_fix(vuln)
-
+    
     def _fix_python_sql_injection(self, vulnerable_line: str) -> str:
         """Generate Python SQL injection fix"""
         # Simple pattern matching for common cases
@@ -1479,12 +1463,12 @@ class AutomatedRemediationEngine:
         elif 'query(' in vulnerable_line and '+' in vulnerable_line:
             return '# Use parameterized query: query("SELECT * FROM table WHERE id = ?", (user_id,))'
         return '# Replace with parameterized query'
-
+    
     def _fix_hardcoded_secrets(self, vuln: Dict) -> RemediationAction:
         """Fix hardcoded secrets"""
         file_path = vuln.get('file_path', '')
         secret_type = vuln.get('secret_type', 'credential')
-
+        
         return RemediationAction(
             vulnerability_id=vuln.get('id', ''),
             action_type='code_fix',
@@ -1506,7 +1490,7 @@ class AutomatedRemediationEngine:
             ],
             rollback_plan='Use temporary hardcoded value until proper secret management'
         )
-
+    
     def apply_fix(self, action: RemediationAction) -> bool:
         """Apply an automated fix"""
         if action.action_type == 'dependency_update':
@@ -1514,7 +1498,7 @@ class AutomatedRemediationEngine:
         elif action.action_type == 'config_change':
             return self._apply_config_change(action)
         return False
-
+    
     def _apply_dependency_update(self, action: RemediationAction) -> bool:
         """Apply dependency update"""
         try:
@@ -1524,7 +1508,7 @@ class AutomatedRemediationEngine:
                 if step.startswith('Run: '):
                     update_command = step[5:].split()
                     break
-
+            
             if update_command:
                 result = subprocess.run(
                     update_command,
@@ -1533,59 +1517,59 @@ class AutomatedRemediationEngine:
                     text=True,
                     timeout=300
                 )
-
+                
                 if result.returncode == 0:
                     print(f"Successfully applied: {action.description}")
                     return True
                 else:
                     print(f"Failed to apply {action.description}: {result.stderr}")
                     return False
-
+            
             return False
         except Exception as e:
             print(f"Error applying fix: {e}")
             return False
-
+    
     def generate_remediation_report(self, actions: List[RemediationAction]) -> str:
         """Generate comprehensive remediation report"""
         report = []
         report.append("# Security Remediation Report\n")
         report.append(f"**Generated**: {datetime.now().isoformat()}\n")
         report.append(f"**Total Actions**: {len(actions)}\n")
-
+        
         automated_count = sum(1 for a in actions if a.automated and a.risk_level in ['safe', 'low_risk'])
         manual_count = len(actions) - automated_count
-
+        
         report.append(f"**Automated Fixes Applied**: {automated_count}\n")
         report.append(f"**Manual Actions Required**: {manual_count}\n\n")
-
+        
         # Group by action type
         by_type = {}
         for action in actions:
             if action.action_type not in by_type:
                 by_type[action.action_type] = []
             by_type[action.action_type].append(action)
-
+        
         for action_type, type_actions in by_type.items():
             report.append(f"## {action_type.replace('_', ' ').title()}\n")
-
+            
             for action in type_actions:
                 report.append(f"### {action.description}\n")
                 report.append(f"**Risk Level**: {action.risk_level}\n")
                 report.append(f"**Automated**: {'✅' if action.automated else '❌'}\n")
-
+                
                 if action.manual_steps:
                     report.append("**Manual Steps**:\n")
                     for step in action.manual_steps:
                         report.append(f"- {step}\n")
-
+                
                 if action.validation_tests:
                     report.append("**Validation Tests**:\n")
                     for test in action.validation_tests:
                         report.append(f"- {test}\n")
-
+                
                 report.append(f"**Rollback**: {action.rollback_plan}\n\n")
-
+        
         return ''.join(report)
 
 # Security Middleware Templates
@@ -1653,7 +1637,7 @@ app.use(cors({
 }));
 
 // Input sanitization and validation
-app.use(express.json({
+app.use(express.json({ 
     limit: '10mb',
     verify: (req, res, buf) => {
         if (buf.length > 10 * 1024 * 1024) {
@@ -1668,12 +1652,12 @@ app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use((req, res, next) => {
     // Remove sensitive headers
     res.removeHeader('X-Powered-By');
-
+    
     // Add security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-
+    
     next();
 });
 
@@ -1707,12 +1691,12 @@ const statements = {
 // Safe database operations
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-
+    
     // Input validation
     if (!email || !password) {
         return res.status(400).json({ error: 'Email and password required' });
     }
-
+    
     try {
         const user = statements.getUserByEmail.get(email);
         if (user && await bcrypt.compare(password, user.password_hash)) {
@@ -1727,7 +1711,7 @@ app.post('/login', async (req, res) => {
     }
 });
 """,
-
+    
     'flask': """
 # Enhanced Flask security configuration
 from flask import Flask, request, session, jsonify
@@ -1798,7 +1782,7 @@ class PasswordManager:
     @staticmethod
     def hash_password(password: str) -> str:
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
+    
     @staticmethod
     def verify_password(password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
@@ -1814,16 +1798,16 @@ def validate_email(email: str) -> bool:
 @limiter.limit("5 per minute")
 def login():
     data = request.get_json()
-
+    
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({'error': 'Email and password required'}), 400
-
+    
     email = data['email'].strip().lower()
     password = data['password']
-
+    
     if not validate_email(email):
         return jsonify({'error': 'Invalid email format'}), 400
-
+    
     try:
         conn = get_db_connection()
         user = conn.execute(
@@ -1831,7 +1815,7 @@ def login():
             (email,)
         ).fetchone()
         conn.close()
-
+        
         if user and PasswordManager.verify_password(password, user['password_hash']):
             session['user_id'] = user['id']
             session.permanent = True
@@ -1841,7 +1825,7 @@ def login():
             })
         else:
             return jsonify({'error': 'Invalid credentials'}), 401
-
+            
     except Exception as e:
         app.logger.error(f'Login error: {e}')
         return jsonify({'error': 'Internal server error'}), 500
@@ -1849,7 +1833,7 @@ def login():
 # Request logging middleware
 @app.before_request
 def log_request_info():
-    app.logger.info('Request: %s %s from %s',
+    app.logger.info('Request: %s %s from %s', 
                    request.method, request.url, request.remote_addr)
 
 # Error handlers
@@ -1873,7 +1857,6 @@ if __name__ == '__main__':
 ```
 
 **Authentication Implementation**
-
 ```python
 # Secure password handling
 import bcrypt
@@ -1885,7 +1868,7 @@ class SecureAuth:
     def __init__(self):
         self.jwt_secret = os.environ.get('JWT_SECRET', secrets.token_urlsafe(32))
         self.password_min_length = 12
-
+        
     def hash_password(self, password):
         """
         Securely hash password with bcrypt
@@ -1893,21 +1876,21 @@ class SecureAuth:
         # Validate password strength
         if len(password) < self.password_min_length:
             raise ValueError(f"Password must be at least {self.password_min_length} characters")
-
+            
         # Check common passwords
         if password.lower() in self.load_common_passwords():
             raise ValueError("Password is too common")
-
+            
         # Hash with bcrypt (cost factor 12)
         salt = bcrypt.gensalt(rounds=12)
         return bcrypt.hashpw(password.encode('utf-8'), salt)
-
+    
     def verify_password(self, password, hashed):
         """
         Verify password against hash
         """
         return bcrypt.checkpw(password.encode('utf-8'), hashed)
-
+    
     def generate_token(self, user_id, expires_in=3600):
         """
         Generate secure JWT token
@@ -1918,13 +1901,13 @@ class SecureAuth:
             'iat': datetime.utcnow(),
             'jti': secrets.token_urlsafe(16)  # Unique token ID
         }
-
+        
         return jwt.encode(
             payload,
             self.jwt_secret,
             algorithm='HS256'
         )
-
+    
     def verify_token(self, token):
         """
         Verify and decode JWT token
@@ -1947,7 +1930,6 @@ class SecureAuth:
 Integrate security scanning into your development pipeline:
 
 **GitHub Actions Security Workflow**
-
 ```yaml
 # .github/workflows/security.yml
 name: Security Scan
@@ -1967,108 +1949,108 @@ jobs:
       contents: read
       security-events: write
       pull-requests: write
-
+      
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Full history for secret scanning
-
+          
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
+          
       - name: Install security tools
         run: |
           # Node.js tools
           npm install -g audit-ci @cyclonedx/cli
-
+          
           # Python tools
           pip install safety bandit semgrep pip-audit
-
+          
           # Container tools
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
+          
           # Secret scanning
           curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
-
+          
       - name: Run secret detection
         run: |
           trufflehog filesystem . --json --no-update > trufflehog-results.json
-
+          
       - name: Upload secret scan results
         if: always()
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: trufflehog-results.json
-
+          
       - name: JavaScript/TypeScript Security Scan
         if: hashFiles('package.json') != ''
         run: |
           npm ci
-
+          
           # Dependency audit
           npm audit --audit-level moderate --json > npm-audit.json || true
-
+          
           # SAST with ESLint Security
           npx eslint . --ext .js,.jsx,.ts,.tsx --format json --output-file eslint-security.json || true
-
+          
           # Generate SBOM
           npx @cyclonedx/cli --type npm --output-format json --output-file sbom-npm.json
-
+          
       - name: Python Security Scan
         if: hashFiles('requirements.txt', 'setup.py', 'pyproject.toml') != ''
         run: |
           # Install dependencies
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f setup.py ]; then pip install -e .; fi
-
+          
           # Dependency vulnerability scan
           safety check --json --output safety-results.json || true
           pip-audit --format=json --output=pip-audit-results.json || true
-
+          
           # SAST with Bandit
           bandit -r . -f json -o bandit-results.json || true
-
+          
           # Advanced SAST with Semgrep
           semgrep --config=auto --json --output=semgrep-results.json . || true
-
+          
       - name: Container Security Scan
         if: hashFiles('Dockerfile', 'docker-compose.yml') != ''
         run: |
           # Build image for scanning
           if [ -f Dockerfile ]; then
             docker build -t security-scan:latest .
-
+            
             # Trivy image scan
             trivy image --format sarif --output trivy-image.sarif security-scan:latest
-
+            
             # Trivy filesystem scan
             trivy fs --format sarif --output trivy-fs.sarif .
           fi
-
+          
       - name: Infrastructure as Code Scan
         if: hashFiles('*.tf', '*.yaml', '*.yml') != ''
         run: |
           # Install Checkov
           pip install checkov
-
+          
           # Scan Terraform
           if ls *.tf 1> /dev/null 2>&1; then
             checkov -f *.tf --framework terraform --output sarif > checkov-terraform.sarif || true
           fi
-
+          
           # Scan Kubernetes manifests
           if ls *.yaml *.yml 1> /dev/null 2>&1; then
             checkov -f *.yaml -f *.yml --framework kubernetes --output sarif > checkov-k8s.sarif || true
           fi
-
+          
       - name: Upload scan results to Security tab
         if: always()
         uses: github/codeql-action/upload-sarif@v2
@@ -2078,7 +2060,7 @@ jobs:
             trivy-fs.sarif
             checkov-terraform.sarif
             checkov-k8s.sarif
-
+            
       - name: Generate Security Report
         if: always()
         run: |
@@ -2086,7 +2068,7 @@ jobs:
           import json
           import glob
           from datetime import datetime
-
+          
           # Collect all scan results
           results = {
               'timestamp': datetime.now().isoformat(),
@@ -2094,10 +2076,10 @@ jobs:
               'tools': [],
               'vulnerabilities': []
           }
-
+          
           # Process each result file
           result_files = glob.glob('*-results.json') + glob.glob('*.sarif')
-
+          
           for file in result_files:
               try:
                   with open(file, 'r') as f:
@@ -2107,7 +2089,7 @@ jobs:
                       # (Implementation would parse each tool's output format)
               except:
                   continue
-
+          
           # Generate markdown report
           with open('security-report.md', 'w') as f:
               f.write(f"# Security Scan Report\n\n")
@@ -2121,20 +2103,20 @@ jobs:
               f.write(f"## Tools Used\n\n")
               for tool in results['tools']:
                   f.write(f"- {tool}\n")
-
+          
           print("Security report generated: security-report.md")
           EOF
-
+          
       - name: Comment PR with Security Results
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
-
+            
             try {
               const report = fs.readFileSync('security-report.md', 'utf8');
-
+              
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
@@ -2144,7 +2126,7 @@ jobs:
             } catch (error) {
               console.log('Could not post security report:', error);
             }
-
+            
       - name: Fail on Critical Vulnerabilities
         run: |
           # Check if any critical vulnerabilities found
@@ -2154,19 +2136,18 @@ jobs:
             echo "Security scan failed due to critical vulnerabilities."
             exit 1
           fi
-
+          
           HIGH_COUNT=$(jq -r '.summary.high // 0' security-report.json 2>/dev/null || echo "0")
           if [ "$HIGH_COUNT" -gt 5 ]; then
             echo "⚠️ Found $HIGH_COUNT high-severity vulnerabilities!"
             echo "Consider addressing high-severity issues."
             # Don't fail for high-severity, just warn
           fi
-
+          
           echo "✅ Security scan completed successfully!"
 ```
 
 **Automated Remediation Workflow**
-
 ```yaml
 # .github/workflows/auto-remediation.yml
 name: Automated Security Remediation
@@ -2193,19 +2174,19 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-
+      
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-
+          
       - name: Set up Node.js
         if: hashFiles('package.json') != ''
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-
+          
       - name: Auto-fix npm dependencies
         if: contains(github.event.inputs.fix_type, 'dependencies') || contains(github.event.inputs.fix_type, 'all')
         run: |
@@ -2213,7 +2194,7 @@ jobs:
             npm audit fix --force
             npm update
           fi
-
+          
       - name: Auto-fix Python dependencies
         if: contains(github.event.inputs.fix_type, 'dependencies') || contains(github.event.inputs.fix_type, 'all')
         run: |
@@ -2221,26 +2202,26 @@ jobs:
             pip install pip-tools
             pip-compile --upgrade requirements.in
           fi
-
+          
       - name: Remove detected secrets
         if: contains(github.event.inputs.fix_type, 'secrets') || contains(github.event.inputs.fix_type, 'all')
         run: |
           # Install git-filter-repo
           pip install git-filter-repo
-
+          
           # Create backup branch
           git checkout -b security-remediation-$(date +%Y%m%d)
-
+          
           # Remove common secret patterns (be very careful with this)
           echo "Warning: This would remove secrets from git history"
           echo "Manual review required for production use"
-
+          
       - name: Update security configurations
         if: contains(github.event.inputs.fix_type, 'config') || contains(github.event.inputs.fix_type, 'all')
         run: |
           # Add .gitignore entries for common secret files
           cat >> .gitignore << 'EOF'
-
+          
           # Security - ignore potential secret files
           .env
           .env.local
@@ -2252,14 +2233,14 @@ jobs:
           config/secrets.yml
           config/database.yml
           EOF
-
+          
           # Update Docker security
           if [ -f Dockerfile ]; then
             # Add security improvements to Dockerfile
             echo "RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup" >> Dockerfile.security
             echo "USER appuser" >> Dockerfile.security
           fi
-
+          
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
@@ -2268,19 +2249,19 @@ jobs:
           title: '🔒 Automated Security Fixes'
           body: |
             ## Automated Security Remediation
-
+            
             This PR contains automated fixes for security vulnerabilities:
-
+            
             ### Changes Made
             - ✅ Updated vulnerable dependencies
             - ✅ Added security configurations
             - ✅ Improved .gitignore for secrets
-
+            
             ### Manual Review Required
             - [ ] Verify all dependency updates are compatible
             - [ ] Test application functionality
             - [ ] Review any secret removal changes
-
+            
             **⚠️ Important**: Always test thoroughly before merging automated security fixes.
           branch: security/automated-fixes
           delete-branch: true
@@ -2291,7 +2272,6 @@ jobs:
 Generate comprehensive security reports with actionable insights:
 
 **Advanced Reporting System**
-
 ```python
 import json
 import jinja2
@@ -2320,7 +2300,7 @@ class SecurityReportGenerator:
                 'dashboard': self.DASHBOARD_TEMPLATE
             })
         )
-
+    
     EXECUTIVE_TEMPLATE = """
 # Executive Security Assessment Report
 
@@ -2360,7 +2340,7 @@ class SecurityReportGenerator:
 - **Short-term (1-6 months)**: {{ costs.short_term }}
 - **Long-term (6+ months)**: {{ costs.long_term }}
 """
-
+    
     DETAILED_TEMPLATE = """
 # Detailed Security Findings Report
 
@@ -2383,7 +2363,6 @@ class SecurityReportGenerator:
 
 **References**:
 {% for ref in vuln.references %}
-
 - [{{ ref.title }}]({{ ref.url }})
 {% endfor %}
 
@@ -2391,11 +2370,8 @@ class SecurityReportGenerator:
 {% endfor %}
 
 ## Tool Effectiveness Analysis
-
 {% for tool in tool_analysis %}
-
 ### {{ tool.name }}
-
 - **Vulnerabilities Found**: {{ tool.found_count }}
 - **False Positives**: {{ tool.false_positives }}%
 - **Execution Time**: {{ tool.execution_time }}s
@@ -2403,14 +2379,14 @@ class SecurityReportGenerator:
 - **Recommendation**: {{ tool.recommendation }}
 {% endfor %}
 """
-
+    
     def generate_comprehensive_report(self, scan_results: Dict[str, Any]) -> Dict[str, str]:
         """Generate all report formats"""
         # Process scan results
         metrics = self._calculate_metrics(scan_results)
         risk_assessment = self._assess_risk(scan_results, metrics)
         compliance_status = self._check_compliance(scan_results)
-
+        
         # Generate different report formats
         reports = {
             'executive_summary': self._generate_executive_summary(
@@ -2430,19 +2406,19 @@ class SecurityReportGenerator:
             }, indent=2),
             'sarif_report': self._generate_sarif_report(scan_results)
         }
-
+        
         return reports
-
+    
     def _calculate_metrics(self, scan_results: Dict[str, Any]) -> SecurityMetrics:
         """Calculate security metrics from scan results"""
         vulnerabilities = scan_results.get('vulnerabilities', [])
-
+        
         severity_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
         for vuln in vulnerabilities:
             severity = vuln.get('severity', 'UNKNOWN').upper()
             if severity in severity_counts:
                 severity_counts[severity] += 1
-
+        
         return SecurityMetrics(
             total_vulnerabilities=len(vulnerabilities),
             critical_count=severity_counts['CRITICAL'],
@@ -2454,17 +2430,17 @@ class SecurityReportGenerator:
             coverage_percentage=scan_results.get('coverage', 0),
             false_positive_rate=scan_results.get('false_positive_rate', 0)
         )
-
+    
     def _assess_risk(self, scan_results: Dict[str, Any], metrics: SecurityMetrics) -> Dict[str, Any]:
         """Perform comprehensive risk assessment"""
         # Calculate risk score (0-100)
         risk_score = min(100, (
-            metrics.critical_count *25 +
-            metrics.high_count* 15 +
-            metrics.medium_count *5 +
-            metrics.low_count* 1
+            metrics.critical_count * 25 +
+            metrics.high_count * 15 +
+            metrics.medium_count * 5 +
+            metrics.low_count * 1
         ))
-
+        
         # Determine risk level
         if risk_score >= 80:
             risk_level = 'CRITICAL'
@@ -2474,7 +2450,7 @@ class SecurityReportGenerator:
             risk_level = 'MEDIUM'
         else:
             risk_level = 'LOW'
-
+        
         # Business impact assessment
         business_impact = {
             'data_breach_probability': min(95, risk_score + metrics.critical_count * 10),
@@ -2482,7 +2458,7 @@ class SecurityReportGenerator:
             'compliance_violation_risk': min(100, risk_score + (metrics.critical_count * 5)),
             'reputation_damage_potential': min(85, risk_score * 0.9)
         }
-
+        
         return {
             'score': risk_score,
             'level': risk_level,
@@ -2490,15 +2466,15 @@ class SecurityReportGenerator:
             'trending': self._calculate_risk_trend(scan_results),
             'peer_comparison': self._compare_with_industry_standards(risk_score)
         }
-
+    
     def _generate_sarif_report(self, scan_results: Dict[str, Any]) -> str:
         """Generate SARIF 2.1.0 compliant report"""
         sarif_report = {
             "version": "2.1.0",
-            "$schema": "<https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json>",
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
             "runs": []
         }
-
+        
         # Group findings by tool
         tools_data = {}
         for vuln in scan_results.get('vulnerabilities', []):
@@ -2506,7 +2482,7 @@ class SecurityReportGenerator:
             if tool not in tools_data:
                 tools_data[tool] = []
             tools_data[tool].append(vuln)
-
+        
         # Create run for each tool
         for tool_name, vulnerabilities in tools_data.items():
             run = {
@@ -2519,7 +2495,7 @@ class SecurityReportGenerator:
                 },
                 "results": []
             }
-
+            
             for vuln in vulnerabilities:
                 result = {
                     "ruleId": vuln.get('type', 'unknown'),
@@ -2538,19 +2514,19 @@ class SecurityReportGenerator:
                         }
                     }]
                 }
-
+                
                 if vuln.get('cwe'):
                     result["properties"] = {
                         "cwe": vuln.get('cwe'),
                         "confidence": vuln.get('confidence', 'medium')
                     }
-
+                
                 run["results"].append(result)
-
+            
             sarif_report["runs"].append(run)
-
+        
         return json.dumps(sarif_report, indent=2)
-
+    
     def _map_severity_to_sarif_level(self, severity: str) -> str:
         """Map severity to SARIF level"""
         mapping = {
@@ -2562,11 +2538,9 @@ class SecurityReportGenerator:
         return mapping.get(severity.upper(), 'warning')
 
 # Usage example
-
 report_generator = SecurityReportGenerator()
 
 # Sample scan results
-
 sample_results = {
     'vulnerabilities': [
         {
@@ -2585,7 +2559,6 @@ sample_results = {
 }
 
 reports = report_generator.generate_comprehensive_report(sample_results)
-
 ```
 
 **Executive Summary**
@@ -2642,7 +2615,6 @@ reports = report_generator.generate_comprehensive_report(sample_results)
 ```
 
 **Detailed Findings with Remediation Code**
-
 ```json
 {
   "scan_metadata": {
@@ -2818,7 +2790,6 @@ reports = report_generator.generate_comprehensive_report(sample_results)
 ### Complete Security-First Development Workflow
 
 **Secure API Development Pipeline**
-
 ```bash
 # 1. Generate secure API scaffolding
 /api-scaffold
@@ -2845,7 +2816,6 @@ minimal_base_images: true
 ```
 
 **Integrated Security Configuration**
-
 ```python
 # security-config.py - Shared across all commands
 class IntegratedSecurityConfig:
@@ -2854,11 +2824,11 @@ class IntegratedSecurityConfig:
         self.scan_config = self.load_scan_config()             # From /security-scan
         self.test_security = self.load_test_security_config()  # From /test-harness
         self.container_security = self.load_container_config() # From /docker-optimize
-
+        
     def generate_security_middleware(self):
         """Generate security middleware based on API scaffold config"""
         middleware = []
-
+        
         if self.api_security.get('rate_limiting'):
             middleware.append({
                 'type': 'rate_limiting',
@@ -2868,7 +2838,7 @@ class IntegratedSecurityConfig:
                     'key_func': 'lambda request: request.client.host'
                 }
             })
-
+        
         if self.api_security.get('jwt_auth'):
             middleware.append({
                 'type': 'jwt_auth',
@@ -2878,13 +2848,13 @@ class IntegratedSecurityConfig:
                     'token_expiry': 3600
                 }
             })
-
+        
         return middleware
-
+    
     def generate_security_tests(self):
         """Generate security tests based on scan findings"""
         test_cases = []
-
+        
         # SQL Injection tests based on API endpoints
         api_endpoints = self.api_security.get('endpoints', [])
         for endpoint in api_endpoints:
@@ -2894,7 +2864,7 @@ class IntegratedSecurityConfig:
                     'endpoint': endpoint['path'],
                     'payloads': self.get_sql_injection_payloads()
                 })
-
+        
         # Authentication bypass tests
         if self.api_security.get('jwt_auth'):
             test_cases.append({
@@ -2906,9 +2876,9 @@ class IntegratedSecurityConfig:
                     'no_token'
                 ]
             })
-
+        
         return test_cases
-
+    
     def generate_container_security_policies(self):
         """Generate container security policies"""
         policies = {
@@ -2929,7 +2899,6 @@ class IntegratedSecurityConfig:
 ```
 
 **API Security Integration**
-
 ```python
 # Generated secure API endpoint with integrated security
 from fastapi import FastAPI, Depends, HTTPException, Request
@@ -2956,8 +2925,8 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """JWT verification with security scan compliance"""
     try:
         payload = jwt.decode(
-            credentials.credentials,
-            security_config.jwt_secret,
+            credentials.credentials, 
+            security_config.jwt_secret, 
             algorithms=["HS256"]
         )
         return payload
@@ -2986,7 +2955,7 @@ async def create_user(
     # Additional security validation from scan results
     if not validate_user_input(user_data):
         raise HTTPException(status_code=400, detail="Invalid input data")
-
+    
     # Create user with security logging
     try:
         user = await user_service.create_user(user_data)
@@ -2998,18 +2967,17 @@ async def create_user(
 ```
 
 **Database Security Integration**
-
 ```python
 # Database security configuration from /db-migrate and /security-scan
 class SecureDatabaseConfig:
     def __init__(self):
         self.migration_config = self.load_migration_config()  # From /db-migrate
         self.security_requirements = self.load_security_scan_results()
-
+        
     def generate_secure_migrations(self):
         """Generate database migrations with security controls"""
         migrations = []
-
+        
         # User table with security controls
         migrations.append({
             'operation': 'create_table',
@@ -3035,7 +3003,7 @@ class SecureDatabaseConfig:
                 }
             }
         })
-
+        
         # Security audit log table
         migrations.append({
             'operation': 'create_table',
@@ -3055,12 +3023,11 @@ class SecureDatabaseConfig:
                 {'name': 'idx_audit_action_timestamp', 'columns': ['action', 'timestamp']}
             ]
         })
-
+        
         return migrations
 ```
 
 **Container Security Integration**
-
 ```dockerfile
 # Dockerfile.secure - Generated with /docker-optimize + /security-scan
 # Multi-stage build with security hardening
@@ -3113,7 +3080,6 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 **Kubernetes Security Integration**
-
 ```yaml
 # k8s-secure-deployment.yaml - From /k8s-manifest + /security-scan
 apiVersion: v1
@@ -3271,7 +3237,6 @@ spec:
 ```
 
 **CI/CD Security Integration**
-
 ```yaml
 # .github/workflows/security-pipeline.yml
 name: Integrated Security Pipeline
@@ -3287,41 +3252,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-
+    
     # 1. Code Security Scanning
     - name: Run Bandit Security Scan
       run: |
         pip install bandit[toml]
         bandit -r . -f sarif -o bandit-results.sarif
-
+    
     - name: Run Semgrep Security Scan
       uses: returntocorp/semgrep-action@v1
       with:
         config: auto
         generateSarif: "1"
-
+    
     # 2. Dependency Security Scanning
     - name: Run Safety Check
       run: |
         pip install safety
         safety check --json --output safety-results.json
-
+    
     - name: Run npm audit
       if: hashFiles('package.json') != ''
       run: |
         npm audit --audit-level high --json > npm-audit-results.json
-
+    
     # 3. Container Security Scanning
     - name: Build Container
       run: docker build -t app:security-test .
-
+    
     - name: Run Trivy Container Scan
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'app:security-test'
         format: 'sarif'
         output: 'trivy-results.sarif'
-
+    
     # 4. Infrastructure Security Scanning
     - name: Run Checkov IaC Scan
       uses: bridgecrewio/checkov-action@master
@@ -3329,7 +3294,7 @@ jobs:
         directory: .
         output_format: sarif
         output_file_path: checkov-results.sarif
-
+    
     # 5. Secret Scanning
     - name: Run TruffleHog Secret Scan
       uses: trufflesecurity/trufflehog@main
@@ -3338,7 +3303,7 @@ jobs:
         base: main
         head: HEAD
         extra_args: --format=sarif --output=trufflehog-results.sarif
-
+    
     # 6. Upload Security Results
     - name: Upload SARIF results to GitHub
       uses: github/codeql-action/upload-sarif@v2
@@ -3349,12 +3314,12 @@ jobs:
           trivy-results.sarif
           checkov-results.sarif
           trufflehog-results.sarif
-
+    
     # 7. Security Test Integration
     - name: Run Security Tests
       run: |
         pytest tests/security/ -v --cov=src/security
-
+        
     # 8. Generate Security Report
     - name: Generate Security Dashboard
       run: |
@@ -3364,7 +3329,7 @@ jobs:
           --trivy trivy-results.sarif \
           --safety safety-results.json \
           --output security-dashboard.html
-
+    
     - name: Upload Security Dashboard
       uses: actions/upload-artifact@v3
       with:
@@ -3377,13 +3342,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v4
-
+    
     # Start application for dynamic testing
     - name: Start Application
       run: |
         docker-compose -f docker-compose.test.yml up -d
         sleep 30  # Wait for startup
-
+    
     # OWASP ZAP Dynamic Testing
     - name: Run OWASP ZAP Scan
       uses: zaproxy/action-full-scan@v0.4.0
@@ -3391,7 +3356,7 @@ jobs:
         target: 'http://localhost:8000'
         rules_file_name: '.zap/rules.tsv'
         cmd_options: '-a -j -m 10 -T 60'
-
+        
     # API Security Testing
     - name: Run API Security Tests
       run: |
@@ -3400,7 +3365,6 @@ jobs:
 ```
 
 **Monitoring and Alerting Integration**
-
 ```python
 # security_monitoring.py - Integrated with all commands
 import logging
@@ -3410,16 +3374,16 @@ import json
 
 class IntegratedSecurityMonitor:
     """Security monitoring that integrates with all command outputs"""
-
+    
     def __init__(self):
         self.api_endpoints = self.load_api_endpoints()      # From /api-scaffold
         self.container_metrics = self.load_container_config() # From /docker-optimize
         self.k8s_security = self.load_k8s_security()        # From /k8s-manifest
-
+        
     def monitor_api_security(self):
         """Monitor API security events"""
         security_events = []
-
+        
         # Monitor authentication failures
         auth_failures = self.get_auth_failure_rate()
         if auth_failures > 10:  # More than 10 failures per minute
@@ -3429,7 +3393,7 @@ class IntegratedSecurityMonitor:
                 'details': f'Authentication failure rate: {auth_failures}/min',
                 'recommended_action': 'Check for brute force attacks'
             })
-
+        
         # Monitor rate limiting violations
         rate_limit_violations = self.get_rate_limit_violations()
         if rate_limit_violations:
@@ -3440,13 +3404,13 @@ class IntegratedSecurityMonitor:
                 'ips': [v['ip'] for v in rate_limit_violations],
                 'recommended_action': 'Consider IP blocking or CAPTCHA'
             })
-
+        
         return security_events
-
+    
     def monitor_container_security(self):
         """Monitor container security events"""
         container_events = []
-
+        
         # Check for privilege escalation attempts
         privilege_events = self.check_privilege_escalation()
         if privilege_events:
@@ -3456,7 +3420,7 @@ class IntegratedSecurityMonitor:
                 'containers': privilege_events,
                 'recommended_action': 'Immediate investigation required'
             })
-
+        
         # Check for filesystem violations
         readonly_violations = self.check_readonly_violations()
         if readonly_violations:
@@ -3466,9 +3430,9 @@ class IntegratedSecurityMonitor:
                 'violations': readonly_violations,
                 'recommended_action': 'Review container security policies'
             })
-
+        
         return container_events
-
+    
     def generate_security_dashboard(self) -> Dict[str, Any]:
         """Generate comprehensive security dashboard"""
         return {
@@ -3498,7 +3462,6 @@ This integrated approach ensures that security is built into every aspect of the
 10. **Monitoring and Alerting Setup**: Real-time security event detection
 
 **Key Features**:
-
 - ✅ **Multi-tool integration**: Bandit, Safety, Trivy, Semgrep, ESLint Security, Snyk
 - ✅ **Automated remediation**: Smart dependency updates and configuration fixes
 - ✅ **CI/CD ready**: Complete GitHub Actions workflows with SARIF uploads

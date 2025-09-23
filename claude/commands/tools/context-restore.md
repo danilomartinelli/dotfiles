@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-20250514
+model: claude-sonnet-4-0
 ---
 
 Restore saved project context for agent coordination:
@@ -46,7 +46,6 @@ Return a comprehensive summary of the restored context and any issues encountere
 ## Context Integration
 
 The restored context will:
-
 - Inform all subsequent agent invocations
 - Maintain consistency with past decisions
 - Provide historical knowledge to agents
@@ -55,7 +54,6 @@ The restored context will:
 ## Usage Scenarios
 
 Use context restoration when:
-
 - Starting work after a break
 - Switching between projects
 - Onboarding to an existing project

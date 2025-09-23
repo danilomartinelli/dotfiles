@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-20250514
+model: claude-sonnet-4-0
 ---
 
 # Onboard
@@ -23,6 +23,6 @@ Do this by:
 
 The goal is to get you fully prepared to start working on the task.
 
-Take as long as you need to get yourself ready. Overdoing it is better than underdoing it.
+Take as long as you need to get yourself ready. Overdoing it is better than underdoing it. 
 
 Record everything in a .claude/tasks/[TASK_ID]/onboarding.md file. This file will be used to onboard you to the task in a new session if needed, so make sure it's comprehensive.

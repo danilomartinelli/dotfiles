@@ -3,6 +3,7 @@ cask_args appdir: '/Applications'
 # Command line tools
 brew 'awscli'      			# AWS Command Line Interface
 brew 'coreutils'     		# GNU File, Shell, and Text utilities
+brew 'derailed/k9s/k9s' # Kubernetes CLI to manage clusters
 brew 'dockutil'      		# Command line utility for managing macOS dock items
 brew 'duti'					 		# Set default applications for file types
 brew 'git'           		# Version control system
@@ -20,9 +21,10 @@ brew 'pandoc'         	# Document converter
 brew 'python-yq'  	 		# Command-line YAML processor using jq
 brew 'spaceman-diff' 		# Diff images from the command line
 brew 'terragrunt'				# Terraform wrapper
-brew 'usql'   		# Universal command-line interface for SQL databases
+brew 'usql'   		      # Universal command-line interface for SQL databases
 brew 'usage'         		# Tool for working with usage-spec CLIs
 brew 'vim'           		# Highly configurable text editor built
+brew 'vultr'          	# Vultr CLI for managing cloud resources
 brew 'watchman'      		# File watching service for triggering actions on file changes
 brew 'wget'          		# File download utility
 
