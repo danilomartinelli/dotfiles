@@ -16,31 +16,20 @@ echo "› setting up claude configuration..."
 
 # Define paths
 CLAUDE_ROOT_DIR="$HOME/.claude"
-CLAUDE_AGENT_DIR="$HOME/.claude/agents"
-CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
+CLAUDE_SETTINGS_FILE="$HOME/.claude/settings.json"
 DOTFILES_DIR="$HOME/.dotfiles/claude"
 
 # Create Claude root directory if it doesn't exist
 mkdir -p "$CLAUDE_ROOT_DIR"
 
-# Create directories in dotfiles if they don't exist
-mkdir -p "$DOTFILES_DIR/agents"
-mkdir -p "$DOTFILES_DIR/commands"
-
 # Remove existing files/links
-[ -d "$CLAUDE_AGENT_DIR" ] && rm -rf "$CLAUDE_AGENT_DIR"
-[ -L "$CLAUDE_AGENT_DIR" ] && rm "$CLAUDE_AGENT_DIR"
-[ -d "$CLAUDE_COMMANDS_DIR" ] && rm -rf "$CLAUDE_COMMANDS_DIR"
-[ -L "$CLAUDE_COMMANDS_DIR" ] && rm "$CLAUDE_COMMANDS_DIR"
+[ -f "$CLAUDE_SETTINGS_FILE" ] && rm "$CLAUDE_SETTINGS_FILE"
+[ -L "$CLAUDE_SETTINGS_FILE" ] && rm "$CLAUDE_SETTINGS_FILE"
 
 # Create symlinks
-ln -s "$DOTFILES_DIR/agents" "$CLAUDE_AGENT_DIR"
-ln -s "$DOTFILES_DIR/commands" "$CLAUDE_COMMANDS_DIR"
+ln -s "$DOTFILES_DIR/settings.json" "$CLAUDE_SETTINGS_FILE"
 
 echo "✓ claude symlinks created"
-
-# Add MCP integrations
-claude mcp add -s user playwright -- npx -y @playwright/mcp@latest
 
 echo ""
 echo "✅ Installation complete!"

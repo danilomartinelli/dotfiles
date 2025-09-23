@@ -41,8 +41,8 @@ rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
 # Global Libs - NPM
 
 "npm:eas-cli" = "latest"
-"npm:nx" = "latest"
 "npm:markdownlint-cli" = "latest"
+"npm:nx" = "latest"
 
 # General Tasks
 
