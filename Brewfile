@@ -17,6 +17,7 @@ brew 'kubernetes-cli' 	       # Kubernetes command line tools
 brew 'kustomize'    		       # Kubernetes configuration management tool
 brew 'mas'           		       # Mac App Store command line interface
 brew 'mise'          		       # Runtime version manager (successor to asdf)
+brew 'obsidian'                # Knowledge base that works on local Markdown files
 brew 'pandoc'         	       # Document converter
 brew 'python-yq'  	 		       # Command-line YAML processor using jq
 brew 'spaceman-diff' 		       # Diff images from the command line
@@ -41,7 +42,6 @@ cask 'iterm2'                 # Terminal emulator for macOS
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'notion'                 # Knowledge management and note-taking
-cask 'obsidian'               # Knowledge base that works on local Markdown files
 cask 'orbstack'               # Docker Desktop alternative for macOS
 cask 'protonvpn'              # VPN client
 cask 'raycast'                # Spotlight alternative with extensions
