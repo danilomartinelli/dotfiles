@@ -739,5 +739,5 @@
   // ========================================
   // MISC
   // ========================================
-  "placeholder": true // Persist to avoid trailing comma issues with auto-insertion of new items
+  "extensions.ignoreRecommendations": true
 }
