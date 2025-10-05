@@ -6,8 +6,14 @@ echo "› configuring dock (minimal)"
 # Clear everything
 dockutil --remove all --no-restart
 
+# Add Apps
+dockutil --add "/Applications/Apps.app" --no-restart
+
 # Add Arc
 dockutil --add "/Applications/Arc.app" --no-restart
+
+# Add ChatGPT
+dockutil --add "/Applications/ChatGPT.app" --no-restart
 
 # Add Visual Studio Code
 dockutil --add "/Applications/Visual Studio Code.app" --no-restart
@@ -21,20 +27,20 @@ dockutil --add "/Applications/Lens.app" --no-restart
 # Add Apidog
 dockutil --add "/Applications/Apidog.app" --no-restart
 
-# Add Ghostty
-dockutil --add "/Applications/Ghostty.app" --no-restart
+# Add iTerm
+dockutil --add "/Applications/iTerm.app" --no-restart
 
 # Add OrbStack
 dockutil --add "/Applications/OrbStack.app" --no-restart
 
-# Add Claude
-dockutil --add "/Applications/Claude.app" --no-restart
-
 # Add Figma
 dockutil --add "/Applications/Figma.app" --no-restart
 
-# Add Notion
-dockutil --add "/Applications/Notion.app" --no-restart
+# Add Obsidian
+dockutil --add "/Applications/Obsidian.app" --no-restart
+
+# Add Todoist
+dockutil --add "/Applications/Todoist.app" --no-restart
 
 # Add Spark Desktop
 dockutil --add "/Applications/Spark Desktop.app" --no-restart
