@@ -3,19 +3,18 @@
   // EDITOR - Performance & Produtividade
   // ========================================
   "editor.fontSize": 14,
-  "editor.fontFamily": "'JetBrains Mono', 'Fira Code', Menlo, Monaco, 'Courier New', monospace",
-  "editor.fontLigatures": true,
-  "editor.lineHeight": 1.6,
-  "editor.letterSpacing": 0.5,
+  "editor.fontFamily": "'Monaspace Neon', monospace",
+  "editor.inlineSuggest.fontFamily": "'Monaspace Krypton', monospace",
+  "editor.fontLigatures": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
   "editor.quickSuggestions": {
     "comments": "off",
-    "strings": "off",
+    "strings": "on", // Enable suggestions in strings for better UX with Tailwind CSS
     "other": "off"
   },
 
   // Formatação & Linting
   "editor.formatOnSave": true,
-  "editor.formatOnPaste": true,
+  "editor.formatOnPaste": false,
   "editor.formatOnType": false,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
@@ -40,11 +39,12 @@
   "editor.hover.sticky": true,
   "editor.rulers": [80, 120],
   "editor.scrollBeyondLastLine": false,
+  "editor.codeLens": true,
 
   // Produtividade
   "editor.tabSize": 2,
+  "editor.insertSpaces": true,
   "editor.detectIndentation": false,
-  "editor.insertSpaces": false,
   "editor.trimAutoWhitespace": true,
   "editor.wordWrap": "bounded",
   "editor.wordWrapColumn": 120,
@@ -63,8 +63,7 @@
   // ========================================
   // FILES & WORKSPACE
   // ========================================
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 1000,
+  "files.autoSave": "off",
   "files.trimTrailingWhitespace": true,
   "files.trimFinalNewlines": true,
   "files.insertFinalNewline": true,
@@ -72,7 +71,7 @@
 
   // File Associations
   "files.associations": {
-    "*.css": "css",
+    "*.css": "tailwindcss",
     "*.scss": "scss",
     "*.sass": "sass",
     ".env*": "dotenv",
@@ -85,9 +84,9 @@
 
   // File Nesting (antfu.file-nesting)
   "explorer.fileNesting.enabled": true,
-  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.expand": true,
   "explorer.fileNesting.patterns": {
-    "//": "Last update at 23/09/2025, 15:09:13",
+    "//": "Last update at 05/10/2025, 06:32:44",
     ".clang-tidy": ".clang-format, .clangd, compile_commands.json",
     ".env": "*.env, .env.*, .envrc, env.d.ts",
     ".gitignore": ".gitattributes, .gitmodules, .gitmessage, .lfsconfig, .mailmap, .git-blame*",
@@ -190,17 +189,16 @@
     "**/__pycache__": true,
     "**/.DS_Store": true,
     "**/.git": true,
-    "**/.next": true,
     "**/.nx": true,
     "**/.turbo": true,
     "**/*.log": true,
     "**/*.pyc": true,
     "**/*.venv": true,
-    "**/build": true,
-    "**/dist": true,
-    "**/logs": true,
-    "**/node_modules": true,
-    "**tmp/": true
+    "**/tmp": true,
+    "**/.next": false,
+    "**/build": false,
+    "**/dist": false,
+    "**/node_modules": false
   },
 
   "search.exclude": {
@@ -215,9 +213,9 @@
     "**/*.venv": true,
     "**/build": true,
     "**/dist": true,
-    "**/logs": true,
+    "**/tmp": true,
     "**/node_modules": true,
-    "**tmp/": true,
+    "**/logs": false,
     "**/.env": false,
     "**/.env.*": false
   },
@@ -226,7 +224,7 @@
   // TERMINAL
   // ========================================
   "terminal.integrated.fontSize": 12,
-  "terminal.integrated.fontFamily": "'JetBrains Mono', 'Fira Code', monospace",
+  "terminal.integrated.fontFamily": "'Monaspace Neon', monospace",
   "terminal.integrated.copyOnSelection": true,
   "terminal.integrated.cursorBlinking": true,
   "terminal.integrated.cursorStyle": "line",
@@ -234,7 +232,7 @@
   "terminal.integrated.enablePersistentSessions": true,
   "terminal.integrated.persistentSessionReviveProcess": "onExit",
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "terminal.external.osxExec": "Ghostty.app",
+  "terminal.external.osxExec": "iTerm.app",
   "terminal.integrated.env.osx": {
     "FIG_NEW_SESSION": "1"
   },
@@ -248,6 +246,7 @@
   "git.postCommitCommand": "sync",
   "git.openRepositoryInParentFolders": "always",
   "git.mergeEditor": true,
+  "git.ignoreRebaseWarning": true,
 
   // ========================================
   // EXTENSÕES ESPECÍFICAS
@@ -256,7 +255,7 @@
   // MCP
   "chat.mcp.autostart": "newAndOutdated",
 
-  // ESLint - OTIMIZADO COM FALLBACK
+  // ESLint
   "eslint.validate": [
     "javascript",
     "javascriptreact",
@@ -271,7 +270,14 @@
   "eslint.lintTask.enable": true,
   "eslint.codeActionsOnSave.mode": "all",
   "eslint.run": "onSave",
-  "eslint.probe": ["javascript", "javascriptreact", "typescript", "typescriptreact", "html", "vue"],
+  "eslint.probe": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "html",
+    "vue"
+  ],
   "eslint.quiet": false,
 
   // Prettier
@@ -283,7 +289,7 @@
   "prettier.singleQuote": true,
   "prettier.trailingComma": "es5",
   "prettier.arrowParens": "always",
-  "prettier.printWidth": 100,
+  "prettier.printWidth": 80,
   "prettier.tabWidth": 2,
   "prettier.useTabs": false,
   "prettier.bracketSpacing": true,
@@ -410,6 +416,63 @@
     ["tw`([^`]*)`", "([^`]*)"],
     ["tw\\.\\w+`([^`]*)`", "([^`]*)"]
   ],
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "ngClass",
+    "class:list",
+    "classNames",
+    // Commonly used in various libraries and frameworks
+    "tw",
+    "containerClassName",
+    "containerClassNames",
+    "contentClassName",
+    "contentClassNames",
+    "inputClassName",
+    "inputClassNames",
+    "buttonClassName",
+    "buttonClassNames",
+    "cardClassName",
+    "cardClassNames",
+    "headerClassName",
+    "headerClassNames",
+    "bodyClassName",
+    "bodyClassNames",
+    "footerClassName",
+    "footerClassNames",
+    "menuClassName",
+    "menuClassNames",
+    "menuItemClassName",
+    "menuItemClassNames",
+    "panelClassName",
+    "panelClassNames",
+    "labelClassName",
+    "labelClassNames",
+    "titleClassName",
+    "titleClassNames",
+    "wrapperClassName",
+    "wrapperClassNames",
+    "rootClassName",
+    "rootClassNames",
+    "navClassName",
+    "navClassNames",
+    "asideClassName",
+    "asideClassNames",
+    "mainClassName",
+    "mainClassNames",
+    "sectionClassName",
+    "sectionClassNames",
+    "articleClassName",
+    "articleClassNames",
+    "formClassName",
+    "formClassNames",
+    "fieldClassName",
+    "fieldClassNames",
+    "groupClassName",
+    "groupClassNames",
+    "iconClassName",
+    "iconClassNames"
+  ],
   "tailwindCSS.emmetCompletions": true,
   "tailwindCSS.validate": true,
 
@@ -522,7 +585,7 @@
   "playwright.reuseBrowser": true,
   "playwright.showTrace": true,
 
-  // Error Lens - OTIMIZADO
+  // Error Lens
   "errorLens.enabled": true,
   "errorLens.fontSize": "12",
   "errorLens.fontWeight": "normal",
@@ -546,7 +609,7 @@
   "remote.SSH.maxReconnectionAttempts": 6,
 
   // ========================================
-  // WORKBENCH & UI - OTIMIZADO PARA ESPAÇO
+  // WORKBENCH & UI
   // ========================================
   "workbench.colorTheme": "Monokai Pro",
   "workbench.iconTheme": "Monokai Pro Icons",
@@ -563,9 +626,9 @@
 
   // Layout otimizado
   "workbench.sideBar.location": "right",
-  "workbench.activityBar.location": "hidden",
-  "workbench.layoutControl.enabled": false,
-  "workbench.editor.editorActionsLocation": "hidden",
+  "workbench.activityBar.location": "top",
+  "workbench.layoutControl.enabled": true,
+  "workbench.editor.editorActionsLocation": "default", // We want to keep this as default to avoid issues with extensions that add actions to the title bar or lens menu
 
   // Maximizar espaço
   "workbench.tree.indent": 12,
@@ -574,7 +637,7 @@
   "workbench.editor.tabSizing": "shrink",
 
   // Reduzir distrações
-  "breadcrumbs.enabled": false,
+  "breadcrumbs.enabled": true,
   "breadcrumbs.symbolPath": "off",
 
   // Explorer
@@ -583,6 +646,7 @@
   "explorer.confirmDragAndDrop": false,
   "explorer.sortOrder": "default",
   "explorer.autoReveal": true,
+  "explorer.confirmPasteNative": false,
 
   // ========================================
   // SEGURANÇA & TELEMETRIA
@@ -591,7 +655,7 @@
   "telemetry.telemetryLevel": "off",
 
   // ========================================
-  // TYPESCRIPT & JAVASCRIPT - OTIMIZADO COM FALLBACK
+  // TYPESCRIPT & JAVASCRIPT
   // ========================================
   "typescript.updateImportsOnFileMove.enabled": "never",
   "javascript.updateImportsOnFileMove.enabled": "never",
@@ -610,9 +674,9 @@
   "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
   "javascript.inlayHints.parameterNames.enabled": "all",
 
-  // Configurações de formatação nativa (fallback quando não há Prettier)
-  "javascript.format.semicolons": "remove",
-  "typescript.format.semicolons": "remove",
+  // Configurações de formatação nativa
+  "javascript.format.semicolons": "ignore",
+  "typescript.format.semicolons": "ignore",
   "javascript.preferences.useAliasesForRenames": true,
   "typescript.preferences.useAliasesForRenames": true,
   "javascript.format.insertSpaceAfterOpeningAndBeforeClosingNonemptyBrackets": false,
@@ -625,7 +689,8 @@
     "javascript": "javascriptreact",
     "typescript": "typescriptreact",
     "vue-html": "html",
-    "vue": "html"
+    "vue": "html",
+    "postcss": "css"
   },
   "emmet.showExpandedAbbreviation": "always",
   "emmet.triggerExpansionOnTab": true,
@@ -645,11 +710,34 @@
   "markdown.preview.doubleClickToSwitchToEditor": true,
 
   // ========================================
+  // PRIVACY & TELEMETRY
+  // ========================================
+  "telemetry.editStats.enabled": false,
+  "telemetry.feedback.enabled": false,
+
+  // ========================================
+  // GITHUB COPILOT & CHAT
+  // ========================================
+  "github.copilot.enable": {
+    "markdown": true
+  },
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.chat.agent.thinkingTool": true,
+  "github.copilot.chat.alternateGptPrompt.enabled": true,
+  "github.copilot.chat.editor.temporalContext.enabled": true,
+  "github.copilot.chat.edits.temporalContext.enabled": true,
+  "github.copilot.chat.generateTests.codeLens": true,
+  "github.copilot.chat.languageContext.fix.typescript.enabled": true,
+  "github.copilot.chat.languageContext.inline.typescript.enabled": true,
+  "github.copilot.chat.languageContext.typescript.enabled": true,
+  "github.copilot.chat.newWorkspace.useContext7": true,
+  "github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
+  "github.copilot.chat.notebook.followCellExecution.enabled": true,
+  "github.copilot.chat.useResponsesApi": true,
+  "chat.tools.global.autoApprove": true,
+
+  // ========================================
   // MISC
   // ========================================
-  "explorer.confirmPasteNative": false,
-  "github.copilot.nextEditSuggestions.enabled": true,
-  "git.ignoreRebaseWarning": true,
-  "telemetry.editStats.enabled": false,
-  "telemetry.feedback.enabled": false
+  "placeholder": true // Persist to avoid trailing comma issues with auto-insertion of new items
 }

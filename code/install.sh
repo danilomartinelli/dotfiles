@@ -23,9 +23,7 @@ mkdir -p "$CODE_DIR"
 # Create symlinks
 ln -s "$DOTFILES_CODE/settings.json" "$CODE_DIR/settings.json"
 ln -s "$DOTFILES_CODE/keybindings.json" "$CODE_DIR/keybindings.json"
-
-# TODO: Create symlink for mcp.json when we start using it
-# ln -s "$DOTFILES_CODE/mcp.json" "$CODE_DIR/mcp.json"
+ln -s "$DOTFILES_CODE/mcp.json" "$CODE_DIR/mcp.json"
 
 echo "✓ code symlinks created"
 
@@ -58,11 +56,6 @@ if ! command -v code &> /dev/null; then
     echo "Add Code to PATH: Open Code > Cmd+Shift+P > 'Install code command in PATH'"
     exit 1
 fi
-
-# Install all extensions
-# Uncomment the line below to enable extension installation
-# TODO: re-enable this when we have a better way to manage extensions
-# cat $DOTFILES_CODE/vsc-extensions.txt | xargs -L 1 code --install-extension
 
 echo ""
 echo "✅ Installation complete!"
