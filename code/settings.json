@@ -40,6 +40,7 @@
   "editor.rulers": [80, 120],
   "editor.scrollBeyondLastLine": false,
   "editor.codeLens": true,
+  "editor.colorDecorators": false,
 
   // Produtividade
   "editor.tabSize": 2,
@@ -380,27 +381,6 @@
       "source.fixAll.eslint": "explicit"
     }
   },
-  "[python]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "ms-python.python",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    }
-  },
-  "[go]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "golang.go",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    }
-  },
-  "[rust]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rust-lang.rust-analyzer",
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    }
-  },
 
   // Tailwind CSS
   "tailwindCSS.includeLanguages": {
@@ -409,6 +389,19 @@
     "vue-html": "html",
     "vue": "html"
   },
+  "tailwindCSS.classFunctions": [
+    "tw",
+    "twMerge",
+    "cn",
+    "cva",
+    "clsx",
+    "className",
+    "classNames",
+    "classList",
+    "styled",
+    "css",
+    "sortCx"
+  ],
   "tailwindCSS.experimental.classRegex": [
     ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
@@ -418,10 +411,16 @@
   ],
   "tailwindCSS.classAttributes": [
     "class",
+    "classes",
     "className",
+    "className:",
     "ngClass",
+    "class:",
     "class:list",
+    "classlist",
     "classNames",
+    "css",
+    "style",
     // Commonly used in various libraries and frameworks
     "tw",
     "containerClassName",
@@ -475,6 +474,184 @@
   ],
   "tailwindCSS.emmetCompletions": true,
   "tailwindCSS.validate": true,
+  "class-collapse.functionality.enable": true,
+  "class-collapse.functionality.openCollapseOnLineSelected": true,
+  "class-collapse.functionality.diffEditor": false,
+  "class-collapse.languages.supportedLanguages": [
+    "astro",
+    "html",
+    "javascriptreact",
+    "javascript",
+    "markdown",
+    "php",
+    "svelte",
+    "typescript",
+    "typescriptreact",
+    "vue",
+    "vue-html"
+  ],
+  "class-collapse.regex.regex": "(?:class|className)\\s*(?:=|:)\\s*(?:\"((?:[^\"\\\\]|\\\\.){81,})\"|'((?:[^'\\\\]|\\\\.){81,})'|\\{[^\"'`]*?\"((?:[^\"\\\\]|\\\\.){81,})\"|\\{[^\"'`]*?'((?:[^'\\\\]|\\\\.){81,})')",
+  "class-collapse.regex.regexFlags": "gm",
+  "class-collapse.regex.regexGroups": [1, 2, 3, 4],
+  "class-collapse.style.placeholderTextColor": "#C3E88DFF",
+  "tailwindRainbow.languages": [
+    "astro",
+    "html",
+    "javascriptreact",
+    "javascript",
+    "markdown",
+    "php",
+    "svelte",
+    "typescript",
+    "typescriptreact",
+    "vue",
+    "vue-html"
+  ],
+  "tailwindRainbow.classIdentifiers": [
+    "class",
+    "classes",
+    "className",
+    "className:",
+    "ngClass",
+    "class:",
+    "class:list",
+    "classlist",
+    "classNames",
+    "css",
+    "style",
+    // Commonly used in various libraries and frameworks
+    "tw",
+    "containerClassName",
+    "containerClassNames",
+    "contentClassName",
+    "contentClassNames",
+    "inputClassName",
+    "inputClassNames",
+    "buttonClassName",
+    "buttonClassNames",
+    "cardClassName",
+    "cardClassNames",
+    "headerClassName",
+    "headerClassNames",
+    "bodyClassName",
+    "bodyClassNames",
+    "footerClassName",
+    "footerClassNames",
+    "menuClassName",
+    "menuClassNames",
+    "menuItemClassName",
+    "menuItemClassNames",
+    "panelClassName",
+    "panelClassNames",
+    "labelClassName",
+    "labelClassNames",
+    "titleClassName",
+    "titleClassNames",
+    "wrapperClassName",
+    "wrapperClassNames",
+    "rootClassName",
+    "rootClassNames",
+    "navClassName",
+    "navClassNames",
+    "asideClassName",
+    "asideClassNames",
+    "mainClassName",
+    "mainClassNames",
+    "sectionClassName",
+    "sectionClassNames",
+    "articleClassName",
+    "articleClassNames",
+    "formClassName",
+    "formClassNames",
+    "fieldClassName",
+    "fieldClassNames",
+    "groupClassName",
+    "groupClassNames",
+    "iconClassName",
+    "iconClassNames"
+  ],
+  "tailwindRainbow.themes": {
+    "monokai-rainbow": {
+      "prefix": {
+        "hover": { "color": "#F92672", "fontWeight": "bold" },
+        "focus": { "color": "#A6E22E", "fontWeight": "bold" },
+        "focus-visible": { "color": "#A6E22E", "fontStyle": "italic" },
+        "active": { "color": "#FD971F", "fontWeight": "bold" },
+        "disabled": { "color": "#75715E", "fontStyle": "italic" },
+
+        "before": { "color": "#AE81FF" },
+        "after": { "color": "#AE81FF" },
+        "first": { "color": "#AE81FF" },
+        "last": { "color": "#AE81FF" },
+
+        "data-*": { "color": "#E6DB74" }, // data-open, data-closed, data-icon-only, etc.
+        "aria-*": { "color": "#66D9EF" }, // aria-selected, aria-invalid, ...
+        "in-*": { "color": "#66D9EF" }, // in-data-input-wrapper:...
+        "group-*": { "color": "#66D9EF" },
+        "peer-*": { "color": "#66D9EF" }
+      },
+
+      "base": {
+        // cores/tokens visuais
+        "text-*": { "color": "#A6E22E" },
+        "bg-*": { "color": "#FD971F", "fontWeight": "semibold" },
+        "border-*": { "color": "#66D9EF" },
+        "ring-*": { "color": "#66D9EF" },
+        "outline-*": { "color": "#AE81FF" },
+        "outline-brand": { "color": "#AE81FF", "fontWeight": "bold" },
+
+        // tipografia
+        "font-*": { "color": "#AE81FF" },
+        "text-sm": { "color": "#A6E22E" },
+        "text-md": { "color": "#A6E22E" },
+        "text-xl": { "color": "#A6E22E" },
+        "leading-*": { "color": "#AE81FF" },
+        "tracking-*": { "color": "#AE81FF" },
+
+        // layout
+        "relative": { "color": "#F8F8F2" },
+        "inline-flex": { "color": "#F8F8F2" },
+        "items-*": { "color": "#66D9EF" },
+        "justify-*": { "color": "#66D9EF" },
+        "whitespace-*": { "color": "#F8F8F2" },
+        "pointer-events-*": { "color": "#F8F8F2" },
+        "shrink-*": { "color": "#F8F8F2" },
+
+        // espaçamento e tamanho
+        "p-*": { "color": "#E6DB74" },
+        "px-*": { "color": "#E6DB74" },
+        "py-*": { "color": "#E6DB74" },
+        "m-*": { "color": "#E6DB74" },
+        "gap-*": { "color": "#E6DB74" },
+        "inset-*": { "color": "#E6DB74" },
+        "w-*": { "color": "#66D9EF" },
+        "h-*": { "color": "#66D9EF" },
+        "max-w-*": { "color": "#66D9EF" },
+        "max-h-*": { "color": "#66D9EF" },
+
+        // bordas/raio
+        "rounded-*": { "color": "#AE81FF" },
+
+        // efeitos / transições
+        "transition": { "color": "#E6DB74" },
+        "transition-*": { "color": "#E6DB74" },
+        "duration-*": { "color": "#E6DB74" },
+        "ease-*": { "color": "#E6DB74" },
+        "transition-inherit-all": { "color": "#E6DB74" },
+
+        // SVG
+        "fill-*": { "color": "#AE81FF" },
+        "stroke-*": { "color": "#AE81FF" }
+      },
+
+      // tudo que for [arbitrary]
+      "arbitrary": { "color": "#AE81FF", "fontStyle": "italic" },
+
+      // !important ao final
+      "important": { "color": "#F92672", "fontWeight": "bold" }
+    }
+  },
+  "tailwindRainbow.theme": "monokai-rainbow",
 
   // Todo Tree
   "todo-tree.general.tags": [
@@ -577,13 +754,6 @@
   "rest-client.enableTelemetry": false,
   "rest-client.followredirect": true,
   "rest-client.previewResponseInUntitledDocument": false,
-
-  // Jest
-  "jest.runMode": "deferred",
-
-  // Playwright
-  "playwright.reuseBrowser": true,
-  "playwright.showTrace": true,
 
   // Error Lens
   "errorLens.enabled": true,
@@ -739,5 +909,14 @@
   // ========================================
   // MISC
   // ========================================
-  "extensions.ignoreRecommendations": true
+  "extensions.ignoreRecommendations": true,
+  "[dockercompose]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 2,
+    "editor.autoIndent": "advanced",
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  }
 }
