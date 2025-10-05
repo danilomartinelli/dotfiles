@@ -62,7 +62,6 @@ mas 'Yubico Authenticator', id: 1497506650       	# 2FA app for YubiKey
 mas 'Xcode', id: 497799835                       	# Apple's integrated development environment
 
 # VSCode Extensions
-vscode 'antfu.file-nesting'                         # Auto file nesting based on glob patterns
 vscode 'anthropic.claude-code'                      # Claude AI integration for VSCode
 vscode 'bierner.markdown-checkbox'                  # Enhance Markdown with checkboxes
 vscode 'bierner.markdown-emoji'                     # Emoji support for Markdown
