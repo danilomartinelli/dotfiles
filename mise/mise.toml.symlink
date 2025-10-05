@@ -9,8 +9,8 @@ _.python.venv = { path = ".venv", create = true }
 # Use the project name derived from the current directory
 PROJECT_NAME = "{{ config_root | basename }}"
 
-# Use 'development' as default to NODE_ENV if not set
-NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
+# Use 'production' as default to NODE_ENV if not set
+NODE_ENV = "{{ env.NODE_ENV | default(value='production') }}"
 
 [tools]
 # Node
