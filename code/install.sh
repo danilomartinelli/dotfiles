@@ -19,6 +19,8 @@ mkdir -p "$CODE_DIR"
 [ -L "$CODE_DIR/settings.json" ] && rm "$CODE_DIR/settings.json"
 [ -f "$CODE_DIR/keybindings.json" ] && rm "$CODE_DIR/keybindings.json"
 [ -L "$CODE_DIR/keybindings.json" ] && rm "$CODE_DIR/keybindings.json"
+[ -f "$CODE_DIR/mcp.json" ] && rm "$CODE_DIR/mcp.json"
+[ -L "$CODE_DIR/mcp.json" ] && rm "$CODE_DIR/mcp.json"
 
 # Create symlinks
 ln -s "$DOTFILES_CODE/settings.json" "$CODE_DIR/settings.json"

@@ -3,7 +3,7 @@
 # The bootstrap script will automatically create a copy of this file
 # as .localrc and symlink it to ~/.localrc
 #
-# IMPORTANT: Never commit .localrc with sensitive data to version control!
+# WARNING: Never commit .localrc with sensitive data to version control!
 # This file should contain sensitive information like API keys and passwords.
 #
 # Setup (handled by bootstrap):
@@ -17,223 +17,22 @@
 # After editing, reload your shell:
 #   source ~/.zshrc
 #   # or use the alias: reload!
+#
+#
+# WARNING: Below are environment variables that we are using for some of our setups.
+# If you are using this file as a template, make sure to replace these with your own.
+
+# =======================================
+# Secret Keys and Tokens
+# =======================================
+
+# Super Claude
+export TWENTYFIRST_API_KEY="<CHANGE_ME>"
+export MORPH_API_KEY="<CHANGE_ME>"
+export TAVILY_API_KEY="<CHANGE_ME>"
 
 # ========================================
-# API Keys and Tokens
-# ========================================
-
-# GitHub
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export GITHUB_USER="your-github-username"
-
-# OpenAI
-export OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export OPENAI_ORG_ID="org-xxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Anthropic Claude
-export ANTHROPIC_API_KEY="sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Vercel
-export VERCEL_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxx"
-export VERCEL_ORG_ID="team_xxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Stripe
-export STRIPE_SECRET_KEY="sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export STRIPE_PUBLISHABLE_KEY="pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# SendGrid
-export SENDGRID_API_KEY="SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Sentry
-export SENTRY_DSN="https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@oxxxxxxx.ingest.sentry.io/xxxxxxxxx"
-export SENTRY_AUTH_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# ========================================
-# Cloud Provider Credentials
-# ========================================
-
-# AWS
-export AWS_ACCESS_KEY_ID="AKIAXXXXXXXXXXXXXXXX"
-export AWS_SECRET_ACCESS_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export AWS_DEFAULT_REGION="us-east-1"
-export AWS_PROFILE="default"
-
-# Google Cloud
-export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.config/gcloud/application_default_credentials.json"
-export GCP_PROJECT_ID="your-project-id"
-
-# Azure
-export AZURE_SUBSCRIPTION_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export AZURE_TENANT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export AZURE_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-export AZURE_CLIENT_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# DigitalOcean
-export DIGITALOCEAN_ACCESS_TOKEN="dop_v1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# ========================================
-# Database Connections
-# ========================================
-
-# PostgreSQL
-export DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
-export PG_HOST="localhost"
-export PG_PORT="5432"
-export PG_USER="username"
-export PG_PASSWORD="password"
-export PG_DATABASE="database_name"
-
-# MySQL
-export MYSQL_HOST="localhost"
-export MYSQL_PORT="3306"
-export MYSQL_USER="root"
-export MYSQL_PASSWORD="password"
-export MYSQL_DATABASE="database_name"
-
-# MongoDB
-export MONGODB_URI="mongodb://username:password@localhost:27017/database_name"
-export MONGO_HOST="localhost"
-export MONGO_PORT="27017"
-
-# Redis
-export REDIS_URL="redis://localhost:6379"
-export REDIS_HOST="localhost"
-export REDIS_PORT="6379"
-export REDIS_PASSWORD=""
-
-# Elasticsearch
-export ELASTICSEARCH_URL="http://localhost:9200"
-export ELASTICSEARCH_USER="elastic"
-export ELASTICSEARCH_PASSWORD="password"
-
-# ========================================
-# Application Configuration
-# ========================================
-
-# Node.js
-export NODE_ENV="development"
-export NPM_TOKEN="npm_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Application URLs
-export API_BASE_URL="https://api.example.com"
-export FRONTEND_URL="http://localhost:3000"
-export BACKEND_URL="http://localhost:8000"
-export WEBHOOK_URL="https://your-app.ngrok.io/webhooks"
-
-# Application Secrets
-export JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-export SESSION_SECRET="your-super-secret-session-key-change-this-in-production"
-export ENCRYPTION_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export SIGNING_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Feature Flags
-export ENABLE_DEBUG="true"
-export ENABLE_ANALYTICS="false"
-export ENABLE_BETA_FEATURES="false"
-
-# ========================================
-# Third-Party Services
-# ========================================
-
-# Slack
-export SLACK_TOKEN="xoxb-xxxxxxxxxxxx-xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx"
-export SLACK_WEBHOOK_URL="https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/xxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Discord
-export DISCORD_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export DISCORD_CLIENT_ID="xxxxxxxxxxxxxxxxxx"
-export DISCORD_CLIENT_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# Twilio
-export TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export TWILIO_AUTH_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export TWILIO_PHONE_NUMBER="+1234567890"
-
-# Mailgun
-export MAILGUN_API_KEY="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export MAILGUN_DOMAIN="mg.example.com"
-
-# ========================================
-# Development Tools
-# ========================================
-
-# Docker
-export DOCKER_REGISTRY="docker.io"
-export DOCKER_USERNAME="your-docker-username"
-export DOCKER_PASSWORD="your-docker-password"
-
-# Kubernetes
-export KUBECONFIG="$HOME/.kube/config"
-export K8S_NAMESPACE="default"
-
-# Terraform
-export TF_VAR_region="us-east-1"
-export TF_VAR_environment="development"
-
-# Datadog
-export DD_API_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-export DD_APP_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# New Relic
-export NEW_RELIC_LICENSE_KEY="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# ========================================
-# Custom Functions and Aliases
-# ========================================
-
-# Company-specific aliases
-alias work='cd ~/Code/work'
-alias personal='cd ~/Code/personal'
-
-# Project-specific shortcuts
-alias myproject='cd ~/Code/myproject && nvm use && source .env'
-
-# Custom functions
-work_vpn() {
-    echo "Connecting to work VPN..."
-    # Add your VPN connection command here
-}
-
-# Load project-specific environments
-load_project_env() {
-    local project=$1
-    if [ -f "$HOME/Code/$project/.env" ]; then
-        source "$HOME/Code/$project/.env"
-        echo "Loaded environment for $project"
-    else
-        echo "No .env file found for $project"
-    fi
-}
-
-# ========================================
-# Path Additions
-# ========================================
-
-# Add custom tools to PATH
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/custom-tools/bin:$PATH"
-
-# Go workspace
-export GOPATH="$HOME/go"
-export PATH="$GOPATH/bin:$PATH"
-
-# Rust
-export PATH="$HOME/.cargo/bin:$PATH"
-
-# ========================================
-# Locale and Editor Settings
-# ========================================
-
-# Locale
-export LANG="en_US.UTF-8"
-export LC_ALL="en_US.UTF-8"
-
-# Default editor (override if needed)
-# export EDITOR="vim"
-# export VISUAL="vim"
-
-# ========================================
-# Notes
+# NOTE: Best Practices for Managing Secrets
 # ========================================
 #
 # 1. Remember to keep this file secure with proper permissions:

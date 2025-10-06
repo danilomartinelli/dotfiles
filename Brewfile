@@ -18,6 +18,7 @@ brew 'kustomize'    		       # Kubernetes configuration management tool
 brew 'mas'           		       # Mac App Store command line interface
 brew 'mise'          		       # Runtime version manager (successor to asdf)
 brew 'pandoc'         	       # Document converter
+brew 'pipx'         		       # Install and run Python applications in isolated environments
 brew 'python-yq'  	 		       # Command-line YAML processor using jq
 brew 'spaceman-diff' 		       # Diff images from the command line
 brew 'usql'   		             # Universal command-line interface for SQL databases

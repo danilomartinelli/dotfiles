@@ -1,0 +1,15 @@
+#!/usr/bin/env zsh
+
+# =======================================
+# NOTE: This file is for non-sensitive common environment variables
+# that you want to share across different machines.
+# Put sensitive data in ~/.localrc instead.
+# =======================================
+
+# Locale
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
+# Default editor (override if needed)
+export EDITOR="code -w"
+export VISUAL="code -w"

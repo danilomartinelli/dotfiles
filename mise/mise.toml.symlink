@@ -9,9 +9,6 @@ _.python.venv = { path = ".venv", create = true }
 # Use the project name derived from the current directory
 PROJECT_NAME = "{{ config_root | basename }}"
 
-# Use 'production' as default to NODE_ENV if not set
-NODE_ENV = "{{ env.NODE_ENV | default(value='development') }}"
-
 [tools]
 # Node
 bun = "{{ env['BUN_VERSION'] | default(value='1.2') }}"
@@ -27,6 +24,8 @@ terraform = "{{ env['TF_VERSION'] | default(value='1') }}"
 python = "{{ get_env(name='PYTHON_VERSION', default='3.11') }}"
 ruff = "latest"
 uv = "latest"
+"pipx:psf/black" = "latest"
+"pipx:SuperClaude" = { version = "latest", postinstall = "SuperClaude install --force --yes" }
 
 # GoLang
 go = "{{ env['GOLANG_VERSION'] | default(value='1.21') }}"
@@ -42,7 +41,7 @@ rust = { version = "1.83.0", components = "rust-src,llvm-tools" }
 
 "npm:eas-cli" = "latest"
 "npm:markdownlint-cli" = "latest"
-"npm:nx" = "latest"
+"npm:@bifrost_inc/superclaude" = "latest"
 
 # General Tasks
 

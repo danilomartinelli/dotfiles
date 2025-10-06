@@ -12,6 +12,12 @@ then
   source ~/.localrc
 fi
 
+# common not sensitive variables
+if [[ -a $ZSH/.commonrc ]]
+then
+  source $ZSH/.commonrc
+fi
+
 # all of our zsh files (excluding folders starting with _)
 typeset -U config_files
 config_files=()
