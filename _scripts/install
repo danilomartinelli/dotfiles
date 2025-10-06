@@ -4,7 +4,7 @@
 
 set -e
 
-cd "$(dirname $0)"/..
+cd "$(dirname "$0")"/.. || exit 1
 
 echo "> set taps"
 brew tap xo/xo
@@ -13,4 +13,11 @@ echo "› brew bundle"
 brew bundle
 
 # find the installers and run them iteratively (ignoring folders starting with _)
-find . -name install.sh -not -path './_*' | while read installer ; do sh -c "${installer}" ; done
+# find the installers and run them iteratively with error handling
+find . -name install.sh -not -path './_*' | while read -r installer; do
+    echo "› Running installer: $installer"
+    if ! sh -c "${installer}"; then
+        echo "ERROR: Failed to run installer: $installer" >&2
+        exit 1
+    fi
+done

@@ -10,3 +10,5 @@ Brewfile.lock.json
 .idea/
 .claude/
 CLAUDE.md
+claudedocs/
+.serena/

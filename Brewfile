@@ -38,6 +38,7 @@ cask 'cleanshot'              # Screenshot and screen recording tool
 cask 'figma'                  # Design tool
 cask 'font-monaspace'      	  # Programming font with ligatures (All styles)
 cask 'iterm2'                 # Terminal emulator for macOS
+cask 'itermai'                # AI-powered code assistant
 cask 'lens'                   # Kubernetes IDE
 cask 'ngrok'                  # Secure tunnel to localhost
 cask 'notion'                 # Knowledge management and note-taking
@@ -79,6 +80,8 @@ vscode 'davidanson.vscode-markdownlint'             # Markdown linting
 vscode 'dbaeumer.vscode-eslint'                     # ESLint integration
 vscode 'docker.docker'                              # Docker support
 vscode 'esbenp.prettier-vscode'                     # Prettier
+vscode 'esdete.tailwind-rainbow'                    # Tailwind Rainbow
+vscode 'etsi0.class-collapse'                       # Class Collapse
 vscode 'github.copilot'                             # GitHub Copilot
 vscode 'github.copilot-chat'                        # GitHub Copilot Chat
 vscode 'gruntfuggly.todo-tree'                      # Highlight TODOs in code
@@ -90,10 +93,8 @@ vscode 'monokai.theme-monokai-pro-vscode'           # Monokai Pro Theme
 vscode 'ms-vscode-remote.remote-ssh'                # Remote - SSH
 vscode 'ms-vscode-remote.remote-ssh-edit'           # Remote - SSH: Editing
 vscode 'ms-vscode.remote-explorer'                  # Remote - Explorer
-vscode 'naumovs.color-highlight'                    # Color Highlight
 vscode 'pflannery.vscode-versionlens'               # Version Lens
 vscode 'redhat.vscode-yaml'                         # YAML Support
-vscode 'stivo.tailwind-fold'                        # Tailwind CSS Folding
 vscode 'tamasfe.even-better-toml'                   # Even Better TOML
 vscode 'tyriar.sort-lines'                          # Sort Lines
 vscode 'usernamehw.errorlens'                       # Error Lens

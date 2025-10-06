@@ -43,7 +43,11 @@ setup_gitconfig () {
     user ' - What is your github author email?'
     read -e git_authoremail
 
-    sed -e "s/AUTHORNAME/$git_authorname/g" -e "s/AUTHOREMAIL/$git_authoremail/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" git/gitconfig.local.symlink.example > git/gitconfig.local.symlink
+    # Escape special characters in user input for safe sed substitution
+    git_authorname_escaped=$(printf '%s\n' "$git_authorname" | sed 's/[\\&/]/\\\\&/g')
+    git_authoremail_escaped=$(printf '%s\n' "$git_authoremail" | sed 's/[\\&/]/\\\\&/g')
+
+    sed -e "s/AUTHORNAME/$git_authorname_escaped/g" -e "s/AUTHOREMAIL/$git_authoremail_escaped/g" -e "s/GIT_CREDENTIAL_HELPER/$git_credential/g" git/gitconfig.local.symlink.example > git/gitconfig.local.symlink
 
     success 'gitconfig'
   fi
@@ -62,7 +66,7 @@ link_file () {
     if [ "$overwrite_all" == "false" ] && [ "$backup_all" == "false" ] && [ "$skip_all" == "false" ]
     then
 
-      local currentSrc="$(readlink $dst)"
+      local currentSrc="$(readlink "$dst")"
 
       if [ "$currentSrc" == "$src" ]
       then

@@ -233,10 +233,12 @@
   "terminal.integrated.enablePersistentSessions": true,
   "terminal.integrated.persistentSessionReviveProcess": "onExit",
   "terminal.integrated.defaultProfile.osx": "zsh",
-  "terminal.external.osxExec": "iTerm.app",
+  "terminal.integrated.fontLigatures.enabled": true,
+  "terminal.integrated.fontLigatures.featureSettings": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
   "terminal.integrated.env.osx": {
     "FIG_NEW_SESSION": "1"
   },
+  "terminal.external.osxExec": "iTerm.app",
 
   // ========================================
   // GIT & CONTROLE DE VERSÃO

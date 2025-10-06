@@ -19,25 +19,37 @@ Host *
     ConnectTimeout 10
     TCPKeepAlive yes
     ForwardX11 no
-    StrictHostKeyChecking accept-new
+    # Security: Changed from accept-new to ask for better security
+    # Use 'yes' for production, 'ask' for development
+    StrictHostKeyChecking ask
+    # Additional security settings
+    HashKnownHosts yes
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    PubkeyAuthentication yes
 
 # Include local configurations if needed (not tracked by git)
 Include ~/.ssh/config_local
 
 # === GITHUB CONFIGURATIONS ===
+# Updated to use Ed25519 keys by default
 Host github.com
     HostName github.com
     User git
+    # Try Ed25519 first, fall back to RSA if not available
+    IdentityFile ~/.ssh/id_ed25519
     IdentityFile ~/.ssh/id_rsa
 
 Host github-personal
     HostName github.com
     User git
+    IdentityFile ~/.ssh/id_ed25519_personal
     IdentityFile ~/.ssh/id_rsa_personal
 
 Host github-work
     HostName github.com
     User git
+    IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
 
 # === COMMON PATTERNS ===
@@ -45,21 +57,25 @@ Host github-work
 Host dev-*
     User deploy
     Port 22
+    IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
 
 # Staging servers
 Host staging-*
     User deploy
     Port 22
+    IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
 
 # Production (extra security)
 Host prod-*
     User deploy
     Port 22
+    IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
     StrictHostKeyChecking yes
+    # Extra security for production
+    ForwardAgent no
 
-# Default fallback
-Host *
-    User $(whoami)
+# Default fallback - removed $(whoami) for security
+# Will use the current username by default
