@@ -5,10 +5,6 @@
 # Package managers
 Brewfile.lock.json
 
-# IDEs, editors and AI assistants
+# IDEs
 .vscode/
 .idea/
-.claude/
-CLAUDE.md
-claudedocs/
-.serena/

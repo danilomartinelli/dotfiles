@@ -1,0 +1,429 @@
+{
+  // UI Settings
+  "editor.minimap.enabled": false,
+  "editor.renderWhitespace": "trailing",
+  "editor.renderLineHighlight": "all",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.guides.indentation": true,
+  "editor.linkedEditing": true,
+  "editor.hover.delay": 300,
+  "editor.hover.sticky": true,
+  "editor.rulers": [80, 120],
+  "editor.scrollBeyondLastLine": false,
+  "editor.codeLens": true,
+  "editor.colorDecorators": false,
+
+  // Formatting & Performance Settings
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.trimAutoWhitespace": true,
+  "editor.wordWrap": "bounded",
+  "editor.wordWrapColumn": 120,
+  "editor.multiCursorModifier": "alt",
+  "editor.snippetSuggestions": "none",
+  "editor.tabCompletion": "on",
+  "editor.emptySelectionClipboard": false,
+  "editor.copyWithSyntaxHighlighting": false,
+  "editor.largeFileOptimizations": true,
+  "editor.maxTokenizationLineLength": 10000,
+
+  // Find & Replace Settings
+  "editor.find.autoFindInSelection": "multiline",
+  "editor.find.seedSearchStringFromSelection": "selection",
+
+  // Files Settings
+  "files.autoSave": "off",
+  "files.trimTrailingWhitespace": true,
+  "files.trimFinalNewlines": true,
+  "files.insertFinalNewline": true,
+  "files.encoding": "utf8",
+
+  // File Associations Settings
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "*.scss": "scss",
+    "*.sass": "sass",
+    ".env*": "dotenv",
+    ".prettierrc": "json",
+    ".eslintrc": "json",
+    "*.mdx": "markdown",
+    "Dockerfile*": "dockerfile",
+    "docker-compose*": "yaml"
+  },
+
+  // Ignore files Settings
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.nx": true,
+    "**/.turbo": true,
+    "**/.next": true,
+    "**/tmp": false,
+    "**/build": false,
+    "**/dist": false,
+    "**/node_modules": false,
+    "**/*.log": false
+  },
+  "search.exclude": {
+    "**/__pycache__": true,
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.nx": true,
+    "**/.turbo": true,
+    "**/.next": true,
+    "**/tmp": false,
+    "**/build": false,
+    "**/dist": false,
+    "**/node_modules": false,
+    "**/*.log": false
+  },
+
+  // Theme Settings
+  "workbench.colorTheme": "Monokai Pro (Filter Octagon)",
+  "workbench.iconTheme": "Monokai Pro (Filter Octagon) Icons",
+  "workbench.productIconTheme": "fluent-icons",
+  "workbench.editor.closeOnFileDelete": true,
+  "workbench.editor.highlightModifiedTabs": true,
+  "editor.fontSize": 14,
+  "editor.fontFamily": "'Monaspace Neon', monospace",
+  "editor.inlineSuggest.fontFamily": "'Monaspace Krypton', monospace",
+  "editor.fontLigatures": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
+
+  // Cursor Settings
+  "cursor.composer.usageSummaryDisplay": "always",
+  "cursor.composer.shouldAllowCustomModes": true,
+  "cursor.cpp.enablePartialAccepts": true,
+  "cursor.rpcFileLogger.enabled": true,
+
+  // Terminal Settings
+  "terminal.integrated.sendKeybindingsToShell": true,
+  "terminal.integrated.fontSize": 12,
+  "terminal.integrated.fontFamily": "'Monaspace Neon', monospace",
+  "terminal.integrated.copyOnSelection": true,
+  "terminal.integrated.cursorBlinking": true,
+  "terminal.integrated.cursorStyle": "line",
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.enablePersistentSessions": true,
+  "terminal.integrated.persistentSessionReviveProcess": "onExit",
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "terminal.integrated.fontLigatures.enabled": true,
+  "terminal.integrated.fontLigatures.featureSettings": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
+  "terminal.integrated.env.osx": {
+    "FIG_NEW_SESSION": "1"
+  },
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+
+  // GIT Settings
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "git.postCommitCommand": "none",
+  "git.openRepositoryInParentFolders": "always",
+  "git.mergeEditor": true,
+  "git.ignoreRebaseWarning": true,
+
+  // Editor General Environments Settings
+  "editor.suggest.insertMode": "replace",
+  "editor.quickSuggestions": {
+    "comments": "off",
+    "strings": "off",
+    "other": "off"
+  },
+  "javascript.format.enable": true,
+  "typescript.format.enable": true,
+
+  // JS Environment Settings
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    }
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    }
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    },
+    "editor.quickSuggestions": {
+      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+    }
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    },
+    "editor.quickSuggestions": {
+      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+    }
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    },
+    "editor.quickSuggestions": {
+      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+    }
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    },
+    "editor.quickSuggestions": {
+      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+    }
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    }
+  },
+
+  // JavaScript/TypeScript General Settings
+  "typescript.updateImportsOnFileMove.enabled": "never",
+  "javascript.updateImportsOnFileMove.enabled": "never",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "javascript.suggest.autoImports": true,
+  "typescript.tsserver.log": "normal",
+  "javascript.validate.enable": false,
+  "typescript.preferences.quoteStyle": "single",
+  "javascript.preferences.quoteStyle": "single",
+  "typescript.preferences.importModuleSpecifier": "shortest",
+  "javascript.preferences.importModuleSpecifier": "shortest",
+  "typescript.inlayHints.parameterNames.enabled": "all",
+  "typescript.inlayHints.parameterTypes.enabled": true,
+  "typescript.inlayHints.propertyDeclarationTypes.enabled": true,
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+  "javascript.inlayHints.parameterNames.enabled": "all",
+
+  // Emmet Settings
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact",
+    "typescript": "typescriptreact",
+    "postcss": "css"
+  },
+  "emmet.showExpandedAbbreviation": "always",
+  "emmet.triggerExpansionOnTab": true,
+
+  // ESLint Settings
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "html",
+    "json",
+    "jsonc"
+  ],
+  "eslint.format.enable": true,
+  "eslint.lintTask.enable": true,
+  "eslint.codeActionsOnSave.mode": "all",
+  "eslint.run": "onSave",
+  "eslint.probe": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "html"
+  ],
+  "eslint.quiet": false,
+
+  // Prettier Settings
+  "prettier.enable": true,
+  "prettier.requireConfig": false,
+  "prettier.resolveGlobalModules": true,
+  "prettier.useEditorConfig": true,
+  "prettier.semi": false,
+  "prettier.singleQuote": true,
+  "prettier.trailingComma": "es5",
+  "prettier.arrowParens": "always",
+  "prettier.printWidth": 80,
+  "prettier.tabWidth": 2,
+  "prettier.useTabs": false,
+  "prettier.bracketSpacing": true,
+  "prettier.bracketSameLine": false,
+  "prettier.endOfLine": "lf",
+
+  // Tailwind CSS Settings
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.classFunctions": [
+    "tw",
+    "twMerge",
+    "cn",
+    "cva",
+    "clsx",
+    "className",
+    "classNames",
+    "classList",
+    "styled",
+    "css",
+    "sortCx"
+  ],
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["tw`([^`]*)`", "([^`]*)"],
+    ["tw\\.\\w+`([^`]*)`", "([^`]*)"]
+  ],
+  "tailwindCSS.classAttributes": [
+    "class",
+    "classes",
+    "className",
+    "className:",
+    "ngClass",
+    "class:",
+    "class:list",
+    "classlist",
+    "classNames",
+    "css",
+    "style",
+    // Commonly used in various libraries and frameworks
+    "tw",
+    "containerClassName",
+    "containerClassNames",
+    "contentClassName",
+    "contentClassNames",
+    "inputClassName",
+    "inputClassNames",
+    "buttonClassName",
+    "buttonClassNames",
+    "cardClassName",
+    "cardClassNames",
+    "headerClassName",
+    "headerClassNames",
+    "bodyClassName",
+    "bodyClassNames",
+    "footerClassName",
+    "footerClassNames",
+    "menuClassName",
+    "menuClassNames",
+    "menuItemClassName",
+    "menuItemClassNames",
+    "panelClassName",
+    "panelClassNames",
+    "labelClassName",
+    "labelClassNames",
+    "titleClassName",
+    "titleClassNames",
+    "wrapperClassName",
+    "wrapperClassNames",
+    "rootClassName",
+    "rootClassNames",
+    "navClassName",
+    "navClassNames",
+    "asideClassName",
+    "asideClassNames",
+    "mainClassName",
+    "mainClassNames",
+    "sectionClassName",
+    "sectionClassNames",
+    "articleClassName",
+    "articleClassNames",
+    "formClassName",
+    "formClassNames",
+    "fieldClassName",
+    "fieldClassNames",
+    "groupClassName",
+    "groupClassNames",
+    "iconClassName",
+    "iconClassNames"
+  ],
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.validate": true,
+
+  // Turbo Console Log Settings
+  "turboConsoleLog.logMessagePrefix": "[LOG]: ",
+  "turboConsoleLog.delimiterInsideMessage": " | ",
+
+  // Path Intellisense Settings
+  "path-intellisense.autoSlashAfterDirectory": true,
+  "path-intellisense.extensionOnImport": false,
+  "path-intellisense.showHiddenFiles": false,
+
+  // NPM Intellisense Settings
+  "npm-intellisense.importQuotes": "'",
+  "npm-intellisense.importLinebreak": ";",
+  "npm-intellisense.importDeclarationType": "const",
+
+  // Error Lens
+  "errorLens.enabled": true,
+  "errorLens.fontSize": "12",
+  "errorLens.fontWeight": "normal",
+  "errorLens.margin": "2ch",
+  "errorLens.borderRadius": "3px",
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.excludeBySource": ["eslint(prettier/prettier)"],
+  "errorLens.delay": 300,
+  "errorLens.followCursor": "closestProblem",
+  "errorLens.gutterIconsEnabled": true,
+
+  // Import Cost
+  "importCost.showCalculatingDecoration": true,
+  "importCost.largePackageDarkColor": "#d44e40",
+  "importCost.mediumPackageDarkColor": "#b8860b",
+  "importCost.smallPackageDarkColor": "#7cc36e",
+
+  // Misc Settings
+  "extensions.ignoreRecommendations": true,
+  "diffEditor.ignoreTrimWhitespace": true,
+  "cSpell.userWords": ["dtos"]
+}

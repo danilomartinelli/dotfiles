@@ -9,30 +9,14 @@ Include ~/.orbstack/ssh/config
 Host *
     AddKeysToAgent yes
     UseKeychain yes
-    # IdentitiesOnly yes
     ServerAliveInterval 60
     ServerAliveCountMax 3
-    # Compression yes
-    ControlMaster auto
-    ControlPath ~/.ssh/sockets/%r@%h-%p
-    ControlPersist 600
-    ConnectTimeout 10
     TCPKeepAlive yes
-    ForwardX11 no
-    # Security: Changed from accept-new to ask for better security
-    # Use 'yes' for production, 'ask' for development
-    StrictHostKeyChecking ask
-    # Additional security settings
-    HashKnownHosts yes
-    PasswordAuthentication no
-    ChallengeResponseAuthentication no
-    PubkeyAuthentication yes
 
 # Include local configurations if needed (not tracked by git)
 Include ~/.ssh/config_local
 
 # === GITHUB CONFIGURATIONS ===
-# Updated to use Ed25519 keys by default
 Host github.com
     HostName github.com
     User git
@@ -51,31 +35,3 @@ Host github-work
     User git
     IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
-
-# === COMMON PATTERNS ===
-# Development servers
-Host dev-*
-    User deploy
-    Port 22
-    IdentityFile ~/.ssh/id_ed25519_work
-    IdentityFile ~/.ssh/id_rsa_work
-
-# Staging servers
-Host staging-*
-    User deploy
-    Port 22
-    IdentityFile ~/.ssh/id_ed25519_work
-    IdentityFile ~/.ssh/id_rsa_work
-
-# Production (extra security)
-Host prod-*
-    User deploy
-    Port 22
-    IdentityFile ~/.ssh/id_ed25519_work
-    IdentityFile ~/.ssh/id_rsa_work
-    StrictHostKeyChecking yes
-    # Extra security for production
-    ForwardAgent no
-
-# Default fallback - removed $(whoami) for security
-# Will use the current username by default

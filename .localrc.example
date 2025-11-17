@@ -26,7 +26,7 @@
 # Secret Keys and Tokens
 # =======================================
 
-# Super Claude
+# Example API Keys
 export TWENTYFIRST_API_KEY="<CHANGE_ME>"
 export MORPH_API_KEY="<CHANGE_ME>"
 export TAVILY_API_KEY="<CHANGE_ME>"
