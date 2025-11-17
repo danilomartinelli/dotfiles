@@ -32,7 +32,6 @@ brew 'zsh-syntax-highlighting'      # Fish shell-like syntax highlighting for Zs
 # Desktop applications
 cask 'android-studio'               # Android development IDE
 cask 'apidog'                       # API development and testing tool
-cask 'archiver-app'                 # File archiving and compression tool
 cask 'chatgpt'                      # ChatGPT desktop client
 cask 'cleanshot'                    # Screenshot and screen recording tool
 cask 'cursor'                       # Source code editor
@@ -59,6 +58,7 @@ cask 'tableplus'                    # Database management tool
 cask 'vlc'                          # Media player supporting various formats
 
 # Mac App Store applications
+mas 'Archiver 4', id: 1556026599                    # (Un)compress files
 mas 'Amphetamine', id: 937984704                    # Keep your Mac awake
 mas 'Bitwarden', id: 1352778147                     # Open-source password manager
 mas 'FileZilla', id: 1298486723                     # FTP client
