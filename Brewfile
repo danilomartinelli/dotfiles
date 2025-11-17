@@ -45,6 +45,7 @@ cask 'google-chrome'                # Google Chrome browser
 cask 'iterm2'                       # Terminal emulator for macOS
 cask 'itermai'                      # AI-powered code assistant
 cask 'lens'                         # Kubernetes IDE
+cask 'linear-linear'                # Project management tool
 cask 'ngrok'                        # Secure tunnel to localhost
 cask 'notion'                       # Knowledge management and note-taking
 cask 'obsidian'                     # Knowledge base that works on local Markdown files

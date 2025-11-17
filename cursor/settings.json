@@ -425,5 +425,8 @@
   // Misc Settings
   "extensions.ignoreRecommendations": true,
   "diffEditor.ignoreTrimWhitespace": true,
-  "cSpell.userWords": ["dtos"]
+  "cSpell.userWords": [
+    "dtos"
+  ],
+  "window.commandCenter": true
 }
