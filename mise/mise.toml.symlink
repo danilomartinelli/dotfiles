@@ -1,0 +1,15 @@
+[tools]
+bun = "1.2.23"
+go = "1.21.13"
+node = "24.11.1"
+npm = "11.4.2"
+"npm:eas-cli" = "16.27.0"
+"npm:markdownlint-cli" = "0.45.0"
+pnpm = "10.22.0"
+python = "3.11.14"
+rust = "1.83.0"
+terraform = "1.13.5"
+yarn = "4.9.4"
+
+[settings]
+idiomatic_version_file_enable_tools = ["node"]
