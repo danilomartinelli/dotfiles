@@ -36,8 +36,8 @@ dockutil --add "/Applications/OrbStack.app" --no-restart
 # Add Figma
 dockutil --add "/Applications/Figma.app" --no-restart
 
-# Add Notion
-dockutil --add "/Applications/Notion.app" --no-restart
+# Add Linear
+dockutil --add "/Applications/Linear.app" --no-restart
 
 # Add Obsidian
 dockutil --add "/Applications/Obsidian.app" --no-restart
