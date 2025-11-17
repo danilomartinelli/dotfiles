@@ -72,13 +72,9 @@ mas 'Yubico Authenticator', id: 1497506650          # 2FA app for YubiKey
 # Cursor Extensions
 # TODO: Fix brew bundle cursor plugin
 
-# cursor 'anysphere.remote-containers'                       # Use Docker containers as your development environment
-# cursor 'bierner.markdown-checkbox'                         # Enhance Markdown with checkboxes
-# cursor 'bierner.markdown-emoji'                            # Emoji support for Markdown
-# cursor 'bierner.markdown-footnotes'                        # Footnote support for Markdown
+# cursor 'anysphere.remote-containers'                       # Use Docker containers as your development environment                      # Footnote support for Markdown
 # cursor 'bierner.markdown-mermaid'                          # Mermaid diagram support for Markdown
 # cursor 'bierner.markdown-preview-github-styles'            # GitHub-style Markdown preview
-# cursor 'bierner.markdown-yaml-preamble'                    # YAML preamble support for Markdown
 # cursor 'bradlc.vscode-tailwindcss'                         # Tailwind CSS IntelliSense
 # cursor 'chakrounanas.turbo-console-log'                    # Turbo Console Log
 # cursor 'christian-kohler.npm-intellisense'                 # NPM IntelliSense
