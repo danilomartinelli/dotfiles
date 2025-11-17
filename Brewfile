@@ -68,40 +68,43 @@ mas 'WhatsApp Messenger', id: 310633997             # WhatsApp Client
 mas 'Xcode', id: 497799835                          # Apple's integrated development environment
 mas 'Yubico Authenticator', id: 1497506650          # 2FA app for YubiKey
 
-# VSCode Extensions
-cursor 'anysphere.remote-containers'                       # Use Docker containers as your development environment
-cursor 'bierner.markdown-checkbox'                         # Enhance Markdown with checkboxes
-cursor 'bierner.markdown-emoji'                            # Emoji support for Markdown
-cursor 'bierner.markdown-footnotes'                        # Footnote support for Markdown
-cursor 'bierner.markdown-mermaid'                          # Mermaid diagram support for Markdown
-cursor 'bierner.markdown-preview-github-styles'            # GitHub-style Markdown preview
-cursor 'bierner.markdown-yaml-preamble'                    # YAML preamble support for Markdown
-cursor 'bradlc.vscode-tailwindcss'                         # Tailwind CSS IntelliSense
-cursor 'chakrounanas.turbo-console-log'                    # Turbo Console Log
-cursor 'christian-kohler.npm-intellisense'                 # NPM IntelliSense
-cursor 'christian-kohler.path-intellisense'                # Path IntelliSense
-cursor 'codezombiech.gitignore'                            # .gitignore file support
-cursor 'csstools.postcss'                                  # PostCSS support
-cursor 'davidanson.vscode-markdownlint'                    # Markdown linting
-cursor 'dbaeumer.vscode-eslint'                            # ESLint integration
-cursor 'docker.docker'                                     # Docker DX
-cursor 'edwinhuish.better-comments-next'                   # Help you create more human-friendly comments
-cursor 'esbenp.prettier-vscode'                            # Prettier
-cursor 'jock.svg'                                          # SVG Viewer
-cursor 'miguelsolorio.fluent-icons'                        # Fluent Icons
-cursor 'mikestead.dotenv'                                  # .env File Support
-cursor 'monokai.theme-monokai-pro-vscode'                  # Monokai Pro Theme
-cursor 'ms-azuretools.vscode-containers'                   # Build, manage, and deploy containerized applications
-cursor 'ms-azuretools.vscode-docker'                       # Docker Extension Pack
-cursor 'ms-vscode-remote.remote-ssh'                       # Remote - SSH
-cursor 'ms-vscode-remote.remote-ssh-edit'                  # Remote - SSH: Editing
-cursor 'ms-vscode.remote-explorer'                         # Remote - Explorer
-cursor 'pflannery.vscode-versionlens'                      # Version Lens
-cursor 'redhat.vscode-yaml'                                # YAML Support
-cursor 'streetsidesoftware.code-spell-checker'             # A basic spell checker
-cursor 'streetsidesoftware.code-spell-checker-portuguese'  # PT-BR Dict for spell checker
-cursor 'tamasfe.even-better-toml'                          # Even Better TOML
-cursor 'usernamehw.errorlens'                              # Error Lens
-cursor 'waderyan.gitblame'                                 # Git Blame
-cursor 'wix.vscode-import-cost'                            # Import Cost
-cursor 'yoavbls.pretty-ts-errors'                          # Pretty TypeScript Errors
+
+# Cursor Extensions
+# TODO: Fix brew bundle cursor plugin
+
+# cursor 'anysphere.remote-containers'                       # Use Docker containers as your development environment
+# cursor 'bierner.markdown-checkbox'                         # Enhance Markdown with checkboxes
+# cursor 'bierner.markdown-emoji'                            # Emoji support for Markdown
+# cursor 'bierner.markdown-footnotes'                        # Footnote support for Markdown
+# cursor 'bierner.markdown-mermaid'                          # Mermaid diagram support for Markdown
+# cursor 'bierner.markdown-preview-github-styles'            # GitHub-style Markdown preview
+# cursor 'bierner.markdown-yaml-preamble'                    # YAML preamble support for Markdown
+# cursor 'bradlc.vscode-tailwindcss'                         # Tailwind CSS IntelliSense
+# cursor 'chakrounanas.turbo-console-log'                    # Turbo Console Log
+# cursor 'christian-kohler.npm-intellisense'                 # NPM IntelliSense
+# cursor 'christian-kohler.path-intellisense'                # Path IntelliSense
+# cursor 'codezombiech.gitignore'                            # .gitignore file support
+# cursor 'csstools.postcss'                                  # PostCSS support
+# cursor 'davidanson.vscode-markdownlint'                    # Markdown linting
+# cursor 'dbaeumer.vscode-eslint'                            # ESLint integration
+# cursor 'docker.docker'                                     # Docker DX
+# cursor 'edwinhuish.better-comments-next'                   # Help you create more human-friendly comments
+# cursor 'esbenp.prettier-vscode'                            # Prettier
+# cursor 'jock.svg'                                          # SVG Viewer
+# cursor 'miguelsolorio.fluent-icons'                        # Fluent Icons
+# cursor 'mikestead.dotenv'                                  # .env File Support
+# cursor 'monokai.theme-monokai-pro-vscode'                  # Monokai Pro Theme
+# cursor 'ms-azuretools.vscode-containers'                   # Build, manage, and deploy containerized applications
+# cursor 'ms-azuretools.vscode-docker'                       # Docker Extension Pack
+# cursor 'ms-vscode-remote.remote-ssh'                       # Remote - SSH
+# cursor 'ms-vscode-remote.remote-ssh-edit'                  # Remote - SSH: Editing
+# cursor 'ms-vscode.remote-explorer'                         # Remote - Explorer
+# cursor 'pflannery.vscode-versionlens'                      # Version Lens
+# cursor 'redhat.vscode-yaml'                                # YAML Support
+# cursor 'streetsidesoftware.code-spell-checker'             # A basic spell checker
+# cursor 'streetsidesoftware.code-spell-checker-portuguese'  # PT-BR Dict for spell checker
+# cursor 'tamasfe.even-better-toml'                          # Even Better TOML
+# cursor 'usernamehw.errorlens'                              # Error Lens
+# cursor 'waderyan.gitblame'                                 # Git Blame
+# cursor 'wix.vscode-import-cost'                            # Import Cost
+# cursor 'yoavbls.pretty-ts-errors'                          # Pretty TypeScript Errors
