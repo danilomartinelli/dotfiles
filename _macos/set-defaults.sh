@@ -1,5 +1,14 @@
+#!/bin/sh
 # macOS System Defaults for Developers
 # Run ./set-defaults.sh and you'll be good to go.
+
+set -e
+
+# Only run on macOS
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "Error: This script is only for macOS" >&2
+  exit 1
+fi
 
 # === KEYBOARD & INPUT ===
 # Disable press-and-hold for keys in favor of key repeat
@@ -83,15 +92,36 @@ defaults write com.apple.menuextra.battery ShowPercent -bool true
 defaults write com.apple.menuextra.clock DateFormat -string "EEE MMM d  H:mm:ss"
 
 # === NETWORK ===
-# Use Google DNS servers
-sudo networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4
+# Use Google DNS servers (requires admin privileges)
+if command -v networksetup >/dev/null 2>&1; then
+  if sudo -n true 2>/dev/null || sudo -v; then
+    if sudo networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4 2>/dev/null; then
+      echo "  ✓ DNS servers configured"
+    else
+      echo "  Warning: Failed to set DNS servers (may require admin privileges)" >&2
+    fi
+  else
+    echo "  Warning: Skipping DNS configuration (sudo access required)" >&2
+  fi
+else
+  echo "  Warning: networksetup not found, skipping DNS configuration" >&2
+fi
 
 # === DEVELOPMENT ENVIRONMENT ===
 # Show ~/Library folder (for development)
-chflags nohidden ~/Library && xattr -d com.apple.FinderInfo ~/Library 2>/dev/null
+if [ -d "$HOME/Library" ]; then
+  if chflags nohidden ~/Library 2>/dev/null; then
+    xattr -d com.apple.FinderInfo ~/Library 2>/dev/null || true
+    echo "  ✓ Library folder is now visible"
+  else
+    echo "  Warning: Failed to show Library folder" >&2
+  fi
+fi
 
 # Restart Services
-killall SystemUIServer Finder Dock ControlStrip 2>/dev/null
+echo "  → Restarting system services..."
+killall SystemUIServer Finder Dock ControlStrip 2>/dev/null || true
+echo "  ✓ Services restarted"
 
 # === MISSION CONTROL SETTINGS ===
 echo "  → configuring Mission Control"

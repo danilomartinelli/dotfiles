@@ -10,4 +10,24 @@
 #   git credit "Danilo Martinelli" danilo.martinelli@witek.com.br
 #
 
+set -e
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Error: Author name and email are required." >&2
+  echo "Usage: git credit \"<name>\" <email>" >&2
+  exit 1
+fi
+
+# Check if there's a commit to amend
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+  echo "Error: No commits to amend." >&2
+  exit 1
+fi
+
 git commit --amend --author "$1 <$2>" -C HEAD

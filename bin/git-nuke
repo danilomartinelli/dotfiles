@@ -8,5 +8,30 @@
 #
 #   git nuke add-git-nuke
 
-git branch -D $1
-git push origin :$1
+set -e
+
+if [ -z "$1" ]; then
+  echo "Error: Branch name required." >&2
+  echo "Usage: git nuke <branch-name>" >&2
+  exit 1
+fi
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
+# Check if branch exists locally
+if ! git show-ref --verify --quiet refs/heads/"$1"; then
+  echo "Warning: Branch '$1' does not exist locally." >&2
+else
+  git branch -D "$1"
+fi
+
+# Try to delete remote branch (may not exist, which is fine)
+if git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; then
+  git push origin :"$1"
+else
+  echo "Info: Branch '$1' does not exist on origin." >&2
+fi

@@ -7,8 +7,15 @@
 
 set -e
 
-parentDirectory="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P)"
-dotfilesDirectory="$(cd "$( dirname "$parentDirectory" )" && pwd -P)"
+# Get the directory of this script (POSIX-compatible)
+# This works even when script is called via symlink
+SCRIPT_PATH=$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")
+if [ -z "$SCRIPT_PATH" ] || [ "$SCRIPT_PATH" = "$0" ]; then
+  # Fallback: use cd to get absolute path
+  SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd -P)/$(basename "$0")"
+fi
+parentDirectory="$(dirname "$SCRIPT_PATH")"
+dotfilesDirectory="$(dirname "$parentDirectory")"
 
 displayUsageAndExit() {
 	echo "dot -- dotfiles management"
@@ -40,23 +47,52 @@ done
 
 export ZSH=$HOME/.dotfiles
 
-# Update dotfiles themselves
-echo "› git pull"
-git -C $ZSH pull
+# Validate dotfiles directory exists
+if [ ! -d "$ZSH" ]; then
+  echo "Error: Dotfiles directory not found: $ZSH" >&2
+  exit 1
+fi
+
+# Check if we're in a git repository
+if [ ! -d "$ZSH/.git" ]; then
+  echo "Warning: $ZSH is not a git repository. Skipping git pull." >&2
+else
+  # Update dotfiles themselves
+  echo "› git pull"
+  if ! git -C "$ZSH" pull; then
+    echo "Warning: git pull failed. Continuing anyway..." >&2
+  fi
+fi
 
 # Install homebrew first (needed for other installers)
-$ZSH/homebrew/install.sh 2>&1
+if [ -f "$ZSH/homebrew/install.sh" ]; then
+  echo "› Installing Homebrew"
+  if ! "$ZSH/homebrew/install.sh" 2>&1; then
+    echo "Warning: Homebrew installation had issues. Continuing..." >&2
+  fi
+else
+  echo "Warning: Homebrew installer not found. Skipping..." >&2
+fi
 
-# Upgrade homebrew
-echo "› brew update"
-brew update
+# Upgrade homebrew (only if brew is available)
+if command -v brew >/dev/null 2>&1; then
+  echo "› brew update"
+  brew update || echo "Warning: brew update failed. Continuing..." >&2
 
-echo "› brew upgrade"
-brew upgrade
+  echo "› brew upgrade"
+  brew upgrade || echo "Warning: brew upgrade failed. Continuing..." >&2
+else
+  echo "Warning: brew command not found. Skipping Homebrew updates." >&2
+fi
 
 # Install software
-echo "› _scripts/install"
-$ZSH/_scripts/install
+if [ -f "$ZSH/_scripts/install" ]; then
+  echo "› _scripts/install"
+  "$ZSH/_scripts/install"
+else
+  echo "Error: Install script not found: $ZSH/_scripts/install" >&2
+  exit 1
+fi
 
 # Reload shell
 echo "Please, run: source ~/.zshrc"

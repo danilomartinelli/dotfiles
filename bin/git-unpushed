@@ -2,5 +2,24 @@
 #
 # Show the diff of everything you haven't pushed yet.
 
+set -e
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
 branch=$(git rev-parse --abbrev-ref HEAD)
-git diff origin/$branch..HEAD
+if [ -z "$branch" ]; then
+  echo "Error: Not on a branch (detached HEAD state)." >&2
+  exit 1
+fi
+
+# Check if remote branch exists
+if ! git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+  echo "Error: Remote branch 'origin/$branch' does not exist." >&2
+  exit 1
+fi
+
+git diff "origin/$branch..HEAD"

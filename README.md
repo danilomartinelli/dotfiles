@@ -90,18 +90,34 @@ topic/
 | `duti` | Set default applications for file types |
 | `git` & `git-lfs` | Version control with large file support |
 | `gh` | GitHub CLI |
+| `go-task` | Task runner / build tool |
 | `helm` & `helmfile` | Kubernetes package management |
 | `imagemagick` | Image manipulation |
-| `jq` & `yq` | JSON/YAML processors |
+| `jq` & `python-yq` | JSON/YAML processors |
 | `kubernetes-cli` & `kustomize` | Kubernetes tools |
 | `mas` | Mac App Store CLI |
 | `mise` | Runtime version manager |
 | `pandoc` | Document converter |
+| `pipx` | Install and run Python applications in isolated environments |
 | `spaceman-diff` | Visual diff for images |
 | `terragrunt` | Terraform wrapper |
+| `usql` | Universal command-line interface for SQL databases |
+| `usage` | Tool for working with usage-spec CLIs |
 | `vim` | Text editor |
+| `vultr` | Vultr CLI for managing cloud resources |
 | `watchman` | File watching service |
 | `wget` | File download utility |
+| `zsh-syntax-highlighting` | Fish shell-like syntax highlighting for Zsh |
+
+### Fonts (via Homebrew)
+
+| Font | Description |
+|------|-------------|
+| `font-fira-code` | Programming font with ligatures (Default) |
+| `font-fira-mono` | Programming font with ligatures (Mono) |
+| `font-jetbrains-mono` | Programming font with ligatures (Mono) |
+| `font-maple-mono` | Programming font with ligatures (Mono) |
+| `font-monaspace` | Programming font with ligatures (All styles) |
 
 ### Desktop Applications
 
@@ -121,6 +137,7 @@ topic/
 || Google Chrome | Web browser |
 || ChatGPT | AI assistant desktop client |
 || Linear | Project management tool |
+|| Notion | Note-taking app |
 || Obsidian | Knowledge base with Markdown |
 || Raycast | Spotlight replacement with extensions |
 || Rectangle Pro | Window management |
@@ -128,6 +145,7 @@ topic/
 || **Design & Media** |  |
 || Figma | Design tool |
 || CleanShot | Screenshot and recording |
+|| VLC | Media player supporting various formats |
 || **Communication** |  |
 || Readdle Spark | Smart email client |
 || **Security** |  |
@@ -142,16 +160,17 @@ topic/
 
 Mise automatically manages versions for:
 
-- **Node.js** (LTS) with Bun, npm, pnpm, yarn
-- **Python** (3.11) with ruff, uv
-- **Go** (1.21)
-- **Rust** (1.83.0)
-- **Elixir** (1.18) with Erlang (27)
-- **Terraform** (latest)
+- **Node.js** (25.2.1) with npm (11.6.3), pnpm (10.23.0), yarn (4.11.0)
+- **Bun** (1.3.2)
+- **Python** (3.14.0) with uv (automatic venv management)
+- **Go** (1.25.5)
+- **Rust** (1.91.1)
+- **Terraform** (1.14.0)
 
 Global npm packages:
 
 - `eas-cli` - Expo Application Services
+- `markdownlint-cli` - Markdown linter
 - `vercel` - Vercel CLI
 - `nx` - Monorepo tool
 
@@ -276,7 +295,7 @@ To add a new tool or configuration:
 mkdir ~/.dotfiles/your-tool
 ```
 
-2. **Add configuration files**:
+1. **Add configuration files**:
 
 ```bash
 # Symlinked configuration
@@ -297,7 +316,7 @@ EOF
 chmod +x ~/.dotfiles/your-tool/install.sh
 ```
 
-3. **Run the installer**:
+1. **Run the installer**:
 
 ```bash
 ~/.dotfiles/your-tool/install.sh
@@ -312,10 +331,11 @@ _scripts/install
 The `.zshrc` loads configuration files in this specific order:
 
 1. **Environment**: Sets `$ZSH` and `$PROJECTS` variables
-2. **Local secrets**: Sources `~/.localrc` if it exists
-3. **Path files**: All `*/path.zsh` files (PATH setup)
-4. **Main configs**: All `*.zsh` files except path and completion
-5. **Completions**: All `*/completion.zsh` files (after compinit)
+2. **Local secrets**: Sources `~/.localrc` if it exists (gitignored, sensitive variables)
+3. **Common variables**: Sources `$ZSH/.commonrc` if it exists (tracked in git, non-sensitive shared variables)
+4. **Path files**: All `*/path.zsh` files (PATH setup)
+5. **Main configs**: All `*.zsh` files except path and completion
+6. **Completions**: All `*/completion.zsh` files (after compinit)
 
 ### Symlink Management
 
@@ -332,6 +352,18 @@ Git uses a split configuration:
 - Public settings: `git/gitconfig.symlink`
 - Private settings: `git/gitconfig.local.symlink` (generated on bootstrap)
   - Contains your name, email, and credential helper
+
+### Common Variables (.commonrc)
+
+Non-sensitive environment variables that you want to share across different machines are stored in `.commonrc` (tracked in git). This file is automatically sourced by `.zshrc` after `.localrc` and before path files.
+
+Unlike `.localrc`, `.commonrc` is tracked in version control, so it's suitable for:
+
+- Locale settings (LANG, LC_ALL)
+- Default editor preferences
+- Non-sensitive configuration that should be consistent across machines
+
+**Note**: Sensitive data should always go in `~/.localrc`, not `.commonrc`.
 
 ### SSH Configuration
 
@@ -358,21 +390,34 @@ The `bin/` directory contains custom utilities:
 
 ### Git Utilities
 
+- `git-all` - Stage all unstaged files
 - `git-amend` - Amend the last commit
+- `git-copy-branch-name` - Copy current branch name to clipboard
 - `git-credit` - Credit an author on commits
 - `git-delete-local-merged` - Delete merged branches
-- `git-nuke` - Remove a branch locally and remotely
-- `git-promote` - Promote a branch to main
+- `git-edit-new` - Open new, unstaged files in $EDITOR
+- `git-nuke` - Remove a branch locally and remotely (with validation)
+- `git-promote` - Promote a branch to track remote branch
 - `git-rank-contributors` - Rank git contributors
-- `git-undo` - Undo the last commit
+- `git-track` - Set up branch to track remote branch
+- `git-undo` - Undo the last commit (keeps changes)
+- `git-unpushed` - Show diff of unpushed commits
+- `git-unpushed-stat` - Show diffstat of unpushed commits
+- `git-up` - Pull with log display
+- `git-wtf` - Display repository state in readable format
 
 ### System Utilities
 
+- `add-credential` - Add AWS or Kubernetes credentials to .localrc
 - `battery-status` - Check battery status
 - `dns-flush` - Flush DNS cache
 - `dot` - Update dotfiles and dependencies
 - `e` - Open in $EDITOR
 - `ee` - Open current directory in $EDITOR
+- `gitio` - Shorten GitHub URLs using git.io
+- `headers` - Display HTTP headers from curl requests
+- `search` - Quick search using ack
+- `set-defaults` - Set macOS system defaults
 
 ## 🔄 Maintenance
 

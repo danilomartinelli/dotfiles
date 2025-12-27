@@ -6,13 +6,36 @@
 # Thanks to ENTP:
 # http://hoth.entp.com/2008/11/10/improving-my-git-workflow
 
+set -e
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
+# Get current branch name
 curr_branch=$(git symbolic-ref -q HEAD | sed -e 's|^refs/heads/||')
 
-remote_branch=$(git branch -r | grep "origin/${curr_branch}")
-[ -z "${remote_branch}" ] && ( git push origin "${curr_branch}" )
+if [ -z "$curr_branch" ]; then
+  echo "Error: Not on a branch (detached HEAD state)." >&2
+  exit 1
+fi
 
-origin=$(git config --get "branch.${curr_branch}.remote")
-[ -z "${origin}" ] && ( git config --add "branch.${curr_branch}.remote" origin )
+# Check if remote branch exists
+remote_branch=$(git branch -r 2>/dev/null | grep "origin/${curr_branch}" || true)
+if [ -z "${remote_branch}" ]; then
+  echo "Pushing branch '${curr_branch}' to origin..."
+  git push origin "${curr_branch}"
+fi
 
-merge=$(git config --get "branch.${curr_branch}.merge")
-[ -z "${merge}" ] && ( git config --add "branch.${curr_branch}.merge" "refs/heads/${curr_branch}" )
+# Set up tracking if not already configured
+origin=$(git config --get "branch.${curr_branch}.remote" || true)
+if [ -z "${origin}" ]; then
+  git config --add "branch.${curr_branch}.remote" origin
+fi
+
+merge=$(git config --get "branch.${curr_branch}.merge" || true)
+if [ -z "${merge}" ]; then
+  git config --add "branch.${curr_branch}.merge" "refs/heads/${curr_branch}"
+fi

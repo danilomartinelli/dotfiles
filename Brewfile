@@ -46,7 +46,6 @@ cask 'warp'                         # Modern terminal emulator for macOS
 cask 'lens'                         # Kubernetes IDE
 cask 'ngrok'                        # Secure tunnel to localhost
 cask 'notion'                        # Note-taking app
-cask 'obsidian'                     # Knowledge base that works on local Markdown files
 cask 'orbstack'                     # Docker Desktop alternative for macOS
 cask 'protonvpn'                    # VPN client
 cask 'raycast'                      # Spotlight alternative with extensions

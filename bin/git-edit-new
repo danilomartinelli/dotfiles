@@ -7,4 +7,24 @@
 # edit them in your editor next. Why waste time clicking around like some sort
 # of plebian when you can just run another command?
 
-$EDITOR $(git ls-files --others --exclude-standard)
+set -e
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
+if [ -z "$EDITOR" ]; then
+  echo "Error: \$EDITOR is not set." >&2
+  exit 1
+fi
+
+new_files=$(git ls-files --others --exclude-standard)
+
+if [ -z "$new_files" ]; then
+  echo "No new, unstaged files found."
+  exit 0
+fi
+
+$EDITOR $new_files

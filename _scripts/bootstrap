@@ -57,24 +57,94 @@ setup_gitconfig () {
 link_file () {
   local src=$1 dst=$2
 
+  # Validate source file exists
+  if [ ! -f "$src" ] && [ ! -d "$src" ]; then
+    fail "Source file does not exist: $src"
+    return 1
+  fi
+
   local overwrite= backup= skip=
   local action=
 
-  if [ -f "$dst" -o -d "$dst" -o -L "$dst" ]
+  # Check if destination exists (file, directory, or symlink)
+  if [ -f "$dst" ] || [ -d "$dst" ] || [ -L "$dst" ]
   then
 
     if [ "$overwrite_all" == "false" ] && [ "$backup_all" == "false" ] && [ "$skip_all" == "false" ]
     then
 
-      local currentSrc="$(readlink "$dst")"
+      # Check if it's a symlink and if it points to the correct source
+      local currentSrc=""
+      if [ -L "$dst" ]; then
+        # Handle broken symlinks gracefully
+        currentSrc=$(readlink "$dst" 2>/dev/null || echo "")
 
-      if [ "$currentSrc" == "$src" ]
-      then
+        # Check if symlink is broken
+        if [ -n "$currentSrc" ] && [ ! -e "$dst" ]; then
+          # Broken symlink - ask what to do
+          user "Broken symlink exists: $dst, what do you want to do?\n\
+          [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
+          read -n 1 action
 
-        skip=true;
+          case "$action" in
+            o )
+              overwrite=true;;
+            O )
+              overwrite_all=true;;
+            b )
+              backup=true;;
+            B )
+              backup_all=true;;
+            s )
+              skip=true;;
+            S )
+              skip_all=true;;
+            * )
+              ;;
+          esac
+        elif [ -n "$currentSrc" ]; then
+          # Resolve absolute paths for comparison
+          local src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
+          local dst_dir="$(dirname "$dst")"
+          local currentSrc_abs=""
 
+          # Resolve current symlink target to absolute path
+          if [ "${currentSrc#/}" = "$currentSrc" ]; then
+            # Relative path
+            currentSrc_abs="$(cd "$dst_dir" && cd "$(dirname "$currentSrc")" 2>/dev/null && pwd -P)/$(basename "$currentSrc")" || currentSrc_abs="$currentSrc"
+          else
+            # Absolute path
+            currentSrc_abs="$currentSrc"
+          fi
+
+          # Check if symlink already points to the correct source
+          if [ "$src_abs" = "$currentSrc_abs" ]; then
+            skip=true;
+          else
+            user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
+            [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
+            read -n 1 action
+
+            case "$action" in
+              o )
+                overwrite=true;;
+              O )
+                overwrite_all=true;;
+              b )
+                backup=true;;
+              B )
+                backup_all=true;;
+              s )
+                skip=true;;
+              S )
+                skip_all=true;;
+              * )
+                ;;
+            esac
+          fi
+        fi
       else
-
+        # Regular file or directory exists
         user "File already exists: $dst ($(basename "$src")), what do you want to do?\n\
         [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
         read -n 1 action
@@ -95,7 +165,6 @@ link_file () {
           * )
             ;;
         esac
-
       fi
 
     fi
@@ -124,8 +193,10 @@ link_file () {
 
   if [ "$skip" != "true" ]  # "false" or empty
   then
-    ln -s "$1" "$2"
-    success "linked $1 to $2"
+    # Use absolute path for symlink to avoid issues with relative paths
+    local src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
+    ln -sf "$src_abs" "$dst"
+    success "linked $src to $dst"
   fi
 }
 
@@ -134,10 +205,12 @@ install_dotfiles () {
 
   local overwrite_all=false backup_all=false skip_all=false
 
-  for src in $(find -H "$DOTFILES_ROOT" -maxdepth 2 -name '*.symlink' -not -path '*.git*' -not -path '*/_*')
-  do
-    dst="$HOME/.$(basename "${src%.*}")"
-    link_file "$src" "$dst"
+  # Find all .symlink files and process them
+  find -H "$DOTFILES_ROOT" -maxdepth 2 -name '*.symlink' -not -path '*.git*' -not -path '*/_*' 2>/dev/null | while read -r src; do
+    if [ -n "$src" ] && [ -f "$src" ]; then
+      dst="$HOME/.$(basename "${src%.*}")"
+      link_file "$src" "$dst"
+    fi
   done
 }
 

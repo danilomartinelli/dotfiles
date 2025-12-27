@@ -2,6 +2,25 @@
 #
 # Copy the current branch name to the clipboard.
 
+set -e
+
+# Check if we're in a git repository
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "Error: Not in a git repository." >&2
+  exit 1
+fi
+
+# Check if pbcopy is available (macOS)
+if ! command -v pbcopy >/dev/null 2>&1; then
+  echo "Error: pbcopy is not available (macOS required)." >&2
+  exit 1
+fi
+
 branch=$(git rev-parse --abbrev-ref HEAD)
-echo $branch
-echo $branch | tr -d '\n' | tr -d ' ' | pbcopy
+if [ -z "$branch" ]; then
+  echo "Error: Not on a branch (detached HEAD state)." >&2
+  exit 1
+fi
+
+echo "$branch"
+echo "$branch" | tr -d '\n' | tr -d ' ' | pbcopy
