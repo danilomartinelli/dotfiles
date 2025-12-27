@@ -105,39 +105,38 @@ topic/
 
 ### Desktop Applications
 
-| Application | Description |
-|------------|-------------|
-| **Development** |  |
-| Android Studio | Android development IDE |
-| Xcode | Apple development IDE |
-| Ghostty | Modern terminal emulator |
-| OrbStack | Docker Desktop alternative |
-| Lens | Kubernetes IDE |
-| TablePlus | Database management |
-| Ngrok | Secure tunnels to localhost |
-| **Productivity** |  |
-| Arc | Privacy-focused browser |
-| Claude | AI assistant desktop client |
-| Notion | Knowledge management |
-| Raycast | Spotlight replacement with extensions |
-| Rectangle Pro | Window management |
-| Paste | Clipboard manager |
-| **Design & Media** |  |
-| Figma | Design tool |
-| CleanShot | Screenshot and recording |
-| PDF Expert | PDF editor |
-| **Communication** |  |
-| Readdle Spark | Smart email client |
-| **Security** |  |
-| Bitwarden | Password manager |
-| ProtonVPN | VPN client |
-| Yubico Authenticator | 2FA with YubiKey |
-| **Other** |  |
-| Spotify | Music streaming |
-| Kindle | eBook reader |
-| Archiver | File compression |
-| iMazing | iOS device management |
-| Apidog | API development and testing |
+|| Application | Description |
+||------------|-------------|
+|| **Development** |  |
+|| Android Studio | Android development IDE |
+|| Xcode | Apple development IDE |
+|| Warp | Modern terminal emulator |
+|| Cursor | AI-powered code editor |
+|| OrbStack | Docker Desktop alternative |
+|| Lens | Kubernetes IDE |
+|| TablePlus | Database management |
+|| Postman | API development and testing |
+|| Ngrok | Secure tunnels to localhost |
+|| **Productivity** |  |
+|| Google Chrome | Web browser |
+|| ChatGPT | AI assistant desktop client |
+|| Linear | Project management tool |
+|| Obsidian | Knowledge base with Markdown |
+|| Raycast | Spotlight replacement with extensions |
+|| Rectangle Pro | Window management |
+|| Paste | Clipboard manager |
+|| **Design & Media** |  |
+|| Figma | Design tool |
+|| CleanShot | Screenshot and recording |
+|| **Communication** |  |
+|| Readdle Spark | Smart email client |
+|| **Security** |  |
+|| Bitwarden | Password manager |
+|| ProtonVPN | VPN client |
+|| Yubico Authenticator | 2FA with YubiKey |
+|| **Other** |  |
+|| Spotify | Music streaming |
+|| Archiver | File compression |
 
 ### Development Runtimes (via Mise)
 

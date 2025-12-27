@@ -74,11 +74,11 @@
     "**/.nx": true,
     "**/.turbo": true,
     "**/.next": true,
-    "**/tmp": false,
-    "**/build": false,
-    "**/dist": false,
-    "**/node_modules": false,
-    "**/*.log": false
+    "**/tmp": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/*.log": true
   },
 
   // Theme Settings
@@ -94,7 +94,6 @@
 
   // Cursor Settings
   "cursor.composer.usageSummaryDisplay": "always",
-  "cursor.composer.shouldAllowCustomModes": true,
   "cursor.cpp.enablePartialAccepts": true,
   "cursor.rpcFileLogger.enabled": true,
 
@@ -115,6 +114,10 @@
     "FIG_NEW_SESSION": "1"
   },
   "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "terminal.external.osxExec": "Warp.app",
+
+  // Vanilla CSS
+  "css.validate": false,
 
   // GIT Settings
   "git.autofetch": true,
@@ -232,6 +235,13 @@
       "source.sortImports": "never"
     }
   },
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file"
+  },
 
   // JavaScript/TypeScript General Settings
   "typescript.updateImportsOnFileMove.enabled": "never",
@@ -239,7 +249,7 @@
   "typescript.preferences.includePackageJsonAutoImports": "auto",
   "typescript.suggest.autoImports": true,
   "javascript.suggest.autoImports": true,
-  "typescript.tsserver.log": "normal",
+  "typescript.tsserver.log": "off",
   "javascript.validate.enable": false,
   "typescript.preferences.quoteStyle": "single",
   "javascript.preferences.quoteStyle": "single",
@@ -335,60 +345,17 @@
     "classlist",
     "classNames",
     "css",
-    "style",
-    // Commonly used in various libraries and frameworks
-    "tw",
-    "containerClassName",
-    "containerClassNames",
-    "contentClassName",
-    "contentClassNames",
-    "inputClassName",
-    "inputClassNames",
-    "buttonClassName",
-    "buttonClassNames",
-    "cardClassName",
-    "cardClassNames",
-    "headerClassName",
-    "headerClassNames",
-    "bodyClassName",
-    "bodyClassNames",
-    "footerClassName",
-    "footerClassNames",
-    "menuClassName",
-    "menuClassNames",
-    "menuItemClassName",
-    "menuItemClassNames",
-    "panelClassName",
-    "panelClassNames",
-    "labelClassName",
-    "labelClassNames",
-    "titleClassName",
-    "titleClassNames",
-    "wrapperClassName",
-    "wrapperClassNames",
-    "rootClassName",
-    "rootClassNames",
-    "navClassName",
-    "navClassNames",
-    "asideClassName",
-    "asideClassNames",
-    "mainClassName",
-    "mainClassNames",
-    "sectionClassName",
-    "sectionClassNames",
-    "articleClassName",
-    "articleClassNames",
-    "formClassName",
-    "formClassNames",
-    "fieldClassName",
-    "fieldClassNames",
-    "groupClassName",
-    "groupClassNames",
-    "iconClassName",
-    "iconClassNames"
+    "style"
   ],
   "tailwindCSS.emmetCompletions": true,
   "tailwindCSS.validate": true,
+  "tailwindCSS.lint.cssConflict": "warning",
+  "tailwindCSS.lint.invalidApply": "error",
+  "tailwindCSS.lint.invalidConfigPath": "error",
+  "tailwindCSS.lint.invalidScreen": "error",
+  "tailwindCSS.lint.invalidTailwindDirective": "error",
+  "tailwindCSS.lint.invalidVariant": "error",
+  "tailwindCSS.lint.recommendedVariantOrder": "warning",
 
   // Turbo Console Log Settings
   "turboConsoleLog.logMessagePrefix": "[LOG]: ",
@@ -422,11 +389,49 @@
   "importCost.mediumPackageDarkColor": "#b8860b",
   "importCost.smallPackageDarkColor": "#7cc36e",
 
+  // Go Lang
+  "gopls": { "ui.semanticTokens": true },
+  "[go]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.formatOnType": false,
+    "editor.formatOnSaveMode": "file",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "never",
+      "source.sortImports": "never"
+    }
+  },
+
   // Misc Settings
   "extensions.ignoreRecommendations": true,
-  "diffEditor.ignoreTrimWhitespace": true,
-  "cSpell.userWords": [
-    "dtos"
+  "diffEditor.ignoreTrimWhitespace": false,
+  "cSpell.userWords": ["dtos"],
+  "window.commandCenter": true,
+  "redhat.telemetry.enabled": false,
+  "docker.extension.enableComposeLanguageServer": true,
+  "cSpell.language": "en,pt,pt-BR",
+  "explorer.confirmDelete": false,
+  "update.releaseTrack": "prerelease",
+  "cSpell.enabledFileTypes": {
+    "yaml": false
+  },
+  "gitlab.featureFlags.flowBuilder": true,
+  "gitlab.showPipelineUpdateNotifications": true,
+  "gitlab.real-timeSecurityScan.enabled": true,
+  "explorer.confirmDragAndDrop": false,
+  "remote.SSH.remotePlatform": {
+    "root@108.61.66.250": "linux"
+  },
+  "remote.autoForwardPortsSource": "hybrid",
+  "sonarlint.connectedMode.connections.sonarcloud": [
+    {
+      "organizationKey": "witek",
+      "connectionId": "witek",
+      "region": "EU"
+    }
   ],
-  "window.commandCenter": true
+  "sonarlint.ideLabsEnabled": true,
+  "sonarlint.focusOnNewCode": false
 }

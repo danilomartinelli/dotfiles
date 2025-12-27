@@ -24,11 +24,11 @@ dockutil --add "/Applications/TablePlus.app" --no-restart
 # Add Lens
 dockutil --add "/Applications/Lens.app" --no-restart
 
-# Add Apidog
-dockutil --add "/Applications/Apidog.app" --no-restart
+# Add Postman
+dockutil --add "/Applications/Postman.app" --no-restart
 
-# Add iTerm
-dockutil --add "/Applications/iTerm.app" --no-restart
+# Add Warp
+dockutil --add "/Applications/Warp.app" --no-restart
 
 # Add OrbStack
 dockutil --add "/Applications/OrbStack.app" --no-restart

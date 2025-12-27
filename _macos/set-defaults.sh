@@ -49,6 +49,12 @@ defaults write com.apple.finder NewWindowTarget -string "PfHm"
 defaults write com.apple.finder NewWindowTargetPath -string "file://$HOME/"
 
 # === DOCK ===
+# Set Dock position (left, bottom, or right)
+defaults write com.apple.dock orientation -string "bottom"
+
+# Set Dock icon size (in pixels)
+defaults write com.apple.dock tilesize -int 48
+
 # Automatically hide and show the Dock
 defaults write com.apple.dock autohide -bool true
 
