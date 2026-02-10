@@ -22,6 +22,7 @@ brew 'usage'                        # Tool for working with usage-spec CLIs
 brew 'vim'                          # Highly configurable text editor built
 brew 'watchman'                     # File watching service for triggering actions on file changes
 brew 'wget'                         # File download utility
+brew 'zsh-syntax-highlighting'      # Syntax highlighting for Zsh
 
 # Desktop applications
 cask 'android-studio'               # Android development IDE
@@ -42,7 +43,6 @@ cask 'rectangle-pro'                # Window management tool
 cask 'spotify'                      # Music streaming service
 cask 'tableplus'                    # Database management tool
 cask 'wezterm'                      # GPU-accelerated cross-platform terminal emulator and multiplexer
-cask 'zsh-syntax-highlighting'      # Syntax highlighting for Zsh
 
 # Mac App Store applications
 mas 'Archiver 4', id: 1556026599                    # (Un)compress files
