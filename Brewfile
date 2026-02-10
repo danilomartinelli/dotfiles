@@ -42,6 +42,7 @@ cask 'rectangle-pro'                # Window management tool
 cask 'spotify'                      # Music streaming service
 cask 'tableplus'                    # Database management tool
 cask 'wezterm'                      # GPU-accelerated cross-platform terminal emulator and multiplexer
+cask 'zsh-syntax-highlighting'      # Syntax highlighting for Zsh
 
 # Mac App Store applications
 mas 'Archiver 4', id: 1556026599                    # (Un)compress files
