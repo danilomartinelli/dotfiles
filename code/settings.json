@@ -61,11 +61,11 @@
     "**/.nx": true,
     "**/.turbo": true,
     "**/.next": true,
-    "**/tmp": false,
-    "**/build": false,
-    "**/dist": false,
-    "**/node_modules": false,
-    "**/*.log": false
+    "**/tmp": true,
+    "**/build": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/*.log": true
   },
   "search.exclude": {
     "**/__pycache__": true,
@@ -87,15 +87,11 @@
   "workbench.productIconTheme": "fluent-icons",
   "workbench.editor.closeOnFileDelete": true,
   "workbench.editor.highlightModifiedTabs": true,
+  "workbench.editor.editorActionsLocation": "default",
   "editor.fontSize": 14,
   "editor.fontFamily": "'Monaspace Neon', monospace",
   "editor.inlineSuggest.fontFamily": "'Monaspace Krypton', monospace",
   "editor.fontLigatures": "'calt', 'liga', 'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'ss07', 'ss08', 'ss09'",
-
-  // Cursor Settings
-  "cursor.composer.usageSummaryDisplay": "always",
-  "cursor.cpp.enablePartialAccepts": true,
-  "cursor.rpcFileLogger.enabled": true,
 
   // Terminal Settings
   "terminal.integrated.sendKeybindingsToShell": true,
@@ -115,6 +111,9 @@
   },
   "terminal.integrated.enableMultiLinePasteWarning": "never",
   "terminal.external.osxExec": "Warp.app",
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.terminal.clear"
+  ],
 
   // Vanilla CSS
   "css.validate": false,
@@ -175,7 +174,7 @@
       "source.sortImports": "never"
     },
     "editor.quickSuggestions": {
-      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+      "strings": "on"
     }
   },
   "[javascriptreact]": {
@@ -190,7 +189,7 @@
       "source.sortImports": "never"
     },
     "editor.quickSuggestions": {
-      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+      "strings": "on"
     }
   },
   "[typescript]": {
@@ -205,7 +204,7 @@
       "source.sortImports": "never"
     },
     "editor.quickSuggestions": {
-      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+      "strings": "on"
     }
   },
   "[typescriptreact]": {
@@ -220,7 +219,7 @@
       "source.sortImports": "never"
     },
     "editor.quickSuggestions": {
-      "strings": "on" // Enable suggestions in strings for better UX with Tailwind CSS
+      "strings": "on"
     }
   },
   "[html]": {
@@ -407,31 +406,19 @@
   // Misc Settings
   "extensions.ignoreRecommendations": true,
   "diffEditor.ignoreTrimWhitespace": false,
-  "cSpell.userWords": ["dtos"],
   "window.commandCenter": true,
   "redhat.telemetry.enabled": false,
   "docker.extension.enableComposeLanguageServer": true,
-  "cSpell.language": "en,pt,pt-BR",
   "explorer.confirmDelete": false,
   "update.releaseTrack": "prerelease",
-  "cSpell.enabledFileTypes": {
-    "yaml": false
-  },
-  "gitlab.featureFlags.flowBuilder": true,
   "gitlab.showPipelineUpdateNotifications": true,
-  "gitlab.real-timeSecurityScan.enabled": true,
   "explorer.confirmDragAndDrop": false,
-  "remote.SSH.remotePlatform": {
-    "root@108.61.66.250": "linux"
-  },
   "remote.autoForwardPortsSource": "hybrid",
-  "sonarlint.connectedMode.connections.sonarcloud": [
-    {
-      "organizationKey": "witek",
-      "connectionId": "witek",
-      "region": "EU"
-    }
-  ],
-  "sonarlint.ideLabsEnabled": true,
-  "sonarlint.focusOnNewCode": false
+  "javascript.referencesCodeLens.enabled": true,
+  "javascript.referencesCodeLens.showOnAllFunctions": true,
+  "typescript.implementationsCodeLens.enabled": true,
+  "errorLens.codeLensEnabled": true,
+  "diffEditor.codeLens": true,
+  "typescript.referencesCodeLens.enabled": true,
+  "typescript.referencesCodeLens.showOnAllFunctions": true
 }

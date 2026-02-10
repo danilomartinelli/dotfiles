@@ -40,14 +40,10 @@ fi
 
 # Add Apps (only if they exist)
 add_app_to_dock "/Applications/Google Chrome.app" "Google Chrome"
-add_app_to_dock "/Applications/ChatGPT.app" "ChatGPT"
-add_app_to_dock "/Applications/Cursor.app" "Cursor"
 add_app_to_dock "/Applications/TablePlus.app" "TablePlus"
 add_app_to_dock "/Applications/Lens.app" "Lens"
 add_app_to_dock "/Applications/Postman.app" "Postman"
-add_app_to_dock "/Applications/Warp.app" "Warp"
 add_app_to_dock "/Applications/OrbStack.app" "OrbStack"
-add_app_to_dock "/Applications/Notion.app" "Notion"
 add_app_to_dock "/Applications/Figma.app" "Figma"
 add_app_to_dock "/Applications/Spark Desktop.app" "Spark Desktop"
 add_app_to_dock "/Applications/Spotify.app" "Spotify"
