@@ -10,9 +10,7 @@ if ! command -v mise >/dev/null 2>&1; then
 fi
 
 echo "› Installing Mise runtimes"
-mise install
-
-if [ $? -eq 0 ]; then
+if mise install; then
   echo "✓ Mise runtimes installed successfully"
 else
   echo "Error: Failed to install Mise runtimes" >&2

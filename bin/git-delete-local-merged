@@ -1,8 +1,23 @@
 #!/bin/sh
 #
-# Delete all local branches that have been merged into HEAD. Stolen from
-# our favorite @tekkub:
-#
-#   https://plus.google.com/115587336092124934674/posts/dXsagsvLakJ
+# Delete local branches merged into HEAD, preserving the current branch and the
+# conventional main/master branches. Git's non-forced delete remains the final
+# safety check.
 
-git branch -d `git branch --merged | grep -v '^*' | grep -v 'master' | tr -d '\n'`
+set -eu
+
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo 'Error: Not in a git repository.' >&2
+  exit 1
+fi
+
+current_branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+
+git for-each-ref --merged=HEAD --format='%(refname:short)' refs/heads/ |
+  while IFS= read -r branch; do
+    case "$branch" in
+      ''|"$current_branch"|main|master) continue ;;
+    esac
+
+    git branch -d -- "$branch"
+  done

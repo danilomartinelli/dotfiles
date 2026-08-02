@@ -20,11 +20,9 @@ if [ -z "$EDITOR" ]; then
   exit 1
 fi
 
-new_files=$(git ls-files --others --exclude-standard)
-
-if [ -z "$new_files" ]; then
+if [ -z "$(git ls-files --others --exclude-standard)" ]; then
   echo "No new, unstaged files found."
   exit 0
 fi
 
-$EDITOR $new_files
+git ls-files --others --exclude-standard -z | xargs -0 "$EDITOR"

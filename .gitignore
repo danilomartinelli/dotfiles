@@ -8,3 +8,6 @@ Brewfile.lock.json
 # IDEs
 .vscode/
 .idea/
+
+# Local agent workspace state
+.context/
