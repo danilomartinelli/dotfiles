@@ -4,6 +4,15 @@ set -e
 
 echo "› setting up ssh configuration"
 
+root_resolver=$HOME/.dotfiles-root
+if [ ! -L "$root_resolver" ] || [ ! -x "$root_resolver" ]; then
+  ssh_script_directory=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+  root_resolver=$ssh_script_directory/../dotfiles-root.symlink
+fi
+
+DOTFILES_ROOT=$("$root_resolver" "$0")
+export DOTFILES_ROOT
+
 # Validate ssh-keygen is available
 if ! command -v ssh-keygen >/dev/null 2>&1; then
   echo "Error: ssh-keygen is required but not installed." >&2
@@ -11,7 +20,7 @@ if ! command -v ssh-keygen >/dev/null 2>&1; then
 fi
 
 SSH_DIR="$HOME/.ssh"
-DOTFILES_SSH="$HOME/.dotfiles/ssh"
+DOTFILES_SSH="$DOTFILES_ROOT/ssh"
 
 # Validate source config exists
 if [ ! -f "$DOTFILES_SSH/config" ]; then

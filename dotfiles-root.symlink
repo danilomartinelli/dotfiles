@@ -1,0 +1,158 @@
+#!/bin/sh
+
+set -eu
+
+program_name=${0##*/}
+max_symlink_hops=64
+
+usage() {
+  cat <<EOF
+Usage: $program_name [--install] [anchor]
+
+Resolve the dotfiles checkout containing anchor. When anchor is omitted, the
+resolver locates the checkout containing itself.
+
+Options:
+  --install  Link this checkout's resolver to \$HOME/.dotfiles-root
+  -h, --help Show this help message
+EOF
+}
+
+fail() {
+  echo "$program_name: $*" >&2
+  exit 1
+}
+
+resolution_error() {
+  echo "$program_name: $*" >&2
+  return 1
+}
+
+resolve_path() {
+  resolver_path=$1
+
+  case "$resolver_path" in
+    */*) ;;
+    *)
+      if [ ! -e "$resolver_path" ] && [ ! -L "$resolver_path" ]; then
+        resolved_command=$(command -v "$resolver_path" 2>/dev/null || true)
+        [ -n "$resolved_command" ] || {
+          resolution_error "anchor is neither a path nor a command: $resolver_path"
+          return 1
+        }
+        resolver_path=$resolved_command
+      fi
+      ;;
+  esac
+
+  case "$resolver_path" in
+    /*) ;;
+    *) resolver_path=$PWD/$resolver_path ;;
+  esac
+
+  symlink_hops=0
+  while [ -L "$resolver_path" ]; do
+    symlink_hops=$((symlink_hops + 1))
+    [ "$symlink_hops" -le "$max_symlink_hops" ] || {
+      resolution_error "symlink cycle while resolving: $1"
+      return 1
+    }
+
+    link_target=$(readlink "$resolver_path") || {
+      resolution_error "cannot read symlink: $resolver_path"
+      return 1
+    }
+    link_directory=$(CDPATH='' cd -P -- "$(dirname -- "$resolver_path")" 2>/dev/null && pwd) || {
+      resolution_error "cannot resolve symlink directory: $resolver_path"
+      return 1
+    }
+
+    case "$link_target" in
+      /*) resolver_path=$link_target ;;
+      *) resolver_path=$link_directory/$link_target ;;
+    esac
+  done
+
+  [ -e "$resolver_path" ] || {
+    resolution_error "broken or missing anchor: $1"
+    return 1
+  }
+
+  if [ -d "$resolver_path" ]; then
+    CDPATH='' cd -P -- "$resolver_path" 2>/dev/null && pwd
+  else
+    resolved_directory=$(CDPATH='' cd -P -- "$(dirname -- "$resolver_path")" 2>/dev/null && pwd) || {
+      resolution_error "cannot resolve anchor directory: $1"
+      return 1
+    }
+    printf '%s/%s\n' "$resolved_directory" "$(basename -- "$resolver_path")"
+  fi
+}
+
+find_checkout_root() {
+  resolved_anchor=$(resolve_path "$1") || return 1
+
+  if [ -d "$resolved_anchor" ]; then
+    candidate_directory=$resolved_anchor
+  else
+    candidate_directory=$(dirname -- "$resolved_anchor")
+  fi
+
+  while :; do
+    if [ -f "$candidate_directory/dotfiles-root.symlink" ]; then
+      CDPATH='' cd -P -- "$candidate_directory" 2>/dev/null && pwd
+      return 0
+    fi
+
+    [ "$candidate_directory" != / ] || {
+      resolution_error "anchor is not inside a dotfiles checkout: $1"
+      return 1
+    }
+    candidate_directory=$(dirname -- "$candidate_directory")
+  done
+}
+
+mode=resolve
+case ${1:-} in
+  --install)
+    mode=install
+    shift
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  --*)
+    fail "unknown option: $1"
+    ;;
+esac
+
+[ "$#" -le 1 ] || fail "expected at most one anchor"
+
+anchor=${1:-$0}
+checkout_root=$(find_checkout_root "$anchor") || exit 1
+
+if [ "$mode" = install ]; then
+  [ -n "${HOME:-}" ] || fail 'HOME is not set'
+
+  source_path=$checkout_root/dotfiles-root.symlink
+  destination_path=$HOME/.dotfiles-root
+
+  if [ -e "$destination_path" ] && [ ! -L "$destination_path" ]; then
+    fail "refusing to overwrite non-symlink: $destination_path"
+  fi
+
+  if [ -L "$destination_path" ]; then
+    current_target=$(resolve_path "$destination_path" 2>/dev/null || true)
+    expected_target=$(resolve_path "$source_path") || fail "resolver is missing: $source_path"
+
+    if [ "$current_target" != "$expected_target" ]; then
+      rm "$destination_path"
+      ln -s "$source_path" "$destination_path"
+    fi
+  else
+    ln -s "$source_path" "$destination_path"
+  fi
+fi
+
+printf '%s\n' "$checkout_root"

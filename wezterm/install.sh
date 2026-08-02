@@ -9,9 +9,8 @@ fi
 
 echo "› setting up WezTerm configuration"
 
-# Define paths
+# Define the destination path
 WEZTERM_DIR="$HOME/.wezterm"
-DOTFILES_WEZTERM_DIR="$HOME/.dotfiles/wezterm"
 
 # Create WezTerm directory if it doesn't exist
 mkdir -p "$WEZTERM_DIR"

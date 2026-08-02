@@ -5,8 +5,10 @@
 set -e
 set -o pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-DOTFILES_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+SETUP_PATH=${BASH_SOURCE[0]}
+SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$SETUP_PATH")" && pwd)"
+ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
+DOTFILES_ROOT=$("$ROOT_RESOLVER" "$SETUP_PATH")
 export DOTFILES_ROOT
 
 BREW_BIN=''
@@ -337,6 +339,10 @@ run_dependency_pipeline() {
   install_topics
 }
 
+install_checkout_root_link() {
+  "$ROOT_RESOLVER" --install "$SETUP_PATH" >/dev/null
+}
+
 run_bootstrap() {
   run_critical 'local environment' setup_local_environment
   run_critical 'Git identity' setup_gitconfig
@@ -346,6 +352,7 @@ run_bootstrap() {
 }
 
 run_update() {
+  run_critical 'checkout root link' install_checkout_root_link
   run_advisory 'checkout refresh' update_checkout
   run_dependency_pipeline update
 }

@@ -1,5 +1,18 @@
-# shortcut to this dotfiles path is $ZSH
-export ZSH=$HOME/.dotfiles
+# Resolve the checkout containing this startup file, including linked worktrees.
+dotfiles_zshrc_path=${(%):-%N}
+dotfiles_root_resolver=$HOME/.dotfiles-root
+if [[ ! -L "$dotfiles_root_resolver" || ! -x "$dotfiles_root_resolver" ]]; then
+  dotfiles_root_resolver=${${dotfiles_zshrc_path:A}:h:h}/dotfiles-root.symlink
+fi
+
+if [[ ! -x "$dotfiles_root_resolver" ]]; then
+  print -u2 'Dotfiles checkout-root resolver not found. Run _scripts/bootstrap first.'
+  return 1
+fi
+
+DOTFILES_ROOT=$("$dotfiles_root_resolver" "$dotfiles_zshrc_path") || return 1
+export DOTFILES_ROOT
+unset dotfiles_root_resolver dotfiles_zshrc_path
 
 # your project folder that we can `c [tab]` to
 export PROJECTS=~/Code
@@ -13,15 +26,15 @@ then
 fi
 
 # common not sensitive variables
-if [[ -a $ZSH/.commonrc ]]
+if [[ -a $DOTFILES_ROOT/.commonrc ]]
 then
-  source $ZSH/.commonrc
+  source $DOTFILES_ROOT/.commonrc
 fi
 
 # all of our zsh files (excluding folders starting with _)
 typeset -U config_files
 config_files=()
-for dir in $ZSH/*; do
+for dir in $DOTFILES_ROOT/*; do
   if [[ $(basename "$dir") != _* ]]; then
     config_files+=($dir/**/*.zsh(N))
   fi
