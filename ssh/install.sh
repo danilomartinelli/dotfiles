@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e
+set -eu
 
 echo "› setting up ssh configuration"
 
@@ -13,125 +13,86 @@ fi
 DOTFILES_ROOT=$("$root_resolver" "$0")
 export DOTFILES_ROOT
 
-# Validate ssh-keygen is available
-if ! command -v ssh-keygen >/dev/null 2>&1; then
-  echo "Error: ssh-keygen is required but not installed." >&2
+SSH_DIR=$HOME/.ssh
+DOTFILES_SSH=$DOTFILES_ROOT/ssh
+SOURCE_CONFIG=$DOTFILES_SSH/config
+SOURCE_LOCAL_CONFIG=$DOTFILES_SSH/config_local.example
+SSH_CONFIG=$SSH_DIR/config
+SSH_LOCAL_CONFIG=$SSH_DIR/config_local
+
+fail() {
+  echo "Error: $*" >&2
   exit 1
-fi
-
-SSH_DIR="$HOME/.ssh"
-DOTFILES_SSH="$DOTFILES_ROOT/ssh"
-
-# Validate source config exists
-if [ ! -f "$DOTFILES_SSH/config" ]; then
-  echo "Error: Source config file not found: $DOTFILES_SSH/config" >&2
-  exit 1
-fi
-
-# Create SSH directory with correct permissions
-if [ ! -d "$SSH_DIR" ]; then
-    mkdir -p "$SSH_DIR"
-    chmod 700 "$SSH_DIR"
-fi
-
-# Remove existing files/links
-[ -f "$SSH_DIR/config" ] && rm "$SSH_DIR/config"
-[ -L "$SSH_DIR/config" ] && rm "$SSH_DIR/config"
-
-# Create symlinks
-ln -s "$DOTFILES_SSH/config" "$SSH_DIR/config"
-
-# Create config_local if it doesn't exist
-if [ ! -f "$SSH_DIR/config_local" ]; then
-    if [ -f "$DOTFILES_SSH/config_local.example" ]; then
-        cp "$DOTFILES_SSH/config_local.example" "$SSH_DIR/config_local"
-        chmod 600 "$SSH_DIR/config_local"
-        echo "  → created ~/.ssh/config_local (customize it for your servers)"
-    else
-        echo "Warning: config_local.example not found" >&2
-    fi
-fi
-
-# Set correct permissions for SSH directory and files
-chmod 700 "$SSH_DIR"
-chmod 600 "$SSH_DIR"/config* 2>/dev/null || true
-find "$SSH_DIR" -name "id_*" -not -name "*.pub" -exec chmod 600 {} \; 2>/dev/null || true
-find "$SSH_DIR" -name "*.pub" -exec chmod 644 {} \; 2>/dev/null || true
-
-# Generate SSH keys if they don't exist
-# Note: set -e is disabled for this function due to interactive prompts
-generate_key() {
-    set +e
-    local key_name="$1"
-    local comment="$2"
-    local key_type="$3"
-    local key_file="$SSH_DIR/$key_name"
-
-    if [ ! -f "$key_file" ]; then
-        echo "  → generating SSH key: $key_name ($key_type)"
-
-        # Prompt for passphrase (optional but recommended for security)
-        echo "    Enter passphrase for $key_name (press Enter for no passphrase):"
-        echo "    Note: Using a passphrase is strongly recommended for security"
-
-        # Generate key based on type
-        if [ "$key_type" = "ed25519" ]; then
-            if ssh-keygen -t ed25519 -f "$key_file" -C "$comment"; then
-                chmod 600 "$key_file"
-                chmod 644 "$key_file.pub"
-                echo "    ✓ created $key_file"
-            else
-                echo "    ✗ Failed to generate $key_name" >&2
-                return 1
-            fi
-        else
-            # RSA fallback with 4096 bits for compatibility
-            if ssh-keygen -t rsa -b 4096 -f "$key_file" -C "$comment"; then
-                chmod 600 "$key_file"
-                chmod 644 "$key_file.pub"
-                echo "    ✓ created $key_file"
-            else
-                echo "    ✗ Failed to generate $key_name" >&2
-                return 1
-            fi
-        fi
-    else
-        echo "  → $key_name already exists, skipping"
-    fi
-    set -e
 }
 
-# Get git email for key comments
-GIT_EMAIL=$(git config --global user.email 2>/dev/null || echo "$(whoami)@$(hostname)")
+canonical_file_path() {
+  canonical_input=$1
+  canonical_directory=$(CDPATH='' cd -P -- "$(dirname -- "$canonical_input")" 2>/dev/null && pwd) || return 1
+  printf '%s/%s\n' "$canonical_directory" "$(basename -- "$canonical_input")"
+}
 
-# Generate modern Ed25519 keys (recommended)
-echo ""
-echo "  Generating Ed25519 keys (recommended for security)..."
-generate_key "id_ed25519" "$GIT_EMAIL" "ed25519" || true
-generate_key "id_ed25519_personal" "$GIT_EMAIL (personal)" "ed25519" || true
-generate_key "id_ed25519_work" "$GIT_EMAIL (work)" "ed25519" || true
+config_link_is_current() {
+  [ -L "$SSH_CONFIG" ] || return 1
 
-# Generate RSA keys for legacy compatibility only if needed
-echo ""
-echo -n "  Do you need RSA keys for legacy system compatibility? (y/N): "
-read -r need_rsa || need_rsa=""
-if [ "$need_rsa" = "y" ] || [ "$need_rsa" = "Y" ]; then
-    echo "  Generating RSA keys for compatibility..."
-    generate_key "id_rsa" "$GIT_EMAIL" "rsa" || true
-    generate_key "id_rsa_personal" "$GIT_EMAIL (personal)" "rsa" || true
-    generate_key "id_rsa_work" "$GIT_EMAIL (work)" "rsa" || true
+  current_target=$(readlink "$SSH_CONFIG") || return 1
+  case "$current_target" in
+    /*) ;;
+    *) current_target=$SSH_DIR/$current_target ;;
+  esac
+
+  current_target=$(canonical_file_path "$current_target") || return 1
+  expected_target=$(canonical_file_path "$SOURCE_CONFIG") || return 1
+  [ "$current_target" = "$expected_target" ]
+}
+
+next_backup_path() {
+  backup_base=$1.backup
+  backup_path=$backup_base
+  backup_number=1
+
+  while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
+    backup_path=$backup_base.$backup_number
+    backup_number=$((backup_number + 1))
+  done
+
+  printf '%s\n' "$backup_path"
+}
+
+[ -f "$SOURCE_CONFIG" ] || fail "source config file not found: $SOURCE_CONFIG"
+[ -f "$SOURCE_LOCAL_CONFIG" ] || fail "local config template not found: $SOURCE_LOCAL_CONFIG"
+
+umask 077
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
+
+if config_link_is_current; then
+  echo "  → ~/.ssh/config already linked"
+else
+  if [ -e "$SSH_CONFIG" ] || [ -L "$SSH_CONFIG" ]; then
+    config_backup=$(next_backup_path "$SSH_CONFIG")
+    mv "$SSH_CONFIG" "$config_backup"
+    echo "  → backed up ~/.ssh/config to $config_backup"
+  fi
+
+  ln -s "$SOURCE_CONFIG" "$SSH_CONFIG"
+  echo "  → linked ~/.ssh/config"
 fi
 
-echo ""
+if [ ! -e "$SSH_LOCAL_CONFIG" ] && [ ! -L "$SSH_LOCAL_CONFIG" ]; then
+  cp "$SOURCE_LOCAL_CONFIG" "$SSH_LOCAL_CONFIG"
+  echo "  → created ~/.ssh/config_local (customize it for your servers)"
+elif [ ! -f "$SSH_LOCAL_CONFIG" ]; then
+  fail "$SSH_LOCAL_CONFIG must be a regular file or a symlink to one"
+fi
+
+chmod 600 "$SSH_LOCAL_CONFIG"
+
+for identity_file in "$SSH_DIR"/id_*; do
+  [ -f "$identity_file" ] || continue
+  case "$identity_file" in
+    *.pub) chmod 644 "$identity_file" ;;
+    *) chmod 600 "$identity_file" ;;
+  esac
+done
+
 echo "✓ ssh configuration complete"
-echo ""
-echo "📋 Next steps:"
-echo "  1. Add your public keys to GitHub, servers, etc:"
-echo "     cat ~/.ssh/id_ed25519.pub"
-echo "  2. Customize ~/.ssh/config_local with your servers"
-echo "  3. Test connections: ssh -T github.com"
-echo ""
-echo "🔐 Security Notes:"
-echo "  - Ed25519 keys are more secure and faster than RSA"
-echo "  - Always use passphrases for production keys"
-echo "  - Consider using ssh-agent or keychain for passphrase management"

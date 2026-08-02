@@ -85,6 +85,12 @@ esac
 exit 0
 EOF
 
+  cat > "$fixture/fake-bin/ssh-keygen" <<'EOF'
+#!/bin/sh
+printf 'ssh-keygen %s\n' "$*" >> "$SETUP_TEST_LOG"
+exit 99
+EOF
+
   cat > "$fixture/fake-bin/brew-template" <<'EOF'
 #!/bin/sh
 printf 'brew %s\n' "$*" >> "$SETUP_TEST_LOG"
@@ -155,6 +161,7 @@ EOF
   chmod +x \
     "$fixture/fake-bin/uname" \
     "$fixture/fake-bin/git" \
+    "$fixture/fake-bin/ssh-keygen" \
     "$fixture/fake-bin/brew-template" \
     "$fixture/fake-bin/editor" \
     "$fixture/homebrew/install.sh" \
@@ -180,6 +187,7 @@ make_fixture() {
     "$fixture/homebrew" \
     "$fixture/git" \
     "$fixture/sample" \
+    "$fixture/ssh" \
     "$fixture/bin" \
     "$fixture/fake-bin" \
     "$fixture/fake-prefix/bin" \
@@ -190,7 +198,11 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
+  cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
+  cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
+  cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
   chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink"
+  chmod +x "$fixture/ssh/install.sh"
 
   printf '%s\n' '# local environment' > "$fixture/.localrc.example"
   printf '%s\n' '# Brewfile fixture' > "$fixture/Brewfile"
@@ -238,8 +250,10 @@ test_setup_usage() {
 
 test_bootstrap_sequence() {
   local fixture
+  local fixture_ssh_config
 
   fixture=$(make_fixture)
+  fixture_ssh_config=$(cd "$fixture/ssh" && pwd -P)/config
   invoke "$fixture" "$fixture/_scripts/setup" bootstrap
 
   assert_before "$fixture/stdout.log" 'Git identity' 'dotfile links'
@@ -253,17 +267,21 @@ test_bootstrap_sequence() {
   assert_not_contains "$fixture/events.log" 'git '
   assert_not_contains "$fixture/events.log" 'brew update'
   assert_not_contains "$fixture/events.log" 'brew upgrade'
+  assert_not_contains "$fixture/events.log" ssh-keygen
   assert_not_contains "$fixture/events.log" topic-ignored
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
   [ -L "$fixture/home/.localrc" ]
   [ -L "$fixture/home/.config" ]
   [ -L "$fixture/home/.dotfiles-root" ]
+  [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
 }
 
 test_update_sequence_and_cwd_independence() {
   local fixture
+  local fixture_ssh_config
 
   fixture=$(make_fixture)
+  fixture_ssh_config=$(cd "$fixture/ssh" && pwd -P)/config
   (
     cd "$TEST_ROOT" || exit 1
     invoke "$fixture" "$fixture/_scripts/setup" update
@@ -279,8 +297,10 @@ test_update_sequence_and_cwd_independence() {
   assert_not_contains "$fixture/events.log" hostname
   assert_not_contains "$fixture/stdout.log" 'Git identity'
   assert_not_contains "$fixture/stdout.log" 'dotfile links'
+  assert_not_contains "$fixture/events.log" ssh-keygen
   assert_contains "$fixture/stdout.log" 'setup update complete'
   [ -L "$fixture/home/.dotfiles-root" ]
+  [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
 }
 
 test_advisory_failures_continue() {
