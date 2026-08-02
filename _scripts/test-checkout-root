@@ -113,7 +113,6 @@ rmdir "$TEST_HOME/.dotfiles-root"
 # Exercise Zsh startup and dot --edit through an isolated HOME.
 ln -s "$TEST_ROOT/dotfiles-root.symlink" "$TEST_HOME/.dotfiles-root"
 ln -s "$TEST_ROOT/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
-ln -s "$TEST_ROOT/z-monokai/z-monokai.symlink" "$TEST_HOME/.z-monokai"
 # shellcheck disable=SC2016 # The script is evaluated by the child Zsh process.
 if ! env -u ZSH HOME="$TEST_HOME" EXPECTED_ROOT="$TEST_ROOT" zsh -d -f -c '
     source "$HOME/.zshrc"
