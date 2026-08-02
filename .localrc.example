@@ -27,9 +27,9 @@
 # =======================================
 
 # Example API Keys
-export TWENTYFIRST_API_KEY="<CHANGE_ME>"
-export MORPH_API_KEY="<CHANGE_ME>"
-export TAVILY_API_KEY="<CHANGE_ME>"
+# export TWENTYFIRST_API_KEY="<CHANGE_ME>"
+# export MORPH_API_KEY="<CHANGE_ME>"
+# export TAVILY_API_KEY="<CHANGE_ME>"
 
 # ========================================
 # NOTE: Best Practices for Managing Secrets
