@@ -10,7 +10,7 @@ else
 fi
 
 # Add Homebrew paths and legacy /usr/local paths for compatibility
-export PATH="$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin:/usr/local/bin:/usr/local/sbin:$ZSH/bin:$PATH"
+export PATH="$HOMEBREW_PREFIX/bin:$HOMEBREW_PREFIX/sbin:/usr/local/bin:/usr/local/sbin:$DOTFILES_ROOT/bin:$PATH"
 
 # Set MANPATH with dynamic Homebrew prefix
 export MANPATH="$HOMEBREW_PREFIX/man:/usr/local/man:/usr/local/mysql/man:/usr/local/git/man:$MANPATH"

@@ -4,5 +4,14 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-exec "$SCRIPT_DIR/setup" bootstrap
+BOOTSTRAP_PATH=${BASH_SOURCE[0]}
+ROOT_RESOLVER=$HOME/.dotfiles-root
+if [ ! -L "$ROOT_RESOLVER" ] || [ ! -x "$ROOT_RESOLVER" ]; then
+  SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$BOOTSTRAP_PATH")" && pwd)
+  ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
+fi
+
+DOTFILES_ROOT=$("$ROOT_RESOLVER" "$BOOTSTRAP_PATH")
+export DOTFILES_ROOT
+
+exec "$DOTFILES_ROOT/_scripts/setup" bootstrap

@@ -189,7 +189,8 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
-  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults"
+  cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
+  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink"
 
   printf '%s\n' '# local environment' > "$fixture/.localrc.example"
   printf '%s\n' '# Brewfile fixture' > "$fixture/Brewfile"
@@ -256,6 +257,7 @@ test_bootstrap_sequence() {
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
   [ -L "$fixture/home/.localrc" ]
   [ -L "$fixture/home/.config" ]
+  [ -L "$fixture/home/.dotfiles-root" ]
 }
 
 test_update_sequence_and_cwd_independence() {
@@ -278,6 +280,7 @@ test_update_sequence_and_cwd_independence() {
   assert_not_contains "$fixture/stdout.log" 'Git identity'
   assert_not_contains "$fixture/stdout.log" 'dotfile links'
   assert_contains "$fixture/stdout.log" 'setup update complete'
+  [ -L "$fixture/home/.dotfiles-root" ]
 }
 
 test_advisory_failures_continue() {

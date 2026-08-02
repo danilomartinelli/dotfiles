@@ -25,6 +25,7 @@ _scripts/bootstrap
 # This will:
 # - Set up git configuration (prompts for name/email)
 # - Create symlinks for all config files
+# - Install the checkout resolver at ~/.dotfiles-root
 # - Install Homebrew and all dependencies
 # - Configure macOS defaults
 ```
@@ -53,6 +54,7 @@ update/upgrade, and hostname normalization warn and continue.
 
 ```text
 .dotfiles/
+├── dotfiles-root.symlink # Checkout-root resolver and home-directory seam
 ├── bin/                 # Custom executable scripts
 ├── functions/           # ZSH functions (auto-loaded)
 ├── _scripts/              # Setup and management scripts
@@ -286,7 +288,7 @@ A template file is provided at `.localrc.example` to help you get started:
 
 ```bash
 # Copy the template and customize it
-cp ~/.dotfiles/.localrc.example ~/.localrc
+cp "$DOTFILES_ROOT/.localrc.example" ~/.localrc
 chmod 600 ~/.localrc
 # Edit with your actual values
 vim ~/.localrc
@@ -299,34 +301,34 @@ To add a new tool or configuration:
 1. **Create a topic directory**:
 
 ```bash
-mkdir ~/.dotfiles/your-tool
+mkdir "$DOTFILES_ROOT/your-tool"
 ```
 
 1. **Add configuration files**:
 
 ```bash
 # Symlinked configuration
-echo "config" > ~/.dotfiles/your-tool/config.symlink
+echo "config" > "$DOTFILES_ROOT/your-tool/config.symlink"
 
 # Shell configuration
-echo "alias yt='your-tool'" > ~/.dotfiles/your-tool/aliases.zsh
+echo "alias yt='your-tool'" > "$DOTFILES_ROOT/your-tool/aliases.zsh"
 
 # PATH modifications
-echo 'export PATH="/path/to/your-tool:$PATH"' > ~/.dotfiles/your-tool/path.zsh
+echo 'export PATH="/path/to/your-tool:$PATH"' > "$DOTFILES_ROOT/your-tool/path.zsh"
 
 # Installation script
-cat > ~/.dotfiles/your-tool/install.sh << 'EOF'
+cat > "$DOTFILES_ROOT/your-tool/install.sh" << 'EOF'
 #!/bin/sh
 echo "› Installing your-tool"
 # Installation commands here
 EOF
-chmod +x ~/.dotfiles/your-tool/install.sh
+chmod +x "$DOTFILES_ROOT/your-tool/install.sh"
 ```
 
 1. **Run the installer**:
 
 ```bash
-~/.dotfiles/your-tool/install.sh
+"$DOTFILES_ROOT/your-tool/install.sh"
 # Or run it with every topic during the next daily update
 dot
 ```
@@ -337,9 +339,9 @@ dot
 
 The `.zshrc` loads configuration files in this specific order:
 
-1. **Environment**: Sets `$ZSH` and `$PROJECTS` variables
+1. **Environment**: Resolves `$DOTFILES_ROOT` from the startup file and sets `$PROJECTS`
 2. **Local secrets**: Sources `~/.localrc` if it exists (gitignored, sensitive variables)
-3. **Common variables**: Sources `$ZSH/.commonrc` if it exists (tracked in git, non-sensitive shared variables)
+3. **Common variables**: Sources `$DOTFILES_ROOT/.commonrc` if it exists (tracked in git, non-sensitive shared variables)
 4. **Path files**: All `*/path.zsh` files (PATH setup)
 5. **Main configs**: All `*.zsh` files except path and completion
 6. **Completions**: All `*/completion.zsh` files (after compinit)
@@ -351,6 +353,17 @@ Files with `.symlink` extension are automatically linked to your home directory:
 - `git/gitconfig.symlink` → `~/.gitconfig`
 - `zsh/zshrc.symlink` → `~/.zshrc`
 - `mise/mise.toml.symlink` → `~/.mise.toml`
+- `dotfiles-root.symlink` → `~/.dotfiles-root`
+
+`~/.dotfiles-root` accepts an optional script or command path and prints the
+physical checkout containing it. This keeps `dot`, shell startup, and installers
+on the invoking checkout when multiple Git worktrees exist.
+
+To establish or repair this link after upgrading an older checkout, run:
+
+```bash
+./dotfiles-root.symlink --install
+```
 
 ### Git Configuration
 
@@ -442,13 +455,13 @@ bin/dot
 brew update && brew upgrade
 
 # Update dotfiles only
-git -C ~/.dotfiles pull
+git -C "$DOTFILES_ROOT" pull
 
 # Reinstall dotfiles
-~/.dotfiles/_scripts/bootstrap
+"$DOTFILES_ROOT/_scripts/bootstrap"
 
 # Verify setup orchestration without changing the real machine
-~/.dotfiles/tests/setup_test.sh
+"$DOTFILES_ROOT/tests/setup_test.sh"
 ```
 
 ### Add New Homebrew Packages
@@ -458,7 +471,7 @@ git -C ~/.dotfiles pull
 brew install package-name
 
 # Add it to Brewfile for persistence
-echo "brew 'package-name'" >> ~/.dotfiles/Brewfile
+echo "brew 'package-name'" >> "$DOTFILES_ROOT/Brewfile"
 ```
 
 ## 🤝 Contributing

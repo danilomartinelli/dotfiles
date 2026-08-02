@@ -58,6 +58,9 @@ reload!
 # Test shell functions
 c <tab>              # Test project directory autocomplete
 extract file.zip     # Test archive extraction
+
+# Test checkout-root resolution, worktrees, and isolated shell startup
+_scripts/test-checkout-root
 ```
 
 ## Architecture & Code Structure
@@ -88,7 +91,7 @@ topic/
 
 The `.zshrc` loads configuration in this precise order (defined in `zsh/zshrc.symlink`):
 
-1. **Environment setup**: Sets `$ZSH` (`~/.dotfiles`) and `$PROJECTS` (`~/Code`)
+1. **Environment setup**: Resolves `$DOTFILES_ROOT` from `~/.dotfiles-root` and sets `$PROJECTS` (`~/Code`)
 2. **Local secrets**: Sources `~/.localrc` (gitignored sensitive vars)
 3. **Common vars**: Sources `.commonrc` (non-sensitive shared vars)
 4. **PATH files**: All `*/path.zsh` files from non-ignored topics
@@ -101,7 +104,8 @@ The `.zshrc` loads configuration in this precise order (defined in `zsh/zshrc.sy
 **`_scripts/setup`** (canonical setup module):
 
 - Exposes `bootstrap` and `update` modes to the command adapters
-- Resolves and owns the active checkout root
+- Uses the checkout root resolved by `dotfiles-root.symlink`
+- Installs or repairs the `~/.dotfiles-root` seam during updates
 - Owns phase order, failure policy, Homebrew setup, and topic discovery
 - Executes only sorted top-level `topic/install.sh` files and excludes reserved `_` topics
 - Stops on required setup failures while treating checkout/package refreshes and hostname normalization as advisory
@@ -111,6 +115,7 @@ The `.zshrc` loads configuration in this precise order (defined in `zsh/zshrc.sy
 - Prompts for git author name/email
 - Creates `git/gitconfig.local.symlink` from template
 - Symlinks all `*.symlink` files to home directory
+- Installs `dotfiles-root.symlink` as `~/.dotfiles-root`
 - Creates `~/.localrc` from `.localrc.example`
 - Applies macOS defaults and normalizes the hostname
 - Installs Homebrew, Brewfile dependencies, and topic configuration
@@ -145,7 +150,7 @@ Files starting with `_` in `functions/` are completion helpers (e.g., `_c` provi
 
 **`~/.localrc`**: Gitignored file for sensitive environment variables (API keys, tokens, credentials). Automatically sourced by `.zshrc` on shell startup.
 
-**`~/.dotfiles/.localrc.example`**: Template showing expected format. Bootstrap script creates `~/.localrc` from this template.
+**`$DOTFILES_ROOT/.localrc.example`**: Template showing expected format. Bootstrap script creates `~/.localrc` from this template.
 
 **Security**: Always `chmod 600 ~/.localrc` to restrict permissions.
 
@@ -156,8 +161,15 @@ Files ending in `.symlink` are automatically discovered by bootstrap script and 
 - `git/gitconfig.symlink` → `~/.gitconfig`
 - `zsh/zshrc.symlink` → `~/.zshrc`
 - `mise/mise.toml.symlink` → `~/.mise.toml`
+- `dotfiles-root.symlink` → `~/.dotfiles-root`
 
 The bootstrap script finds all `.symlink` files (excluding `.git` and `_*` folders) and creates symlinks in `~/.{basename}`.
+
+`~/.dotfiles-root [anchor]` is the single checkout-root interface. It follows
+symlinks and prints the physical checkout containing the invoking script, so
+commands and shell startup remain local to their Git worktree. Running
+`dotfiles-root.symlink --install` repairs the home-directory seam without
+overwriting a regular file or directory.
 
 ### Version Management
 
@@ -176,9 +188,9 @@ Run `mise install` to install/update all runtimes.
 
 ### When Adding New Topics
 
-1. Create directory: `mkdir ~/.dotfiles/newtopic`
+1. Create directory: `mkdir "$DOTFILES_ROOT/newtopic"`
 2. Add files following naming conventions (`aliases.zsh`, `install.sh`, etc.)
-3. Make install script executable: `chmod +x ~/.dotfiles/newtopic/install.sh`
+3. Make install script executable: `chmod +x "$DOTFILES_ROOT/newtopic/install.sh"`
 4. Run installer directly or use `dot` to execute every topic installer
 5. Reload shell: `reload!`
 
@@ -207,7 +219,7 @@ The public config includes `~/.gitconfig.local` so private settings override pub
 
 ## Key Environment Variables
 
-- `$ZSH`: Points to `~/.dotfiles`
+- `$DOTFILES_ROOT`: Physical path of the checkout containing the active dotfiles entrypoint
 - `$PROJECTS`: Points to `~/Code` (used by `c` function)
 - `$EDITOR`: Set by system/env.zsh
 - `$PNPM_HOME`: pnpm global bin directory

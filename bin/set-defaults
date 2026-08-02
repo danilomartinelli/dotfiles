@@ -4,7 +4,13 @@
 
 set -e
 
-SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
-DOTFILES_ROOT=$(dirname "$SCRIPT_DIR")
+ROOT_RESOLVER=$HOME/.dotfiles-root
+if [ ! -L "$ROOT_RESOLVER" ] || [ ! -x "$ROOT_RESOLVER" ]; then
+  SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+  ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
+fi
+
+DOTFILES_ROOT=$("$ROOT_RESOLVER" "$0")
+export DOTFILES_ROOT
 
 exec "$DOTFILES_ROOT/_macos/set-defaults.sh"
