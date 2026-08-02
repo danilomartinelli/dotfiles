@@ -1,0 +1,122 @@
+#!/bin/sh
+
+set -eu
+
+program_name=ssh-key-create
+
+usage() {
+  cat <<'EOF'
+Usage: ssh-key-create <default|personal|work> [--rsa]
+
+Create one SSH key pair. Ed25519 is used unless --rsa is provided.
+
+Examples:
+  ssh-key-create default
+  ssh-key-create personal
+  ssh-key-create work --rsa
+EOF
+}
+
+usage_error() {
+  echo "$program_name: $*" >&2
+  usage >&2
+  exit 2
+}
+
+case ${1:-} in
+  -h|--help)
+    [ "$#" -eq 1 ] || usage_error '--help does not accept additional arguments'
+    usage
+    exit 0
+    ;;
+esac
+
+[ "$#" -ge 1 ] || usage_error 'a key role is required'
+[ "$#" -le 2 ] || usage_error 'too many arguments'
+
+role=$1
+case "$role" in
+  default)
+    role_suffix=
+    test_host=github.com
+    ;;
+  personal)
+    role_suffix=_personal
+    test_host=github-personal
+    ;;
+  work)
+    role_suffix=_work
+    test_host=github-work
+    ;;
+  *) usage_error "unknown key role: $role" ;;
+esac
+
+key_type=ed25519
+if [ "$#" -eq 2 ]; then
+  [ "$2" = --rsa ] || usage_error "unknown option: $2"
+  key_type=rsa
+fi
+
+if ! command -v ssh-keygen >/dev/null 2>&1; then
+  echo "$program_name: ssh-keygen is required but was not found" >&2
+  exit 1
+fi
+
+SSH_DIR=$HOME/.ssh
+if [ "$key_type" = rsa ]; then
+  key_name=id_rsa$role_suffix
+else
+  key_name=id_ed25519$role_suffix
+fi
+
+key_path=$SSH_DIR/$key_name
+public_key_path=$key_path.pub
+
+if [ -e "$key_path" ] || [ -L "$key_path" ] || [ -e "$public_key_path" ] || [ -L "$public_key_path" ]; then
+  echo "$program_name: refusing to overwrite existing key material for $key_path" >&2
+  exit 1
+fi
+
+git_email=
+if command -v git >/dev/null 2>&1; then
+  git_email=$(git config --global user.email 2>/dev/null || true)
+fi
+
+if [ -z "$git_email" ]; then
+  key_user=${USER:-}
+  if [ -z "$key_user" ]; then
+    key_user=$(id -un)
+  fi
+  git_email=$key_user@$(hostname)
+fi
+
+case "$role" in
+  personal) key_comment=$git_email' (personal)' ;;
+  work) key_comment=$git_email' (work)' ;;
+  *) key_comment=$git_email ;;
+esac
+
+umask 077
+mkdir -p "$SSH_DIR"
+chmod 700 "$SSH_DIR"
+
+echo "› creating $role SSH key ($key_type)"
+keygen_status=0
+if [ "$key_type" = rsa ]; then
+  ssh-keygen -t rsa -b 4096 -f "$key_path" -C "$key_comment" || keygen_status=$?
+else
+  ssh-keygen -t ed25519 -f "$key_path" -C "$key_comment" || keygen_status=$?
+fi
+
+if [ "$keygen_status" -ne 0 ]; then
+  echo "$program_name: ssh-keygen failed for $key_path" >&2
+  exit "$keygen_status"
+fi
+
+chmod 600 "$key_path"
+chmod 644 "$public_key_path"
+
+echo "✓ created $key_path"
+echo "  Public key: $public_key_path"
+echo "  Add the public key to the remote service, then test with:"
+echo "    ssh -T $test_host"
