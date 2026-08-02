@@ -1,0 +1,368 @@
+#!/usr/bin/env bash
+#
+# Canonical dotfiles setup orchestration.
+
+set -e
+set -o pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+DOTFILES_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
+export DOTFILES_ROOT
+
+BREW_BIN=''
+LINK_ACTION=''
+overwrite_all=false
+backup_all=false
+skip_all=false
+
+info() {
+  printf '  [ \033[00;34m..\033[0m ] %s\n' "$1"
+}
+
+prompt() {
+  printf '  [ \033[0;33m??\033[0m ] %s\n' "$1"
+}
+
+success() {
+  printf '  [ \033[00;32mOK\033[0m ] %s\n' "$1"
+}
+
+warn() {
+  printf '  [\033[0;33mWARN\033[0m] %s\n' "$1" >&2
+}
+
+fail() {
+  printf '  [\033[0;31mFAIL\033[0m] %s\n' "$1" >&2
+  exit 1
+}
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: _scripts/setup bootstrap|update
+
+  bootstrap  Configure a new machine and install declared dependencies
+  update     Refresh the checkout and installed dependencies
+EOF
+}
+
+run_critical() {
+  local label
+  label=$1
+  shift
+
+  info "$label"
+  if "$@"; then
+    success "$label"
+  else
+    fail "$label"
+  fi
+}
+
+run_advisory() {
+  local label
+  label=$1
+  shift
+
+  info "$label"
+  if "$@"; then
+    success "$label"
+  else
+    warn "$label failed; continuing"
+  fi
+}
+
+setup_local_environment() {
+  if [ ! -f "$DOTFILES_ROOT/.localrc" ]; then
+    cp "$DOTFILES_ROOT/.localrc.example" "$DOTFILES_ROOT/.localrc" || return 1
+  fi
+
+  chmod 600 "$DOTFILES_ROOT/.localrc" || return 1
+}
+
+escape_sed_replacement() {
+  printf '%s\n' "$1" | sed 's/[\\&|]/\\&/g'
+}
+
+setup_gitconfig() {
+  local git_credential
+  local git_authorname
+  local git_authoremail
+  local git_authorname_escaped
+  local git_authoremail_escaped
+
+  if [ -f "$DOTFILES_ROOT/git/gitconfig.local.symlink" ]; then
+    return 0
+  fi
+
+  git_credential='cache'
+  if [ "$(uname -s)" = 'Darwin' ]; then
+    git_credential='osxkeychain'
+  fi
+
+  prompt 'What is your GitHub author name?'
+  read -r -e git_authorname || return 1
+  prompt 'What is your GitHub author email?'
+  read -r -e git_authoremail || return 1
+
+  git_authorname_escaped=$(escape_sed_replacement "$git_authorname")
+  git_authoremail_escaped=$(escape_sed_replacement "$git_authoremail")
+
+  sed \
+    -e "s|AUTHORNAME|$git_authorname_escaped|g" \
+    -e "s|AUTHOREMAIL|$git_authoremail_escaped|g" \
+    -e "s|GIT_CREDENTIAL_HELPER|$git_credential|g" \
+    "$DOTFILES_ROOT/git/gitconfig.local.symlink.example" \
+    > "$DOTFILES_ROOT/git/gitconfig.local.symlink"
+}
+
+choose_link_action() {
+  local src
+  local dst
+  local action
+
+  src=$1
+  dst=$2
+
+  while true; do
+    prompt "File already exists: $dst ($(basename "$src")). [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
+    read -r -n 1 action
+    printf '\n'
+
+    case "$action" in
+      o) LINK_ACTION=overwrite; return 0 ;;
+      O) overwrite_all=true; LINK_ACTION=overwrite; return 0 ;;
+      b) LINK_ACTION=backup; return 0 ;;
+      B) backup_all=true; LINK_ACTION=backup; return 0 ;;
+      s) LINK_ACTION=skip; return 0 ;;
+      S) skip_all=true; LINK_ACTION=skip; return 0 ;;
+      *) warn "Unknown choice: $action" ;;
+    esac
+  done
+}
+
+absolute_link_target() {
+  local dst
+  local target
+  local target_dir
+  local target_name
+
+  dst=$1
+  target=$2
+
+  case "$target" in
+    /*) printf '%s\n' "$target" ;;
+    *)
+      target_dir=$(dirname "$target")
+      target_name=$(basename "$target")
+      if cd "$(dirname "$dst")/$target_dir" 2>/dev/null; then
+        printf '%s/%s\n' "$(pwd -P)" "$target_name"
+      else
+        printf '%s\n' "$target"
+      fi
+      ;;
+  esac
+}
+
+link_file() {
+  local src
+  local dst
+  local src_abs
+  local current_src
+  local current_src_abs
+  local action
+
+  src=$1
+  dst=$2
+
+  if [ ! -f "$src" ] && [ ! -d "$src" ]; then
+    return 1
+  fi
+
+  src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
+
+  if [ -L "$dst" ]; then
+    current_src=$(readlink "$dst" 2>/dev/null || true)
+    current_src_abs=$(absolute_link_target "$dst" "$current_src")
+    if [ "$src_abs" = "$current_src_abs" ]; then
+      success "already linked $dst"
+      return 0
+    fi
+  fi
+
+  if [ -e "$dst" ] || [ -L "$dst" ]; then
+    if [ "$overwrite_all" = true ]; then
+      action=overwrite
+    elif [ "$backup_all" = true ]; then
+      action=backup
+    elif [ "$skip_all" = true ]; then
+      action=skip
+    else
+      choose_link_action "$src" "$dst" || return 1
+      action=$LINK_ACTION
+    fi
+
+    case "$action" in
+      overwrite)
+        rm -rf "$dst" || return 1
+        success "removed $dst"
+        ;;
+      backup)
+        mv "$dst" "${dst}.backup" || return 1
+        success "moved $dst to ${dst}.backup"
+        ;;
+      skip)
+        success "skipped $src"
+        return 0
+        ;;
+    esac
+  fi
+
+  ln -s "$src_abs" "$dst" || return 1
+  success "linked $src to $dst"
+}
+
+install_dotfile_links() {
+  local src
+
+  link_file "$DOTFILES_ROOT/.localrc" "$HOME/.localrc" || return 1
+
+  while IFS= read -r src; do
+    [ -n "$src" ] || continue
+    link_file "$src" "$HOME/.$(basename "${src%.*}")" || return 1
+  done < <(
+    find -H "$DOTFILES_ROOT" -maxdepth 2 -type f -name '*.symlink' \
+      -not -path '*/.git/*' -not -path '*/_*' -print 2>/dev/null | sort
+  )
+}
+
+apply_macos_configuration() {
+  if [ "$(uname -s)" != 'Darwin' ]; then
+    info 'macOS configuration skipped on this platform'
+    return 0
+  fi
+
+  run_critical 'macOS defaults' "$DOTFILES_ROOT/_macos/set-defaults.sh"
+  run_advisory 'hostname normalization' "$DOTFILES_ROOT/_macos/set-hostname.sh"
+}
+
+update_checkout() {
+  if ! git -C "$DOTFILES_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    warn "$DOTFILES_ROOT is not a Git checkout"
+    return 1
+  fi
+
+  git -C "$DOTFILES_ROOT" pull
+}
+
+locate_homebrew() {
+  local candidate
+
+  if command -v brew >/dev/null 2>&1; then
+    command -v brew
+    return 0
+  fi
+
+  for candidate in \
+    /opt/homebrew/bin/brew \
+    /usr/local/bin/brew \
+    /home/linuxbrew/.linuxbrew/bin/brew
+  do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+ensure_homebrew() {
+  local brew_prefix
+
+  "$DOTFILES_ROOT/homebrew/install.sh" || return 1
+  hash -r
+
+  if ! BREW_BIN=$(locate_homebrew); then
+    warn 'Homebrew installer completed but brew is unavailable'
+    return 1
+  fi
+
+  if ! brew_prefix=$("$BREW_BIN" --prefix); then
+    return 1
+  fi
+  PATH="$brew_prefix/bin:$brew_prefix/sbin:$PATH"
+  export PATH
+}
+
+install_declared_dependencies() {
+  run_critical 'Homebrew tap xo/xo' "$BREW_BIN" tap xo/xo
+  run_critical 'Brewfile dependencies' "$BREW_BIN" bundle --file "$DOTFILES_ROOT/Brewfile"
+}
+
+install_topics() {
+  local installer
+  local relative_installer
+
+  while IFS= read -r installer; do
+    [ -n "$installer" ] || continue
+    relative_installer=${installer#"$DOTFILES_ROOT"/}
+
+    case "$relative_installer" in
+      _*/*|homebrew/install.sh) continue ;;
+    esac
+
+    info "topic installer: $relative_installer"
+    if (cd "$DOTFILES_ROOT" && "$installer"); then
+      success "topic installer: $relative_installer"
+    else
+      fail "topic installer: $relative_installer"
+    fi
+  done < <(
+    find "$DOTFILES_ROOT" -mindepth 2 -maxdepth 2 -type f -name install.sh -print | sort
+  )
+}
+
+run_dependency_pipeline() {
+  local mode
+  mode=$1
+
+  run_critical 'Homebrew available' ensure_homebrew
+
+  if [ "$mode" = update ]; then
+    run_advisory 'Homebrew update' "$BREW_BIN" update
+    run_advisory 'Homebrew upgrade' "$BREW_BIN" upgrade
+  fi
+
+  install_declared_dependencies
+  install_topics
+}
+
+run_bootstrap() {
+  run_critical 'local environment' setup_local_environment
+  run_critical 'Git identity' setup_gitconfig
+  run_critical 'dotfile links' install_dotfile_links
+  apply_macos_configuration
+  run_dependency_pipeline bootstrap
+}
+
+run_update() {
+  run_advisory 'checkout refresh' update_checkout
+  run_dependency_pipeline update
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 2
+fi
+
+case "$1" in
+  bootstrap) run_bootstrap ;;
+  update) run_update ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
+printf '\n'
+success "setup $1 complete"

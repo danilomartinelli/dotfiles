@@ -24,7 +24,7 @@ fi
 # Get current hostname
 if ! hostname=$(scutil --get LocalHostName 2>/dev/null); then
   echo "Warning: Failed to get current hostname" >&2
-  exit 0
+  exit 1
 fi
 
 # If hostname is empty, skip
@@ -44,10 +44,11 @@ if [ "$normal_hostname" != "$hostname" ]; then
       echo "  ✓ Hostname updated successfully"
     else
       echo "  Warning: Failed to set ComputerName" >&2
+      exit 1
     fi
   else
     echo "  Warning: Failed to set LocalHostName (may require admin privileges)" >&2
-    exit 0
+    exit 1
   fi
 else
   echo "  ✓ Hostname is already normalized: $hostname"
