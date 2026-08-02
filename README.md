@@ -337,14 +337,26 @@ dot
 
 ### ZSH Loading Order
 
-The `.zshrc` loads configuration files in this specific order:
+`zsh/zshrc.symlink` is the public entry point. It resolves the active checkout
+and sources the private `zsh/_startup.zsh` module exactly once. That module owns
+the deterministic startup phases:
 
-1. **Environment**: Resolves `$DOTFILES_ROOT` from the startup file and sets `$PROJECTS`
-2. **Local secrets**: Sources `~/.localrc` if it exists (gitignored, sensitive variables)
-3. **Common variables**: Sources `$DOTFILES_ROOT/.commonrc` if it exists (tracked in git, non-sensitive shared variables)
-4. **Path files**: All `*/path.zsh` files (PATH setup)
-5. **Main configs**: All `*.zsh` files except path and completion
-6. **Completions**: All `*/completion.zsh` files (after compinit)
+1. **Environment**: Sets `$PROJECTS`, then sources optional `~/.localrc` and `.commonrc`
+2. **Baseline paths**: Discovers `$HOMEBREW_PREFIX` once and initializes PATH, MANPATH, functions, and fpath
+3. **Topic paths**: Sources sorted `*/path.zsh` extensions
+4. **Main configs**: Sources sorted topic `*.zsh` files except path, completion, and the private startup module
+5. **Custom prompt**: Loads `zsh/prompt.zsh` as the sole prompt implementation
+6. **Completion init**: Runs `compinit` once
+7. **Completion extensions**: Sources sorted `*/completion.zsh` files
+8. **Syntax highlighting**: Loads the optional Homebrew script last
+
+Directories and files whose names start with `_` are excluded from topic
+discovery. Reloading `.zshrc` keeps PATH, fpath, and shell hooks de-duplicated.
+Validate the full startup contract in an isolated temporary HOME with:
+
+```bash
+tests/zsh_startup_test.sh
+```
 
 ### Symlink Management
 

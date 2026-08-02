@@ -1,5 +1,5 @@
 # GRC colorizes nifty unix tools all over the place
-if (( $+commands[grc] )) && (( $+commands[brew] ))
+if (( $+commands[grc] )) && [[ -r "$HOMEBREW_PREFIX/etc/grc.bashrc" ]]
 then
-  source `brew --prefix`/etc/grc.bashrc
+  source "$HOMEBREW_PREFIX/etc/grc.bashrc"
 fi

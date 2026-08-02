@@ -50,6 +50,9 @@ _scripts/bootstrap
 # Test setup orchestration in isolated temporary fixtures
 tests/setup_test.sh
 
+# Test deterministic Zsh startup in an isolated temporary HOME
+tests/zsh_startup_test.sh
+
 # Reload shell configuration (after making changes)
 source ~/.zshrc
 # or use alias:
@@ -59,7 +62,7 @@ reload!
 c <tab>              # Test project directory autocomplete
 extract file.zip     # Test archive extraction
 
-# Test checkout-root resolution, worktrees, and isolated shell startup
+# Test checkout-root resolution, worktrees, and its startup seam
 _scripts/test-checkout-root
 ```
 
@@ -89,15 +92,22 @@ topic/
 
 ### Shell Loading Sequence
 
-The `.zshrc` loads configuration in this precise order (defined in `zsh/zshrc.symlink`):
+`zsh/zshrc.symlink` resolves the active checkout, exports `$DOTFILES_ROOT`, and
+sources the private `zsh/_startup.zsh` module exactly once. The module loads
+configuration in this precise order:
 
-1. **Environment setup**: Resolves `$DOTFILES_ROOT` from `~/.dotfiles-root` and sets `$PROJECTS` (`~/Code`)
-2. **Local secrets**: Sources `~/.localrc` (gitignored sensitive vars)
-3. **Common vars**: Sources `.commonrc` (non-sensitive shared vars)
-4. **PATH files**: All `*/path.zsh` files from non-ignored topics
-5. **Main configs**: All `*.zsh` files (except path.zsh and completion.zsh)
-6. **Completions init**: Runs `compinit`
-7. **Completion files**: All `*/completion.zsh` files
+1. **Environment setup**: Sets `$PROJECTS` (`~/Code`), then sources optional `~/.localrc` and `.commonrc`
+2. **Baseline paths**: Discovers and exports `$HOMEBREW_PREFIX` once, then initializes de-duplicated PATH, MANPATH, functions, and fpath
+3. **PATH files**: Sources sorted `*/path.zsh` files from non-ignored topics
+4. **Main configs**: Sources sorted topic `*.zsh` files except path, completion, and `zsh/prompt.zsh`
+5. **Custom prompt**: Sources `zsh/prompt.zsh` as the sole prompt implementation
+6. **Completions init**: Runs `compinit` once
+7. **Completion files**: Sources sorted `*/completion.zsh` files
+8. **Syntax highlighting**: Sources the optional Homebrew script last
+
+Topic discovery excludes every `_`-prefixed directory and file, including
+`zsh/_startup.zsh`. Loader-only `_dotfiles_*` variables are removed after each
+startup pass, and reloading `.zshrc` keeps PATH, fpath, and hooks de-duplicated.
 
 ### Key Scripts
 

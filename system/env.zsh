@@ -4,10 +4,6 @@
 # Set default umask (user: rwx, group: rx, others: rx)
 umask 022
 
-# Increase history size
-export HISTSIZE=10000
-export SAVEHIST=10000
-
 # Set default pager
 export PAGER="less"
 export LESS="-R"
