@@ -69,12 +69,7 @@ alias dynamoscan='aws dynamodb scan --table-name'
 alias dynamoquery='aws dynamodb query --table-name'
 
 # Cost Explorer shortcuts
-alias awscost='aws ce get-cost-and-usage --time-period Start=$(date -u -d "30 days ago" +%Y-%m-%d),End=$(date -u +%Y-%m-%d) --granularity MONTHLY --metrics "UnblendedCost" --group-by Type=DIMENSION,Key=SERVICE'
-
-# Profile shortcuts (work with use_aws_profile function)
-alias awsprofile='current_aws_profile'
-alias awsprofiles='list_aws_profiles'
-alias awsclear='clear_aws_profile'
+alias awscost='aws ce get-cost-and-usage --time-period Start=$(gdate -u -d "30 days ago" +%Y-%m-%d),End=$(gdate -u +%Y-%m-%d) --granularity MONTHLY --metrics "UnblendedCost" --group-by Type=DIMENSION,Key=SERVICE'
 
 # Common AWS operations with JSON output
 alias awsjson='aws --output json'

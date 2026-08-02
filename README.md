@@ -1,545 +1,308 @@
 # danilomartinelli's dotfiles
 
-> Personal macOS development environment configuration for JavaScript/TypeScript, DevOps, and infrastructure management.
+Personal macOS setup for JavaScript/TypeScript, mobile development, DevOps, and
+infrastructure work. The repository installs applications and runtimes, links
+configuration into the home directory, and exposes the commands documented
+below in every interactive Zsh session.
 
-## 🚀 Quick Start
+## First installation
 
-### Prerequisites
-
-- macOS (tested on Darwin 24.5.0)
-- Git
-- Command Line Tools for Xcode (`xcode-select --install`)
-
-### Installation
+Prerequisites: macOS, Git, and the Xcode Command Line Tools.
 
 ```bash
-# Clone the repository
+xcode-select --install
 git clone https://github.com/danilomartinelli/dotfiles.git ~/.dotfiles
-
-# Navigate to dotfiles
 cd ~/.dotfiles
-
-# Run the bootstrap script (first-time setup)
 _scripts/bootstrap
-
-# This will:
-# - Set up git configuration (prompts for name/email)
-# - Create symlinks for all config files
-# - Install the checkout resolver at ~/.dotfiles-root
-# - Install Homebrew and all dependencies
-# - Configure macOS defaults
 ```
 
-### Quick Update Command
+Bootstrap performs the complete first-run workflow:
+
+1. Creates the private `.localrc` from `.localrc.example` and restricts it to
+   mode `600`.
+2. Prompts for the Git author name and email and generates the private
+   `git/gitconfig.local.symlink`.
+3. Links `.localrc` and every public `*.symlink` file into the home directory,
+   including the `~/.dotfiles-root` checkout resolver.
+4. Applies the tracked macOS defaults and attempts hostname normalization.
+5. Installs Homebrew, every dependency in `Brewfile`, and every top-level topic
+   installer.
+
+Existing destination files are never silently replaced: bootstrap offers to
+skip, overwrite, or back them up. Git identity prompts only appear when the
+private Git config does not exist yet.
+
+After bootstrap, open a new shell or run:
 
 ```bash
-# Refresh the checkout, update Homebrew, and run topic installers
-bin/dot
+source ~/.zshrc
 ```
 
-After the first execution, you will have a alias for the command above.
+SSH setup is non-interactive and never creates credentials. Create keys later,
+one role at a time:
 
 ```bash
-dot
-```
-
-Both commands delegate to `_scripts/setup`, which owns phase ordering and
-failure handling. Bootstrap configures local identity, links dotfiles, applies
-macOS settings, and installs dependencies. Daily updates pull the checkout,
-refresh Homebrew, and rerun the declared topic installers without changing
-macOS preferences. Required phases stop on failure; checkout refresh, Homebrew
-update/upgrade, and hostname normalization warn and continue.
-
-## 📂 Repository Structure
-
-```text
-.dotfiles/
-├── dotfiles-root.symlink # Checkout-root resolver and home-directory seam
-├── bin/                 # Custom executable scripts
-├── functions/           # ZSH functions (auto-loaded)
-├── _scripts/              # Setup and management scripts
-├── */                   # Topic directories (see below)
-├── Brewfile            # Homebrew packages and apps
-├── CLAUDE.md           # Claude AI instructions
-└── .localrc.example     # Template for local secrets
-```
-
-### Topic Directory Structure
-
-Each topic follows this standard structure:
-
-```text
-topic/
-├── install.sh       # Installation script (optional)
-├── *.symlink        # Files to be symlinked to ~
-├── path.zsh         # PATH modifications (loaded first)
-├── aliases.zsh      # Command aliases
-├── env.zsh          # Environment variables
-├── completion.zsh   # Shell completions (loaded last)
-└── *.zsh           # Other configs (auto-loaded)
-```
-
-**⚠️ Important Architecture Rules:**
-
-- Folders starting with `_` are completely ignored (e.g., `_docs/`, `_archive/`)
-- Files starting with `_` are ignored even in regular folders
-- Standard file names must be exact: `path.zsh`, `aliases.zsh`, `completion.zsh`
-- Installation scripts must be named `install.sh`
-- Files ending in `.symlink` are automatically linked to home directory
-
-## 🛠 Installed Tools
-
-### Command Line Tools (via Homebrew)
-
-| Tool | Description |
-|------|-------------|
-| `awscli` | AWS Command Line Interface |
-| `coreutils` | GNU File, Shell, and Text utilities |
-| `dockutil` | Manage macOS dock items |
-| `duti` | Set default applications for file types |
-| `git` & `git-lfs` | Version control with large file support |
-| `gh` | GitHub CLI |
-| `go-task` | Task runner / build tool |
-| `helm` & `helmfile` | Kubernetes package management |
-| `imagemagick` | Image manipulation |
-| `jq` & `python-yq` | JSON/YAML processors |
-| `kubernetes-cli` & `kustomize` | Kubernetes tools |
-| `mas` | Mac App Store CLI |
-| `mise` | Runtime version manager |
-| `pandoc` | Document converter |
-| `pipx` | Install and run Python applications in isolated environments |
-| `spaceman-diff` | Visual diff for images |
-| `terragrunt` | Terraform wrapper |
-| `usql` | Universal command-line interface for SQL databases |
-| `usage` | Tool for working with usage-spec CLIs |
-| `vim` | Text editor |
-| `vultr` | Vultr CLI for managing cloud resources |
-| `watchman` | File watching service |
-| `wget` | File download utility |
-| `zsh-syntax-highlighting` | Fish shell-like syntax highlighting for Zsh |
-
-### Fonts (via Homebrew)
-
-| Font | Description |
-|------|-------------|
-| `font-fira-code` | Programming font with ligatures (Default) |
-| `font-fira-mono` | Programming font with ligatures (Mono) |
-| `font-jetbrains-mono` | Programming font with ligatures (Mono) |
-| `font-maple-mono` | Programming font with ligatures (Mono) |
-| `font-monaspace` | Programming font with ligatures (All styles) |
-
-### Desktop Applications
-
-|| Application | Description |
-||------------|-------------|
-|| **Development** |  |
-|| Android Studio | Android development IDE |
-|| Xcode | Apple development IDE |
-|| Warp | Modern terminal emulator |
-|| Cursor | AI-powered code editor |
-|| OrbStack | Docker Desktop alternative |
-|| Lens | Kubernetes IDE |
-|| TablePlus | Database management |
-|| Postman | API development and testing |
-|| Ngrok | Secure tunnels to localhost |
-|| **Productivity** |  |
-|| Google Chrome | Web browser |
-|| ChatGPT | AI assistant desktop client |
-|| Linear | Project management tool |
-|| Notion | Note-taking app |
-|| Obsidian | Knowledge base with Markdown |
-|| Raycast | Spotlight replacement with extensions |
-|| Rectangle Pro | Window management |
-|| Paste | Clipboard manager |
-|| **Design & Media** |  |
-|| Figma | Design tool |
-|| CleanShot | Screenshot and recording |
-|| VLC | Media player supporting various formats |
-|| **Communication** |  |
-|| Readdle Spark | Smart email client |
-|| **Security** |  |
-|| Bitwarden | Password manager |
-|| ProtonVPN | VPN client |
-|| Yubico Authenticator | 2FA with YubiKey |
-|| **Other** |  |
-|| Spotify | Music streaming |
-|| Archiver | File compression |
-
-### Development Runtimes (via Mise)
-
-Mise automatically manages versions for:
-
-- **Node.js** (25.2.1) with npm (11.6.3), pnpm (10.23.0), yarn (4.11.0)
-- **Bun** (1.3.2)
-- **Python** (3.14.0) with uv (automatic venv management)
-- **Go** (1.25.5)
-- **Rust** (1.91.1)
-- **Terraform** (1.14.0)
-
-Global npm packages:
-
-- `eas-cli` - Expo Application Services
-- `markdownlint-cli` - Markdown linter
-- `vercel` - Vercel CLI
-- `nx` - Monorepo tool
-
-## ⌨️ Aliases & Functions
-
-### Git Aliases
-
-| Alias | Command | Description |
-|-------|---------|-------------|
-| `gl` | `git pull --prune` | Pull with pruning |
-| `glog` | Enhanced git log | Pretty git log with graph |
-| `gp` | `git push origin HEAD` | Push current branch |
-| `gd` | `git diff --color` | Colored diff |
-| `gc` | `git commit -v` | Commit with verbose |
-| `gca` | `git commit -v -a` | Commit all with verbose |
-| `gco` | `git checkout` | Checkout |
-| `gcb` | `git copy-branch-name` | Copy current branch name |
-| `gb` | `git branch` | List branches |
-| `gs` | `git status -sb` | Short status |
-| `gac` | `git add -A && git commit -v` | Add all and commit |
-| `ge` | `git-edit-new` | Edit new files |
-
-### System Aliases
-
-| Alias | Command | Description |
-|-------|---------|-------------|
-| `reload!` | `. ~/.zshrc` | Reload shell configuration |
-| `cls` | `clear` | Clear screen |
-| `ls` | `gls -F --color` | Colorized ls with indicators |
-| `l` | `gls -lAh --color` | Long format with hidden files |
-| `ll` | `gls -l --color` | Long format |
-| `la` | `gls -A --color` | All files |
-
-### Docker Aliases
-
-| Alias | Command |
-|-------|---------|
-| `d` | `docker` |
-| `dc` | `docker-compose` |
-
-### Platform-Specific
-
-| Alias | Command | Description |
-|-------|---------|-------------|
-| `ios` | Opens iOS Simulator | Launch iOS Simulator |
-| `android` | `emulator -list-avds \| head -1 \| xargs emulator -avd` | Launch Android emulator |
-| `pubkey` | Copies the default Ed25519 or RSA public key | Copy an SSH public key |
-| `sshclean` | `rm -f ~/.ssh/sockets/*` | Clean SSH sockets |
-
-### Custom Functions
-
-| Function | Description | Usage |
-|----------|-------------|-------|
-| `c` | Jump to project directory | `c project-name` |
-| `extract` | Extract any archive file | `extract file.zip` |
-| `gf` | Switch git branch | `gf branch-name` |
-
-## 🔐 Secret Management
-
-### Local Secrets (.localrc)
-
-All sensitive environment variables should be stored in `~/.localrc` (not tracked in git). This file is automatically sourced by `.zshrc` on shell startup, making all variables available in your shell sessions.
-
-#### Setting Up .localrc
-
-```bash
-# Create your local configuration file
-touch ~/.localrc
-chmod 600 ~/.localrc  # Restrict permissions for security
-
-# Add your secrets and environment variables
-cat >> ~/.localrc << 'EOF'
-# API Keys and Tokens
-export GITHUB_TOKEN="your-github-token"
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-..."
-
-# AWS Credentials
-export AWS_ACCESS_KEY_ID="your-key-id"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_DEFAULT_REGION="us-east-1"
-
-# Database Connections
-export DATABASE_URL="postgresql://user:pass@host:5432/db"
-export REDIS_URL="redis://localhost:6379"
-
-# Application Secrets
-export JWT_SECRET="your-jwt-secret"
-export SESSION_SECRET="your-session-secret"
-
-# Custom Configuration
-export MY_APP_ENV="development"
-export API_BASE_URL="https://api.example.com"
-EOF
-```
-
-#### Best Practices
-
-- **Security**: Always use `chmod 600 ~/.localrc` to ensure only you can read the file
-- **Organization**: Group related variables with comments
-- **Updates**: Variables are loaded on shell startup; run `reload!` (alias for `source ~/.zshrc`) to apply changes immediately
-- **Backup**: Keep a secure backup of your secrets in a password manager (like Bitwarden)
-
-#### Example .localrc Template
-
-A template file is provided at `.localrc.example` to help you get started:
-
-```bash
-# Copy the template and customize it
-cp "$DOTFILES_ROOT/.localrc.example" ~/.localrc
-chmod 600 ~/.localrc
-# Edit with your actual values
-vim ~/.localrc
-```
-
-## 🗂 Creating New Topics
-
-To add a new tool or configuration:
-
-1. **Create a topic directory**:
-
-```bash
-mkdir "$DOTFILES_ROOT/your-tool"
-```
-
-1. **Add configuration files**:
-
-```bash
-# Symlinked configuration
-echo "config" > "$DOTFILES_ROOT/your-tool/config.symlink"
-
-# Shell configuration
-echo "alias yt='your-tool'" > "$DOTFILES_ROOT/your-tool/aliases.zsh"
-
-# PATH modifications
-echo 'export PATH="/path/to/your-tool:$PATH"' > "$DOTFILES_ROOT/your-tool/path.zsh"
-
-# Installation script
-cat > "$DOTFILES_ROOT/your-tool/install.sh" << 'EOF'
-#!/bin/sh
-echo "› Installing your-tool"
-# Installation commands here
-EOF
-chmod +x "$DOTFILES_ROOT/your-tool/install.sh"
-```
-
-1. **Run the installer**:
-
-```bash
-"$DOTFILES_ROOT/your-tool/install.sh"
-# Or run it with every topic during the next daily update
-dot
-```
-
-## 🔧 Configuration Details
-
-### ZSH Loading Order
-
-`zsh/zshrc.symlink` is the public entry point. It resolves the active checkout
-and sources the private `zsh/_startup.zsh` module exactly once. That module owns
-the deterministic startup phases:
-
-1. **Environment**: Sets `$PROJECTS`, then sources optional `~/.localrc` and `.commonrc`
-2. **Baseline paths**: Discovers `$HOMEBREW_PREFIX` once and initializes PATH, MANPATH, functions, and fpath
-3. **Topic paths**: Sources sorted `*/path.zsh` extensions
-4. **Main configs**: Sources sorted topic `*.zsh` files except path, completion, and the private startup module
-5. **Custom prompt**: Loads `zsh/prompt.zsh` as the sole prompt implementation
-6. **Completion init**: Runs `compinit` once
-7. **Completion extensions**: Sources sorted `*/completion.zsh` files
-8. **Syntax highlighting**: Loads the optional Homebrew script last
-
-Directories and files whose names start with `_` are excluded from topic
-discovery. Reloading `.zshrc` keeps PATH, fpath, and shell hooks de-duplicated.
-Validate the full startup contract in an isolated temporary HOME with:
-
-```bash
-tests/zsh_startup_test.sh
-```
-
-### Symlink Management
-
-Files with `.symlink` extension are automatically linked to your home directory:
-
-- `git/gitconfig.symlink` → `~/.gitconfig`
-- `zsh/zshrc.symlink` → `~/.zshrc`
-- `mise/mise.toml.symlink` → `~/.mise.toml`
-- `dotfiles-root.symlink` → `~/.dotfiles-root`
-
-`~/.dotfiles-root` accepts an optional script or command path and prints the
-physical checkout containing it. This keeps `dot`, shell startup, and installers
-on the invoking checkout when multiple Git worktrees exist.
-
-To establish or repair this link after upgrading an older checkout, run:
-
-```bash
-./dotfiles-root.symlink --install
-```
-
-### Git Configuration
-
-Git uses a split configuration:
-
-- Public settings: `git/gitconfig.symlink`
-- Private settings: `git/gitconfig.local.symlink` (generated on bootstrap)
-  - Contains your name, email, and credential helper
-
-### Common Variables (.commonrc)
-
-Non-sensitive environment variables that you want to share across different machines are stored in `.commonrc` (tracked in git). This file is automatically sourced by `.zshrc` after `.localrc` and before path files.
-
-Unlike `.localrc`, `.commonrc` is tracked in version control, so it's suitable for:
-
-- Locale settings (LANG, LC_ALL)
-- Default editor preferences
-- Non-sensitive configuration that should be consistent across machines
-
-**Note**: Sensitive data should always go in `~/.localrc`, not `.commonrc`.
-
-### SSH Configuration
-
-SSH setup includes:
-
-- OrbStack container access
-- Multiple GitHub account support
-- Development/staging/production server configs
-- Connection keepalive settings
-- Non-interactive, repeatable configuration during bootstrap and `dot`
-- Explicit role-based credential creation
-- Socket cleanup alias
-
-Automatic setup creates `~/.ssh` with secure permissions, links the tracked
-configuration, and creates `~/.ssh/config_local` from the example only when it
-is absent. Existing `config_local` content is preserved. If `~/.ssh/config` is
-not already the expected managed link, it is moved to the first available
-backup path (`config.backup`, `config.backup.1`, and so on) before the link is
-installed. Move any host-specific entries you still need from that backup into
-`config_local`.
-
-SSH keys are never generated by bootstrap or daily updates. Create one
-explicitly after setup:
-
-```bash
-# Ed25519 is the default
 ssh-key-create default
 ssh-key-create personal
 ssh-key-create work
-
-# RSA 4096 is available only when requested
 ssh-key-create work --rsa
 ```
 
-The roles map to `github.com`, `github-personal`, and `github-work`. The command
-uses the global Git email as the key comment, lets `ssh-keygen` prompt for the
-passphrase, and refuses to replace either half of an existing key pair.
+## Future updates
 
-Test the complete SSH provisioning contract without changing the real home
-directory:
+Use the public `dot` command for normal maintenance:
 
 ```bash
+dot
+```
+
+It repairs the checkout-root link, attempts `git pull`, ensures Homebrew is
+available, runs `brew update`, `brew upgrade`, and `brew bundle`, then reruns
+all topic installers. Checkout refresh and Homebrew update/upgrade are advisory;
+declared dependency and installer failures stop the run. Unlike bootstrap,
+`dot` does not recreate links, prompt for Git identity, or reapply macOS
+defaults.
+
+Other lifecycle commands:
+
+| Command | Purpose |
+| --- | --- |
+| `dot --edit` | Open the active checkout in `$EDITOR` |
+| `dot --help` | Show supported options |
+| `_scripts/bootstrap` | Run the complete first-machine installation |
+| `_scripts/setup bootstrap` | Canonical bootstrap implementation |
+| `_scripts/setup update` | Canonical daily-update implementation |
+| `dotfiles-root.symlink --install` | Repair `~/.dotfiles-root` for this checkout |
+| `set-defaults` | Explicitly reapply tracked macOS preferences |
+
+## What gets installed
+
+`Brewfile` is the source of truth for machine packages and applications. Setup
+enables the `xo/xo` tap before reconciling the file; it supplies the declared
+`archiver` formula.
+
+### Homebrew formulae
+
+| Formula | Purpose |
+| --- | --- |
+| `awscli` | AWS command-line interface |
+| `archiver` | Archive support used alongside the Archiver app |
+| `coreutils` | GNU utilities, including `gls` and `gdate` |
+| `dockutil` | Programmatic Dock configuration |
+| `duti` | Default application associations |
+| `gh` | GitHub CLI |
+| `git` | Git |
+| `git-lfs` | Git Large File Storage |
+| `helm` | Kubernetes package manager |
+| `helmfile` | Declarative Helm releases |
+| `imagemagick` | Image conversion and manipulation |
+| `jq` | JSON processing |
+| `kubernetes-cli` | `kubectl` |
+| `kustomize` | Kubernetes manifest customization |
+| `mas` | Mac App Store CLI |
+| `mise` | Runtime manager |
+| `opencode` | OpenCode CLI agent |
+| `pandoc` | Document conversion |
+| `spaceman-diff` | Visual image diffs |
+| `usage` | Usage-spec CLI support, including Mise completion |
+| `vim` | Terminal editor |
+| `watchman` | Filesystem watcher |
+| `wget` | File downloader |
+| `zsh-syntax-highlighting` | Zsh syntax highlighting |
+
+### Applications and fonts
+
+| Group | Homebrew casks |
+| --- | --- |
+| Development | `android-studio`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `wezterm`, `zed` |
+| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `rectangle-pro` |
+| Design and media | `cleanshot`, `figma`, `spotify` |
+| Security and communication | `bitwarden`, `whatsapp`, `yubico-authenticator` |
+| Fonts | `font-fira-code`, `font-fira-mono`, `font-jetbrains-mono`, `font-maple-mono`, `font-monaspace` |
+
+The Mac App Store entry is `Xcode` (app id `497799835`). Archiver itself must
+already be installed from the Mac App Store; `archiver/install.sh` only assigns
+its supported file associations when the app is present.
+
+### Mise runtimes
+
+`mise/mise.toml.symlink` installs the following exact declarations:
+
+| Tool | Version |
+| --- | --- |
+| `bun` | `1.3.2` |
+| `go` | `1.25.5` |
+| `node` | `latest` |
+| `npm` | `11.6.3` |
+| `npm:eas-cli` | `16.28.0` |
+| `npm:markdownlint-cli` | `0.46.0` |
+| `pnpm` | `10.23.0` |
+| `python` | `3.14.0` |
+| `ruby` | `latest` |
+| `rust` | `1.91.1` |
+| `terraform` | `1.14.0` |
+| `yarn` | `4.11.0` |
+
+Run `mise install` to reconcile only these runtimes.
+
+## Public commands
+
+`bin/` is a public command directory, not an internal implementation detail.
+Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
+`git-foo` or the preferred Git subcommand form `git foo`.
+
+### General utilities
+
+| Command | Usage and purpose |
+| --- | --- |
+| `battery-status` | Print the macOS battery indicator used by the prompt |
+| `dns-flush` | Flush the macOS DNS cache with `sudo` |
+| `dot` | Run daily dotfiles maintenance or open the checkout |
+| `e` | `e [path]`: open a path, or the current directory, in `$EDITOR` |
+| `headers` | `headers URL`: print HTTP response headers using `curl` |
+| `set-defaults` | Apply `_macos/set-defaults.sh` from the active checkout |
+| `ssh-key-create` | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
+
+### Git utilities
+
+| Executable | Preferred invocation and purpose |
+| --- | --- |
+| `git-all` | `git all`: stage all changes |
+| `git-amend` | `git amend`: amend with the existing commit message |
+| `git-copy-branch-name` | `git copy-branch-name`: copy the current branch name to the macOS clipboard |
+| `git-credit` | `git credit "Name" email`: amend the last commit with another author |
+| `git-delete-local-merged` | `git delete-local-merged`: delete branches merged into `HEAD`, preserving current, `main`, and `master` |
+| `git-edit-new` | `git edit-new`: open untracked files in `$EDITOR` |
+| `git-nuke` | `git nuke branch`: force-delete a local branch and delete the matching `origin` branch |
+| `git-promote` | `git promote`: push the current branch and configure `origin` tracking |
+| `git-rank-contributors` | `git rank-contributors [-v] [-o] [-h]`: rank authors by changed lines |
+| `git-track` | `git track`: track the matching existing branch on `origin` |
+| `git-undo` | `git undo`: soft-reset the latest commit while preserving changes |
+| `git-unpushed` | `git unpushed`: diff local commits not yet on the matching `origin` branch |
+| `git-unpushed-stat` | `git unpushed-stat`: summarize the unpushed diff and commit count |
+| `git-up` | `git up [pull options]`: pull and list newly received commits |
+| `git-wtf` | `git wtf [options]`: summarize local/remote branch relationships |
+
+`git nuke` changes both local and remote state. `git credit`, `git amend`, and
+`git undo` rewrite local commit state; inspect their help/comments before use.
+
+## Zsh functions and aliases
+
+`functions/` is added to `fpath` and autoloaded. Files without a leading `_`
+are public functions; leading-underscore files are completion implementations.
+The current public functions are:
+
+| Function | Usage and purpose |
+| --- | --- |
+| `c` | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Code`) |
+| `extract` | `extract archive`: extract supported tar, gzip, bzip2, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
+| `gf` | `gf remote-branch`: create a local branch tracking `origin/remote-branch` |
+| `pubkey` | Copy the default Ed25519 public key, falling back to RSA |
+
+The shell also exposes these aliases. Arguments written after an alias are
+passed to the expanded command.
+
+| Area | Aliases |
+| --- | --- |
+| Shell | `reload!` → source `~/.zshrc`; `cls` → clear |
+| Files | `ls`, `l`, `ll`, `la` → GNU `gls` variants |
+| Editor | `v`, `vi` → Vim; `vimrc` → edit `~/.vimrc` |
+| Homebrew | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc` |
+| Mise | `m`, `mi`, `mu`, `ml`, `mc` |
+| Docker | `d` → Docker; `dc` → Docker Compose |
+| Mobile | `android`, `android_devices`, `ios`, `ios_devices` |
+| SSH | `sshclean` → remove sockets and stop SSH processes |
+| Git | `gl`, `glog`, `gp`, `gd`, `gc`, `gca`, `gco`, `gcb`, `gb`, `gs`, `gac`, `ge` |
+| Kubectl context | `k`, `kk`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kctx-witek`, `kns` |
+| Kubectl resources | `kgp`, `kgpa`, `kgs`, `kgsa`, `kgd`, `kgda`, `kgn`, `kgns` |
+| Kubectl operations | `kdp`, `kds`, `kdd`, `kdn`, `kl`, `klf`, `klt`, `kaf`, `kdf`, `kex`, `kpf`, `kwp`, `kwpa` |
+| AWS basics/output | `awsl`, `awswho`, `awsregion`, `awsjson`, `awstable`, `awstext`, `awscost` |
+| AWS S3 | `s3ls`, `s3cp`, `s3mv`, `s3rm`, `s3sync`, `s3mb`, `s3rb`, `s3web` |
+| AWS EC2 | `ec2ls`, `ec2start`, `ec2stop`, `ec2reboot`, `ec2terminate`, `ec2ip` |
+| AWS Lambda/CloudFormation | `lambdals`, `lambdainvoke`, `lambdalogs`, `lambdadeploy`, `cfnls`, `cfnvalidate`, `cfnevents`, `cfnoutputs` |
+| AWS ECS/RDS | `ecsls`, `ecsservices`, `ecstasks`, `ecsdescribe`, `rdsls`, `rdsstart`, `rdsstop` |
+| AWS IAM/SSM | `iamusers`, `iamroles`, `iamgroups`, `iampolicies`, `ssmls`, `ssmget`, `ssmput`, `ssmsession` |
+| AWS CloudWatch/DynamoDB | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery` |
+
+## Repository architecture
+
+```text
+dotfiles/
+├── bin/                    # Public executables added to PATH
+├── functions/              # Public autoload functions and _ completions
+├── tests/                  # Repository tests; intentionally visible to tooling
+├── _scripts/               # Private setup adapters and orchestration
+├── _macos/                 # Private macOS configuration implementation
+├── topic/                  # Tool-specific shell files and optional installer
+├── Brewfile                # Homebrew source of truth
+├── dotfiles-root.symlink   # Worktree-aware checkout resolver
+└── .localrc.example        # Private environment template
+```
+
+Topic directories may contain:
+
+```text
+topic/
+├── install.sh       # Optional installer run by bootstrap and dot
+├── *.symlink        # Linked into the home directory during bootstrap
+├── path.zsh         # Loaded first
+├── aliases.zsh      # Loaded with main topic configuration
+├── env.zsh          # Loaded with main topic configuration
+├── completion.zsh   # Loaded after compinit
+└── *.zsh            # Other visible topic configuration
+```
+
+Top-level directories and nested files whose names begin with `_` are reserved
+and excluded from topic discovery. That convention is why implementation lives
+in `_scripts/` and `_macos/`. `tests/` deliberately does not use an underscore:
+tests are neither shell topics nor private startup implementation, and the
+conventional name keeps them discoverable by humans and tooling.
+
+### Zsh loading order
+
+`zsh/zshrc.symlink` resolves the checkout and sources `zsh/_startup.zsh` once.
+The startup module then:
+
+1. Loads `~/.localrc` followed by tracked `.commonrc`.
+2. Initializes Homebrew, `PATH`, `MANPATH`, function paths, and topic discovery.
+3. Sources sorted topic `path.zsh` files, then other visible `*.zsh` files.
+4. Loads the custom prompt as the sole prompt implementation.
+5. Runs `compinit` once and loads sorted `completion.zsh` files.
+6. Loads optional Zsh syntax highlighting last.
+
+Reloading remains idempotent: loader paths and hooks are de-duplicated.
+
+### Secrets and machine-local files
+
+Store secrets in the gitignored `.localrc`, which bootstrap links to
+`~/.localrc`. Store shared non-secret defaults in tracked `.commonrc`. Never
+commit the generated `git/gitconfig.local.symlink`. Keep private SSH hosts in
+`~/.ssh/config_local`; the tracked SSH config includes it and provisioning does
+not overwrite it.
+
+`.context/` is local Conductor/agent workspace state and is intentionally
+gitignored. It is not project configuration.
+
+## Validation
+
+All tests use temporary homes or fixtures and do not change the real machine:
+
+```bash
+tests/setup_test.sh
+tests/zsh_startup_test.sh
 tests/ssh_provisioning_test.sh
+tests/documentation_test.sh
+_scripts/test-checkout-root
 ```
 
-### macOS Defaults
+`tests/documentation_test.sh` guards README coverage for every `bin/` command,
+shell alias, public function, Brewfile package, and Mise tool declaration.
 
-The `_macos/set-defaults.sh` script configures:
+After changing shell configuration, run the relevant tests and then `reload!`.
 
-- System preferences
-- Finder settings
-- Dock configuration
-- Security preferences
+## Adding a topic or dependency
 
-## 📦 Custom Scripts
-
-The `bin/` directory contains custom utilities:
-
-### Git Utilities
-
-- `git-all` - Stage all unstaged files
-- `git-amend` - Amend the last commit
-- `git-copy-branch-name` - Copy current branch name to clipboard
-- `git-credit` - Credit an author on commits
-- `git-delete-local-merged` - Delete merged branches
-- `git-edit-new` - Open new, unstaged files in $EDITOR
-- `git-nuke` - Remove a branch locally and remotely (with validation)
-- `git-promote` - Promote a branch to track remote branch
-- `git-rank-contributors` - Rank git contributors
-- `git-track` - Set up branch to track remote branch
-- `git-undo` - Undo the last commit (keeps changes)
-- `git-unpushed` - Show diff of unpushed commits
-- `git-unpushed-stat` - Show diffstat of unpushed commits
-- `git-up` - Pull with log display
-- `git-wtf` - Display repository state in readable format
-
-### System Utilities
-
-- `add-credential` - Add AWS or Kubernetes credentials to .localrc
-- `battery-status` - Check battery status
-- `dns-flush` - Flush DNS cache
-- `dot` - Update dotfiles and dependencies
-- `e` - Open in $EDITOR
-- `ee` - Open current directory in $EDITOR
-- `gitio` - Shorten GitHub URLs using git.io
-- `headers` - Display HTTP headers from curl requests
-- `search` - Quick search using ack
-- `set-defaults` - Set macOS system defaults
-- `ssh-key-create` - Explicitly create a default, personal, or work SSH key
-
-## 🔄 Maintenance
-
-### Update Everything
-
-```bash
-# Pull latest dotfiles, update brew, and run installers
-bin/dot
-```
-
-### Update Specific Components
-
-```bash
-# Update Homebrew packages
-brew update && brew upgrade
-
-# Update dotfiles only
-git -C "$DOTFILES_ROOT" pull
-
-# Reinstall dotfiles
-"$DOTFILES_ROOT/_scripts/bootstrap"
-
-# Verify setup orchestration without changing the real machine
-"$DOTFILES_ROOT/tests/setup_test.sh"
-
-# Verify SSH provisioning and credential creation in temporary homes
-"$DOTFILES_ROOT/tests/ssh_provisioning_test.sh"
-```
-
-### Add New Homebrew Packages
-
-```bash
-# Install a new package
-brew install package-name
-
-# Add it to Brewfile for persistence
-echo "brew 'package-name'" >> "$DOTFILES_ROOT/Brewfile"
-```
-
-## 🤝 Contributing
-
-Feel free to fork this repository and customize it for your own use. If you have improvements that might benefit others, please submit a pull request!
-
-## 📝 Notes
-
-- This setup is specifically tailored for macOS development
-- The configuration assumes you're using ZSH as your shell
-- Many tools and configurations are specific to JavaScript/TypeScript and DevOps workflows
-- Always review scripts before running them on your system
-
-## 📄 License
-
-This repository contains personal configuration files. Feel free to use any part of this setup in your own dotfiles!
-
-## 🙏 Acknowledgments
-
-Inspired by and borrowed from many amazing dotfiles repositories in the community.
+Create a non-reserved top-level topic, follow the filenames above, make any
+`install.sh` executable, and run it directly or use `dot`. Add Homebrew items to
+`Brewfile`; add runtimes to `mise/mise.toml.symlink`. Update this README in the
+same change—the documentation test will report uncovered public names.

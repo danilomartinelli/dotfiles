@@ -1,263 +1,169 @@
 # AGENTS.md
 
-This file provides guidance to code assistants when working with code in this repository.
+Guidance for coding agents working in this personal macOS dotfiles repository.
 
-## Repository Overview
+## Scope and sources of truth
 
-This is a personal macOS dotfiles repository for JavaScript/TypeScript and DevOps development. It follows a topic-based architecture where each tool/topic has its own directory with standardized file patterns for configuration, installation, and shell integration.
+- `Brewfile` declares Homebrew formulae, casks, fonts, and the Xcode Mac App
+  Store installation.
+- `mise/mise.toml.symlink` declares language runtimes and global runtime tools.
+- `README.md` documents the user-facing install/update workflow and every
+  command, function, and alias exposed by the repository.
+- `.localrc` and `git/gitconfig.local.symlink` are generated, gitignored,
+  machine-private files. Never read secrets into logs or commit them.
 
-## Common Commands
+This repository is macOS-first and assumes interactive Zsh. Tests use isolated
+temporary homes and fixtures where possible.
 
-### Initial Setup
+## Commands
 
 ```bash
-# First-time installation
+# First machine installation (interactive and machine-changing)
 _scripts/bootstrap
 
-# This will:
-# - Prompt for git config (name/email)
-# - Create symlinks for all *.symlink files to ~
-# - Install Homebrew and all dependencies from Brewfile
-# - Configure macOS defaults
-# - Set up ~/.localrc from template
-```
-
-### Daily Usage
-
-```bash
-# Refresh the checkout, update Homebrew, and run topic installers
+# Daily checkout, Homebrew, and topic update
 bin/dot
-# or after first run:
+# Once the shell is configured:
 dot
 
-# Edit dotfiles in $EDITOR
+# Open the active checkout
 dot --edit
-```
 
-### Manual Updates
-
-```bash
-# Update Homebrew packages only
-brew update && brew upgrade
-
-# Re-run bootstrap (re-symlink configs)
-_scripts/bootstrap
-```
-
-### Testing & Validation
-
-```bash
-# Test setup orchestration in isolated temporary fixtures
+# Tests
 tests/setup_test.sh
-
-# Test deterministic Zsh startup in an isolated temporary HOME
 tests/zsh_startup_test.sh
-
-# Test SSH configuration and credential creation in isolated temporary homes
 tests/ssh_provisioning_test.sh
-
-# Reload shell configuration (after making changes)
-source ~/.zshrc
-# or use alias:
-reload!
-
-# Test shell functions
-c <tab>              # Test project directory autocomplete
-extract file.zip     # Test archive extraction
-
-# Test checkout-root resolution, worktrees, and its startup seam
+tests/documentation_test.sh
 _scripts/test-checkout-root
+
+# Shell/static validation
+zsh -n path/to/file.zsh
+shellcheck path/to/script
 ```
 
-## Architecture & Code Structure
+Do not run bootstrap, `dot`, `set-defaults`, Homebrew mutation commands, SSH key
+creation, or destructive Git utilities merely to validate a change. Their
+fixture tests are the safe verification path.
 
-### Topic-Based Organization
+## Public versus internal directories
 
-The repository uses a **topic directory pattern** where each tool/topic (git, docker, zsh, etc.) has its own directory with standardized filenames:
+- `bin/` is public. Zsh adds every executable there to `PATH`. `git-*` files
+  also become `git <subcommand>` commands.
+- `functions/` is public Zsh `fpath`. Files without `_` are callable functions;
+  `_name` files implement completion and are internal.
+- `tests/` is intentionally named without `_`. It is not a shell topic and is
+  never sourced or installed; the conventional name makes validation visible
+  to tooling and contributors.
+- `_scripts/`, `_macos/`, and underscore-prefixed files are private
+  implementation excluded from topic discovery.
+- `.context/` is disposable, gitignored Conductor/agent workspace state, not
+  project configuration.
 
-```
+Current public executables are `battery-status`, `dns-flush`, `dot`, `e`,
+`headers`, `set-defaults`, `ssh-key-create`, and the Git utilities `git-all`,
+`git-amend`, `git-copy-branch-name`, `git-credit`,
+`git-delete-local-merged`, `git-edit-new`, `git-nuke`, `git-promote`,
+`git-rank-contributors`, `git-track`, `git-undo`, `git-unpushed`,
+`git-unpushed-stat`, `git-up`, and `git-wtf`.
+
+Current public autoload functions are `c`, `extract`, and `gf`; `pubkey` is
+defined by `ssh/aliases.zsh`. Keep README coverage and
+`tests/documentation_test.sh` passing when changing this surface.
+
+## Topic architecture
+
+Each visible top-level topic may contain:
+
+```text
 topic/
-├── install.sh       # Runs during canonical setup dependency phases (optional)
-├── *.symlink        # Auto-linked to ~ (e.g., config.symlink → ~/.config)
-├── path.zsh         # PATH modifications (loaded first)
-├── aliases.zsh      # Command aliases
-├── env.zsh          # Environment variables
-├── completion.zsh   # Shell completions (loaded last)
-└── *.zsh           # Other shell configs (auto-loaded)
+├── install.sh       # Optional setup dependency phase
+├── *.symlink        # Linked to ~/.<basename> during bootstrap
+├── path.zsh         # PATH extension, loaded first
+├── aliases.zsh      # Main shell configuration
+├── env.zsh          # Main shell configuration
+├── completion.zsh   # Loaded after compinit
+└── *.zsh            # Other main configuration
 ```
 
-**Critical Architecture Rules:**
+Exact conventions matter:
 
-- Folders starting with `_` are completely ignored (e.g., `_scripts/`, `_macos/`)
-- Files starting with `_` are ignored even in regular topic folders
-- Standard filenames must be exact: `path.zsh`, `aliases.zsh`, `completion.zsh`, `install.sh`
-- Only `.symlink` files are automatically symlinked to home directory
+- Top-level `_` directories and nested `_` files/directories are ignored by
+  topic discovery.
+- Installers must be named `install.sh` and be executable.
+- Only `*.symlink` files are automatically linked.
+- Setup executes sorted, top-level `topic/install.sh` files only. It skips
+  reserved topics and `homebrew/install.sh`, which has its own phase.
 
-### Shell Loading Sequence
+## Setup ownership and lifecycle
 
-`zsh/zshrc.symlink` resolves the active checkout, exports `$DOTFILES_ROOT`, and
-sources the private `zsh/_startup.zsh` module exactly once. The module loads
-configuration in this precise order:
+`_scripts/setup` is the canonical implementation with two modes:
 
-1. **Environment setup**: Sets `$PROJECTS` (`~/Code`), then sources optional `~/.localrc` and `.commonrc`
-2. **Baseline paths**: Discovers and exports `$HOMEBREW_PREFIX` once, then initializes de-duplicated PATH, MANPATH, functions, and fpath
-3. **PATH files**: Sources sorted `*/path.zsh` files from non-ignored topics
-4. **Main configs**: Sources sorted topic `*.zsh` files except path, completion, and `zsh/prompt.zsh`
-5. **Custom prompt**: Sources `zsh/prompt.zsh` as the sole prompt implementation
-6. **Completions init**: Runs `compinit` once
-7. **Completion files**: Sources sorted `*/completion.zsh` files
-8. **Syntax highlighting**: Sources the optional Homebrew script last
+- `bootstrap`: create the private environment and Git identity, install links,
+  apply macOS defaults, ensure Homebrew, install the Brewfile, and run topic
+  installers.
+- `update`: repair `~/.dotfiles-root`, attempt `git pull`, update/upgrade
+  Homebrew, reconcile the Brewfile, and rerun topic installers. It does not
+  relink all dotfiles or apply macOS defaults.
 
-Topic discovery excludes every `_`-prefixed directory and file, including
-`zsh/_startup.zsh`. Loader-only `_dotfiles_*` variables are removed after each
-startup pass, and reloading `.zshrc` keeps PATH, fpath, and hooks de-duplicated.
+`_scripts/bootstrap` and `bin/dot` are stable adapters. Required phases stop on
+failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are
+advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the
+adapters.
 
-### Key Scripts
+`homebrew/install.sh` only makes Homebrew available. The dependency phase taps
+`xo/xo` before reconciling `Brewfile`. Topic installers currently configure
+Archiver associations, the Dock, Mise runtimes, SSH config, and WezTerm
+terminfo.
 
-**`_scripts/setup`** (canonical setup module):
+## Checkout-root contract
 
-- Exposes `bootstrap` and `update` modes to the command adapters
-- Uses the checkout root resolved by `dotfiles-root.symlink`
-- Installs or repairs the `~/.dotfiles-root` seam during updates
-- Owns phase order, failure policy, Homebrew setup, and topic discovery
-- Executes only sorted top-level `topic/install.sh` files and excludes reserved `_` topics
-- Stops on required setup failures while treating checkout/package refreshes and hostname normalization as advisory
+`dotfiles-root.symlink` is the sole checkout-root interface. It resolves
+symlinks and returns the physical checkout containing an anchor, which keeps
+commands local to the invoking Git worktree. `--install` repairs
+`~/.dotfiles-root` but refuses to overwrite a regular file or directory.
 
-**`_scripts/bootstrap`** (first-time adapter):
+Public adapters should resolve through `~/.dotfiles-root` and fall back to the
+repository copy beside the adapter. Do not reintroduce fixed `~/.dotfiles`
+paths. Validate changes with `_scripts/test-checkout-root`.
 
-- Prompts for git author name/email
-- Creates `git/gitconfig.local.symlink` from template
-- Symlinks all `*.symlink` files to home directory
-- Installs `dotfiles-root.symlink` as `~/.dotfiles-root`
-- Creates `~/.localrc` from `.localrc.example`
-- Applies macOS defaults and normalizes the hostname
-- Installs Homebrew, Brewfile dependencies, and topic configuration
+## Zsh startup contract
 
-**`bin/dot`** (daily update adapter):
+`zsh/zshrc.symlink` resolves the checkout, exports `DOTFILES_ROOT`, and sources
+`zsh/_startup.zsh` once. The private startup module owns this order:
 
-- Pulls latest dotfiles from git
-- Ensures and updates Homebrew
-- Runs `brew bundle` to install Brewfile packages
-- Executes sorted top-level `install.sh` scripts in non-reserved topic directories
-- Does not reapply macOS defaults or hostname normalization
+1. Set `PROJECTS=~/Code`; source optional `~/.localrc`, then `.commonrc`.
+2. Discover `HOMEBREW_PREFIX`; initialize unique `PATH`, `MANPATH`, `fpath`, and
+   autoload functions.
+3. Source sorted visible `*/path.zsh` files.
+4. Source other sorted visible topic `*.zsh` files except completions and the
+   authoritative prompt.
+5. Source `zsh/prompt.zsh` as the sole prompt.
+6. Run `compinit` once and source sorted `*/completion.zsh` files.
+7. Source optional Homebrew Zsh syntax highlighting last.
 
-**`ssh/install.sh`** (automatic SSH configuration):
+Reloading must keep paths, hooks, and implementation variables de-duplicated.
+Validate any startup change with `tests/zsh_startup_test.sh`.
 
-- Runs non-interactively during both bootstrap and daily updates
-- Installs the tracked config link and preserves `config_local`
-- Moves conflicting `~/.ssh/config` entries to collision-safe backup names
-- Repairs SSH directory, local config, and top-level identity permissions
-- Never generates credentials or invokes `ssh-keygen`
+## SSH contract
 
-**`bin/ssh-key-create`** (explicit credential adapter):
+`ssh/install.sh` runs non-interactively during bootstrap and updates. It repairs
+permissions, links tracked `ssh/config`, preserves `~/.ssh/config_local`, and
+moves a conflicting config to the first free backup suffix. It must never
+generate, rotate, delete, or upload credentials.
 
-- Resolves the active checkout and delegates to the SSH topic implementation
-- Creates one `default`, `personal`, or `work` key at a time
-- Uses Ed25519 by default and RSA 4096 only with `--rsa`
-- Refuses to overwrite existing private or public key material
+`bin/ssh-key-create` is the explicit credential adapter. It delegates to
+`ssh/create-key`, accepts `default`, `personal`, or `work`, uses Ed25519 unless
+`--rsa` is provided, and refuses to overwrite either half of a key pair.
+Validate with `tests/ssh_provisioning_test.sh`.
 
-### Custom Executables
+## Editing rules
 
-The `bin/` directory is added to PATH and contains custom git utilities and system tools. All are executable scripts that can be called directly:
-
-**Git utilities**: `git-amend`, `git-credit`, `git-delete-local-merged`, `git-nuke`, `git-promote`, `git-rank-contributors`, `git-undo`
-
-**System utilities**: `battery-status`, `dns-flush`, `e` (open in $EDITOR), `ee` (open current dir in $EDITOR), `ssh-key-create`
-
-### Functions
-
-The `functions/` directory contains auto-loaded ZSH functions:
-
-- **`c`**: Jump to project in `$PROJECTS` directory with autocomplete (uses `functions/_c` for completion)
-- **`extract`**: Extract any archive format (tar, zip, rar, etc.)
-- **`gf`**: Git branch switcher with fuzzy finding
-
-Files starting with `_` in `functions/` are completion helpers (e.g., `_c` provides autocomplete for `c` command).
-
-### Secret Management
-
-**`~/.localrc`**: Gitignored file for sensitive environment variables (API keys, tokens, credentials). Automatically sourced by `.zshrc` on shell startup.
-
-**`$DOTFILES_ROOT/.localrc.example`**: Template showing expected format. Bootstrap script creates `~/.localrc` from this template.
-
-**Security**: Always `chmod 600 ~/.localrc` to restrict permissions.
-
-### Symlink Pattern
-
-Files ending in `.symlink` are automatically discovered by bootstrap script and linked to home directory:
-
-- `git/gitconfig.symlink` → `~/.gitconfig`
-- `zsh/zshrc.symlink` → `~/.zshrc`
-- `mise/mise.toml.symlink` → `~/.mise.toml`
-- `dotfiles-root.symlink` → `~/.dotfiles-root`
-
-The bootstrap script finds all `.symlink` files (excluding `.git` and `_*` folders) and creates symlinks in `~/.{basename}`.
-
-`~/.dotfiles-root [anchor]` is the single checkout-root interface. It follows
-symlinks and prints the physical checkout containing the invoking script, so
-commands and shell startup remain local to their Git worktree. Running
-`dotfiles-root.symlink --install` repairs the home-directory seam without
-overwriting a regular file or directory.
-
-### Version Management
-
-**Mise** (`~/.mise.toml`) manages language runtimes automatically:
-
-- Node.js LTS + global packages (eas-cli, vercel, nx)
-- Python 3.11 + tools (ruff, uv)
-- Go 1.21
-- Rust 1.83.0
-- Elixir 1.18 + Erlang 27
-- Terraform latest
-
-Run `mise install` to install/update all runtimes.
-
-## Important Notes
-
-### When Adding New Topics
-
-1. Create directory: `mkdir "$DOTFILES_ROOT/newtopic"`
-2. Add files following naming conventions (`aliases.zsh`, `install.sh`, etc.)
-3. Make install script executable: `chmod +x "$DOTFILES_ROOT/newtopic/install.sh"`
-4. Run installer directly or use `dot` to execute every topic installer
-5. Reload shell: `reload!`
-
-### When Modifying Configurations
-
-- Changes to `.zsh` files require `reload!` to take effect
-- Changes to `.symlink` files affect the symlinked version in `~`
-- Symlink changes require re-running `_scripts/bootstrap`
-- New Homebrew packages should be added to `Brewfile`
-
-### Git Configuration Split
-
-Git config is split between:
-
-- **Public**: `git/gitconfig.symlink` (tracked in git)
-- **Private**: `git/gitconfig.local.symlink` (generated by bootstrap, gitignored)
-
-The public config includes `~/.gitconfig.local` so private settings override public ones.
-
-### SSH Configuration Split
-
-- **Public**: `ssh/config` is linked to `~/.ssh/config` by the automatic topic installer.
-- **Private**: `~/.ssh/config_local` is created from the tracked example only when absent and is never replaced.
-- **Credentials**: `ssh-key-create <default|personal|work> [--rsa]` is the only key-generation interface; setup remains non-interactive.
-
-When another `~/.ssh/config` exists, provisioning moves it to the first free
-`config.backup` suffix before linking the tracked config. Existing keys are
-never rotated, deleted, or uploaded.
-
-### macOS Specific
-
-- `_macos/set-defaults.sh` sets macOS system defaults
-- `_macos/set-hostname.sh` normalizes macOS hostname suffixes
-- `dockutil/install.sh` configures dock items
-- Many scripts assume macOS-specific commands (e.g., `gls` from GNU coreutils)
-
-## Key Environment Variables
-
-- `$DOTFILES_ROOT`: Physical path of the checkout containing the active dotfiles entrypoint
-- `$PROJECTS`: Points to `~/Code` (used by `c` function)
-- `$EDITOR`: Set by system/env.zsh
-- `$PNPM_HOME`: pnpm global bin directory
+- Preserve unrelated work in a dirty worktree.
+- Add Homebrew dependencies to `Brewfile`, runtimes to
+  `mise/mise.toml.symlink`, and public command documentation to `README.md`.
+- New topic installers must be idempotent and non-interactive because both
+  bootstrap and daily updates run them.
+- Shell startup changes must remain safe to source repeatedly.
+- Keep secrets in `.localrc` with mode `600`; shared non-secret environment
+  belongs in `.commonrc`.
+- Prefer fixture tests over commands that mutate the actual Mac.
