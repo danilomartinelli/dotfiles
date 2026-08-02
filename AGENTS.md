@@ -25,7 +25,7 @@ _scripts/bootstrap
 ### Daily Usage
 
 ```bash
-# Update everything (dotfiles, brew packages, run all installers)
+# Refresh the checkout, update Homebrew, and run topic installers
 bin/dot
 # or after first run:
 dot
@@ -40,9 +40,6 @@ dot --edit
 # Update Homebrew packages only
 brew update && brew upgrade
 
-# Re-run all installers
-_scripts/install
-
 # Re-run bootstrap (re-symlink configs)
 _scripts/bootstrap
 ```
@@ -50,6 +47,9 @@ _scripts/bootstrap
 ### Testing & Validation
 
 ```bash
+# Test setup orchestration in isolated temporary fixtures
+tests/setup_test.sh
+
 # Reload shell configuration (after making changes)
 source ~/.zshrc
 # or use alias:
@@ -68,7 +68,7 @@ The repository uses a **topic directory pattern** where each tool/topic (git, do
 
 ```
 topic/
-├── install.sh       # Runs during _scripts/install (optional)
+├── install.sh       # Runs during canonical setup dependency phases (optional)
 ├── *.symlink        # Auto-linked to ~ (e.g., config.symlink → ~/.config)
 ├── path.zsh         # PATH modifications (loaded first)
 ├── aliases.zsh      # Command aliases
@@ -98,27 +98,30 @@ The `.zshrc` loads configuration in this precise order (defined in `zsh/zshrc.sy
 
 ### Key Scripts
 
-**`_scripts/bootstrap`** (first-time setup):
+**`_scripts/setup`** (canonical setup module):
+
+- Exposes `bootstrap` and `update` modes to the command adapters
+- Resolves and owns the active checkout root
+- Owns phase order, failure policy, Homebrew setup, and topic discovery
+- Executes only sorted top-level `topic/install.sh` files and excludes reserved `_` topics
+- Stops on required setup failures while treating checkout/package refreshes and hostname normalization as advisory
+
+**`_scripts/bootstrap`** (first-time adapter):
 
 - Prompts for git author name/email
 - Creates `git/gitconfig.local.symlink` from template
 - Symlinks all `*.symlink` files to home directory
 - Creates `~/.localrc` from `.localrc.example`
-- Runs `_macos/install.sh` for macOS defaults
-- Calls `bin/dot` to install dependencies
+- Applies macOS defaults and normalizes the hostname
+- Installs Homebrew, Brewfile dependencies, and topic configuration
 
-**`bin/dot`** (update script):
+**`bin/dot`** (daily update adapter):
 
 - Pulls latest dotfiles from git
-- Installs/upgrades Homebrew
+- Ensures and updates Homebrew
 - Runs `brew bundle` to install Brewfile packages
-- Executes all `install.sh` scripts in topic directories
-
-**`_scripts/install`**:
-
-- Sets up Homebrew taps
-- Runs `brew bundle` against Brewfile
-- Finds and executes all `install.sh` files (excluding `_*` folders)
+- Executes sorted top-level `install.sh` scripts in non-reserved topic directories
+- Does not reapply macOS defaults or hostname normalization
 
 ### Custom Executables
 
@@ -176,7 +179,7 @@ Run `mise install` to install/update all runtimes.
 1. Create directory: `mkdir ~/.dotfiles/newtopic`
 2. Add files following naming conventions (`aliases.zsh`, `install.sh`, etc.)
 3. Make install script executable: `chmod +x ~/.dotfiles/newtopic/install.sh`
-4. Run installer: `~/.dotfiles/newtopic/install.sh` or `_scripts/install`
+4. Run installer directly or use `dot` to execute every topic installer
 5. Reload shell: `reload!`
 
 ### When Modifying Configurations
@@ -197,7 +200,8 @@ The public config includes `~/.gitconfig.local` so private settings override pub
 
 ### macOS Specific
 
-- `_macos/install.sh` sets macOS system defaults
+- `_macos/set-defaults.sh` sets macOS system defaults
+- `_macos/set-hostname.sh` normalizes macOS hostname suffixes
 - `dockutil/install.sh` configures dock items
 - Many scripts assume macOS-specific commands (e.g., `gls` from GNU coreutils)
 

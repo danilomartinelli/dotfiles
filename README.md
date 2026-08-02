@@ -32,7 +32,7 @@ _scripts/bootstrap
 ### Quick Update Command
 
 ```bash
-# Update dotfiles, brew packages, and run all installers
+# Refresh the checkout, update Homebrew, and run topic installers
 bin/dot
 ```
 
@@ -41,6 +41,13 @@ After the first execution, you will have a alias for the command above.
 ```bash
 dot
 ```
+
+Both commands delegate to `_scripts/setup`, which owns phase ordering and
+failure handling. Bootstrap configures local identity, links dotfiles, applies
+macOS settings, and installs dependencies. Daily updates pull the checkout,
+refresh Homebrew, and rerun the declared topic installers without changing
+macOS preferences. Required phases stop on failure; checkout refresh, Homebrew
+update/upgrade, and hostname normalization warn and continue.
 
 ## 📂 Repository Structure
 
@@ -320,8 +327,8 @@ chmod +x ~/.dotfiles/your-tool/install.sh
 
 ```bash
 ~/.dotfiles/your-tool/install.sh
-# Or run all installers
-_scripts/install
+# Or run it with every topic during the next daily update
+dot
 ```
 
 ## 🔧 Configuration Details
@@ -377,7 +384,7 @@ SSH setup includes:
 
 ### macOS Defaults
 
-The `macos/set-defaults.sh` script configures:
+The `_macos/set-defaults.sh` script configures:
 
 - System preferences
 - Finder settings
@@ -440,8 +447,8 @@ git -C ~/.dotfiles pull
 # Reinstall dotfiles
 ~/.dotfiles/_scripts/bootstrap
 
-# Run all installers
-~/.dotfiles/_scripts/install
+# Verify setup orchestration without changing the real machine
+~/.dotfiles/tests/setup_test.sh
 ```
 
 ### Add New Homebrew Packages

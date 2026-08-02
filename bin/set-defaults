@@ -1,5 +1,10 @@
 #!/bin/sh
 #
-# Sets macOS defaults by running $ZSH/macos/set-defaults.sh.
+# Apply the macOS defaults from this checkout.
 
-exec $ZSH/macos/set-defaults.sh
+set -e
+
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+DOTFILES_ROOT=$(dirname "$SCRIPT_DIR")
+
+exec "$DOTFILES_ROOT/_macos/set-defaults.sh"

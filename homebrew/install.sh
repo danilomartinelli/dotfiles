@@ -1,62 +1,78 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
-# Homebrew
-#
-# This installs some of the common dependencies needed (or at least desired)
-# using Homebrew.
+# Ensure Homebrew is installed. Setup orchestration remains in _scripts/setup.
 
-# Function to download and verify script with checksum
-download_and_verify() {
-    local url="$1"
-    local temp_file="/tmp/homebrew_installer.sh"
+set -e
 
-    echo "  Downloading Homebrew installer..."
-    if ! curl -fsSL "$url" -o "$temp_file"; then
-        echo "  ERROR: Failed to download Homebrew installer" >&2
-        return 1
+find_brew() {
+  local candidate
+
+  if command -v brew >/dev/null 2>&1; then
+    command -v brew
+    return 0
+  fi
+
+  for candidate in \
+    /opt/homebrew/bin/brew \
+    /usr/local/bin/brew \
+    /home/linuxbrew/.linuxbrew/bin/brew
+  do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
     fi
+  done
 
-    # Note: Homebrew doesn't publish official checksums for their installer
-    # In production, you would ideally verify against a known checksum
-    # For now, we at least verify the script contains expected content
-    if ! grep -q "Homebrew" "$temp_file"; then
-        echo "  ERROR: Downloaded script doesn't appear to be valid Homebrew installer" >&2
-        rm -f "$temp_file"
-        return 1
-    fi
-
-    echo "  Executing Homebrew installer..."
-    /bin/bash "$temp_file"
-    local result=$?
-
-    # Clean up
-    rm -f "$temp_file"
-
-    return $result
+  return 1
 }
 
-# Check for Homebrew
-if test ! "$(which brew)"
-then
-  echo "  Installing Homebrew for you."
+download_and_install() {
+  local installer_url
+  local installer_file
 
-  # Install the correct homebrew for each OS type
-  if test "$(uname)" = "Darwin"
-  then
-    download_and_verify "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-  elif test "$(expr substr "$(uname -s)" 1 5)" = "Linux"
-  then
-    download_and_verify "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+  installer_url=$1
+  installer_file=$(mktemp "${TMPDIR:-/tmp}/homebrew-installer.XXXXXX")
+
+  echo '  Downloading Homebrew installer...'
+  if ! curl -fsSL "$installer_url" -o "$installer_file"; then
+    rm -f "$installer_file"
+    echo '  ERROR: Failed to download Homebrew installer' >&2
+    return 1
   fi
 
-  # Verify installation succeeded
-  if test ! "$(which brew)"
-  then
-    echo "  ERROR: Homebrew installation failed" >&2
-    exit 1
+  if ! grep -q Homebrew "$installer_file"; then
+    rm -f "$installer_file"
+    echo "  ERROR: Downloaded script doesn't appear to be a Homebrew installer" >&2
+    return 1
   fi
 
-  echo "  Homebrew installed successfully."
+  echo '  Executing Homebrew installer...'
+  if ! /bin/bash "$installer_file"; then
+    rm -f "$installer_file"
+    return 1
+  fi
+
+  rm -f "$installer_file"
+}
+
+if find_brew >/dev/null; then
+  exit 0
 fi
 
-exit 0
+case "$(uname -s)" in
+  Darwin|Linux)
+    echo '  Installing Homebrew for you.'
+    download_and_install 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'
+    ;;
+  *)
+    echo "  ERROR: Homebrew installation is unsupported on $(uname -s)" >&2
+    exit 1
+    ;;
+esac
+
+if ! find_brew >/dev/null; then
+  echo '  ERROR: Homebrew installation completed, but brew was not found' >&2
+  exit 1
+fi
+
+echo '  Homebrew installed successfully.'
