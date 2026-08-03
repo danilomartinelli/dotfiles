@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+#
+# Classify the dotfiles repository layout once for setup, Zsh startup, and
+# documentation checks.
+
+set -e
+set -o pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: _scripts/topic-catalog <repository-root>
+
+Emit tab-separated kind/path records, sorted by kind and absolute path:
+
+  topic       visible top-level topic directory
+  link        root-level or direct topic *.symlink file
+  installer   direct topic install.sh (homebrew/install.sh excluded)
+  path        visible topic path.zsh file
+  main        other visible topic *.zsh file
+  prompt      the sole authoritative prompt (zsh/prompt.zsh)
+  completion  visible topic completion.zsh file
+  aliases     visible topic aliases.zsh file (also emitted as main)
+
+Visibility excludes hidden and underscore-prefixed names at every level. The
+explicit non-topics bin, functions, and tests are never classified as topics.
+EOF
+}
+
+fail() {
+  printf 'topic-catalog: %s\n' "$1" >&2
+  exit 1
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 2
+fi
+
+input_root=$1
+[ -d "$input_root" ] || fail "invalid repository root: $input_root"
+repository_root=$(CDPATH='' cd -P -- "$input_root" 2>/dev/null && pwd) || \
+  fail "unreadable repository root: $input_root"
+
+records=$(mktemp "${TMPDIR:-/tmp}/topic-catalog.XXXXXX") || \
+  fail 'cannot create a temporary record file'
+trap 'rm -f "$records"' EXIT
+
+record() {
+  printf '%s\t%s\n' "$1" "$2" >> "$records"
+}
+
+classify_zsh_file() {
+  local file=$1
+  local relative=$2
+  local base
+
+  base=$(basename -- "$file")
+  case $base in
+    path.zsh)
+      record path "$file"
+      ;;
+    completion.zsh)
+      record completion "$file"
+      ;;
+    prompt.zsh)
+      if [ "$relative" = zsh/prompt.zsh ]; then
+        record prompt "$file"
+      else
+        record main "$file"
+      fi
+      ;;
+    aliases.zsh)
+      record main "$file"
+      record aliases "$file"
+      ;;
+    *)
+      record main "$file"
+      ;;
+  esac
+}
+
+scan_topic() {
+  local topic_dir=$1
+  local topic_name=$2
+  local entry
+  local entry_name
+  local file
+  local relative
+  local topic_files
+
+  for entry in "$topic_dir"/*.symlink; do
+    [ -f "$entry" ] || continue
+    entry_name=$(basename -- "$entry")
+    case $entry_name in
+      _*) continue ;;
+    esac
+    record link "$entry"
+  done
+
+  if [ -f "$topic_dir/install.sh" ] && [ "$topic_name" != homebrew ]; then
+    record installer "$topic_dir/install.sh"
+  fi
+
+  topic_files=$(find "$topic_dir" -type f -name '*.zsh' -print) || \
+    fail "discovery failed in topic: $topic_dir"
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    relative=${file#"$repository_root"/}
+    case $relative in
+      _*|.*|*/_*|*/.*) continue ;;
+    esac
+    classify_zsh_file "$file" "$relative"
+  done <<< "$topic_files"
+}
+
+for entry in "$repository_root"/*; do
+  [ -e "$entry" ] || continue
+  entry_name=$(basename -- "$entry")
+  case $entry_name in
+    _*) continue ;;
+  esac
+
+  if [ -f "$entry" ]; then
+    case $entry_name in
+      *.symlink) record link "$entry" ;;
+    esac
+    continue
+  fi
+
+  [ -d "$entry" ] || continue
+
+  case $entry_name in
+    bin|functions|tests) continue ;;
+  esac
+
+  record topic "$entry"
+  scan_topic "$entry" "$entry_name"
+done
+
+LC_ALL=C sort "$records" || fail 'failed to sort catalog records'

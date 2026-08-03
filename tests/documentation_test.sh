@@ -30,9 +30,16 @@ while IFS= read -r function_path; do
   assert_documented 'public function' "$function_name"
 done < <(find "$REPOSITORY_ROOT/functions" -mindepth 1 -maxdepth 1 -type f -print | sort)
 
+topic_catalog=$("$REPOSITORY_ROOT/_scripts/topic-catalog" "$REPOSITORY_ROOT")
+
 while IFS= read -r alias_name; do
   assert_documented 'shell alias' "$alias_name"
-done < <(sed -n 's/^alias \([^=]*\)=.*/\1/p' "$REPOSITORY_ROOT"/*/aliases.zsh | sort -u)
+done < <(
+  while IFS=$'\t' read -r catalog_kind catalog_path; do
+    [ "$catalog_kind" = aliases ] || continue
+    sed -n 's/^alias \([^=]*\)=.*/\1/p' "$catalog_path"
+  done <<< "$topic_catalog" | sort -u
+)
 
 while IFS= read -r package_name; do
   assert_documented 'Brewfile dependency' "$package_name"

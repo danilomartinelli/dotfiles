@@ -28,7 +28,9 @@ mkdir -p \
   "$FIXTURE/system" \
   "$FIXTURE/zsh" \
   "$FIXTURE/_ignored" \
+  "$FIXTURE/_scripts" \
   "$FIXTURE/bin" \
+  "$FIXTURE/tests" \
   "$TEST_HOME" \
   "$BREW_PREFIX/bin" \
   "$BREW_PREFIX/etc" \
@@ -45,6 +47,7 @@ cp "$REPOSITORY_ROOT/system/env.zsh" "$FIXTURE/system/env.zsh"
 cp "$REPOSITORY_ROOT/system/grc.zsh" "$FIXTURE/system/grc.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
+cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 sed \
   -e "s|/opt/homebrew|$TEST_ROOT/platform/opt/homebrew|g" \
   -e "s|/usr/local|$TEST_ROOT/platform/usr/local|g" \
@@ -155,7 +158,19 @@ scenario_write_file "$FIXTURE/_ignored/config.zsh" <<'EOF'
 print -r -- ignored-topic >> "$SCENARIO_EVENT_LOG"
 EOF
 
-chmod +x "$FIXTURE/homebrew/_availability.sh"
+scenario_write_file "$FIXTURE/bin/reserved.zsh" <<'EOF'
+print -r -- ignored-bin >> "$SCENARIO_EVENT_LOG"
+EOF
+
+scenario_write_file "$FIXTURE/functions/reserved.zsh" <<'EOF'
+print -r -- ignored-functions >> "$SCENARIO_EVENT_LOG"
+EOF
+
+scenario_write_file "$FIXTURE/tests/reserved.zsh" <<'EOF'
+print -r -- ignored-tests >> "$SCENARIO_EVENT_LOG"
+EOF
+
+chmod +x "$FIXTURE/homebrew/_availability.sh" "$FIXTURE/_scripts/topic-catalog"
 ln -s "$FIXTURE/resolver" "$TEST_HOME/.dotfiles-root"
 ln -s "$FIXTURE/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
 
@@ -221,6 +236,12 @@ terminal_hooks=("${(M)precmd_functions:#update_terminal_cwd}")
 private_loader_parameters=(${(k)parameters[(I)_dotfiles_*]})
 (( $#private_loader_parameters == 0 )) || fail "private loader state leaked: $private_loader_parameters"
 
+typeset fpath_entry
+for fpath_entry in "${fpath[@]}"; do
+  [[ $fpath_entry == "$STARTUP_FIXTURE_ROOT/bin" || $fpath_entry == "$STARTUP_FIXTURE_ROOT/tests" ]] && \
+    fail "reserved root leaked into fpath: $fpath_entry"
+done
+
 typeset first_path=$PATH first_manpath=$MANPATH
 typeset -a first_fpath=("$fpath[@]")
 print -r -- reload >> "$SCENARIO_EVENT_LOG"
@@ -285,6 +306,9 @@ test_startup_order_and_reload() {
   assert_not_contains "$events" ignored-file
   assert_not_contains "$events" ignored-directory
   assert_not_contains "$events" ignored-topic
+  assert_not_contains "$events" ignored-bin
+  assert_not_contains "$events" ignored-functions
+  assert_not_contains "$events" ignored-tests
 }
 
 test_optional_homebrew_integration() {
