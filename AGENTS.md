@@ -56,6 +56,9 @@ fixture tests are the safe verification path.
 - `tests/` is intentionally named without `_`. It is not a shell topic and is
   never sourced or installed; the conventional name makes validation visible
   to tooling and contributors.
+- `tests/_support/shell-scenario.sh` owns shared temporary lifecycle,
+  fake-command creation, capture, assertions, and TAP reporting. Keep fake
+  command behavior local to the suite that exercises it.
 - `_scripts/`, `_macos/`, and underscore-prefixed files are private
   implementation excluded from topic discovery.
 - `.context/` is disposable, gitignored Conductor/agent workspace state, not

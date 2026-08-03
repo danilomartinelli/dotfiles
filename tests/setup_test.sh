@@ -4,80 +4,23 @@ set -u
 
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPOSITORY_ROOT="$(cd "$TEST_DIR/.." && pwd -P)"
-TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-setup-tests.XXXXXX")
-trap 'rm -rf "$TEST_ROOT"' EXIT
-
-tests_run=0
-tests_failed=0
-
-fail_assertion() {
-  printf '    %s\n' "$1" >&2
-  return 1
-}
-
-assert_contains() {
-  local file
-  local expected
-
-  file=$1
-  expected=$2
-  grep -Fq "$expected" "$file" || fail_assertion "Expected $file to contain: $expected"
-}
-
-assert_not_contains() {
-  local file
-  local unexpected
-
-  file=$1
-  unexpected=$2
-  if grep -Fq "$unexpected" "$file"; then
-    fail_assertion "Expected $file not to contain: $unexpected"
-  fi
-}
-
-assert_count() {
-  local file
-  local pattern
-  local expected
-  local actual
-
-  file=$1
-  pattern=$2
-  expected=$3
-  actual=$(grep -Fc "$pattern" "$file" || true)
-  [ "$actual" -eq "$expected" ] || fail_assertion "Expected $expected occurrences of '$pattern' in $file, got $actual"
-}
-
-assert_before() {
-  local file
-  local first_pattern
-  local second_pattern
-  local first_line
-  local second_line
-
-  file=$1
-  first_pattern=$2
-  second_pattern=$3
-  first_line=$(grep -nF "$first_pattern" "$file" | head -n 1 | cut -d: -f1)
-  second_line=$(grep -nF "$second_pattern" "$file" | head -n 1 | cut -d: -f1)
-
-  [ -n "$first_line" ] || fail_assertion "Missing '$first_pattern' in $file"
-  [ -n "$second_line" ] || fail_assertion "Missing '$second_pattern' in $file"
-  [ "$first_line" -lt "$second_line" ] || fail_assertion "Expected '$first_pattern' before '$second_pattern' in $file"
-}
+# shellcheck source=tests/_support/shell-scenario.sh
+source "$TEST_DIR/_support/shell-scenario.sh"
+scenario_init dotfiles-setup-tests
+TEST_ROOT=$SCENARIO_ROOT
 
 write_fixture_scripts() {
   local fixture
   fixture=$1
 
-  cat > "$fixture/fake-bin/uname" <<'EOF'
+  scenario_write_executable "$fixture/fake-bin/uname" <<'EOF'
 #!/bin/sh
 printf '%s\n' "${FAKE_UNAME:-Darwin}"
 EOF
 
-  cat > "$fixture/fake-bin/git" <<'EOF'
+  scenario_write_executable "$fixture/fake-bin/git" <<'EOF'
 #!/bin/sh
-printf 'git %s\n' "$*" >> "$SETUP_TEST_LOG"
+printf 'git %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 case " $* " in
   *' rev-parse '*) exit "${FAIL_GIT_CHECKOUT:-0}" ;;
   *' pull '*) exit "${FAIL_GIT_PULL:-0}" ;;
@@ -85,15 +28,15 @@ esac
 exit 0
 EOF
 
-  cat > "$fixture/fake-bin/ssh-keygen" <<'EOF'
+  scenario_write_executable "$fixture/fake-bin/ssh-keygen" <<'EOF'
 #!/bin/sh
-printf 'ssh-keygen %s\n' "$*" >> "$SETUP_TEST_LOG"
+printf 'ssh-keygen %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 exit 99
 EOF
 
-  cat > "$fixture/fake-bin/brew-template" <<'EOF'
+  scenario_write_executable "$fixture/fake-bin/brew-template" <<'EOF'
 #!/bin/sh
-printf 'brew %s\n' "$*" >> "$SETUP_TEST_LOG"
+printf 'brew %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 case "$1" in
   --prefix)
     if [ "${FAIL_BREW_PREFIX:-0}" -ne 0 ]; then
@@ -117,9 +60,9 @@ esac
 exit 0
 EOF
 
-  cat > "$fixture/homebrew/install.sh" <<'EOF'
+  scenario_write_executable "$fixture/homebrew/install.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' homebrew-installer >> "$SETUP_TEST_LOG"
+printf '%s\n' homebrew-installer >> "$SCENARIO_EVENT_LOG"
 if [ -n "${SETUP_TEST_BREW_TARGET:-}" ]; then
   cp "$SETUP_TEST_BREW_TEMPLATE" "$SETUP_TEST_BREW_TARGET"
   chmod +x "$SETUP_TEST_BREW_TARGET"
@@ -127,52 +70,39 @@ fi
 exit "${FAIL_HOMEBREW_INSTALL:-0}"
 EOF
 
-  cat > "$fixture/_macos/set-defaults.sh" <<'EOF'
+  scenario_write_executable "$fixture/_macos/set-defaults.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' macos-defaults >> "$SETUP_TEST_LOG"
+printf '%s\n' macos-defaults >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_DEFAULTS:-0}"
 EOF
 
-  cat > "$fixture/_macos/set-hostname.sh" <<'EOF'
+  scenario_write_executable "$fixture/_macos/set-hostname.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' hostname >> "$SETUP_TEST_LOG"
+printf '%s\n' hostname >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_HOSTNAME:-0}"
 EOF
 
-  cat > "$fixture/alpha/install.sh" <<'EOF'
+  scenario_write_executable "$fixture/alpha/install.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' topic-alpha >> "$SETUP_TEST_LOG"
+printf '%s\n' topic-alpha >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_TOPIC_ALPHA:-0}"
 EOF
 
-  cat > "$fixture/zulu/install.sh" <<'EOF'
+  scenario_write_executable "$fixture/zulu/install.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' topic-zulu >> "$SETUP_TEST_LOG"
+printf '%s\n' topic-zulu >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_TOPIC_ZULU:-0}"
 EOF
 
-  cat > "$fixture/_ignored/install.sh" <<'EOF'
+  scenario_write_executable "$fixture/_ignored/install.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' topic-ignored >> "$SETUP_TEST_LOG"
+printf '%s\n' topic-ignored >> "$SCENARIO_EVENT_LOG"
 EOF
 
-  cat > "$fixture/fake-bin/editor" <<'EOF'
+  scenario_write_executable "$fixture/fake-bin/editor" <<'EOF'
 #!/bin/sh
-printf 'editor %s\n' "$*" >> "$SETUP_TEST_LOG"
+printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 EOF
-
-  chmod +x \
-    "$fixture/fake-bin/uname" \
-    "$fixture/fake-bin/git" \
-    "$fixture/fake-bin/ssh-keygen" \
-    "$fixture/fake-bin/brew-template" \
-    "$fixture/fake-bin/editor" \
-    "$fixture/homebrew/install.sh" \
-    "$fixture/_macos/set-defaults.sh" \
-    "$fixture/_macos/set-hostname.sh" \
-    "$fixture/alpha/install.sh" \
-    "$fixture/zulu/install.sh" \
-    "$fixture/_ignored/install.sh"
 }
 
 make_fixture() {
@@ -180,7 +110,7 @@ make_fixture() {
   local fixture
 
   brew_state=${1:-present}
-  fixture=$(mktemp -d "$TEST_ROOT/fixture.XXXXXX")
+  fixture=$(scenario_tmpdir fixture)
   mkdir -p \
     "$fixture/_scripts" \
     "$fixture/_macos" \
@@ -230,16 +160,15 @@ make_fixture() {
 
 invoke() {
   local fixture
-  shift_count=1
   fixture=$1
-  shift "$shift_count"
+  shift
 
-  HOME="$fixture/home" \
-  PATH="$fixture/fake-bin:/usr/bin:/bin" \
-  SETUP_TEST_LOG="$fixture/events.log" \
-  FAKE_BREW_PREFIX="$fixture/fake-prefix" \
-  EDITOR="$fixture/fake-bin/editor" \
-  "$@" > "$fixture/stdout.log" 2> "$fixture/stderr.log"
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    FAKE_BREW_PREFIX="$fixture/fake-prefix" \
+    EDITOR="$fixture/fake-bin/editor" \
+    "$@"
 }
 
 test_setup_usage() {
@@ -407,7 +336,7 @@ test_interactive_git_identity() {
 
   fixture=$(make_fixture)
   rm "$fixture/git/gitconfig.local.symlink"
-  cat > "$fixture/git/gitconfig.local.symlink.example" <<'EOF'
+  scenario_write_file "$fixture/git/gitconfig.local.symlink.example" <<'EOF'
 [user]
   name = AUTHORNAME
   email = AUTHOREMAIL
@@ -416,11 +345,11 @@ test_interactive_git_identity() {
 EOF
 
   printf '%s\n%s\n' 'Dan & Co|Ops' 'dan+test@example.com' | \
-    HOME="$fixture/home" \
-    PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    SETUP_TEST_LOG="$fixture/events.log" \
-    FAKE_BREW_PREFIX="$fixture/fake-prefix" \
-    "$fixture/_scripts/setup" bootstrap > "$fixture/stdout.log" 2> "$fixture/stderr.log"
+    scenario_capture "$fixture" env \
+      HOME="$fixture/home" \
+      PATH="$fixture/fake-bin:/usr/bin:/bin" \
+      FAKE_BREW_PREFIX="$fixture/fake-prefix" \
+      "$fixture/_scripts/setup" bootstrap
 
   assert_contains "$fixture/git/gitconfig.local.symlink" 'name = Dan & Co|Ops'
   assert_contains "$fixture/git/gitconfig.local.symlink" 'email = dan+test@example.com'
@@ -479,35 +408,12 @@ test_command_adapters() {
   assert_not_contains "$edit_fixture/events.log" 'git '
 }
 
-run_test() {
-  local name
-  local test_function
-
-  name=$1
-  test_function=$2
-  tests_run=$((tests_run + 1))
-
-  (set -e; "$test_function")
-  test_status=$?
-  if [ "$test_status" -eq 0 ]; then
-    printf 'ok %d - %s\n' "$tests_run" "$name"
-  else
-    tests_failed=$((tests_failed + 1))
-    printf 'not ok %d - %s\n' "$tests_run" "$name"
-  fi
-}
-
-run_test 'setup rejects unknown modes' test_setup_usage
-run_test 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
-run_test 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
-run_test 'advisory failures warn and continue' test_advisory_failures_continue
-run_test 'critical failures stop the run' test_critical_failures_stop
-run_test 'bootstrap creates and links an interactive Git identity' test_interactive_git_identity
-run_test 'platform skips and fresh Homebrew discovery work' test_platform_and_fresh_homebrew
-run_test 'public commands adapt to the canonical modes' test_command_adapters
-
-printf '1..%d\n' "$tests_run"
-if [ "$tests_failed" -ne 0 ]; then
-  printf '%d test(s) failed\n' "$tests_failed" >&2
-  exit 1
-fi
+scenario_run 'setup rejects unknown modes' test_setup_usage
+scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
+scenario_run 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
+scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
+scenario_run 'critical failures stop the run' test_critical_failures_stop
+scenario_run 'bootstrap creates and links an interactive Git identity' test_interactive_git_identity
+scenario_run 'platform skips and fresh Homebrew discovery work' test_platform_and_fresh_homebrew
+scenario_run 'public commands adapt to the canonical modes' test_command_adapters
+scenario_finish

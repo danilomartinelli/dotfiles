@@ -4,49 +4,20 @@ set -euo pipefail
 
 TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
-TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-zsh-startup-tests.XXXXXX")
-trap 'rm -rf "$TEST_ROOT"' EXIT
+# shellcheck source=tests/_support/shell-scenario.sh
+source "$TEST_DIR/_support/shell-scenario.sh"
+scenario_init dotfiles-zsh-startup-tests
+TEST_ROOT=$SCENARIO_ROOT
 
-fail() {
-  printf 'FAIL: %s\n' "$*" >&2
+ZSH_BIN=$(command -v zsh) || {
+  scenario_fail 'zsh is required'
   exit 1
 }
-
-assert_contains() {
-  local file=$1 expected=$2
-  grep -Fq "$expected" "$file" || fail "expected $file to contain: $expected"
-}
-
-assert_not_contains() {
-  local file=$1 unexpected=$2
-  if grep -Fq "$unexpected" "$file"; then
-    fail "expected $file not to contain: $unexpected"
-  fi
-}
-
-assert_count() {
-  local file=$1 pattern=$2 expected=$3 actual
-  actual=$(grep -Fc "$pattern" "$file" || true)
-  [[ $actual -eq $expected ]] || \
-    fail "expected $expected occurrences of '$pattern' in $file, got $actual"
-}
-
-assert_before() {
-  local file=$1 first=$2 second=$3 first_line second_line
-  first_line=$(grep -nF "$first" "$file" | head -n 1 | cut -d: -f1)
-  second_line=$(grep -nF "$second" "$file" | head -n 1 | cut -d: -f1)
-  [[ -n $first_line ]] || fail "missing '$first' in $file"
-  [[ -n $second_line ]] || fail "missing '$second' in $file"
-  [[ $first_line -lt $second_line ]] || \
-    fail "expected '$first' before '$second' in $file"
-}
-
-ZSH_BIN=$(command -v zsh) || fail 'zsh is required'
 FIXTURE="$TEST_ROOT/repository"
 TEST_HOME="$TEST_ROOT/home"
 BREW_PREFIX="$TEST_ROOT/homebrew"
-EVENTS="$TEST_ROOT/events.log"
-OPTIONAL_EVENTS="$TEST_ROOT/optional-events.log"
+MAIN_ARTIFACTS="$TEST_ROOT/main"
+OPTIONAL_ARTIFACTS="$TEST_ROOT/optional"
 
 mkdir -p \
   "$FIXTURE/alpha/_private" \
@@ -82,113 +53,113 @@ sed \
   > "$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
-printf '%s\n' 'print -r -- prompt >> "$STARTUP_TEST_LOG"' >> "$FIXTURE/zsh/prompt.zsh"
+printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >> "$FIXTURE/zsh/prompt.zsh"
 
-cat > "$FIXTURE/resolver" <<'EOF'
+scenario_write_executable "$FIXTURE/resolver" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$STARTUP_FIXTURE_ROOT"
 EOF
 
-cat > "$BREW_PREFIX/bin/brew" <<'EOF'
+scenario_write_executable "$BREW_PREFIX/bin/brew" <<'EOF'
 #!/bin/sh
-printf '%s\n' brew-prefix >> "$STARTUP_TEST_LOG"
+printf '%s\n' brew-prefix >> "$SCENARIO_EVENT_LOG"
 if [ "$1" = --prefix ]; then
   printf '%s\n' "$FAKE_HOMEBREW_PREFIX"
 fi
 EOF
 
-cat > "$BREW_PREFIX/bin/grc" <<'EOF'
+scenario_write_executable "$BREW_PREFIX/bin/grc" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
 
-cat > "$BREW_PREFIX/etc/grc.bashrc" <<'EOF'
-print -r -- grc >> "$STARTUP_TEST_LOG"
+scenario_write_file "$BREW_PREFIX/etc/grc.bashrc" <<'EOF'
+print -r -- grc >> "$SCENARIO_EVENT_LOG"
 typeset -g FAKE_GRC_LOADED=1
 EOF
 
-cat > "$BREW_PREFIX/share/zsh/site-functions/_git" <<'EOF'
-print -r -- git-completion >> "$STARTUP_TEST_LOG"
+scenario_write_file "$BREW_PREFIX/share/zsh/site-functions/_git" <<'EOF'
+print -r -- git-completion >> "$SCENARIO_EVENT_LOG"
 typeset -g FAKE_GIT_COMPLETION_LOADED=1
 EOF
 
-cat > "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" <<'EOF'
-print -r -- syntax-highlighting >> "$STARTUP_TEST_LOG"
+scenario_write_file "$BREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" <<'EOF'
+print -r -- syntax-highlighting >> "$SCENARIO_EVENT_LOG"
 typeset -gA ZSH_HIGHLIGHT_STYLES
 typeset -g FAKE_SYNTAX_LOADED=1
 EOF
 
-cat > "$FIXTURE/functions/compinit" <<'EOF'
-print -r -- compinit >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/functions/compinit" <<'EOF'
+print -r -- compinit >> "$SCENARIO_EVENT_LOG"
 compdef() {
   if [[ $1 == _git && $2 == git ]]; then
-    print -r -- git-completion >> "$STARTUP_TEST_LOG"
+    print -r -- git-completion >> "$SCENARIO_EVENT_LOG"
     typeset -g FAKE_GIT_COMPLETION_LOADED=1
   fi
 }
 EOF
 
-cat > "$FIXTURE/functions/sample_function" <<'EOF'
+scenario_write_file "$FIXTURE/functions/sample_function" <<'EOF'
 print -r -- sample-function
 EOF
 
-cat > "$TEST_HOME/.localrc" <<'EOF'
-print -r -- local-environment >> "$STARTUP_TEST_LOG"
+scenario_write_file "$TEST_HOME/.localrc" <<'EOF'
+print -r -- local-environment >> "$SCENARIO_EVENT_LOG"
 export PATH="$PATH:/local/bin"
 EOF
 
-cat > "$FIXTURE/.commonrc" <<'EOF'
-print -r -- common-environment >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/.commonrc" <<'EOF'
+print -r -- common-environment >> "$SCENARIO_EVENT_LOG"
 export PATH="$PATH:/common/bin"
 EOF
 
-cat > "$FIXTURE/alpha/path.zsh" <<'EOF'
-print -r -- path-alpha >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/alpha/path.zsh" <<'EOF'
+print -r -- path-alpha >> "$SCENARIO_EVENT_LOG"
 path+=(/alpha/bin)
 EOF
 
-cat > "$FIXTURE/bravo/path.zsh" <<'EOF'
-print -r -- path-bravo >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/bravo/path.zsh" <<'EOF'
+print -r -- path-bravo >> "$SCENARIO_EVENT_LOG"
 path+=(/bravo/bin)
 EOF
 
-cat > "$FIXTURE/alpha/main.zsh" <<'EOF'
-print -r -- main-alpha >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/alpha/main.zsh" <<'EOF'
+print -r -- main-alpha >> "$SCENARIO_EVENT_LOG"
 typeset -g STARTUP_ALPHA_MAIN=1
 EOF
 
-cat > "$FIXTURE/bravo/main.zsh" <<'EOF'
-print -r -- main-bravo >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/bravo/main.zsh" <<'EOF'
+print -r -- main-bravo >> "$SCENARIO_EVENT_LOG"
 typeset -g STARTUP_BRAVO_MAIN=1
 EOF
 
-cat > "$FIXTURE/alpha/completion.zsh" <<'EOF'
-print -r -- completion-alpha >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/alpha/completion.zsh" <<'EOF'
+print -r -- completion-alpha >> "$SCENARIO_EVENT_LOG"
 typeset -g STARTUP_ALPHA_COMPLETION=1
 EOF
 
-cat > "$FIXTURE/bravo/completion.zsh" <<'EOF'
-print -r -- completion-bravo >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/bravo/completion.zsh" <<'EOF'
+print -r -- completion-bravo >> "$SCENARIO_EVENT_LOG"
 typeset -g STARTUP_BRAVO_COMPLETION=1
 EOF
 
-cat > "$FIXTURE/alpha/_ignored.zsh" <<'EOF'
-print -r -- ignored-file >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/alpha/_ignored.zsh" <<'EOF'
+print -r -- ignored-file >> "$SCENARIO_EVENT_LOG"
 EOF
 
-cat > "$FIXTURE/alpha/_private/nested.zsh" <<'EOF'
-print -r -- ignored-directory >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/alpha/_private/nested.zsh" <<'EOF'
+print -r -- ignored-directory >> "$SCENARIO_EVENT_LOG"
 EOF
 
-cat > "$FIXTURE/_ignored/config.zsh" <<'EOF'
-print -r -- ignored-topic >> "$STARTUP_TEST_LOG"
+scenario_write_file "$FIXTURE/_ignored/config.zsh" <<'EOF'
+print -r -- ignored-topic >> "$SCENARIO_EVENT_LOG"
 EOF
 
-chmod +x "$FIXTURE/resolver" "$FIXTURE/homebrew/_availability.sh" "$BREW_PREFIX/bin/brew" "$BREW_PREFIX/bin/grc"
+chmod +x "$FIXTURE/homebrew/_availability.sh"
 ln -s "$FIXTURE/resolver" "$TEST_HOME/.dotfiles-root"
 ln -s "$FIXTURE/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
 
-cat > "$TEST_ROOT/assert-startup.zsh" <<'EOF'
+scenario_write_file "$TEST_ROOT/assert-startup.zsh" <<'EOF'
 fail() {
   print -u2 -r -- "FAIL: $*"
   exit 1
@@ -252,7 +223,7 @@ private_loader_parameters=(${(k)parameters[(I)_dotfiles_*]})
 
 typeset first_path=$PATH first_manpath=$MANPATH
 typeset -a first_fpath=("$fpath[@]")
-print -r -- reload >> "$STARTUP_TEST_LOG"
+print -r -- reload >> "$SCENARIO_EVENT_LOG"
 source "$HOME/.zshrc"
 
 assert_equal "$first_path" "$PATH" 'PATH after reload'
@@ -277,54 +248,64 @@ private_loader_parameters=(${(k)parameters[(I)_dotfiles_*]})
 EOF
 
 STARTUP_PATH="$BREW_PREFIX/bin:/base/bin:/usr/local/bin:/usr/bin:/bin"
-if ! env -u ZSH \
-  HOME="$TEST_HOME" \
-  PATH="$STARTUP_PATH" \
-  MANPATH='/base/man:' \
-  TERM_PROGRAM=Apple_Terminal \
-  STARTUP_FIXTURE_ROOT="$FIXTURE" \
-  STARTUP_TEST_LOG="$EVENTS" \
-  FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
-  "$ZSH_BIN" -d -f "$TEST_ROOT/assert-startup.zsh"
-then
-  fail 'isolated Zsh startup assertions failed'
-fi
 
-assert_before "$EVENTS" local-environment common-environment
-assert_before "$EVENTS" common-environment brew-prefix
-assert_before "$EVENTS" brew-prefix path-alpha
-assert_before "$EVENTS" path-alpha path-bravo
-assert_before "$EVENTS" path-bravo main-alpha
-assert_before "$EVENTS" main-alpha main-bravo
-assert_before "$EVENTS" main-bravo grc
-assert_before "$EVENTS" grc prompt
-assert_before "$EVENTS" prompt compinit
-assert_before "$EVENTS" compinit completion-alpha
-assert_before "$EVENTS" completion-alpha completion-bravo
-assert_before "$EVENTS" completion-bravo git-completion
-assert_before "$EVENTS" git-completion syntax-highlighting
-assert_before "$EVENTS" syntax-highlighting reload
-assert_count "$EVENTS" brew-prefix 2
-assert_count "$EVENTS" compinit 2
-assert_count "$EVENTS" syntax-highlighting 2
-assert_not_contains "$EVENTS" ignored-file
-assert_not_contains "$EVENTS" ignored-directory
-assert_not_contains "$EVENTS" ignored-topic
+test_startup_order_and_reload() {
+  local events="$MAIN_ARTIFACTS/events.log"
 
-# A missing Homebrew syntax-highlighting script must not prevent startup.
-# shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-if ! env -u ZSH \
-  HOME="$TEST_HOME" \
-  PATH="$STARTUP_PATH" \
-  MANPATH='/base/man:' \
-  STARTUP_FIXTURE_ROOT="$FIXTURE" \
-  STARTUP_TEST_LOG="$OPTIONAL_EVENTS" \
-  FAKE_HOMEBREW_PREFIX="$TEST_ROOT/missing-homebrew-prefix" \
-  EXPECTED_FALLBACK_PREFIX="$TEST_ROOT/platform/usr/local" \
-  "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'
-then
-  fail 'startup failed without optional syntax highlighting'
-fi
-assert_not_contains "$OPTIONAL_EVENTS" syntax-highlighting
+  if ! scenario_capture "$MAIN_ARTIFACTS" env -u ZSH \
+    HOME="$TEST_HOME" \
+    PATH="$STARTUP_PATH" \
+    MANPATH='/base/man:' \
+    TERM_PROGRAM=Apple_Terminal \
+    STARTUP_FIXTURE_ROOT="$FIXTURE" \
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
+    "$ZSH_BIN" -d -f "$TEST_ROOT/assert-startup.zsh"
+  then
+    command cat "$MAIN_ARTIFACTS/stderr.log" >&2
+    scenario_fail 'isolated Zsh startup assertions failed'
+  fi
 
-printf 'PASS: Zsh startup orchestration\n'
+  assert_before "$events" local-environment common-environment
+  assert_before "$events" common-environment brew-prefix
+  assert_before "$events" brew-prefix path-alpha
+  assert_before "$events" path-alpha path-bravo
+  assert_before "$events" path-bravo main-alpha
+  assert_before "$events" main-alpha main-bravo
+  assert_before "$events" main-bravo grc
+  assert_before "$events" grc prompt
+  assert_before "$events" prompt compinit
+  assert_before "$events" compinit completion-alpha
+  assert_before "$events" completion-alpha completion-bravo
+  assert_before "$events" completion-bravo git-completion
+  assert_before "$events" git-completion syntax-highlighting
+  assert_before "$events" syntax-highlighting reload
+  assert_count "$events" brew-prefix 2
+  assert_count "$events" compinit 2
+  assert_count "$events" syntax-highlighting 2
+  assert_not_contains "$events" ignored-file
+  assert_not_contains "$events" ignored-directory
+  assert_not_contains "$events" ignored-topic
+}
+
+test_optional_homebrew_integration() {
+  local events="$OPTIONAL_ARTIFACTS/events.log"
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+  if ! scenario_capture "$OPTIONAL_ARTIFACTS" env -u ZSH \
+    HOME="$TEST_HOME" \
+    PATH="$STARTUP_PATH" \
+    MANPATH='/base/man:' \
+    STARTUP_FIXTURE_ROOT="$FIXTURE" \
+    FAKE_HOMEBREW_PREFIX="$TEST_ROOT/missing-homebrew-prefix" \
+    EXPECTED_FALLBACK_PREFIX="$TEST_ROOT/platform/usr/local" \
+    "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'
+  then
+    command cat "$OPTIONAL_ARTIFACTS/stderr.log" >&2
+    scenario_fail 'startup failed without optional syntax highlighting'
+  fi
+  assert_not_contains "$events" syntax-highlighting
+}
+
+scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
+scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
+scenario_finish

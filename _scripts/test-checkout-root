@@ -2,133 +2,132 @@
 
 set -euo pipefail
 
-TEST_ROOT=$(cd "$(dirname "$0")/.." && pwd -P)
+SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+TEST_ROOT=$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)
 RESOLVER="$TEST_ROOT/dotfiles-root.symlink"
-TEST_TMP=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-root-test.XXXXXX")
-TEST_TMP=$(cd "$TEST_TMP" && pwd -P)
+# shellcheck source=tests/_support/shell-scenario.sh
+source "$TEST_ROOT/tests/_support/shell-scenario.sh"
+scenario_init dotfiles-root-test
 
-cleanup() {
-  rm -rf "$TEST_TMP"
-}
-trap cleanup EXIT
+test_anchor_resolution() {
+  local case_root
+  case_root=$(scenario_tmpdir anchors)
 
-fail() {
-  echo "FAIL: $*" >&2
-  exit 1
-}
+  assert_equal "$TEST_ROOT" "$("$RESOLVER" "$TEST_ROOT/bin/dot")" "absolute anchor"
+  assert_equal "$TEST_ROOT" "$(cd "$TEST_ROOT" && "$RESOLVER" bin/dot)" "relative anchor"
+  assert_equal "$TEST_ROOT" "$(cd "$case_root" && PATH="$TEST_ROOT/bin:$PATH" "$RESOLVER" dot)" "command-name anchor"
+  # shellcheck disable=SC2016 # The Git alias must retain the variable for runtime expansion.
+  assert_equal '!"$DOTFILES_ROOT/bin/git-promote"' "$(git config --file "$TEST_ROOT/git/gitconfig.symlink" --get alias.promote)" "Git alias root variable"
 
-assert_equal() {
-  local expected=$1 actual=$2 description=$3
-  if [ "$expected" != "$actual" ]; then
-    fail "$description (expected '$expected', got '$actual')"
-  fi
-}
-
-assert_fails() {
-  local description=$1
-  shift
-  if "$@" >/dev/null 2>&1; then
-    fail "$description (command unexpectedly succeeded)"
-  fi
+  mkdir -p "$case_root/links"
+  ln -s "$TEST_ROOT/bin/dot" "$case_root/links/absolute"
+  ln -s absolute "$case_root/links/relative"
+  assert_equal "$TEST_ROOT" "$("$RESOLVER" "$case_root/links/relative")" "relative symlink chain"
 }
 
-assert_fails_with() {
-  local description=$1 pattern=$2
-  shift 2
-  if "$@" >"$TEST_TMP/failure-output" 2>&1; then
-    fail "$description (command unexpectedly succeeded)"
-  fi
-  if ! grep -q "$pattern" "$TEST_TMP/failure-output"; then
-    fail "$description (missing error pattern '$pattern')"
-  fi
+test_invalid_anchors() {
+  local case_root
+  case_root=$(scenario_tmpdir invalid-anchors)
+
+  mkdir -p "$case_root/links"
+  ln -s missing "$case_root/links/broken"
+  assert_fails_with_output "broken symlink" "broken or missing anchor" "$RESOLVER" "$case_root/links/broken"
+  ln -s cycle-b "$case_root/links/cycle-a"
+  ln -s cycle-a "$case_root/links/cycle-b"
+  assert_fails_with_output "symlink cycle" "symlink cycle" "$RESOLVER" "$case_root/links/cycle-a"
+
+  touch "$case_root/outside"
+  assert_fails_with_output "anchor outside a checkout" "not inside a dotfiles checkout" "$RESOLVER" "$case_root/outside"
 }
 
-# Resolve physical, relative, command-name, and symlinked anchors.
-assert_equal "$TEST_ROOT" "$("$RESOLVER" "$TEST_ROOT/bin/dot")" "absolute anchor"
-assert_equal "$TEST_ROOT" "$(cd "$TEST_ROOT" && "$RESOLVER" bin/dot)" "relative anchor"
-assert_equal "$TEST_ROOT" "$(cd "$TEST_TMP" && PATH="$TEST_ROOT/bin:$PATH" "$RESOLVER" dot)" "command-name anchor"
-# shellcheck disable=SC2016 # The Git alias must retain the variable for runtime expansion.
-assert_equal '!"$DOTFILES_ROOT/bin/git-promote"' "$(git config --file "$TEST_ROOT/git/gitconfig.symlink" --get alias.promote)" "Git alias root variable"
+test_checkout_types() {
+  local case_root
+  case_root=$(scenario_tmpdir checkout-types)
 
-mkdir -p "$TEST_TMP/links"
-ln -s "$TEST_ROOT/bin/dot" "$TEST_TMP/links/absolute"
-ln -s absolute "$TEST_TMP/links/relative"
-assert_equal "$TEST_ROOT" "$("$RESOLVER" "$TEST_TMP/links/relative")" "relative symlink chain"
+  mkdir -p "$case_root/archive/nested"
+  cp "$RESOLVER" "$case_root/archive/dotfiles-root.symlink"
+  touch "$case_root/archive/nested/anchor"
+  assert_equal "$case_root/archive" "$("$RESOLVER" "$case_root/archive/nested/anchor")" "non-Git checkout"
 
-ln -s missing "$TEST_TMP/links/broken"
-assert_fails_with "broken symlink" "broken or missing anchor" "$RESOLVER" "$TEST_TMP/links/broken"
-ln -s cycle-b "$TEST_TMP/links/cycle-a"
-ln -s cycle-a "$TEST_TMP/links/cycle-b"
-assert_fails_with "symlink cycle" "symlink cycle" "$RESOLVER" "$TEST_TMP/links/cycle-a"
+  mkdir -p "$case_root/repository/nested"
+  cp "$RESOLVER" "$case_root/repository/dotfiles-root.symlink"
+  touch "$case_root/repository/nested/anchor"
+  git -C "$case_root/repository" init -q
+  git -C "$case_root/repository" config user.name 'Dotfiles Root Test'
+  git -C "$case_root/repository" config user.email 'dotfiles-root@example.invalid'
+  git -C "$case_root/repository" add .
+  git -C "$case_root/repository" commit -qm 'test fixture'
+  assert_equal "$case_root/repository" "$("$RESOLVER" "$case_root/repository/nested/anchor")" "ordinary Git checkout"
+  git -C "$case_root/repository" worktree add -q --detach "$case_root/worktree"
+  [ -f "$case_root/worktree/.git" ] || scenario_fail "worktree fixture does not have a .git file"
+  assert_equal "$case_root/worktree" "$("$RESOLVER" "$case_root/worktree/nested/anchor")" "Git worktree"
+}
 
-touch "$TEST_TMP/outside"
-assert_fails_with "anchor outside a checkout" "not inside a dotfiles checkout" "$RESOLVER" "$TEST_TMP/outside"
+test_home_link_installation() {
+  local case_root
+  local test_home
+  case_root=$(scenario_tmpdir home-link)
+  test_home="$case_root/home"
+  mkdir -p "$case_root/archive" "$test_home"
+  cp "$RESOLVER" "$case_root/archive/dotfiles-root.symlink"
 
-# A root marker is sufficient even without Git metadata.
-mkdir -p "$TEST_TMP/archive/nested"
-cp "$RESOLVER" "$TEST_TMP/archive/dotfiles-root.symlink"
-touch "$TEST_TMP/archive/nested/anchor"
-assert_equal "$TEST_TMP/archive" "$("$RESOLVER" "$TEST_TMP/archive/nested/anchor")" "non-Git checkout"
+  assert_equal "$TEST_ROOT" "$(HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot")" "initial install"
+  assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$test_home/.dotfiles-root")" "installed target"
+  assert_equal "$TEST_ROOT" "$(HOME="$test_home" "$test_home/.dotfiles-root")" "installed default anchor"
+  assert_equal "$TEST_ROOT" "$(HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot")" "idempotent install"
 
-# A real linked worktree must resolve to the worktree, not its main checkout.
-mkdir -p "$TEST_TMP/repository/nested"
-cp "$RESOLVER" "$TEST_TMP/repository/dotfiles-root.symlink"
-touch "$TEST_TMP/repository/nested/anchor"
-git -C "$TEST_TMP/repository" init -q
-git -C "$TEST_TMP/repository" config user.name 'Dotfiles Root Test'
-git -C "$TEST_TMP/repository" config user.email 'dotfiles-root@example.invalid'
-git -C "$TEST_TMP/repository" add .
-git -C "$TEST_TMP/repository" commit -qm 'test fixture'
-assert_equal "$TEST_TMP/repository" "$("$RESOLVER" "$TEST_TMP/repository/nested/anchor")" "ordinary Git checkout"
-git -C "$TEST_TMP/repository" worktree add -q --detach "$TEST_TMP/worktree"
-[ -f "$TEST_TMP/worktree/.git" ] || fail "worktree fixture does not have a .git file"
-assert_equal "$TEST_TMP/worktree" "$("$RESOLVER" "$TEST_TMP/worktree/nested/anchor")" "Git worktree"
+  rm "$test_home/.dotfiles-root"
+  ln -s "$case_root/archive/dotfiles-root.symlink" "$test_home/.dotfiles-root"
+  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" > /dev/null
+  assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$test_home/.dotfiles-root")" "stale link update"
 
-# Install, update, and protect the stable home seam.
-TEST_HOME="$TEST_TMP/home"
-mkdir -p "$TEST_HOME"
-assert_equal "$TEST_ROOT" "$(HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot")" "initial install"
-assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$TEST_HOME/.dotfiles-root")" "installed target"
-assert_equal "$TEST_ROOT" "$(HOME="$TEST_HOME" "$TEST_HOME/.dotfiles-root")" "installed default anchor"
-assert_equal "$TEST_ROOT" "$(HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot")" "idempotent install"
+  rm "$test_home/.dotfiles-root"
+  ln -s missing "$test_home/.dotfiles-root"
+  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" > /dev/null
+  assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$test_home/.dotfiles-root")" "broken link update"
 
-rm "$TEST_HOME/.dotfiles-root"
-ln -s "$TEST_TMP/archive/dotfiles-root.symlink" "$TEST_HOME/.dotfiles-root"
-HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot" >/dev/null
-assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$TEST_HOME/.dotfiles-root")" "stale link update"
+  rm "$test_home/.dotfiles-root"
+  touch "$test_home/.dotfiles-root"
+  assert_fails "regular-file protection" env HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot"
+  rm "$test_home/.dotfiles-root"
+  mkdir "$test_home/.dotfiles-root"
+  assert_fails "directory protection" env HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot"
+}
 
-rm "$TEST_HOME/.dotfiles-root"
-ln -s missing "$TEST_HOME/.dotfiles-root"
-HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot" >/dev/null
-assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$TEST_HOME/.dotfiles-root")" "broken link update"
+test_adapter_integration() {
+  local case_root
+  local test_home
+  case_root=$(scenario_tmpdir adapters)
+  test_home="$case_root/home"
+  mkdir -p "$test_home"
 
-rm "$TEST_HOME/.dotfiles-root"
-touch "$TEST_HOME/.dotfiles-root"
-assert_fails "regular-file protection" env HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot"
-rm "$TEST_HOME/.dotfiles-root"
-mkdir "$TEST_HOME/.dotfiles-root"
-assert_fails "directory protection" env HOME="$TEST_HOME" "$RESOLVER" --install "$TEST_ROOT/bin/dot"
-rmdir "$TEST_HOME/.dotfiles-root"
-
-# Exercise Zsh startup and dot --edit through an isolated HOME.
-ln -s "$TEST_ROOT/dotfiles-root.symlink" "$TEST_HOME/.dotfiles-root"
-ln -s "$TEST_ROOT/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
-# shellcheck disable=SC2016 # The script is evaluated by the child Zsh process.
-if ! env -u ZSH HOME="$TEST_HOME" EXPECTED_ROOT="$TEST_ROOT" zsh -d -f -c '
+  ln -s "$TEST_ROOT/dotfiles-root.symlink" "$test_home/.dotfiles-root"
+  ln -s "$TEST_ROOT/zsh/zshrc.symlink" "$test_home/.zshrc"
+  # shellcheck disable=SC2016 # The script is evaluated by the child Zsh process.
+  if ! scenario_capture "$case_root/zsh" env -u ZSH HOME="$test_home" EXPECTED_ROOT="$TEST_ROOT" zsh -d -f -c '
     source "$HOME/.zshrc"
     [[ "$DOTFILES_ROOT" == "$EXPECTED_ROOT" ]]
     [[ -z "${ZSH+x}" ]]
-  ' 2>"$TEST_TMP/zsh-stderr"; then
-  cat "$TEST_TMP/zsh-stderr" >&2
-  fail "Zsh startup did not export only DOTFILES_ROOT"
-fi
+  '; then
+    command cat "$case_root/zsh/stderr.log" >&2
+    scenario_fail "Zsh startup did not export only DOTFILES_ROOT"
+  fi
 
-cat > "$TEST_TMP/editor" <<'EOF'
+  scenario_write_executable "$case_root/editor" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$1" > "$EDITOR_CAPTURE"
 EOF
-chmod +x "$TEST_TMP/editor"
-HOME="$TEST_HOME" EDITOR="$TEST_TMP/editor" EDITOR_CAPTURE="$TEST_TMP/editor-argument" "$TEST_ROOT/bin/dot" --edit
-assert_equal "$TEST_ROOT" "$(cat "$TEST_TMP/editor-argument")" "dot --edit checkout"
+  scenario_capture "$case_root/edit" env \
+    HOME="$test_home" \
+    EDITOR="$case_root/editor" \
+    EDITOR_CAPTURE="$case_root/editor-argument" \
+    "$TEST_ROOT/bin/dot" --edit
+  assert_equal "$TEST_ROOT" "$(command cat "$case_root/editor-argument")" "dot --edit checkout"
+}
 
-echo "PASS: checkout-root interface"
+scenario_run 'anchors resolve from paths, commands, and symlink chains' test_anchor_resolution
+scenario_run 'invalid anchors fail with explicit diagnostics' test_invalid_anchors
+scenario_run 'marker directories, Git checkouts, and worktrees resolve locally' test_checkout_types
+scenario_run 'the stable home link installs, repairs, and protects conflicts' test_home_link_installation
+scenario_run 'Zsh and dot --edit use the checkout-root adapter' test_adapter_integration
+scenario_finish
