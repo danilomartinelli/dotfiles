@@ -297,6 +297,11 @@ tests/documentation_test.sh
 _scripts/test-checkout-root
 ```
 
+The behavioral suites source `tests/_support/shell-scenario.sh` for temporary
+fixture cleanup, fake executable creation, output and event capture, shared
+assertions, and TAP reporting. Domain-specific fake behavior stays in the suite
+that owns it.
+
 `tests/documentation_test.sh` guards README coverage for every `bin/` command,
 shell alias, public function, Brewfile package, and Mise tool declaration.
 
