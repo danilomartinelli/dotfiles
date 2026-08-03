@@ -291,6 +291,7 @@ All tests use temporary homes or fixtures and do not change the real machine:
 tests/setup_test.sh
 tests/zsh_startup_test.sh
 tests/ssh_provisioning_test.sh
+tests/git_branch_state_test.sh
 tests/documentation_test.sh
 _scripts/test-checkout-root
 ```
