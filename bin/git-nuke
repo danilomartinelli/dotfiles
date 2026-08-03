@@ -16,22 +16,31 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-# Check if we're in a git repository
-if ! git rev-parse --git-dir >/dev/null 2>&1; then
-  echo "Error: Not in a git repository." >&2
-  exit 1
+ROOT_RESOLVER=$HOME/.dotfiles-root
+if [ ! -L "$ROOT_RESOLVER" ] || [ ! -x "$ROOT_RESOLVER" ]; then
+  SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+  ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
 fi
+DOTFILES_ROOT=$("$ROOT_RESOLVER" "$0")
+export DOTFILES_ROOT
+
+# shellcheck disable=SC1091 # Loaded from the resolved dotfiles checkout.
+. "$DOTFILES_ROOT/git/_branch-state.sh"
+
+_dotfiles_git_state_require_worktree git
 
 # Check if branch exists locally
-if ! git show-ref --verify --quiet refs/heads/"$1"; then
+if ! _dotfiles_git_state_local_branch_exists git "$1"; then
   echo "Warning: Branch '$1' does not exist locally." >&2
 else
   git branch -D "$1"
 fi
 
-# Try to delete remote branch (may not exist, which is fine)
-if git ls-remote --exit-code --heads origin "$1" >/dev/null 2>&1; then
-  git push origin :"$1"
-else
-  echo "Info: Branch '$1' does not exist on origin." >&2
-fi
+# Try to delete the exact remote branch (it may not exist, which is fine).
+remote_status=0
+_dotfiles_git_state_live_origin_branch_exists git "$1" || remote_status=$?
+case $remote_status in
+  0) git push origin :"$1" ;;
+  1) echo "Info: Branch '$1' does not exist on origin." >&2 ;;
+  *) exit "$remote_status" ;;
+esac

@@ -8,44 +8,43 @@ else
   git="/usr/bin/git"
 fi
 
-git_branch() {
-  echo $($git symbolic-ref HEAD 2>/dev/null | awk -F/ {'print $NF'})
-}
+. "$DOTFILES_ROOT/git/_branch-state.sh"
 
 git_dirty() {
-  if $(! $git status -s &> /dev/null)
+  local branch
+  branch=$(git_prompt_info) || return 0
+
+  if ! $git status -s &> /dev/null
   then
-    echo ""
+    return
   else
     if [[ $($git status --porcelain) == "" ]]
     then
-      echo "on %{$fg_bold[green]%}$(git_prompt_info)%{$reset_color%}"
+      echo "on %{$fg_bold[green]%}$branch%{$reset_color%}"
     else
-      echo "on %{$fg_bold[red]%}$(git_prompt_info)%{$reset_color%}"
+      echo "on %{$fg_bold[red]%}$branch%{$reset_color%}"
     fi
   fi
 }
 
 git_prompt_info () {
- ref=$($git symbolic-ref HEAD 2>/dev/null) || return
-# echo "(%{\e[0;33m%}${ref#refs/heads/}%{\e[0m%})"
- echo "${ref#refs/heads/}"
+  _dotfiles_git_state_current_branch "$git" 2>/dev/null
 }
 
-# This assumes that you always have an origin named `origin`, and that you only
-# care about one specific origin. If this is not the case, you might want to use
-# `$git cherry -v @{upstream}` instead.
 need_push () {
-  if [ $($git rev-parse --is-inside-work-tree 2>/dev/null) ]
-  then
-    number=$($git cherry -v origin/$(git symbolic-ref --short HEAD) 2>/dev/null | wc -l | bc)
+  local branch number
 
-    if [[ $number == 0 ]]
-    then
-      echo " "
-    else
-      echo " with %{$fg_bold[magenta]%}$number unpushed%{$reset_color%}"
-    fi
+  branch=$(_dotfiles_git_state_current_branch "$git" 2>/dev/null) || return 0
+  if ! _dotfiles_git_state_origin_tracking_branch_exists "$git" "$branch"; then
+    return 0
+  fi
+  number=$(_dotfiles_git_state_ahead_count "$git" "$branch" 2>/dev/null) || return 0
+
+  if [[ $number == 0 ]]
+  then
+    echo " "
+  else
+    echo " with %{$fg_bold[magenta]%}$number unpushed%{$reset_color%}"
   fi
 }
 
