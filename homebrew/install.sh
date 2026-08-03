@@ -4,27 +4,9 @@
 
 set -e
 
-find_brew() {
-  local candidate
-
-  if command -v brew >/dev/null 2>&1; then
-    command -v brew
-    return 0
-  fi
-
-  for candidate in \
-    /opt/homebrew/bin/brew \
-    /usr/local/bin/brew \
-    /home/linuxbrew/.linuxbrew/bin/brew
-  do
-    if [ -x "$candidate" ]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
+SCRIPT_PATH=${BASH_SOURCE[0]}
+SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
+HOMEBREW_AVAILABILITY=$SCRIPT_DIR/_availability.sh
 
 download_and_install() {
   local installer_url
@@ -55,7 +37,7 @@ download_and_install() {
   rm -f "$installer_file"
 }
 
-if find_brew >/dev/null; then
+if "$HOMEBREW_AVAILABILITY" prefix >/dev/null; then
   exit 0
 fi
 
@@ -70,7 +52,7 @@ case "$(uname -s)" in
     ;;
 esac
 
-if ! find_brew >/dev/null; then
+if ! "$HOMEBREW_AVAILABILITY" prefix >/dev/null; then
   echo '  ERROR: Homebrew installation completed, but brew was not found' >&2
   exit 1
 fi

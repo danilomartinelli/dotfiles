@@ -53,6 +53,7 @@ mkdir -p \
   "$FIXTURE/bravo" \
   "$FIXTURE/functions" \
   "$FIXTURE/git" \
+  "$FIXTURE/homebrew" \
   "$FIXTURE/system" \
   "$FIXTURE/zsh" \
   "$FIXTURE/_ignored" \
@@ -73,6 +74,12 @@ cp "$REPOSITORY_ROOT/system/env.zsh" "$FIXTURE/system/env.zsh"
 cp "$REPOSITORY_ROOT/system/grc.zsh" "$FIXTURE/system/grc.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
+sed \
+  -e "s|/opt/homebrew|$TEST_ROOT/platform/opt/homebrew|g" \
+  -e "s|/usr/local|$TEST_ROOT/platform/usr/local|g" \
+  -e "s|/home/linuxbrew/.linuxbrew|$TEST_ROOT/platform/home/linuxbrew/.linuxbrew|g" \
+  "$REPOSITORY_ROOT/homebrew/_availability.sh" \
+  > "$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
 printf '%s\n' 'print -r -- prompt >> "$STARTUP_TEST_LOG"' >> "$FIXTURE/zsh/prompt.zsh"
@@ -177,7 +184,7 @@ cat > "$FIXTURE/_ignored/config.zsh" <<'EOF'
 print -r -- ignored-topic >> "$STARTUP_TEST_LOG"
 EOF
 
-chmod +x "$FIXTURE/resolver" "$BREW_PREFIX/bin/brew" "$BREW_PREFIX/bin/grc"
+chmod +x "$FIXTURE/resolver" "$FIXTURE/homebrew/_availability.sh" "$BREW_PREFIX/bin/brew" "$BREW_PREFIX/bin/grc"
 ln -s "$FIXTURE/resolver" "$TEST_HOME/.dotfiles-root"
 ln -s "$FIXTURE/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
 
@@ -313,7 +320,8 @@ if ! env -u ZSH \
   STARTUP_FIXTURE_ROOT="$FIXTURE" \
   STARTUP_TEST_LOG="$OPTIONAL_EVENTS" \
   FAKE_HOMEBREW_PREFIX="$TEST_ROOT/missing-homebrew-prefix" \
-  "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ -z ${FAKE_SYNTAX_LOADED-} ]]'
+  EXPECTED_FALLBACK_PREFIX="$TEST_ROOT/platform/usr/local" \
+  "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'
 then
   fail 'startup failed without optional syntax highlighting'
 fi

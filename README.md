@@ -292,12 +292,16 @@ tests/setup_test.sh
 tests/zsh_startup_test.sh
 tests/ssh_provisioning_test.sh
 tests/git_branch_state_test.sh
+tests/homebrew_availability_test.sh
 tests/documentation_test.sh
 _scripts/test-checkout-root
 ```
 
 `tests/documentation_test.sh` guards README coverage for every `bin/` command,
 shell alias, public function, Brewfile package, and Mise tool declaration.
+
+`homebrew/_availability.sh` is the private interface used by installation,
+setup, and Zsh startup to resolve the same Homebrew executable and prefix rules.
 
 After changing shell configuration, run the relevant tests and then `reload!`.
 

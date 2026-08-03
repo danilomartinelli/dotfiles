@@ -10,6 +10,7 @@ SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$SETUP_PATH")" && pwd)"
 ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
 DOTFILES_ROOT=$("$ROOT_RESOLVER" "$SETUP_PATH")
 export DOTFILES_ROOT
+HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 
 BREW_BIN=''
 LINK_ACTION=''
@@ -256,40 +257,18 @@ update_checkout() {
   git -C "$DOTFILES_ROOT" pull
 }
 
-locate_homebrew() {
-  local candidate
-
-  if command -v brew >/dev/null 2>&1; then
-    command -v brew
-    return 0
-  fi
-
-  for candidate in \
-    /opt/homebrew/bin/brew \
-    /usr/local/bin/brew \
-    /home/linuxbrew/.linuxbrew/bin/brew
-  do
-    if [ -x "$candidate" ]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
 ensure_homebrew() {
   local brew_prefix
 
   "$DOTFILES_ROOT/homebrew/install.sh" || return 1
   hash -r
 
-  if ! BREW_BIN=$(locate_homebrew); then
+  if ! BREW_BIN=$("$HOMEBREW_AVAILABILITY" binary); then
     warn 'Homebrew installer completed but brew is unavailable'
     return 1
   fi
 
-  if ! brew_prefix=$("$BREW_BIN" --prefix); then
+  if ! brew_prefix=$("$HOMEBREW_AVAILABILITY" prefix); then
     return 1
   fi
   PATH="$brew_prefix/bin:$brew_prefix/sbin:$PATH"
