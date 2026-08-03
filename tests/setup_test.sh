@@ -96,6 +96,9 @@ EOF
 printf 'brew %s\n' "$*" >> "$SETUP_TEST_LOG"
 case "$1" in
   --prefix)
+    if [ "${FAIL_BREW_PREFIX:-0}" -ne 0 ]; then
+      exit "$FAIL_BREW_PREFIX"
+    fi
     printf '%s\n' "$FAKE_BREW_PREFIX"
     ;;
   update)
@@ -198,10 +201,16 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
+  sed \
+    -e "s|/opt/homebrew|$fixture/platform/opt/homebrew|g" \
+    -e "s|/usr/local|$fixture/platform/usr/local|g" \
+    -e "s|/home/linuxbrew/.linuxbrew|$fixture/platform/home/linuxbrew/.linuxbrew|g" \
+    "$REPOSITORY_ROOT/homebrew/_availability.sh" \
+    > "$fixture/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
-  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink"
+  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/ssh/install.sh"
 
   printf '%s\n' '# local environment' > "$fixture/.localrc.example"
@@ -340,6 +349,7 @@ test_critical_failures_stop() {
   local defaults_fixture
   local bundle_fixture
   local homebrew_fixture
+  local prefix_fixture
   local topic_fixture
 
   defaults_fixture=$(make_fixture)
@@ -361,6 +371,16 @@ test_critical_failures_stop() {
   assert_contains "$homebrew_fixture/stderr.log" 'Homebrew available'
   assert_not_contains "$homebrew_fixture/events.log" 'brew update'
   assert_not_contains "$homebrew_fixture/events.log" topic-alpha
+
+  prefix_fixture=$(make_fixture)
+  export FAIL_BREW_PREFIX=1
+  if invoke "$prefix_fixture" "$prefix_fixture/_scripts/setup" update; then
+    return 1
+  fi
+  unset FAIL_BREW_PREFIX
+  assert_contains "$prefix_fixture/stderr.log" 'Homebrew available'
+  assert_not_contains "$prefix_fixture/events.log" 'brew update'
+  assert_not_contains "$prefix_fixture/events.log" topic-alpha
 
   bundle_fixture=$(make_fixture)
   export FAIL_BREW_BUNDLE=1

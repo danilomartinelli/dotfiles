@@ -8,19 +8,9 @@ export PROJECTS="$HOME/Code"
 [[ -r "$HOME/.localrc" ]] && source "$HOME/.localrc"
 [[ -r "$DOTFILES_ROOT/.commonrc" ]] && source "$DOTFILES_ROOT/.commonrc"
 
-# Discover Homebrew once. The exported prefix is reused by the baseline path,
+# Resolve Homebrew once. The exported prefix is reused by the baseline path,
 # topic configuration, completions, and syntax highlighting.
-if (( $+commands[brew] )) && \
-  _dotfiles_homebrew_prefix=$("$commands[brew]" --prefix 2>/dev/null)
-then
-  HOMEBREW_PREFIX=$_dotfiles_homebrew_prefix
-elif [[ -d /opt/homebrew ]]; then
-  HOMEBREW_PREFIX=/opt/homebrew
-elif [[ -d /usr/local/Homebrew ]]; then
-  HOMEBREW_PREFIX=/usr/local
-else
-  HOMEBREW_PREFIX=/usr/local
-fi
+HOMEBREW_PREFIX=$("$DOTFILES_ROOT/homebrew/_availability.sh" prefix --fallback 2>/dev/null)
 export HOMEBREW_PREFIX
 
 # Establish the portable baseline before topics extend it. Zsh's unique path

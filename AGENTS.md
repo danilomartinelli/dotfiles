@@ -34,6 +34,7 @@ tests/setup_test.sh
 tests/zsh_startup_test.sh
 tests/ssh_provisioning_test.sh
 tests/git_branch_state_test.sh
+tests/homebrew_availability_test.sh
 tests/documentation_test.sh
 _scripts/test-checkout-root
 
@@ -111,10 +112,12 @@ failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are
 advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the
 adapters.
 
-`homebrew/install.sh` only makes Homebrew available. The dependency phase taps
-`xo/xo` before reconciling `Brewfile`. Topic installers currently configure
-Archiver associations, the Dock, Mise runtimes, SSH config, and WezTerm
-terminfo.
+`homebrew/install.sh` only makes Homebrew available. The private executable
+`homebrew/_availability.sh` owns executable discovery, prefix validation, and
+the non-failing startup fallback shared by installation, setup, and Zsh. The
+dependency phase taps `xo/xo` before reconciling `Brewfile`. Topic installers
+currently configure Archiver associations, the Dock, Mise runtimes, SSH config,
+and WezTerm terminfo.
 
 ## Checkout-root contract
 
