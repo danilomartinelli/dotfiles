@@ -1,8 +1,9 @@
 # Private shell-startup orchestrator. This file is sourced only by ~/.zshrc.
 
 # `c [tab]` uses this as its project root. Local and shared environment files
-# retain their existing ability to override it.
-export PROJECTS="$HOME/Code"
+# retain their existing ability to override it. Default matches the Workspace
+# layout created by workspace/install.sh (`~/Workspace/github.com/<user>`).
+export PROJECTS="$HOME/Workspace/github.com"
 
 # Keep secrets outside the repository, then apply shared non-sensitive values.
 [[ -r "$HOME/.localrc" ]] && source "$HOME/.localrc"
@@ -117,13 +118,20 @@ done
 source "$_dotfiles_prompt_file"
 
 # Initialize completion exactly once in this startup pass, then let topics add
-# their completion definitions and styles.
+# their completion definitions and styles. -i silently skips insecure
+# directories instead of prompting.
 autoload -U compinit
-compinit
+compinit -i
 
 for _dotfiles_file in "${_dotfiles_completion_files[@]}"; do
   source "$_dotfiles_file"
 done
+
+# Autosuggestions must load before syntax highlighting and after compinit.
+_dotfiles_autosuggestions="$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+if [[ -r $_dotfiles_autosuggestions ]]; then
+  source "$_dotfiles_autosuggestions"
+fi
 
 # Syntax highlighting must be sourced last and remains optional.
 _dotfiles_syntax_highlighting="$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"

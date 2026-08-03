@@ -137,8 +137,8 @@ test_golden_manifest() {
   expected=$fixture/expected.manifest
   actual=$fixture/actual.manifest
 
-  golden_manifest "$fixture" > "$expected"
-  "$CATALOG" "$fixture" > "$actual" || return 1
+  golden_manifest "$fixture" >"$expected"
+  "$CATALOG" "$fixture" >"$actual" || return 1
 
   if ! diff -u "$expected" "$actual"; then
     scenario_fail 'catalog output differs from the golden manifest'

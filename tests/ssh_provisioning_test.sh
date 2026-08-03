@@ -100,9 +100,9 @@ test_fresh_and_idempotent_provisioning() {
   assert_mode "$test_home/.ssh/config_local" 600
   assert_contains "$test_home/stdout.log" 'ssh configuration complete'
 
-  printf '%s\n' '# preserved local entry' >> "$test_home/.ssh/config_local"
-  : > "$test_home/.ssh/id_ed25519"
-  : > "$test_home/.ssh/id_ed25519.pub"
+  printf '%s\n' '# preserved local entry' >>"$test_home/.ssh/config_local"
+  : >"$test_home/.ssh/id_ed25519"
+  : >"$test_home/.ssh/id_ed25519.pub"
   chmod 777 "$test_home/.ssh/config_local" "$test_home/.ssh/id_ed25519" "$test_home/.ssh/id_ed25519.pub"
 
   invoke_installer "$test_home"
@@ -120,8 +120,8 @@ test_collision_safe_config_backup() {
 
   test_home=$(make_home)
   mkdir -p "$test_home/.ssh"
-  printf '%s\n' 'existing backup' > "$test_home/.ssh/config.backup"
-  printf '%s\n' 'original config' > "$test_home/.ssh/config"
+  printf '%s\n' 'existing backup' >"$test_home/.ssh/config.backup"
+  printf '%s\n' 'original config' >"$test_home/.ssh/config"
 
   invoke_installer "$test_home"
 
@@ -143,9 +143,9 @@ test_installer_does_not_consume_stdin() {
   local test_home stdin_value
 
   test_home=$(make_home)
-  printf '%s\n' ssh-stdin-sentinel > "$test_home/stdin"
+  printf '%s\n' ssh-stdin-sentinel >"$test_home/stdin"
 
-  exec 3< "$test_home/stdin"
+  exec 3<"$test_home/stdin"
   scenario_capture "$test_home" env \
     HOME="$test_home" \
     "$REPOSITORY_ROOT/ssh/install.sh" <&3
@@ -210,7 +210,7 @@ test_existing_keys_are_never_overwritten() {
 
   private_home=$(make_home)
   mkdir -p "$private_home/.ssh"
-  printf '%s\n' private-material > "$private_home/.ssh/id_ed25519_personal"
+  printf '%s\n' private-material >"$private_home/.ssh/id_ed25519_personal"
   assert_fails_with_status 1 invoke_key_command "$private_home" personal
   assert_contains "$private_home/.ssh/id_ed25519_personal" private-material
   assert_not_contains "$private_home/events.log" call
@@ -218,7 +218,7 @@ test_existing_keys_are_never_overwritten() {
 
   public_home=$(make_home)
   mkdir -p "$public_home/.ssh"
-  printf '%s\n' public-material > "$public_home/.ssh/id_rsa_work.pub"
+  printf '%s\n' public-material >"$public_home/.ssh/id_rsa_work.pub"
   assert_fails_with_status 1 invoke_key_command "$public_home" work --rsa
   assert_contains "$public_home/.ssh/id_rsa_work.pub" public-material
   assert_not_contains "$public_home/events.log" call
@@ -238,9 +238,9 @@ test_usage_dependency_fallback_and_failure() {
   missing_home=$(make_home)
   mkdir -p "$missing_home/empty-bin"
   if scenario_capture "$missing_home" env \
-      HOME="$missing_home" \
-      PATH="$missing_home/empty-bin" \
-      "$REPOSITORY_ROOT/ssh/create-key" default; then
+    HOME="$missing_home" \
+    PATH="$missing_home/empty-bin" \
+    "$REPOSITORY_ROOT/ssh/create-key" default; then
     return 1
   fi
   assert_contains "$missing_home/stderr.log" 'ssh-keygen is required'

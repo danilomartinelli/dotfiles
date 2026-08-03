@@ -38,15 +38,15 @@ fi
 
 input_root=$1
 [ -d "$input_root" ] || fail "invalid repository root: $input_root"
-repository_root=$(CDPATH='' cd -P -- "$input_root" 2>/dev/null && pwd) || \
-  fail "unreadable repository root: $input_root"
+repository_root=$(CDPATH='' cd -P -- "$input_root" 2>/dev/null && pwd) \
+  || fail "unreadable repository root: $input_root"
 
-records=$(mktemp "${TMPDIR:-/tmp}/topic-catalog.XXXXXX") || \
-  fail 'cannot create a temporary record file'
+records=$(mktemp "${TMPDIR:-/tmp}/topic-catalog.XXXXXX") \
+  || fail 'cannot create a temporary record file'
 trap 'rm -f "$records"' EXIT
 
 record() {
-  printf '%s\t%s\n' "$1" "$2" >> "$records"
+  printf '%s\t%s\n' "$1" "$2" >>"$records"
 }
 
 classify_zsh_file() {
@@ -101,16 +101,16 @@ scan_topic() {
     record installer "$topic_dir/install.sh"
   fi
 
-  topic_files=$(find "$topic_dir" -type f -name '*.zsh' -print) || \
-    fail "discovery failed in topic: $topic_dir"
+  topic_files=$(find "$topic_dir" -type f -name '*.zsh' -print) \
+    || fail "discovery failed in topic: $topic_dir"
   while IFS= read -r file; do
     [ -n "$file" ] || continue
     relative=${file#"$repository_root"/}
     case $relative in
-      _*|.*|*/_*|*/.*) continue ;;
+      _* | .* | */_* | */.*) continue ;;
     esac
     classify_zsh_file "$file" "$relative"
-  done <<< "$topic_files"
+  done <<<"$topic_files"
 }
 
 for entry in "$repository_root"/*; do
@@ -130,7 +130,7 @@ for entry in "$repository_root"/*; do
   [ -d "$entry" ] || continue
 
   case $entry_name in
-    bin|functions|tests) continue ;;
+    bin | functions | tests) continue ;;
   esac
 
   record topic "$entry"

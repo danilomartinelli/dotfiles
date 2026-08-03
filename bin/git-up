@@ -19,6 +19,8 @@ if [ "$before" = "$after" ]; then
   exit 0
 fi
 
+# ORIG_HEAD marks where HEAD was before the pull, so a rebase pull does not
+# list rewritten local commits as incoming.
 echo 'Log:'
-git log --color --pretty=oneline --abbrev-commit "$before..$after" |
-  sed 's/^/  /'
+git log --color --pretty=oneline --abbrev-commit ORIG_HEAD..HEAD \
+  | sed 's/^/  /'

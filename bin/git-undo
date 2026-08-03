@@ -2,4 +2,11 @@
 #
 # Undo your last commit, but don't throw away your changes
 
+set -e
+
+if ! git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+  echo 'Error: No commit to undo.' >&2
+  exit 1
+fi
+
 git reset --soft HEAD^

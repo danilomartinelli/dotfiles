@@ -21,6 +21,9 @@ defaults write NSGlobalDomain com.apple.keyboard.fnState -bool true
 defaults write NSGlobalDomain KeyRepeat -int 1
 defaults write NSGlobalDomain InitialKeyRepeat -int 10
 
+# Full keyboard access: Tab moves focus between all controls
+defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
+
 # Disable auto-correct and auto-capitalization
 defaults write NSGlobalDomain NSAutomaticSpellingCorrectionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticCapitalizationEnabled -bool false
@@ -28,9 +31,15 @@ defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 
+# === TRACKPAD ===
+# Tap to click
+defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+
 # === FINDER ===
 # Always open everything in Finder's list view
-defaults write com.apple.Finder FXPreferredViewStyle Nlsv
+defaults write com.apple.finder FXPreferredViewStyle Nlsv
 
 # Show all filename extensions
 defaults write NSGlobalDomain AppleShowAllExtensions -bool true
@@ -43,6 +52,21 @@ defaults write com.apple.finder ShowPathbar -bool true
 
 # Show status bar in Finder
 defaults write com.apple.finder ShowStatusBar -bool true
+
+# Show the full POSIX path in the window title
+defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+
+# Keep folders first when sorting by name
+defaults write com.apple.finder _FXSortFoldersFirst -bool true
+
+# Search the current folder by default
+defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+
+# Disable the warning when changing a file extension
+defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+
+# Allow quitting Finder with Cmd+Q
+defaults write com.apple.finder QuitMenuItem -bool true
 
 # Show volumes on Desktop
 defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
@@ -57,6 +81,12 @@ defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
 defaults write com.apple.finder NewWindowTarget -string "PfHm"
 defaults write com.apple.finder NewWindowTargetPath -string "file://$HOME/"
 
+# Expand save and print panels by default
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
+
 # === DOCK ===
 # Set Dock position (left, bottom, or right)
 defaults write com.apple.dock orientation -string "bottom"
@@ -64,8 +94,13 @@ defaults write com.apple.dock orientation -string "bottom"
 # Set Dock icon size (in pixels)
 defaults write com.apple.dock tilesize -int 48
 
-# Automatically hide and show the Dock
+# Automatically hide and show the Dock, without delay
 defaults write com.apple.dock autohide -bool true
+defaults write com.apple.dock autohide-delay -float 0
+defaults write com.apple.dock autohide-time-modifier -float 0.4
+
+# Disable the launch animation
+defaults write com.apple.dock launchanim -bool false
 
 # Don't show recent applications in Dock
 defaults write com.apple.dock show-recents -bool false
@@ -80,16 +115,28 @@ defaults write com.apple.dock wvous-bl-modifier -int 0
 defaults write com.apple.dock wvous-br-corner -int 1
 defaults write com.apple.dock wvous-br-modifier -int 0
 
+# === MISSION CONTROL ===
+# Don't automatically rearrange spaces based on most recent use
+defaults write com.apple.dock mru-spaces -bool false
+
+# Group windows by application in Mission Control
+defaults write com.apple.dock expose-group-by-app -bool true
+
 # === SECURITY & PRIVACY ===
 # Use AirDrop over every interface
-defaults write com.apple.NetworkBrowser BrowseAllInterfaces 1
+defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
 
-# === MENU BAR ===
+# === MENU BAR (Control Center) ===
 # Show battery percentage
-defaults write com.apple.menuextra.battery ShowPercent -bool true
+defaults write com.apple.controlcenter BatteryShowPercentage -bool true
 
-# Show date and time in menu bar
-defaults write com.apple.menuextra.clock DateFormat -string "EEE MMM d  H:mm:ss"
+# Menu bar clock: show seconds and day of week
+defaults write com.apple.menuextra.clock ShowSeconds -bool true
+defaults write com.apple.menuextra.clock ShowDayOfWeek -bool true
+
+# === TIME MACHINE ===
+# Don't offer new disks for backup
+defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
 
 # === NETWORK ===
 # Use Google DNS servers (requires admin privileges)
@@ -118,19 +165,8 @@ if [ -d "$HOME/Library" ]; then
   fi
 fi
 
-# Restart Services
+# Restart services last so every domain above is reloaded. Keyboard settings
+# apply fully only after logout/login.
 echo "  → Restarting system services..."
-killall SystemUIServer Finder Dock ControlStrip 2>/dev/null || true
-echo "  ✓ Services restarted"
-
-# === MISSION CONTROL SETTINGS ===
-echo "  → configuring Mission Control"
-
-# Enable Mission Control
-defaults write com.apple.dock mcx-expose-disabled -bool false
-
-# Don't automatically rearrange spaces based on most recent use
-defaults write com.apple.dock mru-spaces -bool false
-
-# Group windows by application in Mission Control
-defaults write com.apple.dock expose-group-by-app -bool true
+killall Finder Dock SystemUIServer ControlCenter ControlStrip cfprefsd 2>/dev/null || true
+echo "  ✓ Services restarted (log out to apply keyboard settings)"

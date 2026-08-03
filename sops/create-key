@@ -1,0 +1,116 @@
+#!/bin/sh
+
+set -eu
+
+program_name=sops-key-create
+
+usage() {
+  cat <<'EOF'
+Usage: sops-key-create <default|personal|work>
+
+Create one age identity for SOPS. Keys are written under
+~/.config/sops/age/ and never overwrite existing material.
+
+Examples:
+  sops-key-create default
+  sops-key-create personal
+  sops-key-create work
+EOF
+}
+
+usage_error() {
+  echo "$program_name: $*" >&2
+  usage >&2
+  exit 2
+}
+
+case ${1:-} in
+  -h | --help)
+    [ "$#" -eq 1 ] || usage_error '--help does not accept additional arguments'
+    usage
+    exit 0
+    ;;
+esac
+
+[ "$#" -eq 1 ] || usage_error 'a key role is required'
+
+role=$1
+case "$role" in
+  default)
+    key_name=keys.txt
+    recipient_name=recipient.txt
+    ;;
+  personal)
+    key_name=keys_personal.txt
+    recipient_name=recipient_personal.txt
+    ;;
+  work)
+    key_name=keys_work.txt
+    recipient_name=recipient_work.txt
+    ;;
+  *) usage_error "unknown key role: $role" ;;
+esac
+
+if ! command -v age-keygen >/dev/null 2>&1; then
+  echo "$program_name: age-keygen is required but was not found" >&2
+  echo "  Install with: brew install age" >&2
+  exit 1
+fi
+
+config_home=${XDG_CONFIG_HOME:-$HOME/.config}
+age_dir=$config_home/sops/age
+key_path=$age_dir/$key_name
+recipient_path=$age_dir/$recipient_name
+
+if [ -e "$key_path" ] || [ -L "$key_path" ]; then
+  echo "$program_name: refusing to overwrite existing key material for $key_path" >&2
+  exit 1
+fi
+
+if [ -e "$recipient_path" ] || [ -L "$recipient_path" ]; then
+  echo "$program_name: refusing to overwrite existing recipient file for $recipient_path" >&2
+  exit 1
+fi
+
+umask 077
+mkdir -p "$age_dir"
+chmod 700 "$age_dir"
+
+echo "› creating $role age key for SOPS"
+keygen_status=0
+keygen_output=$(age-keygen -o "$key_path" 2>&1) || keygen_status=$?
+
+if [ "$keygen_status" -ne 0 ]; then
+  echo "$program_name: age-keygen failed for $key_path" >&2
+  printf '%s\n' "$keygen_output" >&2
+  exit "$keygen_status"
+fi
+
+chmod 600 "$key_path"
+
+# Prefer the public key line from age-keygen stderr ("Public key: age1...").
+public_key=$(printf '%s\n' "$keygen_output" | sed -n 's/^Public key: //p' | head -n 1)
+if [ -z "$public_key" ]; then
+  public_key=$(sed -n 's/^# public key: //p' "$key_path" | head -n 1)
+fi
+
+if [ -z "$public_key" ]; then
+  echo "$program_name: created $key_path but could not extract the public recipient" >&2
+  exit 1
+fi
+
+printf '%s\n' "$public_key" >"$recipient_path"
+chmod 644 "$recipient_path"
+
+echo "✓ created $key_path"
+echo "  Recipient: $public_key"
+echo "  Public key file: $recipient_path"
+if [ "$role" = default ]; then
+  echo "  SOPS will use this identity via:"
+  echo "    export SOPS_AGE_KEY_FILE=\"$key_path\""
+  echo "  Encrypt with:"
+  echo "    sops --age \"\$(cat \"$recipient_path\")\" -e -i secrets.yaml"
+else
+  echo "  Point SOPS at this identity when needed:"
+  echo "    export SOPS_AGE_KEY_FILE=\"$key_path\""
+fi

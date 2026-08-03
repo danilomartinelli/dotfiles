@@ -1,3 +1,1 @@
-# Add VSCode Plugin to Brew bundle
-export HOMEBREW_BREWFILE_VSCODE=1
 export HOMEBREW_NO_ENV_HINTS=1

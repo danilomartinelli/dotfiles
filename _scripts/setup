@@ -118,7 +118,7 @@ setup_gitconfig() {
     -e "s|AUTHOREMAIL|$git_authoremail_escaped|g" \
     -e "s|GIT_CREDENTIAL_HELPER|$git_credential|g" \
     "$DOTFILES_ROOT/git/gitconfig.local.symlink.example" \
-    > "$DOTFILES_ROOT/git/gitconfig.local.symlink"
+    >"$DOTFILES_ROOT/git/gitconfig.local.symlink"
 }
 
 choose_link_action() {
@@ -135,12 +135,33 @@ choose_link_action() {
     printf '\n'
 
     case "$action" in
-      o) LINK_ACTION=overwrite; return 0 ;;
-      O) overwrite_all=true; LINK_ACTION=overwrite; return 0 ;;
-      b) LINK_ACTION=backup; return 0 ;;
-      B) backup_all=true; LINK_ACTION=backup; return 0 ;;
-      s) LINK_ACTION=skip; return 0 ;;
-      S) skip_all=true; LINK_ACTION=skip; return 0 ;;
+      o)
+        LINK_ACTION=overwrite
+        return 0
+        ;;
+      O)
+        overwrite_all=true
+        LINK_ACTION=overwrite
+        return 0
+        ;;
+      b)
+        LINK_ACTION=backup
+        return 0
+        ;;
+      B)
+        backup_all=true
+        LINK_ACTION=backup
+        return 0
+        ;;
+      s)
+        LINK_ACTION=skip
+        return 0
+        ;;
+      S)
+        skip_all=true
+        LINK_ACTION=skip
+        return 0
+        ;;
       *) warn "Unknown choice: $action" ;;
     esac
   done
@@ -247,7 +268,7 @@ install_dotfile_links() {
   while IFS=$'\t' read -r kind src; do
     [ "$kind" = link ] || continue
     link_file "$src" "$HOME/.$(basename "${src%.*}")" || return 1
-  done <<< "$catalog"
+  done <<<"$catalog"
 }
 
 apply_macos_configuration() {
@@ -289,6 +310,9 @@ ensure_homebrew() {
 
 install_declared_dependencies() {
   run_critical 'Homebrew tap xo/xo' "$BREW_BIN" tap xo/xo
+  run_critical 'Homebrew tap nikitabobko/tap' "$BREW_BIN" tap nikitabobko/tap
+  # AeroSpace ships from a third-party tap that Homebrew must explicitly trust.
+  run_advisory 'Homebrew trust nikitabobko/tap' "$BREW_BIN" trust --tap nikitabobko/tap
   run_critical 'Brewfile dependencies' "$BREW_BIN" bundle --file "$DOTFILES_ROOT/Brewfile"
 }
 
@@ -310,7 +334,7 @@ install_topics() {
     else
       fail "topic installer: $relative_installer"
     fi
-  done <<< "$catalog"
+  done <<<"$catalog"
 }
 
 run_dependency_pipeline() {

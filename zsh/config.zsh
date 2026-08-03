@@ -2,7 +2,6 @@ autoload -U colors && colors
 
 export LSCOLORS="exfxcxdxbxegedabagacad"
 export CLICOLOR=true
-export GREP_OPTIONS='--color=auto'
 export LESS_TERMCAP_mb=$'e[1;35m'
 export LESS_TERMCAP_md=$'e[1;36m'
 export LESS_TERMCAP_me=$'e[0m'
@@ -12,8 +11,8 @@ export LESS_TERMCAP_ue=$'e[0m'
 export LESS_TERMCAP_us=$'e[1;32m'
 
 HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=100000
+SAVEHIST=100000
 
 setopt NO_BG_NICE # don't nice background tasks
 setopt NO_HUP
@@ -21,16 +20,23 @@ setopt NO_LIST_BEEP
 setopt LOCAL_OPTIONS # allow functions to have local options
 setopt LOCAL_TRAPS # allow functions to have local traps
 setopt HIST_VERIFY
-setopt SHARE_HISTORY # share history between sessions ???
 setopt EXTENDED_HISTORY # add timestamps to history
 setopt PROMPT_SUBST
-setopt CORRECT
 setopt IGNORE_EOF
 
-setopt APPEND_HISTORY # adds history
-setopt INC_APPEND_HISTORY SHARE_HISTORY  # adds history incrementally and share it across sessions
-setopt HIST_IGNORE_ALL_DUPS  # don't record dupes in history
+setopt INC_APPEND_HISTORY # write history incrementally
+setopt SHARE_HISTORY # share history across sessions, appending incrementally
+setopt HIST_IGNORE_ALL_DUPS # don't record dupes in history
+setopt HIST_IGNORE_SPACE # skip commands that start with a space
+setopt HIST_SAVE_NO_DUPS
 setopt HIST_REDUCE_BLANKS
+
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt EXTENDED_GLOB
+setopt INTERACTIVE_COMMENTS
 
 # Report commands that take longer than three seconds.
 export REPORTTIME=3

@@ -118,7 +118,7 @@ case ${1:-} in
     mode=install
     shift
     ;;
-  -h|--help)
+  -h | --help)
     usage
     exit 0
     ;;

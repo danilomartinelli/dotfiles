@@ -32,7 +32,7 @@ scenario_write_file() {
   local scenario_path=$1
 
   mkdir -p -- "$(dirname -- "$scenario_path")"
-  command cat > "$scenario_path"
+  command cat >"$scenario_path"
 }
 
 scenario_write_executable() {
@@ -47,9 +47,9 @@ scenario_capture() {
   shift
 
   mkdir -p -- "$scenario_artifact_dir"
-  : > "$scenario_artifact_dir/events.log"
+  : >"$scenario_artifact_dir/events.log"
   SCENARIO_EVENT_LOG="$scenario_artifact_dir/events.log" \
-    "$@" > "$scenario_artifact_dir/stdout.log" 2> "$scenario_artifact_dir/stderr.log"
+    "$@" >"$scenario_artifact_dir/stdout.log" 2>"$scenario_artifact_dir/stderr.log"
 }
 
 scenario_fail() {
@@ -62,16 +62,16 @@ assert_equal() {
   local actual=$2
   local description=$3
 
-  [ "$expected" = "$actual" ] || \
-    scenario_fail "$description (expected '$expected', got '$actual')"
+  [ "$expected" = "$actual" ] \
+    || scenario_fail "$description (expected '$expected', got '$actual')"
 }
 
 assert_contains() {
   local file=$1
   local expected=$2
 
-  grep -Fq -- "$expected" "$file" || \
-    scenario_fail "Expected $file to contain: $expected"
+  grep -Fq -- "$expected" "$file" \
+    || scenario_fail "Expected $file to contain: $expected"
 }
 
 assert_not_contains() {
@@ -90,8 +90,8 @@ assert_count() {
   local actual
 
   actual=$(grep -Fc -- "$pattern" "$file" || true)
-  [ "$actual" -eq "$expected" ] || \
-    scenario_fail "Expected $expected occurrences of '$pattern' in $file, got $actual"
+  [ "$actual" -eq "$expected" ] \
+    || scenario_fail "Expected $expected occurrences of '$pattern' in $file, got $actual"
 }
 
 assert_before() {
@@ -105,8 +105,8 @@ assert_before() {
   second_line=$(grep -nF -- "$second_pattern" "$file" | head -n 1 | cut -d: -f1 || true)
   [ -n "$first_line" ] || scenario_fail "Missing '$first_pattern' in $file"
   [ -n "$second_line" ] || scenario_fail "Missing '$second_pattern' in $file"
-  [ "$first_line" -lt "$second_line" ] || \
-    scenario_fail "Expected '$first_pattern' before '$second_pattern' in $file"
+  [ "$first_line" -lt "$second_line" ] \
+    || scenario_fail "Expected '$first_pattern' before '$second_pattern' in $file"
 }
 
 assert_mode() {
@@ -122,7 +122,7 @@ assert_fails() {
   local description=$1
   shift
 
-  if "$@" > /dev/null 2>&1; then
+  if "$@" >/dev/null 2>&1; then
     scenario_fail "$description (command unexpectedly succeeded)"
   fi
 }
@@ -137,8 +137,8 @@ assert_fails_with_status() {
   else
     actual=$?
   fi
-  [ "$actual" -eq "$expected" ] || \
-    scenario_fail "Expected status $expected, got $actual"
+  [ "$actual" -eq "$expected" ] \
+    || scenario_fail "Expected status $expected, got $actual"
 }
 
 assert_fails_with_output() {
@@ -170,7 +170,10 @@ scenario_run() {
       set +e
       ;;
   esac
-  (set -e; "$@")
+  (
+    set -e
+    "$@"
+  )
   scenario_status=$?
   if [ "$scenario_errexit_enabled" -eq 1 ]; then
     set -e

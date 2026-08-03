@@ -142,20 +142,20 @@ make_fixture() {
     -e "s|/usr/local|$fixture/platform/usr/local|g" \
     -e "s|/home/linuxbrew/.linuxbrew|$fixture/platform/home/linuxbrew/.linuxbrew|g" \
     "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-    > "$fixture/homebrew/_availability.sh"
+    >"$fixture/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
   chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/_scripts/topic-catalog" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/ssh/install.sh"
 
-  printf '%s\n' '# local environment' > "$fixture/.localrc.example"
-  printf '%s\n' '# Brewfile fixture' > "$fixture/Brewfile"
-  printf '%s\n' '[user]' > "$fixture/git/gitconfig.local.symlink.example"
-  printf '%s\n' '[user]' > "$fixture/git/gitconfig.local.symlink"
-  printf '%s\n' 'fixture config' > "$fixture/sample/config.symlink"
-  printf '%s\n' 'reserved link' > "$fixture/_ignored/hidden.symlink"
-  printf '%s\n' 'reserved link' > "$fixture/bin/reserved.symlink"
+  printf '%s\n' '# local environment' >"$fixture/.localrc.example"
+  printf '%s\n' '# Brewfile fixture' >"$fixture/Brewfile"
+  printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink.example"
+  printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink"
+  printf '%s\n' 'fixture config' >"$fixture/sample/config.symlink"
+  printf '%s\n' 'reserved link' >"$fixture/_ignored/hidden.symlink"
+  printf '%s\n' 'reserved link' >"$fixture/bin/reserved.symlink"
 
   write_fixture_scripts "$fixture"
   if [ "$brew_state" = present ]; then
@@ -356,8 +356,8 @@ test_interactive_git_identity() {
   helper = GIT_CREDENTIAL_HELPER
 EOF
 
-  printf '%s\n%s\n' 'Dan & Co|Ops' 'dan+test@example.com' | \
-    scenario_capture "$fixture" env \
+  printf '%s\n%s\n' 'Dan & Co|Ops' 'dan+test@example.com' \
+    | scenario_capture "$fixture" env \
       HOME="$fixture/home" \
       PATH="$fixture/fake-bin:/usr/bin:/bin" \
       FAKE_BREW_PREFIX="$fixture/fake-prefix" \

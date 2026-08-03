@@ -1,18 +1,22 @@
 [tools]
 bun = "1.3.2"
+elixir = "1.18"
+erlang = "27"
 go = "1.25.5"
-node = "latest"
+"go:mvdan.cc/sh/v3/cmd/shfmt" = "latest"
+java = "temurin-21"
+node = "lts"
 npm = "11.6.3"
 "npm:eas-cli" = "16.28.0"
-"npm:markdownlint-cli" = "0.46.0"
+"pipx:mdformat" = "latest"
 pnpm = "10.23.0"
 python = "3.14.0"
-ruby = "latest"
+ruby = "3.4"
 rust = "1.91.1"
 terraform = "1.14.0"
+uv = "latest"
 yarn = "4.11.0"
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]
 python.uv_venv_auto = true
-

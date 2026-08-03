@@ -53,10 +53,10 @@ sed \
   -e "s|/usr/local|$TEST_ROOT/platform/usr/local|g" \
   -e "s|/home/linuxbrew/.linuxbrew|$TEST_ROOT/platform/home/linuxbrew/.linuxbrew|g" \
   "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-  > "$FIXTURE/homebrew/_availability.sh"
+  >"$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
-printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >> "$FIXTURE/zsh/prompt.zsh"
+printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >>"$FIXTURE/zsh/prompt.zsh"
 
 scenario_write_executable "$FIXTURE/resolver" <<'EOF'
 #!/bin/sh
@@ -194,10 +194,10 @@ expected_manpath="$FAKE_HOMEBREW_PREFIX/man:/usr/local/man:/usr/local/mysql/man:
 assert_equal "$expected_path" "$PATH" 'PATH order'
 assert_equal "$expected_manpath" "$MANPATH" 'MANPATH order'
 assert_equal "$FAKE_HOMEBREW_PREFIX" "$HOMEBREW_PREFIX" 'Homebrew prefix'
-assert_equal "$HOME/Code" "$PROJECTS" 'project root'
+assert_equal "$HOME/Workspace/github.com" "$PROJECTS" 'project root'
 assert_equal "$HOME/.zsh_history" "$HISTFILE" 'history file'
-assert_equal 10000 "$HISTSIZE" 'history size'
-assert_equal 10000 "$SAVEHIST" 'saved history size'
+assert_equal 100000 "$HISTSIZE" 'history size'
+assert_equal 100000 "$SAVEHIST" 'saved history size'
 
 [[ -o APPEND_HISTORY ]] || fail 'APPEND_HISTORY is disabled'
 [[ -o INC_APPEND_HISTORY ]] || fail 'INC_APPEND_HISTORY is disabled'
@@ -280,8 +280,7 @@ test_startup_order_and_reload() {
     TERM_PROGRAM=Apple_Terminal \
     STARTUP_FIXTURE_ROOT="$FIXTURE" \
     FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
-    "$ZSH_BIN" -d -f "$TEST_ROOT/assert-startup.zsh"
-  then
+    "$ZSH_BIN" -d -f "$TEST_ROOT/assert-startup.zsh"; then
     command cat "$MAIN_ARTIFACTS/stderr.log" >&2
     scenario_fail 'isolated Zsh startup assertions failed'
   fi
@@ -322,8 +321,7 @@ test_optional_homebrew_integration() {
     STARTUP_FIXTURE_ROOT="$FIXTURE" \
     FAKE_HOMEBREW_PREFIX="$TEST_ROOT/missing-homebrew-prefix" \
     EXPECTED_FALLBACK_PREFIX="$TEST_ROOT/platform/usr/local" \
-    "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'
-  then
+    "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'; then
     command cat "$OPTIONAL_ARTIFACTS/stderr.log" >&2
     scenario_fail 'startup failed without optional syntax highlighting'
   fi

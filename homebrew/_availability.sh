@@ -12,8 +12,7 @@ find_brew_binary() {
   for brew_binary in \
     /opt/homebrew/bin/brew \
     /usr/local/bin/brew \
-    /home/linuxbrew/.linuxbrew/bin/brew
-  do
+    /home/linuxbrew/.linuxbrew/bin/brew; do
     if [ -x "$brew_binary" ]; then
       printf '%s\n' "$brew_binary"
       return 0

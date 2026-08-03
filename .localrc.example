@@ -12,15 +12,32 @@
 #   3. Sets proper permissions (600)
 #
 # Manual editing after bootstrap:
-#   vim "$DOTFILES_ROOT/.localrc"  # or vim ~/.localrc (both work with symlink)
+#   zed "$DOTFILES_ROOT/.localrc"  # or zed ~/.localrc (both work with symlink)
 #
 # After editing, reload your shell:
 #   source ~/.zshrc
 #   # or use the alias: reload!
-#
-#
-# WARNING: Below are environment variables that we are using for some of our setups.
-# If you are using this file as a template, make sure to replace these with your own.
+
+# =======================================
+# Machine defaults (non-secret)
+# =======================================
+
+# Override the shared workspace / projects directories if needed
+# export WORKSPACE="$HOME/Workspace"
+# export PROJECTS="$WORKSPACE/github.com"
+
+# Optional identity hints used by some CLIs (Git still uses gitconfig.local)
+# export GIT_AUTHOR_NAME="Your Name"
+# export GIT_AUTHOR_EMAIL="you@example.com"
+# export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
+# export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+
+# Optional contact / tooling defaults
+# export EMAIL="you@example.com"
+# export USERNAME="yourhandle"
+# GitHub handle used by workspace/install.sh for ~/Workspace/github.com/<user>
+# export GITHUB_USER="yourhandle"
+# export GITLAB_USER="yourhandle"
 
 # =======================================
 # Secret Keys and Tokens
@@ -30,6 +47,26 @@
 # export TWENTYFIRST_API_KEY="<CHANGE_ME>"
 # export MORPH_API_KEY="<CHANGE_ME>"
 # export TAVILY_API_KEY="<CHANGE_ME>"
+
+# OpenCode providers (loaded via {env:...} in ~/.config/opencode/opencode.json)
+# Kimi / Moonshot AI
+# export MOONSHOT_API_KEY="<CHANGE_ME>"
+#
+# MiniMax (minimax.io Token Plan or API Console)
+# export MINIMAX_API_KEY="<CHANGE_ME>"
+#
+# Z.AI / GLM Coding Plan (models.dev provider id: zai / zai-coding-plan)
+# export ZHIPU_API_KEY="<CHANGE_ME>"
+#
+# OpenCode Zen + OpenCode Go (same key space)
+# export OPENCODE_API_KEY="<CHANGE_ME>"
+#
+# Optional extras used by other agents/tools
+# export ANTHROPIC_API_KEY="<CHANGE_ME>"
+# export OPENAI_API_KEY="<CHANGE_ME>"
+# export GEMINI_API_KEY="<CHANGE_ME>"
+# export OPENROUTER_API_KEY="<CHANGE_ME>"
+# Aider also reads provider keys from the environment / a repo `.env`
 
 # ========================================
 # NOTE: Best Practices for Managing Secrets
@@ -48,3 +85,6 @@
 # 5. Use different credentials for development and production
 #
 # 6. Some services provide scoped tokens - use the minimum required permissions
+#
+# 7. Git name/email for commits belong in git/gitconfig.local.symlink
+#    (created by bootstrap). The GIT_* exports above are optional extras.

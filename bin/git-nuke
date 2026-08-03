@@ -29,6 +29,19 @@ export DOTFILES_ROOT
 
 _dotfiles_git_state_require_worktree git
 
+# Never nuke the protected or current branches.
+current=$(_dotfiles_git_state_current_branch git 2>/dev/null || true)
+case $1 in
+  main | master)
+    echo "Error: Refusing to nuke protected branch '$1'." >&2
+    exit 1
+    ;;
+  "$current")
+    echo "Error: Refusing to nuke the current branch '$1'." >&2
+    exit 1
+    ;;
+esac
+
 # Check if branch exists locally
 if ! _dotfiles_git_state_local_branch_exists git "$1"; then
   echo "Warning: Branch '$1' does not exist locally." >&2
@@ -40,7 +53,7 @@ fi
 remote_status=0
 _dotfiles_git_state_live_origin_branch_exists git "$1" || remote_status=$?
 case $remote_status in
-  0) git push origin :"$1" ;;
+  0) git push origin --delete "$1" ;;
   1) echo "Info: Branch '$1' does not exist on origin." >&2 ;;
   *) exit "$remote_status" ;;
 esac

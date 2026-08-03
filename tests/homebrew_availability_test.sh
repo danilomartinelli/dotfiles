@@ -14,14 +14,14 @@ fail() {
 
 assert_equal() {
   local expected=$1 actual=$2 description=$3
-  [[ $actual == "$expected" ]] || \
-    fail "$description (expected '$expected', got '$actual')"
+  [[ $actual == "$expected" ]] \
+    || fail "$description (expected '$expected', got '$actual')"
 }
 
 assert_contains() {
   local file=$1 expected=$2
-  grep -Fq -- "$expected" "$file" || \
-    fail "Expected $file to contain: $expected"
+  grep -Fq -- "$expected" "$file" \
+    || fail "Expected $file to contain: $expected"
 }
 
 assert_not_contains() {
@@ -49,17 +49,17 @@ new_fixture() {
   BREW_TEMPLATE=$FIXTURE/brew-template
 
   mkdir -p "$FIXTURE/homebrew" "$FAKE_BIN" "$VALID_PREFIX" "$FIXTURE/tmp"
-  : > "$INSTALL_LOG"
+  : >"$INSTALL_LOG"
 
   sed \
     -e "s|/opt/homebrew|$OPT_PREFIX|g" \
     -e "s|/usr/local|$USR_PREFIX|g" \
     -e "s|/home/linuxbrew/.linuxbrew|$LINUX_PREFIX|g" \
     "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-    > "$FIXTURE/homebrew/_availability.sh"
+    >"$FIXTURE/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/homebrew/install.sh" "$FIXTURE/homebrew/install.sh"
 
-  cat > "$BREW_TEMPLATE" <<'EOF'
+  cat >"$BREW_TEMPLATE" <<'EOF'
 #!/bin/sh
 if [ "$1" != --prefix ]; then
   exit 0
@@ -81,12 +81,12 @@ case "${BREW_TEST_PREFIX_MODE:-valid}" in
 esac
 EOF
 
-  cat > "$FAKE_BIN/uname" <<'EOF'
+  cat >"$FAKE_BIN/uname" <<'EOF'
 #!/bin/sh
 printf '%s\n' "${BREW_TEST_UNAME:-Darwin}"
 EOF
 
-  cat > "$FAKE_BIN/curl" <<'EOF'
+  cat >"$FAKE_BIN/curl" <<'EOF'
 #!/bin/sh
 printf '%s\n' curl >> "$BREW_TEST_INSTALL_LOG"
 installer_file=
@@ -135,7 +135,7 @@ capture_module() {
     BREW_TEST_PREFIX="$BREW_TEST_PREFIX" \
     BREW_TEST_PREFIX_MODE="$BREW_TEST_PREFIX_MODE" \
     "$FIXTURE/homebrew/_availability.sh" "$@" \
-    > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    >"$STDOUT_LOG" 2>"$STDERR_LOG"
   CAPTURED_STATUS=$?
   set -e
 }
@@ -152,7 +152,7 @@ capture_installer() {
     BREW_TEST_INSTALL_TARGET="$BREW_TEST_INSTALL_TARGET" \
     BREW_TEST_TEMPLATE="$BREW_TEMPLATE" \
     "$FIXTURE/homebrew/install.sh" \
-    > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    >"$STDOUT_LOG" 2>"$STDERR_LOG"
   CAPTURED_STATUS=$?
   set -e
 }

@@ -38,7 +38,7 @@ done < <(
   while IFS=$'\t' read -r catalog_kind catalog_path; do
     [ "$catalog_kind" = aliases ] || continue
     sed -n 's/^alias \([^=]*\)=.*/\1/p' "$catalog_path"
-  done <<< "$topic_catalog" | sort -u
+  done <<<"$topic_catalog" | sort -u
 )
 
 while IFS= read -r package_name; do
@@ -59,7 +59,7 @@ done < <(
   ' "$REPOSITORY_ROOT/mise/mise.toml.symlink"
 )
 
-if (( failures > 0 )); then
+if ((failures > 0)); then
   exit 1
 fi
 

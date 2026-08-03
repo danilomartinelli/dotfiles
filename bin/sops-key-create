@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Stable adapter for explicit SOPS age identity creation.
+
+set -e
+
+ROOT_RESOLVER=$HOME/.dotfiles-root
+if [ ! -L "$ROOT_RESOLVER" ] || [ ! -x "$ROOT_RESOLVER" ]; then
+  SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+  ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
+fi
+
+DOTFILES_ROOT=$("$ROOT_RESOLVER" "$0")
+export DOTFILES_ROOT
+
+exec "$DOTFILES_ROOT/sops/create-key" "$@"
