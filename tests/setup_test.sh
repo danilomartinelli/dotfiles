@@ -99,6 +99,11 @@ EOF
 printf '%s\n' topic-ignored >> "$SCENARIO_EVENT_LOG"
 EOF
 
+  scenario_write_executable "$fixture/bin/install.sh" <<'EOF'
+#!/bin/sh
+printf '%s\n' topic-bin >> "$SCENARIO_EVENT_LOG"
+EOF
+
   scenario_write_executable "$fixture/fake-bin/editor" <<'EOF'
 #!/bin/sh
 printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
@@ -128,6 +133,7 @@ make_fixture() {
 
   cp "$REPOSITORY_ROOT/_scripts/setup" "$fixture/_scripts/setup"
   cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
+  cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
@@ -140,7 +146,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
-  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink" "$fixture/homebrew/_availability.sh"
+  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/_scripts/topic-catalog" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/ssh/install.sh"
 
   printf '%s\n' '# local environment' > "$fixture/.localrc.example"
@@ -148,6 +154,8 @@ make_fixture() {
   printf '%s\n' '[user]' > "$fixture/git/gitconfig.local.symlink.example"
   printf '%s\n' '[user]' > "$fixture/git/gitconfig.local.symlink"
   printf '%s\n' 'fixture config' > "$fixture/sample/config.symlink"
+  printf '%s\n' 'reserved link' > "$fixture/_ignored/hidden.symlink"
+  printf '%s\n' 'reserved link' > "$fixture/bin/reserved.symlink"
 
   write_fixture_scripts "$fixture"
   if [ "$brew_state" = present ]; then
@@ -207,10 +215,13 @@ test_bootstrap_sequence() {
   assert_not_contains "$fixture/events.log" 'brew upgrade'
   assert_not_contains "$fixture/events.log" ssh-keygen
   assert_not_contains "$fixture/events.log" topic-ignored
+  assert_not_contains "$fixture/events.log" topic-bin
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
   [ -L "$fixture/home/.localrc" ]
   [ -L "$fixture/home/.config" ]
   [ -L "$fixture/home/.dotfiles-root" ]
+  [ ! -e "$fixture/home/.hidden" ]
+  [ ! -e "$fixture/home/.reserved" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
 }
 
@@ -236,6 +247,7 @@ test_update_sequence_and_cwd_independence() {
   assert_not_contains "$fixture/stdout.log" 'Git identity'
   assert_not_contains "$fixture/stdout.log" 'dotfile links'
   assert_not_contains "$fixture/events.log" ssh-keygen
+  assert_not_contains "$fixture/events.log" topic-bin
   assert_contains "$fixture/stdout.log" 'setup update complete'
   [ -L "$fixture/home/.dotfiles-root" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]

@@ -11,9 +11,12 @@ ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
 DOTFILES_ROOT=$("$ROOT_RESOLVER" "$SETUP_PATH")
 export DOTFILES_ROOT
 HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
+TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 
 BREW_BIN=''
 LINK_ACTION=''
+CATALOG_SNAPSHOT=''
+CATALOG_CAPTURED=false
 overwrite_all=false
 backup_all=false
 skip_all=false
@@ -224,18 +227,27 @@ link_file() {
   success "linked $src to $dst"
 }
 
+setup_catalog() {
+  if [ "$CATALOG_CAPTURED" != true ]; then
+    CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
+    CATALOG_CAPTURED=true
+  fi
+  printf '%s\n' "$CATALOG_SNAPSHOT"
+}
+
 install_dotfile_links() {
+  local catalog
+  local kind
   local src
+
+  catalog=$(setup_catalog) || return 1
 
   link_file "$DOTFILES_ROOT/.localrc" "$HOME/.localrc" || return 1
 
-  while IFS= read -r src; do
-    [ -n "$src" ] || continue
+  while IFS=$'\t' read -r kind src; do
+    [ "$kind" = link ] || continue
     link_file "$src" "$HOME/.$(basename "${src%.*}")" || return 1
-  done < <(
-    find -H "$DOTFILES_ROOT" -maxdepth 2 -type f -name '*.symlink' \
-      -not -path '*/.git/*' -not -path '*/_*' -print 2>/dev/null | sort
-  )
+  done <<< "$catalog"
 }
 
 apply_macos_configuration() {
@@ -281,16 +293,16 @@ install_declared_dependencies() {
 }
 
 install_topics() {
+  local catalog
+  local kind
   local installer
   local relative_installer
 
-  while IFS= read -r installer; do
-    [ -n "$installer" ] || continue
-    relative_installer=${installer#"$DOTFILES_ROOT"/}
+  catalog=$(setup_catalog) || return 1
 
-    case "$relative_installer" in
-      _*/*|homebrew/install.sh) continue ;;
-    esac
+  while IFS=$'\t' read -r kind installer; do
+    [ "$kind" = installer ] || continue
+    relative_installer=${installer#"$DOTFILES_ROOT"/}
 
     info "topic installer: $relative_installer"
     if (cd "$DOTFILES_ROOT" && "$installer"); then
@@ -298,9 +310,7 @@ install_topics() {
     else
       fail "topic installer: $relative_installer"
     fi
-  done < <(
-    find "$DOTFILES_ROOT" -mindepth 2 -maxdepth 2 -type f -name install.sh -print | sort
-  )
+  done <<< "$catalog"
 }
 
 run_dependency_pipeline() {

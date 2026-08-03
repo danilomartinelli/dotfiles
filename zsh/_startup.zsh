@@ -41,42 +41,56 @@ if [[ -z ${MANPATH+x} || $MANPATH == *: ]]; then
 fi
 export MANPATH="${(j/:/)_dotfiles_manpath}"
 
-# Collect visible topic files in deterministic order. Both reserved topics and
-# private files/directories inside a topic are intentionally excluded.
+# Classify the repository layout once. Setup and the documentation checks
+# consume the same catalog, so every surface agrees on the visible topics and
+# the role of each shell file.
 typeset -ga _dotfiles_topic_dirs
 typeset -ga _dotfiles_path_files
 typeset -ga _dotfiles_main_files
 typeset -ga _dotfiles_completion_files
+typeset -g _dotfiles_prompt_file=''
+typeset -gi _dotfiles_prompt_count=0
 _dotfiles_topic_dirs=()
 _dotfiles_path_files=()
 _dotfiles_main_files=()
 _dotfiles_completion_files=()
 
-for _dotfiles_topic_dir in "$DOTFILES_ROOT"/*(N/); do
-  [[ ${_dotfiles_topic_dir:t} == _* ]] && continue
-  _dotfiles_topic_dirs+=("$_dotfiles_topic_dir")
+if ! _dotfiles_catalog=$("$DOTFILES_ROOT/_scripts/topic-catalog" "$DOTFILES_ROOT" 2>/dev/null); then
+  print -u2 'dotfiles: topic catalog discovery failed'
+  unset ${(k)parameters[(I)_dotfiles_*]}
+  return 1
+fi
 
-  for _dotfiles_file in "$_dotfiles_topic_dir"/**/*.zsh(N); do
-    _dotfiles_relative=${_dotfiles_file#"$DOTFILES_ROOT"/}
-    [[ $_dotfiles_relative == _* || $_dotfiles_relative == */_* ]] && continue
-
-    case ${_dotfiles_file:t} in
-      path.zsh)
-        _dotfiles_path_files+=("$_dotfiles_file")
-        ;;
-      completion.zsh)
-        _dotfiles_completion_files+=("$_dotfiles_file")
-        ;;
-      prompt.zsh)
-        [[ $_dotfiles_file == "$DOTFILES_ROOT/zsh/prompt.zsh" ]] || \
-          _dotfiles_main_files+=("$_dotfiles_file")
-        ;;
-      *)
-        _dotfiles_main_files+=("$_dotfiles_file")
-        ;;
-    esac
-  done
+for _dotfiles_record in "${(@f)_dotfiles_catalog}"; do
+  _dotfiles_kind=${_dotfiles_record%%$'\t'*}
+  _dotfiles_file=${_dotfiles_record#*$'\t'}
+  case $_dotfiles_kind in
+    topic)
+      _dotfiles_topic_dirs+=("$_dotfiles_file")
+      ;;
+    path)
+      _dotfiles_path_files+=("$_dotfiles_file")
+      ;;
+    main)
+      _dotfiles_main_files+=("$_dotfiles_file")
+      ;;
+    completion)
+      _dotfiles_completion_files+=("$_dotfiles_file")
+      ;;
+    prompt)
+      _dotfiles_prompt_file=$_dotfiles_file
+      (( _dotfiles_prompt_count += 1 ))
+      ;;
+  esac
 done
+
+# The custom battery/git prompt is authoritative; exactly one topic file may
+# claim that role.
+if (( _dotfiles_prompt_count != 1 )); then
+  print -u2 "dotfiles: expected exactly one authoritative prompt, found $_dotfiles_prompt_count"
+  unset ${(k)parameters[(I)_dotfiles_*]}
+  return 1
+fi
 
 # Make repository functions and visible topics available for autoloading before
 # topic extensions and main configuration run.
@@ -98,9 +112,9 @@ for _dotfiles_file in "${_dotfiles_main_files[@]}"; do
   source "$_dotfiles_file"
 done
 
-# The custom battery/git prompt is authoritative and loads after every general
-# topic file, so no topic can accidentally replace it through discovery order.
-source "$DOTFILES_ROOT/zsh/prompt.zsh"
+# The authoritative prompt loads after every general topic file, so no topic
+# can accidentally replace it through discovery order.
+source "$_dotfiles_prompt_file"
 
 # Initialize completion exactly once in this startup pass, then let topics add
 # their completion definitions and styles.

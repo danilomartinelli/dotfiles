@@ -36,6 +36,7 @@ tests/ssh_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
 tests/documentation_test.sh
+tests/topic_catalog_test.sh
 _scripts/test-checkout-root
 
 # Shell/static validation
@@ -93,7 +94,14 @@ topic/
 Exact conventions matter:
 
 - Top-level `_` directories and nested `_` files/directories are ignored by
-  topic discovery.
+  topic discovery. The visible roots `bin/`, `functions/`, and `tests/` are
+  explicit non-topics and are never classified as topics.
+- `_scripts/topic-catalog <repository-root>` is the single private interface
+  that classifies the layout for setup, Zsh startup, and the documentation
+  test. It emits sorted, tab-separated `kind<TAB>absolute-path` records with
+  kinds `topic`, `link`, `installer`, `path`, `main`, `prompt`, `completion`,
+  and `aliases` (`aliases.zsh` emits both `main` and `aliases`; only
+  `zsh/prompt.zsh` is the authoritative prompt).
 - Installers must be named `install.sh` and be executable.
 - Only `*.symlink` files are automatically linked.
 - Setup executes sorted, top-level `topic/install.sh` files only. It skips

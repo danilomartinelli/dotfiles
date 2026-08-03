@@ -254,9 +254,20 @@ topic/
 
 Top-level directories and nested files whose names begin with `_` are reserved
 and excluded from topic discovery. That convention is why implementation lives
-in `_scripts/` and `_macos/`. `tests/` deliberately does not use an underscore:
-tests are neither shell topics nor private startup implementation, and the
-conventional name keeps them discoverable by humans and tooling.
+in `_scripts/` and `_macos/`. The visible roots `bin/`, `functions/`, and
+`tests/` are explicit non-topics: they are never classified as shell topics.
+`tests/` deliberately does not use an underscore: tests are neither shell
+topics nor private startup implementation, and the conventional name keeps
+them discoverable by humans and tooling.
+
+`_scripts/topic-catalog <repository-root>` is the single private interface
+that classifies this layout for setup, Zsh startup, and the documentation
+test. It emits deterministic, tab-separated `kind<TAB>absolute-path` records
+sorted by kind and path, with kinds `topic`, `link`, `installer`, `path`,
+`main`, `prompt`, `completion`, and `aliases`. An `aliases.zsh` file emits
+both `main` and `aliases` records; only `zsh/prompt.zsh` is the authoritative
+`prompt`; `homebrew/install.sh` is excluded from `installer` records because
+Homebrew has its own setup phase.
 
 ### Zsh loading order
 
@@ -294,6 +305,7 @@ tests/ssh_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
 tests/documentation_test.sh
+tests/topic_catalog_test.sh
 _scripts/test-checkout-root
 ```
 
