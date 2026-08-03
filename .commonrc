@@ -10,6 +10,37 @@
 export LANG="pt_BR.UTF-8"
 export LC_ALL="pt_BR.UTF-8"
 
-# Default editor (override if needed)
-export EDITOR="vim"
-export VISUAL="vim"
+# Default editor (override if needed). Git uses `zed --wait` via gitconfig.
+export EDITOR="zed"
+export VISUAL="zed"
+export GIT_EDITOR="zed --wait"
+
+# Workspace + projects root used by `c` / completion (override in .localrc)
+export WORKSPACE="${WORKSPACE:-$HOME/Workspace}"
+export PROJECTS="${PROJECTS:-$WORKSPACE/github.com}"
+
+# XDG base directories (keep tools predictable across machines)
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+# Homebrew (non-interactive / CI-friendly defaults)
+export HOMEBREW_NO_ANALYTICS=1
+export HOMEBREW_NO_ENV_HINTS=1
+export HOMEBREW_BAT=1
+
+# GPG / SSH helpers for interactive terminals
+export GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"
+
+# Android / React Native (paths are extended in android-studio/path.zsh)
+export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+
+# Prefer OrbStack's Docker socket when present
+if [[ -z "${DOCKER_HOST:-}" && -S "$HOME/.orbstack/run/docker.sock" ]]; then
+  export DOCKER_HOST="unix://$HOME/.orbstack/run/docker.sock"
+fi
+
+# OpenCode config lives under XDG; secrets stay in .localrc
+export OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$XDG_CONFIG_HOME/opencode}"

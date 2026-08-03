@@ -78,12 +78,12 @@ test_home_link_installation() {
 
   rm "$test_home/.dotfiles-root"
   ln -s "$case_root/archive/dotfiles-root.symlink" "$test_home/.dotfiles-root"
-  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" > /dev/null
+  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" >/dev/null
   assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$test_home/.dotfiles-root")" "stale link update"
 
   rm "$test_home/.dotfiles-root"
   ln -s missing "$test_home/.dotfiles-root"
-  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" > /dev/null
+  HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot" >/dev/null
   assert_equal "$TEST_ROOT/dotfiles-root.symlink" "$(readlink "$test_home/.dotfiles-root")" "broken link update"
 
   rm "$test_home/.dotfiles-root"

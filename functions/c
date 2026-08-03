@@ -11,6 +11,13 @@
 #
 #    c danilom<tab>/bo<tab>
 #
-# ...to quickly jump into danilomartinelli/boom, for example.
+# ...to quickly jump into ~/Workspace/github.com/danilomartinelli/boom.
 
-cd "$PROJECTS/$1"
+if [[ -n $1 && -d $PROJECTS/$1 ]]; then
+  cd "$PROJECTS/$1"
+elif [[ -z $1 ]]; then
+  cd "$PROJECTS"
+else
+  echo "c: no such project: $1" >&2
+  return 1
+fi

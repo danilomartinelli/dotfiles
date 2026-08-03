@@ -1,0 +1,22 @@
+# Global Aider defaults — tuned for Ghostty + Catppuccin Mocha
+# Docs: https://aider.chat/docs/config/aider_conf.html
+# API keys stay in ~/.localrc / env (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
+
+dark-mode: true
+pretty: true
+stream: true
+code-theme: monokai
+
+# Match the repo editor used elsewhere in these dotfiles
+editor: zed --wait
+
+# Safer defaults for shared machines / review-first workflows
+auto-commits: false
+gitignore: true
+attribute-co-authored-by: true
+analytics-disable: true
+
+# Fancy input works well in Ghostty (truecolor + shell integration)
+fancy-input: true
+detect-urls: true
+suggest-shell-commands: true

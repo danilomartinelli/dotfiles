@@ -42,7 +42,7 @@ if "$HOMEBREW_AVAILABILITY" prefix >/dev/null; then
 fi
 
 case "$(uname -s)" in
-  Darwin|Linux)
+  Darwin | Linux)
     echo '  Installing Homebrew for you.'
     download_and_install 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'
     ;;

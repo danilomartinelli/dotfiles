@@ -24,7 +24,7 @@ usage_error() {
 }
 
 case ${1:-} in
-  -h|--help)
+  -h | --help)
     [ "$#" -eq 1 ] || usage_error '--help does not accept additional arguments'
     usage
     exit 0

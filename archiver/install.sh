@@ -27,7 +27,7 @@ if ! /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "/Applications/Archi
 fi
 
 # List of compressed file extensions
-EXTENSIONS=".zip .rar .7z .tar .gz .bz2 .xz .tgz .tbz2"
+EXTENSIONS=".zip .rar .7z .tar .gz .bz2 .xz .tgz .tbz2 .zst .lz4"
 
 # Set default app for each extension
 failed=0

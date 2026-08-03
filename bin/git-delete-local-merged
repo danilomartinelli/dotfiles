@@ -13,10 +13,10 @@ fi
 
 current_branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
 
-git for-each-ref --merged=HEAD --format='%(refname:short)' refs/heads/ |
-  while IFS= read -r branch; do
+git for-each-ref --merged=HEAD --format='%(refname:short)' refs/heads/ \
+  | while IFS= read -r branch; do
     case "$branch" in
-      ''|"$current_branch"|main|master) continue ;;
+      '' | "$current_branch" | main | master) continue ;;
     esac
 
     git branch -d -- "$branch"

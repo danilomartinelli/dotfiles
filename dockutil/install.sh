@@ -39,7 +39,11 @@ if ! dockutil --remove all --no-restart >/dev/null 2>&1; then
 fi
 
 # Add Apps (only if they exist)
+add_app_to_dock "/Applications/Ghostty.app" "Ghostty"
 add_app_to_dock "/Applications/Google Chrome.app" "Google Chrome"
+add_app_to_dock "/Applications/Zed.app" "Zed"
+add_app_to_dock "/Applications/Onlook.app" "Onlook"
+add_app_to_dock "/Applications/Obsidian.app" "Obsidian"
 add_app_to_dock "/Applications/TablePlus.app" "TablePlus"
 add_app_to_dock "/Applications/Lens.app" "Lens"
 add_app_to_dock "/Applications/Postman.app" "Postman"
@@ -51,27 +55,23 @@ add_app_to_dock "/Applications/WhatsApp.app" "WhatsApp"
 add_app_to_dock "/Applications/Bitwarden.app" "Bitwarden"
 add_app_to_dock "/Applications/System Settings.app" "System Settings"
 
-# === FOLDERS SECTION (after the | separator) ===
-# Add Downloads folder
+# === FOLDERS (others section = right of the divider, beside the trash) ===
+# Add Workspace first, then Downloads so Downloads sits closest to the trash.
+workspace_root=${WORKSPACE:-$HOME/Workspace}
+if [ ! -d "$workspace_root" ]; then
+  echo "  → $workspace_root not found, creating it"
+  mkdir -p "$workspace_root/github.com"
+fi
+if dockutil --add "$workspace_root" --view list --display folder --section others --no-restart >/dev/null 2>&1; then
+  echo "  ✓ Added Workspace folder (others)"
+fi
+
 if [ -d "$HOME/Downloads" ]; then
   if dockutil --add "$HOME/Downloads" --view list --display folder --section others --no-restart >/dev/null 2>&1; then
-    echo "  ✓ Added Downloads folder"
+    echo "  ✓ Added Downloads folder (others, next to trash)"
   fi
 else
   echo "  ⚠️  Downloads folder not found" >&2
-fi
-
-# Add Code folder (if it exists)
-if [ -d "$HOME/Code" ]; then
-  if dockutil --add "$HOME/Code" --view list --display folder --section others --no-restart >/dev/null 2>&1; then
-    echo "  ✓ Added Code folder"
-  fi
-else
-  echo "  → ~/Code folder not found, creating it"
-  mkdir -p "$HOME/Code"
-  if dockutil --add "$HOME/Code" --view list --display folder --section others --no-restart >/dev/null 2>&1; then
-    echo "  ✓ Added Code folder"
-  fi
 fi
 
 # Restart Dock to apply changes

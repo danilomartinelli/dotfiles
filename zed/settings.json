@@ -1,0 +1,99 @@
+{
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "Catppuccin Frappé"
+  },
+  "icon_theme": {
+    "mode": "system",
+    "light": "Catppuccin Frappé",
+    "dark": "Catppuccin Frappé"
+  },
+  "base_keymap": "VSCode",
+  "vim_mode": false,
+  "ui_font_size": 16,
+  "buffer_font_family": "JetBrainsMono Nerd Font",
+  "buffer_font_size": 15,
+  "tab_size": 2,
+  "soft_wrap": "editor_width",
+  "format_on_save": "on",
+  "autosave": "on_focus_change",
+  "relative_line_numbers": "disabled",
+  "indent_guides": {
+    "enabled": true,
+    "coloring": "indent_aware"
+  },
+  "inlay_hints": {
+    "enabled": true
+  },
+  "project_panel": {
+    "dock": "left",
+    "git_status": true
+  },
+  "outline_panel": {
+    "dock": "right"
+  },
+  "git_panel": {
+    "dock": "right",
+    "tree_view": true
+  },
+  "terminal": {
+    "font_family": "JetBrainsMono Nerd Font",
+    "env": {
+      "EDITOR": "zed --wait"
+    }
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.DS_Store",
+    "**/.context",
+    "**/.next",
+    "**/.turbo",
+    "**/.venv",
+    "**/node_modules",
+    "**/dist",
+    "**/out"
+  ],
+  "languages": {
+    "JavaScript": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true }
+    },
+    "TypeScript": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true },
+      "inlay_hints": { "enabled": false }
+    },
+    "TSX": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true },
+      "inlay_hints": { "enabled": false }
+    },
+    "JSON": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true }
+    },
+    "JSONC": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true }
+    },
+    "Markdown": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true }
+    },
+    "YAML": {
+      "format_on_save": "on",
+      "prettier": { "allowed": true }
+    },
+    "Elixir": {
+      "tab_size": 2
+    },
+    "Python": {
+      "tab_size": 4
+    }
+  }
+}

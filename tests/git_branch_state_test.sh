@@ -15,14 +15,14 @@ fail() {
 
 assert_equal() {
   local expected=$1 actual=$2 description=$3
-  [[ $actual == "$expected" ]] || \
-    fail "$description (expected '$expected', got '$actual')"
+  [[ $actual == "$expected" ]] \
+    || fail "$description (expected '$expected', got '$actual')"
 }
 
 assert_contains() {
   local file=$1 expected=$2
-  grep -Fq -- "$expected" "$file" || \
-    fail "Expected $file to contain: $expected"
+  grep -Fq -- "$expected" "$file" \
+    || fail "Expected $file to contain: $expected"
 }
 
 assert_not_contains() {
@@ -34,8 +34,8 @@ assert_not_contains() {
 
 assert_ref_exists() {
   local repository=$1 ref=$2
-  git -C "$repository" show-ref --verify --quiet "$ref" || \
-    fail "Expected $repository to contain ref $ref"
+  git -C "$repository" show-ref --verify --quiet "$ref" \
+    || fail "Expected $repository to contain ref $ref"
 }
 
 assert_ref_missing() {
@@ -69,7 +69,7 @@ new_fixture() {
   git -C "$WORKTREE" config user.email 'branch-state@example.invalid'
   git -C "$WORKTREE" config commit.gpgsign false
 
-  printf '%s\n' initial > "$WORKTREE/tracked.txt"
+  printf '%s\n' initial >"$WORKTREE/tracked.txt"
   git -C "$WORKTREE" add tracked.txt
   git -C "$WORKTREE" commit -qm 'initial commit'
 
@@ -77,7 +77,7 @@ new_fixture() {
   git -C "$WORKTREE" remote add origin "$ORIGIN"
   git -C "$WORKTREE" push -qu origin main
 
-  cat > "$FAKE_BIN/pbcopy" <<'EOF'
+  cat >"$FAKE_BIN/pbcopy" <<'EOF'
 #!/bin/sh
 cat > "$PBCOPY_CAPTURE"
 EOF
@@ -86,7 +86,7 @@ EOF
 
 create_commit() {
   local name=$1 content=$2
-  printf '%s\n' "$content" > "$WORKTREE/$name"
+  printf '%s\n' "$content" >"$WORKTREE/$name"
   git -C "$WORKTREE" add "$name"
   git -C "$WORKTREE" commit -qm "add $name"
 }
@@ -113,7 +113,7 @@ invoke_adapter_at() {
       PATH="$FAKE_BIN:$PATH" \
       PBCOPY_CAPTURE=$PBCOPY_CAPTURE \
       "$REPOSITORY_ROOT/bin/$adapter" "$@"
-  ) > "$STDOUT_LOG" 2> "$STDERR_LOG"
+  ) >"$STDOUT_LOG" 2>"$STDERR_LOG"
 }
 
 invoke_adapter() {
@@ -131,7 +131,7 @@ invoke_need_push() {
       source "$DOTFILES_ROOT/zsh/prompt.zsh"
       need_push
     '
-  ) > "$STDOUT_LOG" 2> "$STDERR_LOG"
+  ) >"$STDOUT_LOG" 2>"$STDERR_LOG"
 }
 
 test_branch_state_contract() {
@@ -143,13 +143,13 @@ test_branch_state_contract() {
   assert_equal main "$branch" 'current branch'
 
   capture_status query_state_at "$FIXTURE" \
-    _dotfiles_git_state_require_worktree > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    _dotfiles_git_state_require_worktree >"$STDOUT_LOG" 2>"$STDERR_LOG"
   assert_equal 1 "$CAPTURED_STATUS" 'non-worktree status'
   assert_contains "$STDERR_LOG" 'Error: Not in a git repository.'
 
   git -C "$WORKTREE" checkout --detach -q
   capture_status query_state_at "$WORKTREE" \
-    _dotfiles_git_state_current_branch > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    _dotfiles_git_state_current_branch >"$STDOUT_LOG" 2>"$STDERR_LOG"
   assert_equal 1 "$CAPTURED_STATUS" 'detached HEAD status'
   assert_contains "$STDERR_LOG" 'Error: Not on a branch (detached HEAD state).'
   git -C "$WORKTREE" switch -q main
@@ -158,7 +158,7 @@ test_branch_state_contract() {
   git -C "$WORKTREE" push -q origin candidate-long
   capture_status query_state_at "$WORKTREE" \
     _dotfiles_git_state_live_origin_branch_exists candidate \
-    > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    >"$STDOUT_LOG" 2>"$STDERR_LOG"
   assert_equal 1 "$CAPTURED_STATUS" 'exact missing live branch status'
   query_state_at "$WORKTREE" \
     _dotfiles_git_state_live_origin_branch_exists candidate-long
@@ -180,7 +180,7 @@ test_branch_state_contract() {
   mv "$ORIGIN" "$remote_offline"
   capture_status query_state_at "$WORKTREE" \
     _dotfiles_git_state_live_origin_branch_exists main \
-    > "$STDOUT_LOG" 2> "$STDERR_LOG"
+    >"$STDOUT_LOG" 2>"$STDERR_LOG"
   assert_equal 2 "$CAPTURED_STATUS" 'unavailable live origin status'
   assert_contains "$STDERR_LOG" "Error: Unable to query origin for branch 'main'."
 }
@@ -192,8 +192,7 @@ test_current_branch_adapter_errors() {
   git -C "$WORKTREE" checkout --detach -q
 
   for adapter in \
-    git-promote git-track git-unpushed git-unpushed-stat git-copy-branch-name
-  do
+    git-promote git-track git-unpushed git-unpushed-stat git-copy-branch-name; do
     capture_status invoke_adapter "$adapter"
     assert_equal 1 "$CAPTURED_STATUS" "$adapter detached HEAD status"
     assert_contains "$STDERR_LOG" 'Error: Not on a branch (detached HEAD state).'
@@ -272,8 +271,8 @@ test_unpushed_copy_and_prompt() {
   assert_contains "$STDOUT_LOG" '2 commits total'
 
   invoke_adapter git-copy-branch-name
-  assert_equal main "$(tr -d '\n' < "$STDOUT_LOG")" 'copied branch stdout'
-  copied=$(< "$PBCOPY_CAPTURE")
+  assert_equal main "$(tr -d '\n' <"$STDOUT_LOG")" 'copied branch stdout'
+  copied=$(<"$PBCOPY_CAPTURE")
   assert_equal main "$copied" 'pbcopy branch content'
 
   mv "$ORIGIN" "$FIXTURE/origin-offline.git"

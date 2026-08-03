@@ -14,16 +14,11 @@ git_dirty() {
   local branch
   branch=$(git_prompt_info) || return 0
 
-  if ! $git status -s &> /dev/null
+  if [[ $($git status --porcelain 2>/dev/null) == "" ]]
   then
-    return
+    echo "on %{$fg_bold[green]%}$branch%{$reset_color%}"
   else
-    if [[ $($git status --porcelain) == "" ]]
-    then
-      echo "on %{$fg_bold[green]%}$branch%{$reset_color%}"
-    else
-      echo "on %{$fg_bold[red]%}$branch%{$reset_color%}"
-    fi
+    echo "on %{$fg_bold[red]%}$branch%{$reset_color%}"
   fi
 }
 
@@ -53,16 +48,21 @@ directory_name() {
 }
 
 battery_status() {
-  if test ! "$(uname)" = "Darwin"
+  if [[ $(uname) != "Darwin" ]]
   then
-    exit 0
+    return 0
   fi
 
-  if [[ $(sysctl -n hw.model) == *"Book"* ]]
+  # The hardware model is resolved once when this file is sourced; each prompt
+  # render runs in a subshell and could not cache it.
+  if [[ $_prompt_hw_model == *"Book"* ]]
   then
     $DOTFILES_ROOT/bin/battery-status
   fi
 }
+
+typeset -g _prompt_hw_model
+_prompt_hw_model=$(sysctl -n hw.model 2>/dev/null)
 
 export PROMPT=$'\n$(battery_status)in $(directory_name) $(git_dirty)$(need_push)\n› '
 set_prompt () {

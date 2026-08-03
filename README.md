@@ -38,14 +38,18 @@ After bootstrap, open a new shell or run:
 source ~/.zshrc
 ```
 
-SSH setup is non-interactive and never creates credentials. Create keys later,
-one role at a time:
+SSH and SOPS setup are non-interactive and never invent credentials during
+install. Create keys explicitly when you need them:
 
 ```bash
 ssh-key-create default
 ssh-key-create personal
 ssh-key-create work
 ssh-key-create work --rsa
+
+sops-key-create default
+sops-key-create personal
+sops-key-create work
 ```
 
 ## Future updates
@@ -78,21 +82,30 @@ Other lifecycle commands:
 ## What gets installed
 
 `Brewfile` is the source of truth for machine packages and applications. Setup
-enables the `xo/xo` tap before reconciling the file; it supplies the declared
-`archiver` formula.
+enables the `xo/xo` and `nikitabobko/tap` taps (and trusts the latter) before
+reconciling the file; `xo/xo` supplies the declared `archiver` formula.
 
 ### Homebrew formulae
 
 | Formula | Purpose |
 | --- | --- |
-| `awscli` | AWS command-line interface |
+| `age` | Age encryption used as the SOPS identity backend |
+| `aider` | AI pair programming in the terminal |
 | `archiver` | Archive support used alongside the Archiver app |
+| `awscli` | AWS command-line interface |
+| `bat` | `cat` with syntax highlighting |
+| `cocoapods` | CocoaPods for React Native / iOS native deps |
 | `coreutils` | GNU utilities, including `gls` and `gdate` |
+| `direnv` | Per-directory environment variables |
 | `dockutil` | Programmatic Dock configuration |
 | `duti` | Default application associations |
+| `eza` | Modern `ls` replacement |
+| `fd` | Modern `find` replacement |
+| `fzf` | Fuzzy finder for history, files, and directories |
 | `gh` | GitHub CLI |
 | `git` | Git |
 | `git-lfs` | Git Large File Storage |
+| `glab` | GitLab CLI |
 | `helm` | Kubernetes package manager |
 | `helmfile` | Declarative Helm releases |
 | `imagemagick` | Image conversion and manipulation |
@@ -101,28 +114,48 @@ enables the `xo/xo` tap before reconciling the file; it supplies the declared
 | `kustomize` | Kubernetes manifest customization |
 | `mas` | Mac App Store CLI |
 | `mise` | Runtime manager |
+| `neovim` | Terminal editor |
 | `opencode` | OpenCode CLI agent |
 | `pandoc` | Document conversion |
+| `ripgrep` | Fast recursive search |
+| `sops` | Encrypt and decrypt secrets (age, KMS, PGP) |
 | `spaceman-diff` | Visual image diffs |
+| `tmux` | Terminal multiplexer |
 | `usage` | Usage-spec CLI support, including Mise completion |
-| `vim` | Terminal editor |
+| `watch` | Repeat a command and watch the output |
 | `watchman` | Filesystem watcher |
 | `wget` | File downloader |
+| `wrangler` | Cloudflare Workers CLI |
+| `zoxide` | Smarter `cd` |
+| `zsh-autosuggestions` | Zsh autosuggestions |
 | `zsh-syntax-highlighting` | Zsh syntax highlighting |
 
 ### Applications and fonts
 
 | Group | Homebrew casks |
 | --- | --- |
-| Development | `android-studio`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `wezterm`, `zed` |
-| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `rectangle-pro` |
+| Development | `android-studio`, `lens`, `onlook`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Terminal | `ghostty`, `session-manager-plugin` |
+| Window and menu bar | `nikitabobko/tap/aerospace`, `bartender`, `keyclu` |
+| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
 | Design and media | `cleanshot`, `figma`, `spotify` |
-| Security and communication | `bitwarden`, `whatsapp`, `yubico-authenticator` |
-| Fonts | `font-fira-code`, `font-fira-mono`, `font-jetbrains-mono`, `font-maple-mono`, `font-monaspace` |
+| Network and security | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator` |
+| Fonts | `font-jetbrains-mono-nerd-font` |
 
-The Mac App Store entry is `Xcode` (app id `497799835`). Archiver itself must
-already be installed from the Mac App Store; `archiver/install.sh` only assigns
-its supported file associations when the app is present.
+The Brewfile also declares the `nikitabobko/tap` tap (trusted during setup) for
+AeroSpace. The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
+itself must already be installed from the Mac App Store; `archiver/install.sh`
+only assigns its supported file associations when the app is present.
+
+Topic installers link or apply machine config for Ghostty, Zed (settings +
+default text/source associations via `duti`), AeroSpace, OrbStack Docker engine
+defaults, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode
+(`~/.config/opencode`), SOPS age directories, Workspace (`~/Workspace/github.com/<user>`),
+Mise, SSH, Archiver, and the Dock.
+
+`tmux/tmux.conf.symlink` provides the multiplexer configuration. Global Aider
+defaults live in `aider/aider.conf.yml.symlink` (`~/.aider.conf.yml`) and assume
+Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code theme).
 
 ### Mise runtimes
 
@@ -131,19 +164,26 @@ its supported file associations when the app is present.
 | Tool | Version |
 | --- | --- |
 | `bun` | `1.3.2` |
+| `elixir` | `1.18` |
+| `erlang` | `27` |
 | `go` | `1.25.5` |
-| `node` | `latest` |
+| `go:mvdan.cc/sh/v3/cmd/shfmt` | `latest` |
+| `java` | `temurin-21` |
+| `node` | `lts` |
 | `npm` | `11.6.3` |
 | `npm:eas-cli` | `16.28.0` |
-| `npm:markdownlint-cli` | `0.46.0` |
+| `pipx:mdformat` | `latest` |
 | `pnpm` | `10.23.0` |
 | `python` | `3.14.0` |
-| `ruby` | `latest` |
+| `ruby` | `3.4` |
 | `rust` | `1.91.1` |
 | `terraform` | `1.14.0` |
+| `uv` | `latest` |
 | `yarn` | `4.11.0` |
 
-Run `mise install` to reconcile only these runtimes.
+Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
+Markdown; `shfmt` is installed through the Go backend on top of the managed Go
+toolchain.
 
 ## Public commands
 
@@ -161,6 +201,7 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 | `e` | `e [path]`: open a path, or the current directory, in `$EDITOR` |
 | `headers` | `headers URL`: print HTTP response headers using `curl` |
 | `set-defaults` | Apply `_macos/set-defaults.sh` from the active checkout |
+| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work` |
 | `ssh-key-create` | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
 
 ### Git utilities
@@ -194,7 +235,7 @@ The current public functions are:
 
 | Function | Usage and purpose |
 | --- | --- |
-| `c` | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Code`) |
+| `c` | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`) |
 | `extract` | `extract archive`: extract supported tar, gzip, bzip2, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
 | `gf` | `gf remote-branch`: create a local branch tracking `origin/remote-branch` |
 | `pubkey` | Copy the default Ed25519 public key, falling back to RSA |
@@ -204,13 +245,16 @@ passed to the expanded command.
 
 | Area | Aliases |
 | --- | --- |
-| Shell | `reload!` → source `~/.zshrc`; `cls` → clear |
-| Files | `ls`, `l`, `ll`, `la` → GNU `gls` variants |
-| Editor | `v`, `vi` → Vim; `vimrc` → edit `~/.vimrc` |
+| Shell | `reload!` → source `~/.zshrc`; `cls` → clear; `grep` → colored output |
+| Files | `ls`, `l`, `ll`, `la`, `lt` → `eza` (falls back to GNU `gls`); `cat` → `bat` |
+| Editor | `v`, `vi` → Neovim; `vimrc` → edit `~/.vimrc` |
 | Homebrew | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc` |
 | Mise | `m`, `mi`, `mu`, `ml`, `mc` |
+| Aider | `aider-architect`, `aider-ro` |
 | Docker | `d` → Docker; `dc` → Docker Compose |
-| Mobile | `android`, `android_devices`, `ios`, `ios_devices` |
+| Mobile | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods` |
+| Tailscale | `ts`, `tsstatus`, `tsip`, `tsup`, `tsdown`, `tsping` |
+| SOPS | `sops-encrypt`, `sops-decrypt`, `sops-edit` |
 | SSH | `sshclean` → remove sockets and stop SSH processes |
 | Git | `gl`, `glog`, `gp`, `gd`, `gc`, `gca`, `gco`, `gcb`, `gb`, `gs`, `gac`, `ge` |
 | Kubectl context | `k`, `kk`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kctx-witek`, `kns` |
@@ -291,6 +335,16 @@ commit the generated `git/gitconfig.local.symlink`. Keep private SSH hosts in
 `~/.ssh/config_local`; the tracked SSH config includes it and provisioning does
 not overwrite it.
 
+Age private keys for SOPS live in `~/.config/sops/age/` (mode `600`) and are
+never committed. `sops/env.zsh` exports `SOPS_AGE_KEY_FILE` and, when present,
+`SOPS_AGE_RECIPIENTS` from `recipient.txt`.
+
+`.localrc.example` includes commented templates for Git identity exports and
+OpenCode provider keys (`MOONSHOT_API_KEY` / Kimi, `MINIMAX_API_KEY`,
+`ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go). OpenCode reads
+those environment variables automatically once they are exported from
+`~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
+
 `.context/` is local Conductor/agent workspace state and is intentionally
 gitignored. It is not project configuration.
 
@@ -302,6 +356,7 @@ All tests use temporary homes or fixtures and do not change the real machine:
 tests/setup_test.sh
 tests/zsh_startup_test.sh
 tests/ssh_provisioning_test.sh
+tests/sops_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
 tests/documentation_test.sh
