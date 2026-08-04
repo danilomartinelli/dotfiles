@@ -1,0 +1,2 @@
+# Enable OpenCode background subagents
+export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true

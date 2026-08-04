@@ -1,11 +1,25 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "autoupdate": true,
-  "permission": {
-    "skill": {
-      "*": "allow"
+  "agent": {
+    "explore": {
+      "disable": true
+    },
+    "general": {
+      "disable": true
     }
   },
-  "plugin": [],
-  "instructions": []
+  "autoupdate": true,
+  "lsp": true,
+  "mcp": {
+    "codegraph": {
+      "enabled": true,
+      "type": "local",
+      "command": [
+        "codegraph",
+        "serve",
+        "--mcp"
+      ]
+    }
+  },
+  "plugin": ["opencode-claude-auth@latest", "oh-my-opencode-slim"]
 }

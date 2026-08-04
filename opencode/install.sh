@@ -14,6 +14,12 @@ mkdir -p "$CONFIG_DIR/skills" "$CONFIG_DIR/plugins" "$CONFIG_DIR/agents" "$CONFI
 "$LINK_CONFIG" --label "OpenCode config" \
   "$TOPIC_DIR/opencode.json" "$CONFIG_DIR/opencode.json"
 
+"$LINK_CONFIG" --label "OpenCode TUI config" \
+  "$TOPIC_DIR/tui.json" "$CONFIG_DIR/tui.json"
+
+"$LINK_CONFIG" --label "oh-my-opencode-slim config" \
+  "$TOPIC_DIR/oh-my-opencode-slim.json" "$CONFIG_DIR/oh-my-opencode-slim.json"
+
 # Link each skill directory so new skills can be added in-repo.
 for skill_dir in "$TOPIC_DIR"/skills/*/; do
   [ -d "$skill_dir" ] || continue
