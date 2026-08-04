@@ -1,4 +1,4 @@
-# Global Aider defaults — tuned for Ghostty + Catppuccin Mocha
+# Global Aider defaults — tuned for Ghostty + Catppuccin Macchiato
 # Docs: https://aider.chat/docs/config/aider_conf.html
 # API keys stay in ~/.localrc / env (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.)
 
