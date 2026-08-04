@@ -4,7 +4,7 @@
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
-theme = "Catppuccin Mocha"
+theme = "Catppuccin Macchiato"
 
 macos-option-as-alt = true
 macos-titlebar-style = transparent
