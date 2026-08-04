@@ -61,12 +61,16 @@
 # OpenCode Zen + OpenCode Go (same key space)
 # export OPENCODE_API_KEY="<CHANGE_ME>"
 #
-# Optional extras used by other agents/tools
+# Optional extras used by other agents/tools (Aider, Hermes, skills CLI, …)
 # export ANTHROPIC_API_KEY="<CHANGE_ME>"
 # export OPENAI_API_KEY="<CHANGE_ME>"
 # export GEMINI_API_KEY="<CHANGE_ME>"
 # export OPENROUTER_API_KEY="<CHANGE_ME>"
 # Aider also reads provider keys from the environment / a repo `.env`
+#
+# Hermes Agent (brew install hermes-agent; topic: hermes/)
+# Prefer `hermes model` / `hermes setup` for provider config; keys above are shared.
+# export HERMES_HOME="$HOME/.hermes"
 
 # ========================================
 # NOTE: Best Practices for Managing Secrets
