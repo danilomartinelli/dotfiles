@@ -1,6 +1,9 @@
 # True color support (Ghostty)
 set -g default-terminal "tmux-256color"
-set -ag terminal-overrides ",xterm-ghostty:RGB"
+set -as terminal-features ",xterm-ghostty:RGB"
+
+# Write copy-mode selections to the system clipboard via OSC52
+set -s set-clipboard on
 
 # Enable mouse support
 set -g mouse on

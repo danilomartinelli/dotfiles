@@ -1,0 +1,6 @@
+# Wire image files to the spaceman-diff driver declared in gitconfig.
+*.png diff=spaceman-diff
+*.jpg diff=spaceman-diff
+*.jpeg diff=spaceman-diff
+*.gif diff=spaceman-diff
+*.ico diff=spaceman-diff

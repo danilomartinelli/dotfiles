@@ -1,4 +1,4 @@
-alias sshclean='rm -f ~/.ssh/sockets/*; killall ssh 2>/dev/null; echo "SSH sockets limpos"'
+alias sshclean='rm -f ~/.ssh/sockets/*; killall ssh 2>/dev/null; echo "SSH sockets cleaned"'
 
 # Copy the default public key, preferring Ed25519 with an RSA fallback.
 pubkey() {

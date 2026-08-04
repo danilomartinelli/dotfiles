@@ -2,12 +2,12 @@
   "theme": {
     "mode": "system",
     "light": "One Light",
-    "dark": "Catppuccin Frappé"
+    "dark": "Catppuccin Mocha"
   },
   "icon_theme": {
     "mode": "system",
     "light": "Catppuccin Frappé",
-    "dark": "Catppuccin Frappé"
+    "dark": "Catppuccin Mocha"
   },
   "base_keymap": "VSCode",
   "vim_mode": false,
@@ -60,33 +60,26 @@
   ],
   "languages": {
     "JavaScript": {
-      "format_on_save": "on",
       "prettier": { "allowed": true }
     },
     "TypeScript": {
-      "format_on_save": "on",
       "prettier": { "allowed": true },
       "inlay_hints": { "enabled": false }
     },
     "TSX": {
-      "format_on_save": "on",
       "prettier": { "allowed": true },
       "inlay_hints": { "enabled": false }
     },
     "JSON": {
-      "format_on_save": "on",
       "prettier": { "allowed": true }
     },
     "JSONC": {
-      "format_on_save": "on",
       "prettier": { "allowed": true }
     },
     "Markdown": {
-      "format_on_save": "on",
       "prettier": { "allowed": true }
     },
     "YAML": {
-      "format_on_save": "on",
       "prettier": { "allowed": true }
     },
     "Elixir": {

@@ -13,4 +13,9 @@
 #   $ e .
 #   $ e /usr/local
 #   # => opens the specified directory in your editor
+if [ -z "${EDITOR:-}" ]; then
+  echo "Error: \$EDITOR is not set." >&2
+  exit 1
+fi
+
 exec "$EDITOR" "${1:-.}"

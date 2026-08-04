@@ -20,7 +20,6 @@ fi
 # Raycast stores most settings in its own sync store; script commands are the
 # durable, repo-friendly surface. Point Raycast at this directory once:
 #   Raycast → Settings → Extensions → Script Commands → Add Directories
-printf '%s\n' "$SCRIPTS_DIR" >"$TOPIC_DIR/.script-commands-path"
 echo "  ✓ Script commands live in $SCRIPTS_DIR"
 echo "  → Add that folder in Raycast → Settings → Extensions → Script Commands"
 
