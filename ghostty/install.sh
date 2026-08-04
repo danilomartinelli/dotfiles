@@ -10,27 +10,13 @@ fi
 echo "› setting up Ghostty configuration"
 
 TOPIC_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$TOPIC_DIR/.." && pwd)
 CONFIG_DIR="$HOME/.config/ghostty"
+LINK_CONFIG="$DOTFILES_ROOT/_scripts/link-config"
 
 mkdir -p "$CONFIG_DIR"
 
-target="$CONFIG_DIR/config"
-if [ -L "$target" ] && [ "$(readlink "$target")" = "$TOPIC_DIR/config" ]; then
-  echo "  ✓ Ghostty config already linked"
-elif [ -e "$target" ] && [ ! -L "$target" ]; then
-  backup="$CONFIG_DIR/config.backup"
-  if [ -e "$backup" ]; then
-    echo "Warning: $target and $backup exist; leaving config untouched" >&2
-  else
-    mv "$target" "$backup"
-    ln -s "$TOPIC_DIR/config" "$target"
-    echo "  → Existing config moved to $backup"
-    echo "  ✓ Ghostty config linked"
-  fi
-else
-  ln -sfn "$TOPIC_DIR/config" "$target"
-  echo "  ✓ Ghostty config linked"
-fi
+"$LINK_CONFIG" --label "Ghostty config" "$TOPIC_DIR/config" "$CONFIG_DIR/config"
 
 # Register Ghostty as the default handler for Unix executables (idempotent).
 if defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null | grep -q "com.mitchellh.ghostty"; then

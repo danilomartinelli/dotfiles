@@ -31,6 +31,19 @@ _dotfiles_git_state_current_branch() (
   printf '%s\n' "$_dotfiles_git_state_branch"
 )
 
+# Print the current branch name, or nothing when HEAD is detached.
+_dotfiles_git_state_current_branch_or_empty() (
+  _dotfiles_git_state_git=$1
+
+  _dotfiles_git_state_require_worktree "$_dotfiles_git_state_git" || exit 1
+
+  _dotfiles_git_state_branch=$(
+    "$_dotfiles_git_state_git" symbolic-ref --quiet --short HEAD 2>/dev/null
+  ) || _dotfiles_git_state_branch=
+
+  printf '%s\n' "$_dotfiles_git_state_branch"
+)
+
 _dotfiles_git_state_local_branch_exists() (
   _dotfiles_git_state_git=$1
   _dotfiles_git_state_branch=$2

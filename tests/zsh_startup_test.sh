@@ -48,6 +48,7 @@ cp "$REPOSITORY_ROOT/system/grc.zsh" "$FIXTURE/system/grc.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
+cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$FIXTURE/_scripts/adapter-checkout.sh"
 sed \
   -e "s|/opt/homebrew|$TEST_ROOT/platform/opt/homebrew|g" \
   -e "s|/usr/local|$TEST_ROOT/platform/usr/local|g" \

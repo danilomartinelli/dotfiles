@@ -1,17 +1,6 @@
 # Resolve the checkout containing this startup file, including linked worktrees.
-dotfiles_zshrc_path=${(%):-%N}
-dotfiles_root_resolver=$HOME/.dotfiles-root
-if [[ ! -L "$dotfiles_root_resolver" || ! -x "$dotfiles_root_resolver" ]]; then
-  dotfiles_root_resolver=${${dotfiles_zshrc_path:A}:h:h}/dotfiles-root.symlink
-fi
-
-if [[ ! -x "$dotfiles_root_resolver" ]]; then
-  print -u2 'Dotfiles checkout-root resolver not found. Run _scripts/bootstrap first.'
-  return 1
-fi
-
-DOTFILES_ROOT=$("$dotfiles_root_resolver" "$dotfiles_zshrc_path") || return 1
-export DOTFILES_ROOT
-unset dotfiles_root_resolver dotfiles_zshrc_path
+ADAPTER_ANCHOR=${(%):-%N}
+# shellcheck disable=SC1091 # Sourced from the checkout beside this startup file.
+. "${${ADAPTER_ANCHOR:A}:h:h}/_scripts/adapter-checkout.sh" || return 1
 
 source "$DOTFILES_ROOT/zsh/_startup.zsh"

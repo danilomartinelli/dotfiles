@@ -9,21 +9,16 @@ fi
 echo "› setting up OrbStack Docker engine defaults"
 
 TOPIC_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$TOPIC_DIR/.." && pwd)
 CONFIG_DIR="$HOME/.orbstack/config"
 SOURCE="$TOPIC_DIR/docker.json"
 TARGET="$CONFIG_DIR/docker.json"
+LINK_CONFIG="$DOTFILES_ROOT/_scripts/link-config"
 
 mkdir -p "$CONFIG_DIR"
 
-if [ -L "$TARGET" ] && [ "$(readlink "$TARGET")" = "$SOURCE" ]; then
-  echo "  ✓ OrbStack docker.json already linked"
-elif [ -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
-  # Preserve machine-local daemon tweaks (mirrors, insecure registries, etc.).
-  echo "  → Existing $TARGET kept (not overwriting local Docker engine config)"
-else
-  ln -sfn "$SOURCE" "$TARGET"
-  echo "  ✓ OrbStack docker.json linked"
-fi
+"$LINK_CONFIG" --policy preserve-existing --label "OrbStack docker.json" \
+  "$SOURCE" "$TARGET"
 
 # Prefer OrbStack as the active Docker context when available.
 if command -v docker >/dev/null 2>&1 && docker context ls >/dev/null 2>&1; then

@@ -14,12 +14,8 @@ HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 
 BREW_BIN=''
-LINK_ACTION=''
 CATALOG_SNAPSHOT=''
 CATALOG_CAPTURED=false
-overwrite_all=false
-backup_all=false
-skip_all=false
 
 info() {
   printf '  [ \033[00;34m..\033[0m ] %s\n' "$1"
@@ -121,133 +117,6 @@ setup_gitconfig() {
     >"$DOTFILES_ROOT/git/gitconfig.local.symlink"
 }
 
-choose_link_action() {
-  local src
-  local dst
-  local action
-
-  src=$1
-  dst=$2
-
-  while true; do
-    prompt "File already exists: $dst ($(basename "$src")). [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
-    read -r -n 1 action
-    printf '\n'
-
-    case "$action" in
-      o)
-        LINK_ACTION=overwrite
-        return 0
-        ;;
-      O)
-        overwrite_all=true
-        LINK_ACTION=overwrite
-        return 0
-        ;;
-      b)
-        LINK_ACTION=backup
-        return 0
-        ;;
-      B)
-        backup_all=true
-        LINK_ACTION=backup
-        return 0
-        ;;
-      s)
-        LINK_ACTION=skip
-        return 0
-        ;;
-      S)
-        skip_all=true
-        LINK_ACTION=skip
-        return 0
-        ;;
-      *) warn "Unknown choice: $action" ;;
-    esac
-  done
-}
-
-absolute_link_target() {
-  local dst
-  local target
-  local target_dir
-  local target_name
-
-  dst=$1
-  target=$2
-
-  case "$target" in
-    /*) printf '%s\n' "$target" ;;
-    *)
-      target_dir=$(dirname "$target")
-      target_name=$(basename "$target")
-      if cd "$(dirname "$dst")/$target_dir" 2>/dev/null; then
-        printf '%s/%s\n' "$(pwd -P)" "$target_name"
-      else
-        printf '%s\n' "$target"
-      fi
-      ;;
-  esac
-}
-
-link_file() {
-  local src
-  local dst
-  local src_abs
-  local current_src
-  local current_src_abs
-  local action
-
-  src=$1
-  dst=$2
-
-  if [ ! -f "$src" ] && [ ! -d "$src" ]; then
-    return 1
-  fi
-
-  src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
-
-  if [ -L "$dst" ]; then
-    current_src=$(readlink "$dst" 2>/dev/null || true)
-    current_src_abs=$(absolute_link_target "$dst" "$current_src")
-    if [ "$src_abs" = "$current_src_abs" ]; then
-      success "already linked $dst"
-      return 0
-    fi
-  fi
-
-  if [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ "$overwrite_all" = true ]; then
-      action=overwrite
-    elif [ "$backup_all" = true ]; then
-      action=backup
-    elif [ "$skip_all" = true ]; then
-      action=skip
-    else
-      choose_link_action "$src" "$dst" || return 1
-      action=$LINK_ACTION
-    fi
-
-    case "$action" in
-      overwrite)
-        rm -rf "$dst" || return 1
-        success "removed $dst"
-        ;;
-      backup)
-        mv "$dst" "${dst}.backup" || return 1
-        success "moved $dst to ${dst}.backup"
-        ;;
-      skip)
-        success "skipped $src"
-        return 0
-        ;;
-    esac
-  fi
-
-  ln -s "$src_abs" "$dst" || return 1
-  success "linked $src to $dst"
-}
-
 setup_catalog() {
   if [ "$CATALOG_CAPTURED" != true ]; then
     CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
@@ -257,18 +126,7 @@ setup_catalog() {
 }
 
 install_dotfile_links() {
-  local catalog
-  local kind
-  local src
-
-  catalog=$(setup_catalog) || return 1
-
-  link_file "$DOTFILES_ROOT/.localrc" "$HOME/.localrc" || return 1
-
-  while IFS=$'\t' read -r kind src; do
-    [ "$kind" = link ] || continue
-    link_file "$src" "$HOME/.$(basename "${src%.*}")" || return 1
-  done <<<"$catalog"
+  "$DOTFILES_ROOT/_scripts/link-dotfiles"
 }
 
 apply_macos_configuration() {
@@ -309,11 +167,8 @@ ensure_homebrew() {
 }
 
 install_declared_dependencies() {
-  run_critical 'Homebrew tap xo/xo' "$BREW_BIN" tap xo/xo
-  run_critical 'Homebrew tap nikitabobko/tap' "$BREW_BIN" tap nikitabobko/tap
-  # AeroSpace ships from a third-party tap that Homebrew must explicitly trust.
-  run_advisory 'Homebrew trust nikitabobko/tap' "$BREW_BIN" trust --tap nikitabobko/tap
-  run_critical 'Brewfile dependencies' "$BREW_BIN" bundle --file "$DOTFILES_ROOT/Brewfile"
+  run_critical 'Brewfile dependencies' \
+    "$DOTFILES_ROOT/homebrew/_bundle.sh" --brew "$BREW_BIN" --file "$DOTFILES_ROOT/Brewfile"
 }
 
 install_topics() {

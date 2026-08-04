@@ -152,7 +152,11 @@ test_branch_state_contract() {
     _dotfiles_git_state_current_branch >"$STDOUT_LOG" 2>"$STDERR_LOG"
   assert_equal 1 "$CAPTURED_STATUS" 'detached HEAD status'
   assert_contains "$STDERR_LOG" 'Error: Not on a branch (detached HEAD state).'
+  branch=$(query_state_at "$WORKTREE" _dotfiles_git_state_current_branch_or_empty)
+  assert_equal '' "$branch" 'detached HEAD empty branch'
   git -C "$WORKTREE" switch -q main
+  branch=$(query_state_at "$WORKTREE" _dotfiles_git_state_current_branch_or_empty)
+  assert_equal main "$branch" 'current branch or empty on branch'
 
   git -C "$WORKTREE" branch candidate-long
   git -C "$WORKTREE" push -q origin candidate-long
