@@ -136,7 +136,7 @@ Other lifecycle commands:
 
 | Group | Homebrew casks |
 | --- | --- |
-| Development | `android-studio`, `lens`, `onlook`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Development | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
 | Terminal | `ghostty`, `session-manager-plugin` |
 | Window and menu bar | `nikitabobko/tap/aerospace`, `bartender`, `keyclu` |
 | Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
