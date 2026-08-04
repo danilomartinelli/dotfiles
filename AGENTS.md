@@ -142,3 +142,17 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 - Keep secrets in `.localrc` with mode `600`; shared non-secret environment belongs in `.commonrc`.
 - Prefer fixture tests over commands that mutate the actual Mac.
 - Prefer `mdformat` (no aggressive wrap that collapses tables) and `shfmt -i 2` for Markdown and POSIX/bash shell scripts; do not run `shfmt` on Zsh topic files that use Zsh-only syntax.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues, managed via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
