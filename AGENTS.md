@@ -147,12 +147,12 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 
 ### Issue tracker
 
-Issues live in this repo's GitHub Issues, managed via `gh`. See `docs/agents/issue-tracker.md`.
+Issues live in this repo's GitHub Issues, managed via `gh`. See `_docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
-Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `_docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+Single-context: root `CONTEXT.md` + `_docs/adr/`. See `_docs/agents/domain.md`.
