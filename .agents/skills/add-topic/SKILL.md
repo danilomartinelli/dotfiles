@@ -28,8 +28,10 @@ topic-name/
 
 For configs that live under `~/.config/<tool>/` (Ghostty/Zed/AeroSpace style),
 keep the tracked files in the topic and have `install.sh` create the destination
-directory, link/copy idempotently, and never overwrite a regular file without a
-`.backup` when one does not already exist.
+directory, then call `_scripts/link-config` (default policy `replace-with-backup`).
+Use `--policy preserve-existing` when local machine tweaks must win, or
+`--policy numbered-backup` when collisions need free `.backup.N` suffixes (SSH).
+Do not reimplement link/backup logic inside the installer.
 
 ## Rules
 

@@ -134,6 +134,9 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/setup" "$fixture/_scripts/setup"
   cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
   cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
+  cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$fixture/_scripts/adapter-checkout.sh"
+  cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
+  cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
@@ -143,11 +146,22 @@ make_fixture() {
     -e "s|/home/linuxbrew/.linuxbrew|$fixture/platform/home/linuxbrew/.linuxbrew|g" \
     "$REPOSITORY_ROOT/homebrew/_availability.sh" \
     >"$fixture/homebrew/_availability.sh"
+  cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
-  chmod +x "$fixture/_scripts/setup" "$fixture/_scripts/bootstrap" "$fixture/_scripts/topic-catalog" "$fixture/bin/dot" "$fixture/bin/set-defaults" "$fixture/dotfiles-root.symlink" "$fixture/homebrew/_availability.sh"
-  chmod +x "$fixture/ssh/install.sh"
+  chmod +x \
+    "$fixture/_scripts/setup" \
+    "$fixture/_scripts/bootstrap" \
+    "$fixture/_scripts/topic-catalog" \
+    "$fixture/_scripts/link-dotfiles" \
+    "$fixture/_scripts/link-config" \
+    "$fixture/bin/dot" \
+    "$fixture/bin/set-defaults" \
+    "$fixture/dotfiles-root.symlink" \
+    "$fixture/homebrew/_availability.sh" \
+    "$fixture/homebrew/_bundle.sh" \
+    "$fixture/ssh/install.sh"
 
   printf '%s\n' '# local environment' >"$fixture/.localrc.example"
   printf '%s\n' '# Brewfile fixture' >"$fixture/Brewfile"
@@ -206,7 +220,8 @@ test_bootstrap_sequence() {
   assert_before "$fixture/stdout.log" 'dotfile links' 'macOS defaults'
   assert_before "$fixture/events.log" macos-defaults hostname
   assert_before "$fixture/events.log" hostname homebrew-installer
-  assert_before "$fixture/events.log" 'brew tap xo/xo' 'brew bundle --file'
+  assert_before "$fixture/events.log" 'brew tap nikitabobko/tap' 'brew trust --tap'
+  assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
   assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
   assert_before "$fixture/events.log" topic-alpha topic-zulu
   assert_count "$fixture/events.log" homebrew-installer 1
@@ -240,7 +255,8 @@ test_update_sequence_and_cwd_independence() {
   assert_before "$fixture/events.log" ' pull' homebrew-installer
   assert_before "$fixture/events.log" homebrew-installer 'brew update'
   assert_before "$fixture/events.log" 'brew update' 'brew upgrade'
-  assert_before "$fixture/events.log" 'brew upgrade' 'brew tap xo/xo'
+  assert_before "$fixture/events.log" 'brew upgrade' 'brew tap nikitabobko/tap'
+  assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
   assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
   assert_not_contains "$fixture/events.log" macos-defaults
   assert_not_contains "$fixture/events.log" hostname

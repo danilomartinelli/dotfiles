@@ -10,35 +10,14 @@ fi
 echo "› setting up Zed configuration"
 
 TOPIC_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$TOPIC_DIR/.." && pwd)
 CONFIG_DIR="$HOME/.config/zed"
+LINK_CONFIG="$DOTFILES_ROOT/_scripts/link-config"
 
 mkdir -p "$CONFIG_DIR"
 
-link_config() {
-  source_path=$1
-  target_path=$2
-  label=$3
-
-  if [ -L "$target_path" ] && [ "$(readlink "$target_path")" = "$source_path" ]; then
-    echo "  ✓ $label already linked"
-    return 0
-  fi
-
-  if [ -e "$target_path" ] && [ ! -L "$target_path" ]; then
-    backup="${target_path}.backup"
-    if [ -e "$backup" ]; then
-      echo "Warning: $target_path and $backup exist; leaving $label untouched" >&2
-      return 0
-    fi
-    mv "$target_path" "$backup"
-    echo "  → Existing $label moved to $backup"
-  fi
-
-  ln -sfn "$source_path" "$target_path"
-  echo "  ✓ $label linked"
-}
-
-link_config "$TOPIC_DIR/settings.json" "$CONFIG_DIR/settings.json" "Zed settings"
+"$LINK_CONFIG" --label "Zed settings" \
+  "$TOPIC_DIR/settings.json" "$CONFIG_DIR/settings.json"
 
 ZED_BUNDLE="dev.zed.Zed"
 ZED_APP="/Applications/Zed.app"

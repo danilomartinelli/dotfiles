@@ -4,13 +4,7 @@
 
 set -e
 
-ROOT_RESOLVER=$HOME/.dotfiles-root
-if [ ! -L "$ROOT_RESOLVER" ] || [ ! -x "$ROOT_RESOLVER" ]; then
-  SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
-  ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
-fi
-
-DOTFILES_ROOT=$("$ROOT_RESOLVER" "$0")
-export DOTFILES_ROOT
+# shellcheck disable=SC1091 # Loaded from the adapter checkout beside this script.
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/adapter-checkout.sh"
 
 exec "$DOTFILES_ROOT/_macos/set-defaults.sh"

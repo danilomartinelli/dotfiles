@@ -1,0 +1,149 @@
+#!/bin/sh
+#
+# Idempotent config linking for topic installers.
+# Default policy: replace-with-backup.
+
+set -eu
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: link-config [--policy replace-with-backup|preserve-existing|numbered-backup]
+                   [--label LABEL] <source> <target>
+EOF
+}
+
+policy=replace-with-backup
+label=
+source_path=
+target_path=
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --policy)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 2
+      }
+      policy=$2
+      shift 2
+      ;;
+    --label)
+      [ "$#" -ge 2 ] || {
+        usage
+        exit 2
+      }
+      label=$2
+      shift 2
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "link-config: unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ "$#" -ne 2 ]; then
+  usage
+  exit 2
+fi
+
+source_path=$1
+target_path=$2
+
+case "$policy" in
+  replace-with-backup | preserve-existing | numbered-backup) ;;
+  *)
+    echo "link-config: unknown policy: $policy" >&2
+    exit 2
+    ;;
+esac
+
+if [ -z "$label" ]; then
+  label=$(basename -- "$target_path")
+fi
+
+if [ ! -e "$source_path" ] && [ ! -L "$source_path" ]; then
+  echo "link-config: source not found: $source_path" >&2
+  exit 1
+fi
+
+canonical_file_path() {
+  canonical_input=$1
+  canonical_directory=$(CDPATH='' cd -P -- "$(dirname -- "$canonical_input")" 2>/dev/null && pwd) || return 1
+  printf '%s/%s\n' "$canonical_directory" "$(basename -- "$canonical_input")"
+}
+
+next_backup_path() {
+  backup_base=$1.backup
+  backup_path=$backup_base
+  backup_number=1
+
+  while [ -e "$backup_path" ] || [ -L "$backup_path" ]; do
+    backup_path=$backup_base.$backup_number
+    backup_number=$((backup_number + 1))
+  done
+
+  printf '%s\n' "$backup_path"
+}
+
+link_is_current() {
+  [ -L "$target_path" ] || return 1
+
+  current_target=$(readlink "$target_path") || return 1
+  case "$current_target" in
+    /*) ;;
+    *) current_target=$(dirname -- "$target_path")/$current_target ;;
+  esac
+
+  current_target=$(canonical_file_path "$current_target") || return 1
+  expected_target=$(canonical_file_path "$source_path") || return 1
+  [ "$current_target" = "$expected_target" ]
+}
+
+if link_is_current; then
+  echo "  ✓ $label already linked"
+  exit 0
+fi
+
+if [ -e "$target_path" ] || [ -L "$target_path" ]; then
+  case "$policy" in
+    preserve-existing)
+      echo "  → Existing $target_path kept (not overwriting local config)"
+      exit 0
+      ;;
+    replace-with-backup)
+      if [ -e "$target_path" ] && [ ! -L "$target_path" ]; then
+        backup=${target_path}.backup
+        if [ -e "$backup" ] || [ -L "$backup" ]; then
+          echo "Warning: $target_path and $backup exist; leaving $label untouched" >&2
+          exit 0
+        fi
+        mv "$target_path" "$backup"
+        echo "  → Existing $label moved to $backup"
+      else
+        # Wrong symlink or other link target: replace in place.
+        rm -f "$target_path"
+      fi
+      ;;
+    numbered-backup)
+      backup=$(next_backup_path "$target_path")
+      mv "$target_path" "$backup"
+      echo "  → backed up $target_path to $backup"
+      ;;
+  esac
+fi
+
+ln -sfn "$source_path" "$target_path"
+echo "  ✓ $label linked"

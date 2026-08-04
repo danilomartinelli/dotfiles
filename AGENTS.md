@@ -33,6 +33,10 @@ tests/ssh_provisioning_test.sh
 tests/sops_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
+tests/homebrew_bundle_test.sh
+tests/link_config_test.sh
+tests/link_dotfiles_test.sh
+tests/macos_defaults_test.sh
 tests/documentation_test.sh
 tests/topic_catalog_test.sh
 _scripts/test-checkout-root
@@ -89,7 +93,11 @@ Exact conventions matter:
 
 `_scripts/bootstrap` and `bin/dot` are stable adapters. Required phases stop on failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the adapters.
 
-`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. The dependency phase taps `xo/xo` and `nikitabobko/tap` (trusting the latter) before reconciling `Brewfile`. Topic installers currently configure Archiver, Dock, Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, and OpenCode.
+`_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` files (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.
+
+`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, and OpenCode.
+
+macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; DNS/Library/restart advisory). App-specific `defaults write` calls stay in topic installers.
 
 Project agent skills live in `.agents/skills/*/SKILL.md` (discovered by OpenCode). Use the `add-topic` skill when scaffolding a new topic folder.
 
@@ -97,7 +105,7 @@ Project agent skills live in `.agents/skills/*/SKILL.md` (discovered by OpenCode
 
 `dotfiles-root.symlink` is the sole checkout-root interface. It resolves symlinks and returns the physical checkout containing an anchor, which keeps commands local to the invoking Git worktree. `--install` repairs `~/.dotfiles-root` but refuses to overwrite a regular file or directory.
 
-Public adapters should resolve through `~/.dotfiles-root` and fall back to the repository copy beside the adapter. Do not reintroduce fixed `~/.dotfiles` paths. Validate changes with `_scripts/test-checkout-root`.
+Public adapters source `_scripts/adapter-checkout.sh` (set `ADAPTER_ANCHOR` when `$0` is wrong, e.g. Zsh startup). That preamble prefers `~/.dotfiles-root` and falls back to the sibling `dotfiles-root.symlink`. Do not reintroduce fixed `~/.dotfiles` paths. Validate changes with `_scripts/test-checkout-root`.
 
 ## Zsh startup contract
 

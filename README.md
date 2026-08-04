@@ -81,9 +81,10 @@ Other lifecycle commands:
 
 ## What gets installed
 
-`Brewfile` is the source of truth for machine packages and applications. Setup
-enables the `xo/xo` and `nikitabobko/tap` taps (and trusts the latter) before
-reconciling the file; `xo/xo` supplies the declared `archiver` formula.
+`Brewfile` is the source of truth for machine packages, applications, and taps
+(including `xo/xo` for `archiver` and `nikitabobko/tap` for AeroSpace).
+`homebrew/_bundle.sh` trusts `nikitabobko/tap` when needed, then runs
+`brew bundle` against that file.
 
 ### Homebrew formulae
 
@@ -142,8 +143,7 @@ reconciling the file; `xo/xo` supplies the declared `archiver` formula.
 | Network and security | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator` |
 | Fonts | `font-jetbrains-mono-nerd-font` |
 
-The Brewfile also declares the `nikitabobko/tap` tap (trusted during setup) for
-AeroSpace. The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
+The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
 itself must already be installed from the Mac App Store; `archiver/install.sh`
 only assigns its supported file associations when the app is present.
 

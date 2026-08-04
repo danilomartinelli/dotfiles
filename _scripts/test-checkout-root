@@ -94,6 +94,51 @@ test_home_link_installation() {
   assert_fails "directory protection" env HOME="$test_home" "$RESOLVER" --install "$TEST_ROOT/bin/dot"
 }
 
+test_adapter_checkout_preamble() {
+  local case_root
+  local test_home
+  local resolved
+
+  case_root=$(scenario_tmpdir adapter-checkout)
+  test_home="$case_root/home"
+  mkdir -p "$test_home" "$case_root/bin"
+  cp "$TEST_ROOT/bin/dot" "$case_root/bin/dot"
+  mkdir -p "$case_root/_scripts"
+  cp "$TEST_ROOT/_scripts/adapter-checkout.sh" "$case_root/_scripts/adapter-checkout.sh"
+  cp "$TEST_ROOT/dotfiles-root.symlink" "$case_root/dotfiles-root.symlink"
+  chmod +x "$case_root/bin/dot" "$case_root/dotfiles-root.symlink"
+
+  # Without ~/.dotfiles-root, fall back to the sibling resolver.
+  # shellcheck disable=SC1091
+  resolved=$(
+    HOME="$test_home" \
+      ADAPTER_ANCHOR="$case_root/bin/dot" \
+      sh -c '. "$1" && printf %s "$DOTFILES_ROOT"' \
+      sh "$case_root/_scripts/adapter-checkout.sh"
+  )
+  assert_equal "$case_root" "$resolved" 'sibling resolver fallback'
+
+  ln -s "$TEST_ROOT/dotfiles-root.symlink" "$test_home/.dotfiles-root"
+  resolved=$(
+    HOME="$test_home" \
+      ADAPTER_ANCHOR="$case_root/bin/dot" \
+      sh -c '. "$1" && printf %s "$DOTFILES_ROOT"' \
+      sh "$case_root/_scripts/adapter-checkout.sh"
+  )
+  # Anchor keeps the invoking checkout even when ~/.dotfiles-root points elsewhere.
+  assert_equal "$case_root" "$resolved" 'home resolver with local anchor'
+
+  rm "$test_home/.dotfiles-root"
+  ln -s missing "$test_home/.dotfiles-root"
+  resolved=$(
+    HOME="$test_home" \
+      ADAPTER_ANCHOR="$case_root/bin/dot" \
+      sh -c '. "$1" && printf %s "$DOTFILES_ROOT"' \
+      sh "$case_root/_scripts/adapter-checkout.sh"
+  )
+  assert_equal "$case_root" "$resolved" 'broken home link falls back'
+}
+
 test_adapter_integration() {
   local case_root
   local test_home
@@ -129,5 +174,6 @@ scenario_run 'anchors resolve from paths, commands, and symlink chains' test_anc
 scenario_run 'invalid anchors fail with explicit diagnostics' test_invalid_anchors
 scenario_run 'marker directories, Git checkouts, and worktrees resolve locally' test_checkout_types
 scenario_run 'the stable home link installs, repairs, and protects conflicts' test_home_link_installation
+scenario_run 'adapter-checkout prefers home link and falls back to sibling' test_adapter_checkout_preamble
 scenario_run 'Zsh and dot --edit use the checkout-root adapter' test_adapter_integration
 scenario_finish

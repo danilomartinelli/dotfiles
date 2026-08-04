@@ -1,7 +1,8 @@
 cask_args appdir: '/Applications'
 
-# Third-party taps (trusted during setup for nikitabobko/tap)
+# Third-party taps (nikitabobko/tap is also trusted by homebrew/_bundle.sh)
 tap 'nikitabobko/tap'               # AeroSpace tiling window manager
+tap 'xo/xo'                         # archiver formula
 
 # Command line tools
 brew 'age'                          # Modern file encryption (SOPS identity backend)
