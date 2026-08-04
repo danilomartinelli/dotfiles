@@ -113,10 +113,10 @@ set showmatch
 " How many tenths of a second to blink when matching brackets
 set mat=2
 
-" No annoying sound on errors
+" No annoying sound on errors (t_vb is a no-op in Neovim, so fail silently)
 set noerrorbells
 set novisualbell
-set t_vb=
+silent! set t_vb=
 set tm=500
 
 " Properly disable sound on errors on MacVim

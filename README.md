@@ -107,6 +107,7 @@ Other lifecycle commands:
 | `git` | Git |
 | `git-lfs` | Git Large File Storage |
 | `glab` | GitLab CLI |
+| `grc` | Colourise output of common Unix tools |
 | `helm` | Kubernetes package manager |
 | `helmfile` | Declarative Helm releases |
 | `imagemagick` | Image conversion and manipulation |
@@ -148,7 +149,8 @@ itself must already be installed from the Mac App Store; `archiver/install.sh`
 only assigns its supported file associations when the app is present.
 
 Topic installers link or apply machine config for Ghostty, Zed (settings +
-default text/source associations via `duti`), AeroSpace, OrbStack Docker engine
+default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
+bridging to `~/.vimrc`), AeroSpace, OrbStack Docker engine
 defaults, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode
 (`~/.config/opencode`), SOPS age directories, Workspace (`~/Workspace/github.com/<user>`),
 Mise, SSH, Archiver, and the Dock.
@@ -236,8 +238,8 @@ The current public functions are:
 | Function | Usage and purpose |
 | --- | --- |
 | `c` | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`) |
-| `extract` | `extract archive`: extract supported tar, gzip, bzip2, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
-| `gf` | `gf remote-branch`: create a local branch tracking `origin/remote-branch` |
+| `extract` | `extract archive`: extract supported tar, gzip, bzip2, xz, zstd, 7z, lz4, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
+| `gf` | `gf remote-branch`: switch to the local branch, or create it tracking `origin/remote-branch` |
 | `pubkey` | Copy the default Ed25519 public key, falling back to RSA |
 
 The shell also exposes these aliases. Arguments written after an alias are
@@ -247,7 +249,7 @@ passed to the expanded command.
 | --- | --- |
 | Shell | `reload!` → source `~/.zshrc`; `cls` → clear; `grep` → colored output |
 | Files | `ls`, `l`, `ll`, `la`, `lt` → `eza` (falls back to GNU `gls`); `cat` → `bat` |
-| Editor | `v`, `vi` → Neovim; `vimrc` → edit `~/.vimrc` |
+| Editor | `v`, `vi`, `vim` → Neovim; `vimrc` → edit `~/.vimrc` |
 | Homebrew | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc` |
 | Mise | `m`, `mi`, `mu`, `ml`, `mc` |
 | Aider | `aider-architect`, `aider-ro` |
@@ -257,7 +259,7 @@ passed to the expanded command.
 | SOPS | `sops-encrypt`, `sops-decrypt`, `sops-edit` |
 | SSH | `sshclean` → remove sockets and stop SSH processes |
 | Git | `gl`, `glog`, `gp`, `gd`, `gc`, `gca`, `gco`, `gcb`, `gb`, `gs`, `gac`, `ge` |
-| Kubectl context | `k`, `kk`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kctx-witek`, `kns` |
+| Kubectl context | `k`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kns` |
 | Kubectl resources | `kgp`, `kgpa`, `kgs`, `kgsa`, `kgd`, `kgda`, `kgn`, `kgns` |
 | Kubectl operations | `kdp`, `kds`, `kdd`, `kdn`, `kl`, `klf`, `klt`, `kaf`, `kdf`, `kex`, `kpf`, `kwp`, `kwpa` |
 | AWS basics/output | `awsl`, `awswho`, `awsregion`, `awsjson`, `awstable`, `awstext`, `awscost` |

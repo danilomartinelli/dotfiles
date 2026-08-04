@@ -26,10 +26,10 @@ add_app_to_dock() {
     if dockutil --add "$app_path" --no-restart >/dev/null 2>&1; then
       echo "  ✓ Added $app_name"
     else
-      echo "  ⚠️  Failed to add $app_name (may already be in dock)" >&2
+      echo "Warning: Failed to add $app_name (may already be in dock)" >&2
     fi
   else
-    echo "  ⚠️  Skipping $app_name (not found at $app_path)" >&2
+    echo "Warning: Skipping $app_name (not found at $app_path)" >&2
   fi
 }
 
@@ -71,7 +71,7 @@ if [ -d "$HOME/Downloads" ]; then
     echo "  ✓ Added Downloads folder (others, next to trash)"
   fi
 else
-  echo "  ⚠️  Downloads folder not found" >&2
+  echo "Warning: Downloads folder not found" >&2
 fi
 
 # Restart Dock to apply changes

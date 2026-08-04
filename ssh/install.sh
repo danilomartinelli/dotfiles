@@ -24,8 +24,8 @@ fail() {
 [ -f "$SOURCE_LOCAL_CONFIG" ] || fail "local config template not found: $SOURCE_LOCAL_CONFIG"
 
 umask 077
-mkdir -p "$SSH_DIR"
-chmod 700 "$SSH_DIR"
+mkdir -p "$SSH_DIR" "$SSH_DIR/sockets"
+chmod 700 "$SSH_DIR" "$SSH_DIR/sockets"
 
 "$LINK_CONFIG" --policy numbered-backup --label '~/.ssh/config' \
   "$SOURCE_CONFIG" "$SSH_CONFIG"

@@ -220,7 +220,9 @@ assert_equal select "${(j: :)menu_style}" 'completion menu style'
 [[ $(bindkey '^[[Z') == *reverse-menu-complete* ]] || fail 'reverse completion binding is missing'
 
 [[ $PROMPT == *'$(battery_status)'* ]] || fail 'custom prompt is not active'
-[[ ${functions[precmd]} == *set_prompt* ]] || fail 'custom prompt does not own precmd'
+(( ${precmd_functions[(Ie)_dotfiles_prompt_window_title]} )) || \
+  fail 'custom prompt hook is not registered'
+[[ -z ${functions[precmd]-} ]] || fail 'custom prompt must not override precmd directly'
 (( ! $+functions[lprompt] )) || fail 'obsolete Monokai prompt is loaded'
 [[ $REPORTTIME == 3 ]] || fail 'command timing threshold changed'
 [[ $TIMEFMT == *elapsed:* && $TIMEFMT == *memory:* ]] || fail 'command timing format changed'
@@ -265,6 +267,9 @@ done
   fail "function fpath entry is duplicated or missing: ${(j.:.)fpath}"
 terminal_hooks=("${(M)precmd_functions:#update_terminal_cwd}")
 (( $#terminal_hooks == 1 )) || fail 'Apple Terminal hook duplicated after reload'
+typeset -a prompt_hooks
+prompt_hooks=("${(M)precmd_functions:#_dotfiles_prompt_window_title}")
+(( $#prompt_hooks == 1 )) || fail 'custom prompt hook duplicated after reload'
 private_loader_parameters=(${(k)parameters[(I)_dotfiles_*]})
 (( $#private_loader_parameters == 0 )) || fail "private loader state leaked after reload: $private_loader_parameters"
 EOF

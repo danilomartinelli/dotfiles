@@ -9,6 +9,7 @@
         count   = !git shortlog -sn
 [core]
         excludesfile = ~/.gitignore
+        attributesfile = ~/.gitattributes
         editor = zed --wait
         fsmonitor = true
         untrackedCache = true
@@ -26,6 +27,7 @@
   command = spaceman-diff
 [diff]
         algorithm = histogram
+        colorMoved = default
 [init]
 	defaultBranch = main
 [pull]
@@ -41,6 +43,7 @@
 [rebase]
 	autoStash = true
 	autoSquash = true
+	updateRefs = true
 [branch]
 	sort = -committerdate
 [tag]

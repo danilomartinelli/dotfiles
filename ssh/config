@@ -12,6 +12,9 @@ Host *
     ServerAliveInterval 60
     ServerAliveCountMax 3
     TCPKeepAlive yes
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%C
+    ControlPersist 10m
 
 # Include local configurations if needed (not tracked by git)
 Include ~/.ssh/config_local
@@ -20,6 +23,7 @@ Include ~/.ssh/config_local
 Host github.com
     HostName github.com
     User git
+    IdentitiesOnly yes
     # Try Ed25519 first, fall back to RSA if not available
     IdentityFile ~/.ssh/id_ed25519
     IdentityFile ~/.ssh/id_rsa
@@ -27,11 +31,13 @@ Host github.com
 Host github-personal
     HostName github.com
     User git
+    IdentitiesOnly yes
     IdentityFile ~/.ssh/id_ed25519_personal
     IdentityFile ~/.ssh/id_rsa_personal
 
 Host github-work
     HostName github.com
     User git
+    IdentitiesOnly yes
     IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work

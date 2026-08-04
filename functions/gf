@@ -6,5 +6,9 @@ gf() {
     return 1
   fi
 
-  git switch --track "origin/$branch"
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    git switch "$branch"
+  else
+    git switch --track "origin/$branch"
+  fi
 }

@@ -1,13 +1,11 @@
 # Kubectl shortcuts
 alias k='kubectl'
-alias kk='kubectl'
 
 # Context and config management
 alias kctx='kubectl config use-context'
 alias kctx-list='kubectl config get-contexts'
 alias kcurrent='kubectl config current-context'
 alias konfig='kubectl config view --minify --raw'
-alias kctx-witek='kubectl config use-context witek-cluster'
 
 # Resource shortcuts
 alias kgp='kubectl get pods'

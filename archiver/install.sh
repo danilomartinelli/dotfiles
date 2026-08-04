@@ -42,5 +42,4 @@ if [ $failed -eq 0 ]; then
   echo "✓ Archiver set as default for compressed files"
 else
   echo "Warning: Some file types could not be configured ($failed failed)" >&2
-  exit 1
 fi

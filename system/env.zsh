@@ -9,10 +9,10 @@ export PAGER="less"
 export LESS="-R"
 
 # Set default browser (can be overridden in .localrc)
-if [ -z "$BROWSER" ]; then
-  if [ -d "/Applications/Google Chrome.app" ]; then
+if [[ -z "$BROWSER" ]]; then
+  if [[ -d "/Applications/Google Chrome.app" ]]; then
     export BROWSER="open -a 'Google Chrome'"
-  elif [ -d "/Applications/Safari.app" ]; then
+  elif [[ -d "/Applications/Safari.app" ]]; then
     export BROWSER="open -a Safari"
   fi
 fi
