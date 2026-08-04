@@ -7,6 +7,7 @@ tap 'xo/xo'                         # archiver formula
 # Command line tools
 brew 'age'                          # Modern file encryption (SOPS identity backend)
 brew 'aider'                        # AI pair programming in the terminal
+brew 'ansible'                      # Automation / configuration management CLI
 brew 'archiver'                     # Multi-format archive utility
 brew 'awscli'                       # AWS Command Line Interface
 brew 'bat'                          # Cat clone with syntax highlighting
@@ -25,6 +26,7 @@ brew 'glab'                        # GitLab CLI for managing repositories
 brew 'grc'                         # Colourise output of common Unix tools
 brew 'helm'                        # Kubernetes package manager
 brew 'helmfile'                     # Deploy and manage Helm charts
+brew 'hermes-agent'                 # Nous Research Hermes Agent CLI
 brew 'imagemagick'                  # Image manipulation library and tools
 brew 'jq'                           # Command-line JSON processor
 brew 'kubernetes-cli'               # Kubernetes command line tools
@@ -72,6 +74,7 @@ cask 'session-manager-plugin'       # AWS Systems Manager Session Manager plugin
 cask 'spotify'                      # Music streaming service
 cask 'tableplus'                    # Database management tool
 cask 'tailscale-app'                # Mesh VPN based on WireGuard
+cask 'vagrant'                      # Portable development environments
 cask 'whatsapp'                     # Messaging application
 cask 'yubico-authenticator'         # Authenticator for YubiKey security keys
 cask 'zed'                          # High-performance collaborative code editor

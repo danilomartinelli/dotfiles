@@ -92,6 +92,7 @@ Other lifecycle commands:
 | --- | --- |
 | `age` | Age encryption used as the SOPS identity backend |
 | `aider` | AI pair programming in the terminal |
+| `ansible` | Automation and configuration management CLI |
 | `archiver` | Archive support used alongside the Archiver app |
 | `awscli` | AWS command-line interface |
 | `bat` | `cat` with syntax highlighting |
@@ -110,6 +111,7 @@ Other lifecycle commands:
 | `grc` | Colourise output of common Unix tools |
 | `helm` | Kubernetes package manager |
 | `helmfile` | Declarative Helm releases |
+| `hermes-agent` | Hermes Agent CLI (Nous Research) |
 | `imagemagick` | Image conversion and manipulation |
 | `jq` | JSON processing |
 | `kubernetes-cli` | `kubectl` |
@@ -136,7 +138,7 @@ Other lifecycle commands:
 
 | Group | Homebrew casks |
 | --- | --- |
-| Development | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Development | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `vagrant`, `zed` |
 | Terminal | `ghostty`, `session-manager-plugin` |
 | Window and menu bar | `nikitabobko/tap/aerospace`, `bartender`, `keyclu` |
 | Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
@@ -152,8 +154,8 @@ Topic installers link or apply machine config for Ghostty, Zed (settings +
 default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
 bridging to `~/.vimrc`), AeroSpace, OrbStack Docker engine
 defaults, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode
-(`~/.config/opencode`), SOPS age directories, Workspace (`~/Workspace/github.com/<user>`),
-Mise, SSH, Archiver, and the Dock.
+(`~/.config/opencode`), Hermes Agent (`~/.hermes`), SOPS age directories,
+Workspace (`~/Workspace/github.com/<user>`), Mise, SSH, Archiver, and the Dock.
 
 `tmux/tmux.conf.symlink` provides the multiplexer configuration. Global Aider
 defaults live in `aider/aider.conf.yml.symlink` (`~/.aider.conf.yml`) and assume
@@ -174,6 +176,7 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 | `node` | `lts` |
 | `npm` | `11.6.3` |
 | `npm:eas-cli` | `16.28.0` |
+| `npm:skills` | `1.5.21` |
 | `pipx:mdformat` | `latest` |
 | `pnpm` | `10.23.0` |
 | `python` | `3.14.0` |
@@ -185,7 +188,9 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
-toolchain.
+toolchain. `npm:skills` is the Vercel Labs agent-skills CLI (`skills add`,
+`skills list`). Package managers `bun`, `pnpm`, and `yarn`, plus `terraform`,
+are also declared here so a fresh machine gets them via Mise.
 
 ## Public commands
 
@@ -253,6 +258,7 @@ passed to the expanded command.
 | Homebrew | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc` |
 | Mise | `m`, `mi`, `mu`, `ml`, `mc` |
 | Aider | `aider-architect`, `aider-ro` |
+| Hermes | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update` |
 | Docker | `d` → Docker; `dc` → Docker Compose |
 | Mobile | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods` |
 | Tailscale | `ts`, `tsstatus`, `tsip`, `tsup`, `tsdown`, `tsping` |
@@ -341,11 +347,13 @@ Age private keys for SOPS live in `~/.config/sops/age/` (mode `600`) and are
 never committed. `sops/env.zsh` exports `SOPS_AGE_KEY_FILE` and, when present,
 `SOPS_AGE_RECIPIENTS` from `recipient.txt`.
 
-`.localrc.example` includes commented templates for Git identity exports and
+`.localrc.example` includes commented templates for Git identity exports,
 OpenCode provider keys (`MOONSHOT_API_KEY` / Kimi, `MINIMAX_API_KEY`,
-`ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go). OpenCode reads
-those environment variables automatically once they are exported from
-`~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
+`ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go), and Hermes /
+shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
+OpenCode reads those environment variables automatically once they are exported
+from `~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
+Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally
 gitignored. It is not project configuration.
