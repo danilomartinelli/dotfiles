@@ -23,7 +23,7 @@ elif defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSH
   installer_success "Ghostty set as default terminal handler"
 else
   installer_warn "Failed to set Ghostty as default terminal handler"
-  echo "  You may need to set it manually in System Settings" >&2
+  installer_hint "You may need to set it manually in System Settings"
 fi
 
 installer_success "Ghostty configured"

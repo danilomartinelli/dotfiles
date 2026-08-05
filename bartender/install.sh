@@ -18,7 +18,7 @@ done
 
 if [ -z "$APP" ]; then
   installer_warn "Bartender not installed yet; skipping preferences"
-  echo "  Install with: brew install --cask bartender" >&2
+  installer_hint "Install with: brew install --cask bartender"
   exit 0
 fi
 

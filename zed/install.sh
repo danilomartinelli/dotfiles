@@ -26,7 +26,7 @@ fi
 
 if ! command -v duti >/dev/null 2>&1; then
   installer_warn "duti is required to set Zed as the default text editor"
-  echo "  Install with: brew install duti" >&2
+  installer_hint "Install with: brew install duti"
   exit 0
 fi
 

@@ -47,3 +47,13 @@ installer_note() {
 installer_warn() {
   printf 'Warning: %s\n' "$*" >&2
 }
+
+installer_error() {
+  printf 'Error: %s\n' "$*" >&2
+}
+
+# Actionable follow-up for the warning or error just emitted, so the whole
+# message stays on one stream. Use installer_note for stdout follow-ups.
+installer_hint() {
+  printf '  → %s\n' "$*" >&2
+}

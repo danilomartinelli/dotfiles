@@ -15,7 +15,7 @@ SSH_CONFIG=$SSH_DIR/config
 SSH_LOCAL_CONFIG=$SSH_DIR/config_local
 
 fail() {
-  echo "Error: $*" >&2
+  installer_error "$*"
   exit 1
 }
 

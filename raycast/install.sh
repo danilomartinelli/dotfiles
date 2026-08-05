@@ -12,7 +12,7 @@ SCRIPTS_DIR="$TOPIC_DIR/scripts"
 
 if [ ! -d "/Applications/Raycast.app" ]; then
   installer_warn "Raycast not installed yet"
-  echo "  Install with: brew install --cask raycast" >&2
+  installer_hint "Install with: brew install --cask raycast"
   exit 0
 fi
 

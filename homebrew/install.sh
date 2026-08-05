@@ -17,20 +17,20 @@ download_and_install() {
   installer_url=$1
   installer_file=$(mktemp "${TMPDIR:-/tmp}/homebrew-installer.XXXXXX")
 
-  echo '  Downloading Homebrew installer...'
+  installer_note 'downloading Homebrew installer...'
   if ! curl -fsSL "$installer_url" -o "$installer_file"; then
     rm -f "$installer_file"
-    echo '  ERROR: Failed to download Homebrew installer' >&2
+    installer_error 'Failed to download Homebrew installer'
     return 1
   fi
 
   if ! grep -q Homebrew "$installer_file"; then
     rm -f "$installer_file"
-    echo "  ERROR: Downloaded script doesn't appear to be a Homebrew installer" >&2
+    installer_error "Downloaded script doesn't appear to be a Homebrew installer"
     return 1
   fi
 
-  echo '  Executing Homebrew installer...'
+  installer_note 'executing Homebrew installer...'
   if ! /bin/bash "$installer_file"; then
     rm -f "$installer_file"
     return 1
@@ -45,18 +45,18 @@ fi
 
 case "$(uname -s)" in
   Darwin | Linux)
-    echo '  Installing Homebrew for you.'
+    installer_note 'installing Homebrew for you'
     download_and_install 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'
     ;;
   *)
-    echo "  ERROR: Homebrew installation is unsupported on $(uname -s)" >&2
+    installer_error "Homebrew installation is unsupported on $(uname -s)"
     exit 1
     ;;
 esac
 
 if ! "$HOMEBREW_AVAILABILITY" prefix >/dev/null; then
-  echo '  ERROR: Homebrew installation completed, but brew was not found' >&2
+  installer_error 'Homebrew installation completed, but brew was not found'
   exit 1
 fi
 
-echo '  Homebrew installed successfully.'
+installer_success 'Homebrew installed successfully.'
