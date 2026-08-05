@@ -18,6 +18,17 @@ assert_documented() {
   fi
 }
 
+assert_documented_in() {
+  local doc_path=$1
+  local kind=$2
+  local name=$3
+
+  if ! grep -Fq -- "\`$name\`" "$doc_path"; then
+    printf '%s is missing %s: %s\n' "${doc_path#"$REPOSITORY_ROOT/"}" "$kind" "$name" >&2
+    failures=$((failures + 1))
+  fi
+}
+
 while IFS= read -r command_path; do
   assert_documented 'bin command' "$(basename -- "$command_path")"
 done < <(find "$REPOSITORY_ROOT/bin" -mindepth 1 -maxdepth 1 -type f -print | sort)
@@ -58,6 +69,17 @@ done < <(
       if (name != "") print name
     }
   ' "$REPOSITORY_ROOT/mise/mise.toml.symlink"
+)
+
+# Both the agent contract and the scaffold skill must list every preamble
+# helper, or new installers fall back to raw echo for the undocumented ones.
+while IFS= read -r helper_name; do
+  assert_documented_in "$REPOSITORY_ROOT/AGENTS.md" 'preamble helper' "$helper_name"
+  assert_documented_in "$REPOSITORY_ROOT/.agents/skills/add-topic/SKILL.md" \
+    'preamble helper' "$helper_name"
+done < <(
+  sed -n 's/^\(installer_[a-z_]*\)() {$/\1/p' \
+    "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" | sort -u
 )
 
 if ((failures > 0)); then

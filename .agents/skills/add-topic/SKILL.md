@@ -56,8 +56,19 @@ installer_success "topic-name configured"
 
 The preamble exports `TOPIC_DIR` and `DOTFILES_ROOT`, and provides
 `installer_require_darwin`, `installer_link_config`, `installer_banner`,
-`installer_success`, `installer_note`, and `installer_warn`. For bash installers,
-set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}` before sourcing.
+`installer_success`, `installer_note`, `installer_warn`, `installer_error`, and
+`installer_hint`. For bash installers, set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}`
+before sourcing.
+
+Never write installer output with a raw `echo`. `banner`, `success`, and `note`
+go to stdout; `warn`, `error`, and `hint` go to stderr. Use `installer_hint` —
+not `installer_note` — for the actionable follow-up to a warning or error, so the
+whole message stays on one stream:
+
+```sh
+installer_warn "Ghostty not installed yet"
+installer_hint "Install with: brew install --cask ghostty"
+```
 
 ## Rules
 
