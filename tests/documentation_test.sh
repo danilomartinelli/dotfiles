@@ -51,6 +51,7 @@ done < <(
   awk -F '=' '
     /^\[tools\]$/ { in_tools = 1; next }
     /^\[/ { in_tools = 0 }
+    /^[[:space:]]*#/ { next }
     in_tools {
       name = $1
       gsub(/[[:space:]\"]/, "", name)

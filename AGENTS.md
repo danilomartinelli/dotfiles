@@ -143,7 +143,9 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 - Shell startup changes must remain safe to source repeatedly.
 - Keep secrets in `.localrc` with mode `600`; shared non-secret environment belongs in `.commonrc`.
 - Prefer fixture tests over commands that mutate the actual Mac.
-- Prefer `mdformat` (no aggressive wrap that collapses tables) and `shfmt -i 2` for Markdown and POSIX/bash shell scripts; do not run `shfmt` on Zsh topic files that use Zsh-only syntax.
+- Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`. Both come from `mise/mise.toml.symlink`, not Homebrew; run `mise install` rather than `brew install`.
+  - The `shfmt` flags are not optional: `-ci` (indent switch cases) and `-bn` (binary operators start the line) match the existing code, and dropping either rewrites the whole repository. Never run `shfmt` on Zsh topic files that use Zsh-only syntax.
+  - `mdformat` needs the `mdformat-gfm` and `mdformat-frontmatter` plugins declared in the mise entry. Bare `mdformat` destroys the YAML frontmatter of every `SKILL.md` and mangles GFM tables.
 
 ## Agent skills
 

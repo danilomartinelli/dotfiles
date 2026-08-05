@@ -9,7 +9,8 @@ node = "lts"
 npm = "11.6.3"
 "npm:eas-cli" = "16.28.0"
 "npm:skills" = "1.5.21"
-"pipx:mdformat" = "latest"
+# Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
+"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm --with mdformat-frontmatter" }
 pnpm = "10.23.0"
 python = "3.14.0"
 ruby = "3.4"
