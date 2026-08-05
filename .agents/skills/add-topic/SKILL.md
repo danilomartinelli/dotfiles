@@ -63,17 +63,17 @@ set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}` before sourcing.
 
 1. Topic directory name must not start with `_` and must not be `bin`,
    `functions`, or `tests`.
-2. `install.sh` must use `set -e` (or `set -eu`), source the installer preamble,
+1. `install.sh` must use `set -e` (or `set -eu`), source the installer preamble,
    skip non-Darwin via `installer_require_darwin` when macOS-only, and be safe
    to run from both bootstrap and `dot`.
-3. Do not generate credentials in installers. Use an explicit `bin/*-create`
+1. Do not generate credentials in installers. Use an explicit `bin/*-create`
    adapter when key material is needed (see SSH/SOPS).
-4. If the topic adds Homebrew packages, update `Brewfile`.
-5. If the topic adds runtimes/tools, update `mise/mise.toml.symlink`.
-6. Update `README.md` for every new public `bin/` command, alias, Brewfile
+1. If the topic adds Homebrew packages, update `Brewfile`.
+1. If the topic adds runtimes/tools, update `mise/mise.toml.symlink`.
+1. Update `README.md` for every new public `bin/` command, alias, Brewfile
    package, and Mise tool — `tests/documentation_test.sh` enforces this.
-7. Prefer fixture tests over mutating the real Mac.
-8. Keep secrets out of the topic; document env vars in `.localrc.example`.
+1. Prefer fixture tests over mutating the real Mac.
+1. Keep secrets out of the topic; document env vars in `.localrc.example`.
 
 ## Checklist
 

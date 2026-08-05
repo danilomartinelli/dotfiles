@@ -22,9 +22,9 @@ First check whether `.slim/clonedeps.json` exists.
 If it exists:
 
 1. Read it before asking librarian for a new plan.
-2. Check whether each listed `path` exists under `.slim/clonedeps/repos/`.
-3. Reuse existing cloned repos when they already satisfy the user's task.
-4. Only ask librarian for new recommendations if the existing manifest is
+1. Check whether each listed `path` exists under `.slim/clonedeps/repos/`.
+1. Reuse existing cloned repos when they already satisfy the user's task.
+1. Only ask librarian for new recommendations if the existing manifest is
    missing, stale, or insufficient for the current task.
 
 Do not rescan/re-plan from scratch when the manifest already has useful entries.
@@ -90,14 +90,14 @@ are directly relevant to the active task.
 The orchestrator owns final approval. Before cloning:
 
 1. Verify refs manually where possible with `git ls-remote`.
-2. Prefer pinned tags or commit SHAs. If no exact tag exists, ask librarian to
+1. Prefer pinned tags or commit SHAs. If no exact tag exists, ask librarian to
    find the correct module-specific tag/commit or explain the fallback.
-3. Only use HTTPS GitHub/GitLab-style repository URLs by default. Reject
+1. Only use HTTPS GitHub/GitLab-style repository URLs by default. Reject
    `file://`, SSH URLs, local paths, URLs with embedded credentials, and private
    or auth-required repositories unless the user explicitly approves that case.
-4. Present the plan to the user with dependency, repo URL, ref, reason, and
+1. Present the plan to the user with dependency, repo URL, ref, reason, and
    caveats.
-5. Ask for confirmation before network cloning unless the user explicitly asked
+1. Ask for confirmation before network cloning unless the user explicitly asked
    to clone immediately.
 
 ### Step 4: Update Ignore Files
@@ -157,11 +157,11 @@ stop and ask whether to clean/reclone.
 Safe manual git pattern:
 
 1. `git ls-remote <repoUrl> <ref>` to verify the ref where practical.
-2. Clone without submodules/recursive behavior.
-3. Prefer shallow fetch/clone where practical.
-4. Clone into a temporary directory under `.slim/clonedeps/repos/`, then move it
+1. Clone without submodules/recursive behavior.
+1. Prefer shallow fetch/clone where practical.
+1. Clone into a temporary directory under `.slim/clonedeps/repos/`, then move it
    into the final safe-name path after checkout succeeds.
-5. Remove failed temporary clones.
+1. Remove failed temporary clones.
 
 Do not run dependency install/build/test scripts from cloned repositories.
 

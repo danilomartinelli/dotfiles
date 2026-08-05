@@ -108,8 +108,8 @@ _dotfiles_git_state_tracks_matching_origin() (
       "branch.$_dotfiles_git_state_branch.merge" 2>/dev/null
   ) || _dotfiles_git_state_merge=
 
-  [ "$_dotfiles_git_state_remote" = origin ] && \
-    [ "$_dotfiles_git_state_merge" = "refs/heads/$_dotfiles_git_state_branch" ]
+  [ "$_dotfiles_git_state_remote" = origin ] \
+    && [ "$_dotfiles_git_state_merge" = "refs/heads/$_dotfiles_git_state_branch" ]
 )
 
 _dotfiles_git_state_ahead_count() (

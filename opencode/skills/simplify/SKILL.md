@@ -45,8 +45,8 @@ Simplification means making code more consistent with the codebase, not imposing
 Before simplifying:
 
 1. Read `AGENTS.md` / project conventions
-2. Study how neighboring code handles similar patterns
-3. Match the project's style for imports, naming, function style, error handling, and type annotations
+1. Study how neighboring code handles similar patterns
+1. Match the project's style for imports, naming, function style, error handling, and type annotations
 
 Simplification that breaks project consistency is not simplification - it's churn.
 
@@ -108,8 +108,8 @@ Make one simplification at a time.
 For each simplification:
 
 1. Make the change
-2. Run relevant tests
-3. Keep it only if behavior is preserved
+1. Run relevant tests
+1. Keep it only if behavior is preserved
 
 Separate refactoring from feature work whenever possible.
 

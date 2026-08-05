@@ -18,15 +18,15 @@ Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give
 ### Ways to construct one — try them in roughly this order
 
 1. **Failing test** at whatever seam reaches the bug — unit, integration, e2e.
-2. **Curl / HTTP script** against a running dev server.
-3. **CLI invocation** with a fixture input, diffing stdout against a known-good snapshot.
-4. **Headless browser script** (Playwright / Puppeteer) — drives the UI, asserts on DOM/console/network.
-5. **Replay a captured trace.** Save a real network request / payload / event log to disk; replay it through the code path in isolation.
-6. **Throwaway harness.** Spin up a minimal subset of the system (one service, mocked deps) that exercises the bug code path with a single function call.
-7. **Property / fuzz loop.** If the bug is "sometimes wrong output", run 1000 random inputs and look for the failure mode.
-8. **Bisection harness.** If the bug appeared between two known states (commit, dataset, version), automate "boot at state X, check, repeat" so you can `git bisect run` it.
-9. **Differential loop.** Run the same input through old-version vs new-version (or two configs) and diff outputs.
-10. **HITL bash script.** Last resort. If a human must click, drive _them_ with `scripts/hitl-loop.template.sh` so the loop is still structured. Captured output feeds back to you.
+1. **Curl / HTTP script** against a running dev server.
+1. **CLI invocation** with a fixture input, diffing stdout against a known-good snapshot.
+1. **Headless browser script** (Playwright / Puppeteer) — drives the UI, asserts on DOM/console/network.
+1. **Replay a captured trace.** Save a real network request / payload / event log to disk; replay it through the code path in isolation.
+1. **Throwaway harness.** Spin up a minimal subset of the system (one service, mocked deps) that exercises the bug code path with a single function call.
+1. **Property / fuzz loop.** If the bug is "sometimes wrong output", run 1000 random inputs and look for the failure mode.
+1. **Bisection harness.** If the bug appeared between two known states (commit, dataset, version), automate "boot at state X, check, repeat" so you can `git bisect run` it.
+1. **Differential loop.** Run the same input through old-version vs new-version (or two configs) and diff outputs.
+1. **HITL bash script.** Last resort. If a human must click, drive _them_ with `scripts/hitl-loop.template.sh` so the loop is still structured. Captured output feeds back to you.
 
 Build the right feedback loop, and the bug is 90% fixed.
 
@@ -98,8 +98,8 @@ Each probe must map to a specific prediction from Phase 3. **Change one variable
 Tool preference:
 
 1. **Debugger / REPL inspection** if the env supports it. One breakpoint beats ten logs.
-2. **Targeted logs** at the boundaries that distinguish hypotheses.
-3. Never "log everything and grep".
+1. **Targeted logs** at the boundaries that distinguish hypotheses.
+1. Never "log everything and grep".
 
 **Tag every debug log** with a unique prefix, e.g. `[DEBUG-a4f2]`. Cleanup at the end becomes a single grep. Untagged logs survive; tagged logs die.
 
@@ -116,10 +116,10 @@ A correct seam is one where the test exercises the **real bug pattern** as it oc
 If a correct seam exists:
 
 1. Turn the minimised repro into a failing test at that seam.
-2. Watch it fail.
-3. Apply the fix.
-4. Watch it pass.
-5. Re-run the Phase 1 feedback loop against the original (un-minimised) scenario.
+1. Watch it fail.
+1. Apply the fix.
+1. Watch it pass.
+1. Re-run the Phase 1 feedback loop against the original (un-minimised) scenario.
 
 ## Phase 6 — Cleanup + post-mortem
 

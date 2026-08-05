@@ -20,12 +20,12 @@ Bootstrap performs the complete first-run workflow:
 
 1. Creates the private `.localrc` from `.localrc.example` and restricts it to
    mode `600`.
-2. Prompts for the Git author name and email and generates the private
+1. Prompts for the Git author name and email and generates the private
    `git/gitconfig.local.symlink`.
-3. Links `.localrc` and every public `*.symlink` file into the home directory,
+1. Links `.localrc` and every public `*.symlink` file into the home directory,
    including the `~/.dotfiles-root` checkout resolver.
-4. Applies the tracked macOS defaults and attempts hostname normalization.
-5. Installs Homebrew, every dependency in `Brewfile`, and every top-level topic
+1. Applies the tracked macOS defaults and attempts hostname normalization.
+1. Installs Homebrew, every dependency in `Brewfile`, and every top-level topic
    installer.
 
 Existing destination files are never silently replaced: bootstrap offers to
@@ -69,15 +69,15 @@ defaults.
 
 Other lifecycle commands:
 
-| Command | Purpose |
-| --- | --- |
-| `dot --edit` | Open the active checkout in `$EDITOR` |
-| `dot --help` | Show supported options |
-| `_scripts/bootstrap` | Run the complete first-machine installation |
-| `_scripts/setup bootstrap` | Canonical bootstrap implementation |
-| `_scripts/setup update` | Canonical daily-update implementation |
-| `dotfiles-root.symlink --install` | Repair `~/.dotfiles-root` for this checkout |
-| `set-defaults` | Explicitly reapply tracked macOS preferences |
+| Command                           | Purpose                                      |
+| --------------------------------- | -------------------------------------------- |
+| `dot --edit`                      | Open the active checkout in `$EDITOR`        |
+| `dot --help`                      | Show supported options                       |
+| `_scripts/bootstrap`              | Run the complete first-machine installation  |
+| `_scripts/setup bootstrap`        | Canonical bootstrap implementation           |
+| `_scripts/setup update`           | Canonical daily-update implementation        |
+| `dotfiles-root.symlink --install` | Repair `~/.dotfiles-root` for this checkout  |
+| `set-defaults`                    | Explicitly reapply tracked macOS preferences |
 
 ## What gets installed
 
@@ -88,63 +88,63 @@ Other lifecycle commands:
 
 ### Homebrew formulae
 
-| Formula | Purpose |
-| --- | --- |
-| `age` | Age encryption used as the SOPS identity backend |
-| `aider` | AI pair programming in the terminal |
-| `ansible` | Automation and configuration management CLI |
-| `archiver` | Archive support used alongside the Archiver app |
-| `awscli` | AWS command-line interface |
-| `bat` | `cat` with syntax highlighting |
-| `cocoapods` | CocoaPods for React Native / iOS native deps |
-| `coreutils` | GNU utilities, including `gls` and `gdate` |
-| `direnv` | Per-directory environment variables |
-| `dockutil` | Programmatic Dock configuration |
-| `duti` | Default application associations |
-| `eza` | Modern `ls` replacement |
-| `fd` | Modern `find` replacement |
-| `fzf` | Fuzzy finder for history, files, and directories |
-| `gh` | GitHub CLI |
-| `git` | Git |
-| `git-lfs` | Git Large File Storage |
-| `glab` | GitLab CLI |
-| `grc` | Colourise output of common Unix tools |
-| `helm` | Kubernetes package manager |
-| `helmfile` | Declarative Helm releases |
-| `hermes-agent` | Hermes Agent CLI (Nous Research) |
-| `imagemagick` | Image conversion and manipulation |
-| `jq` | JSON processing |
-| `kubernetes-cli` | `kubectl` |
-| `kustomize` | Kubernetes manifest customization |
-| `mas` | Mac App Store CLI |
-| `mise` | Runtime manager |
-| `neovim` | Terminal editor |
-| `opencode` | OpenCode CLI agent |
-| `pandoc` | Document conversion |
-| `ripgrep` | Fast recursive search |
-| `sops` | Encrypt and decrypt secrets (age, KMS, PGP) |
-| `spaceman-diff` | Visual image diffs |
-| `tmux` | Terminal multiplexer |
-| `usage` | Usage-spec CLI support, including Mise completion |
-| `watch` | Repeat a command and watch the output |
-| `watchman` | Filesystem watcher |
-| `wget` | File downloader |
-| `wrangler` | Cloudflare Workers CLI |
-| `zoxide` | Smarter `cd` |
-| `zsh-autosuggestions` | Zsh autosuggestions |
-| `zsh-syntax-highlighting` | Zsh syntax highlighting |
+| Formula                   | Purpose                                           |
+| ------------------------- | ------------------------------------------------- |
+| `age`                     | Age encryption used as the SOPS identity backend  |
+| `aider`                   | AI pair programming in the terminal               |
+| `ansible`                 | Automation and configuration management CLI       |
+| `archiver`                | Archive support used alongside the Archiver app   |
+| `awscli`                  | AWS command-line interface                        |
+| `bat`                     | `cat` with syntax highlighting                    |
+| `cocoapods`               | CocoaPods for React Native / iOS native deps      |
+| `coreutils`               | GNU utilities, including `gls` and `gdate`        |
+| `direnv`                  | Per-directory environment variables               |
+| `dockutil`                | Programmatic Dock configuration                   |
+| `duti`                    | Default application associations                  |
+| `eza`                     | Modern `ls` replacement                           |
+| `fd`                      | Modern `find` replacement                         |
+| `fzf`                     | Fuzzy finder for history, files, and directories  |
+| `gh`                      | GitHub CLI                                        |
+| `git`                     | Git                                               |
+| `git-lfs`                 | Git Large File Storage                            |
+| `glab`                    | GitLab CLI                                        |
+| `grc`                     | Colourise output of common Unix tools             |
+| `helm`                    | Kubernetes package manager                        |
+| `helmfile`                | Declarative Helm releases                         |
+| `hermes-agent`            | Hermes Agent CLI (Nous Research)                  |
+| `imagemagick`             | Image conversion and manipulation                 |
+| `jq`                      | JSON processing                                   |
+| `kubernetes-cli`          | `kubectl`                                         |
+| `kustomize`               | Kubernetes manifest customization                 |
+| `mas`                     | Mac App Store CLI                                 |
+| `mise`                    | Runtime manager                                   |
+| `neovim`                  | Terminal editor                                   |
+| `opencode`                | OpenCode CLI agent                                |
+| `pandoc`                  | Document conversion                               |
+| `ripgrep`                 | Fast recursive search                             |
+| `sops`                    | Encrypt and decrypt secrets (age, KMS, PGP)       |
+| `spaceman-diff`           | Visual image diffs                                |
+| `tmux`                    | Terminal multiplexer                              |
+| `usage`                   | Usage-spec CLI support, including Mise completion |
+| `watch`                   | Repeat a command and watch the output             |
+| `watchman`                | Filesystem watcher                                |
+| `wget`                    | File downloader                                   |
+| `wrangler`                | Cloudflare Workers CLI                            |
+| `zoxide`                  | Smarter `cd`                                      |
+| `zsh-autosuggestions`     | Zsh autosuggestions                               |
+| `zsh-syntax-highlighting` | Zsh syntax highlighting                           |
 
 ### Applications and fonts
 
-| Group | Homebrew casks |
-| --- | --- |
-| Development | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `vagrant`, `zed` |
-| Terminal | `ghostty`, `session-manager-plugin` |
-| Window and menu bar | `nikitabobko/tap/aerospace`, `bartender`, `keyclu` |
-| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
-| Design and media | `cleanshot`, `figma`, `spotify` |
-| Network and security | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator` |
-| Fonts | `font-jetbrains-mono-nerd-font` |
+| Group                     | Homebrew casks                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `vagrant`, `zed` |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                     |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                      |
+| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark`                            |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                         |
+| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                        |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                         |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
 itself must already be installed from the Mac App Store; `archiver/install.sh`
@@ -165,26 +165,26 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 
 `mise/mise.toml.symlink` installs the following exact declarations:
 
-| Tool | Version |
-| --- | --- |
-| `bun` | `1.3.2` |
-| `elixir` | `1.18` |
-| `erlang` | `27` |
-| `go` | `1.25.5` |
-| `go:mvdan.cc/sh/v3/cmd/shfmt` | `latest` |
-| `java` | `temurin-21` |
-| `node` | `lts` |
-| `npm` | `11.6.3` |
-| `npm:eas-cli` | `16.28.0` |
-| `npm:skills` | `1.5.21` |
-| `pipx:mdformat` | `latest` |
-| `pnpm` | `10.23.0` |
-| `python` | `3.14.0` |
-| `ruby` | `3.4` |
-| `rust` | `1.91.1` |
-| `terraform` | `1.14.0` |
-| `uv` | `latest` |
-| `yarn` | `4.11.0` |
+| Tool                          | Version      |
+| ----------------------------- | ------------ |
+| `bun`                         | `1.3.2`      |
+| `elixir`                      | `1.18`       |
+| `erlang`                      | `27`         |
+| `go`                          | `1.25.5`     |
+| `go:mvdan.cc/sh/v3/cmd/shfmt` | `latest`     |
+| `java`                        | `temurin-21` |
+| `node`                        | `lts`        |
+| `npm`                         | `11.6.3`     |
+| `npm:eas-cli`                 | `16.28.0`    |
+| `npm:skills`                  | `1.5.21`     |
+| `pipx:mdformat`               | `latest`     |
+| `pnpm`                        | `10.23.0`    |
+| `python`                      | `3.14.0`     |
+| `ruby`                        | `3.4`        |
+| `rust`                        | `1.91.1`     |
+| `terraform`                   | `1.14.0`     |
+| `uv`                          | `latest`     |
+| `yarn`                        | `4.11.0`     |
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
@@ -200,36 +200,36 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 
 ### General utilities
 
-| Command | Usage and purpose |
-| --- | --- |
-| `battery-status` | Print the macOS battery indicator used by the prompt |
-| `dns-flush` | Flush the macOS DNS cache with `sudo` |
-| `dot` | Run daily dotfiles maintenance or open the checkout |
-| `e` | `e [path]`: open a path, or the current directory, in `$EDITOR` |
-| `headers` | `headers URL`: print HTTP response headers using `curl` |
-| `set-defaults` | Apply `_macos/set-defaults.sh` from the active checkout |
-| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work` |
-| `ssh-key-create` | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
+| Command           | Usage and purpose                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------ |
+| `battery-status`  | Print the macOS battery indicator used by the prompt                                                   |
+| `dns-flush`       | Flush the macOS DNS cache with `sudo`                                                                  |
+| `dot`             | Run daily dotfiles maintenance or open the checkout                                                    |
+| `e`               | `e [path]`: open a path, or the current directory, in `$EDITOR`                                        |
+| `headers`         | `headers URL`: print HTTP response headers using `curl`                                                |
+| `set-defaults`    | Apply `_macos/set-defaults.sh` from the active checkout                                                |
+| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work`   |
+| `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
 
 ### Git utilities
 
-| Executable | Preferred invocation and purpose |
-| --- | --- |
-| `git-all` | `git all`: stage all changes |
-| `git-amend` | `git amend`: amend with the existing commit message |
-| `git-copy-branch-name` | `git copy-branch-name`: copy the current branch name to the macOS clipboard |
-| `git-credit` | `git credit "Name" email`: amend the last commit with another author |
+| Executable                | Preferred invocation and purpose                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `git-all`                 | `git all`: stage all changes                                                                            |
+| `git-amend`               | `git amend`: amend with the existing commit message                                                     |
+| `git-copy-branch-name`    | `git copy-branch-name`: copy the current branch name to the macOS clipboard                             |
+| `git-credit`              | `git credit "Name" email`: amend the last commit with another author                                    |
 | `git-delete-local-merged` | `git delete-local-merged`: delete branches merged into `HEAD`, preserving current, `main`, and `master` |
-| `git-edit-new` | `git edit-new`: open untracked files in `$EDITOR` |
-| `git-nuke` | `git nuke branch`: force-delete a local branch and delete the matching `origin` branch |
-| `git-promote` | `git promote`: push the current branch and configure `origin` tracking |
-| `git-rank-contributors` | `git rank-contributors [-v] [-o] [-h]`: rank authors by changed lines |
-| `git-track` | `git track`: track the matching existing branch on `origin` |
-| `git-undo` | `git undo`: soft-reset the latest commit while preserving changes |
-| `git-unpushed` | `git unpushed`: diff local commits not yet on the matching `origin` branch |
-| `git-unpushed-stat` | `git unpushed-stat`: summarize the unpushed diff and commit count |
-| `git-up` | `git up [pull options]`: pull and list newly received commits |
-| `git-wtf` | `git wtf [options]`: summarize local/remote branch relationships |
+| `git-edit-new`            | `git edit-new`: open untracked files in `$EDITOR`                                                       |
+| `git-nuke`                | `git nuke branch`: force-delete a local branch and delete the matching `origin` branch                  |
+| `git-promote`             | `git promote`: push the current branch and configure `origin` tracking                                  |
+| `git-rank-contributors`   | `git rank-contributors [-v] [-o] [-h]`: rank authors by changed lines                                   |
+| `git-track`               | `git track`: track the matching existing branch on `origin`                                             |
+| `git-undo`                | `git undo`: soft-reset the latest commit while preserving changes                                       |
+| `git-unpushed`            | `git unpushed`: diff local commits not yet on the matching `origin` branch                              |
+| `git-unpushed-stat`       | `git unpushed-stat`: summarize the unpushed diff and commit count                                       |
+| `git-up`                  | `git up [pull options]`: pull and list newly received commits                                           |
+| `git-wtf`                 | `git wtf [options]`: summarize local/remote branch relationships                                        |
 
 `git nuke` changes both local and remote state. `git credit`, `git amend`, and
 `git undo` rewrite local commit state; inspect their help/comments before use.
@@ -240,41 +240,41 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 are public functions; leading-underscore files are completion implementations.
 The current public functions are:
 
-| Function | Usage and purpose |
-| --- | --- |
-| `c` | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`) |
+| Function  | Usage and purpose                                                                                                             |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `c`       | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`)                               |
 | `extract` | `extract archive`: extract supported tar, gzip, bzip2, xz, zstd, 7z, lz4, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
-| `gf` | `gf remote-branch`: switch to the local branch, or create it tracking `origin/remote-branch` |
-| `pubkey` | Copy the default Ed25519 public key, falling back to RSA |
+| `gf`      | `gf remote-branch`: switch to the local branch, or create it tracking `origin/remote-branch`                                  |
+| `pubkey`  | Copy the default Ed25519 public key, falling back to RSA                                                                      |
 
 The shell also exposes these aliases. Arguments written after an alias are
 passed to the expanded command.
 
-| Area | Aliases |
-| --- | --- |
-| Shell | `reload!` → source `~/.zshrc`; `cls` → clear; `grep` → colored output |
-| Files | `ls`, `l`, `ll`, `la`, `lt` → `eza` (falls back to GNU `gls`); `cat` → `bat` |
-| Editor | `v`, `vi`, `vim` → Neovim; `vimrc` → edit `~/.vimrc` |
-| Homebrew | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc` |
-| Mise | `m`, `mi`, `mu`, `ml`, `mc` |
-| Aider | `aider-architect`, `aider-ro` |
-| Hermes | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update` |
-| Docker | `d` → Docker; `dc` → Docker Compose |
-| Mobile | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods` |
-| Tailscale | `ts`, `tsstatus`, `tsip`, `tsup`, `tsdown`, `tsping` |
-| SOPS | `sops-encrypt`, `sops-decrypt`, `sops-edit` |
-| SSH | `sshclean` → remove sockets and stop SSH processes |
-| Git | `gl`, `glog`, `gp`, `gd`, `gc`, `gca`, `gco`, `gcb`, `gb`, `gs`, `gac`, `ge` |
-| Kubectl context | `k`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kns` |
-| Kubectl resources | `kgp`, `kgpa`, `kgs`, `kgsa`, `kgd`, `kgda`, `kgn`, `kgns` |
-| Kubectl operations | `kdp`, `kds`, `kdd`, `kdn`, `kl`, `klf`, `klt`, `kaf`, `kdf`, `kex`, `kpf`, `kwp`, `kwpa` |
-| AWS basics/output | `awsl`, `awswho`, `awsregion`, `awsjson`, `awstable`, `awstext`, `awscost` |
-| AWS S3 | `s3ls`, `s3cp`, `s3mv`, `s3rm`, `s3sync`, `s3mb`, `s3rb`, `s3web` |
-| AWS EC2 | `ec2ls`, `ec2start`, `ec2stop`, `ec2reboot`, `ec2terminate`, `ec2ip` |
+| Area                      | Aliases                                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Shell                     | `reload!` → source `~/.zshrc`; `cls` → clear; `grep` → colored output                                       |
+| Files                     | `ls`, `l`, `ll`, `la`, `lt` → `eza` (falls back to GNU `gls`); `cat` → `bat`                                |
+| Editor                    | `v`, `vi`, `vim` → Neovim; `vimrc` → edit `~/.vimrc`                                                        |
+| Homebrew                  | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc`                                                         |
+| Mise                      | `m`, `mi`, `mu`, `ml`, `mc`                                                                                 |
+| Aider                     | `aider-architect`, `aider-ro`                                                                               |
+| Hermes                    | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update`                                            |
+| Docker                    | `d` → Docker; `dc` → Docker Compose                                                                         |
+| Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`                              |
+| Tailscale                 | `ts`, `tsstatus`, `tsip`, `tsup`, `tsdown`, `tsping`                                                        |
+| SOPS                      | `sops-encrypt`, `sops-decrypt`, `sops-edit`                                                                 |
+| SSH                       | `sshclean` → remove sockets and stop SSH processes                                                          |
+| Git                       | `gl`, `glog`, `gp`, `gd`, `gc`, `gca`, `gco`, `gcb`, `gb`, `gs`, `gac`, `ge`                                |
+| Kubectl context           | `k`, `kctx`, `kctx-list`, `kcurrent`, `konfig`, `kns`                                                       |
+| Kubectl resources         | `kgp`, `kgpa`, `kgs`, `kgsa`, `kgd`, `kgda`, `kgn`, `kgns`                                                  |
+| Kubectl operations        | `kdp`, `kds`, `kdd`, `kdn`, `kl`, `klf`, `klt`, `kaf`, `kdf`, `kex`, `kpf`, `kwp`, `kwpa`                   |
+| AWS basics/output         | `awsl`, `awswho`, `awsregion`, `awsjson`, `awstable`, `awstext`, `awscost`                                  |
+| AWS S3                    | `s3ls`, `s3cp`, `s3mv`, `s3rm`, `s3sync`, `s3mb`, `s3rb`, `s3web`                                           |
+| AWS EC2                   | `ec2ls`, `ec2start`, `ec2stop`, `ec2reboot`, `ec2terminate`, `ec2ip`                                        |
 | AWS Lambda/CloudFormation | `lambdals`, `lambdainvoke`, `lambdalogs`, `lambdadeploy`, `cfnls`, `cfnvalidate`, `cfnevents`, `cfnoutputs` |
-| AWS ECS/RDS | `ecsls`, `ecsservices`, `ecstasks`, `ecsdescribe`, `rdsls`, `rdsstart`, `rdsstop` |
-| AWS IAM/SSM | `iamusers`, `iamroles`, `iamgroups`, `iampolicies`, `ssmls`, `ssmget`, `ssmput`, `ssmsession` |
-| AWS CloudWatch/DynamoDB | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery` |
+| AWS ECS/RDS               | `ecsls`, `ecsservices`, `ecstasks`, `ecsdescribe`, `rdsls`, `rdsstart`, `rdsstop`                           |
+| AWS IAM/SSM               | `iamusers`, `iamroles`, `iamgroups`, `iampolicies`, `ssmls`, `ssmget`, `ssmput`, `ssmsession`               |
+| AWS CloudWatch/DynamoDB   | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery`                                     |
 
 ## Repository architecture
 
@@ -327,11 +327,11 @@ Homebrew has its own setup phase.
 The startup module then:
 
 1. Loads `~/.localrc` followed by tracked `.commonrc`.
-2. Initializes Homebrew, `PATH`, `MANPATH`, function paths, and topic discovery.
-3. Sources sorted topic `path.zsh` files, then other visible `*.zsh` files.
-4. Loads the custom prompt as the sole prompt implementation.
-5. Runs `compinit` once and loads sorted `completion.zsh` files.
-6. Loads optional Zsh syntax highlighting last.
+1. Initializes Homebrew, `PATH`, `MANPATH`, function paths, and topic discovery.
+1. Sources sorted topic `path.zsh` files, then other visible `*.zsh` files.
+1. Loads the custom prompt as the sole prompt implementation.
+1. Runs `compinit` once and loads sorted `completion.zsh` files.
+1. Loads optional Zsh syntax highlighting last.
 
 Reloading remains idempotent: loader paths and hooks are de-duplicated.
 

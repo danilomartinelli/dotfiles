@@ -45,14 +45,14 @@ Build it as a **lightweight TUI** — on every tick, clear the screen (`console.
 Each frame has two parts, in this order:
 
 1. **Current state**, pretty-printed and diff-friendly (one field per line, or formatted JSON). Use **bold** for field names or section headers and **dim** for less important context (timestamps, IDs, derived values). Native ANSI escape codes are fine — `\x1b[1m` bold, `\x1b[2m` dim, `\x1b[0m` reset. No need to pull in a styling library unless one is already in the project.
-2. **Keyboard shortcuts**, listed at the bottom: `[a] add user  [d] delete user  [t] tick clock  [q] quit`. Bold the key, dim the description, or vice-versa — whatever reads cleanly.
+1. **Keyboard shortcuts**, listed at the bottom: `[a] add user  [d] delete user  [t] tick clock  [q] quit`. Bold the key, dim the description, or vice-versa — whatever reads cleanly.
 
 Behaviour:
 
 1. **Initialise state** — a single in-memory object/struct. Render the first frame on start.
-2. **Read one keystroke (or one line)** at a time, dispatch to a handler that mutates state.
-3. **Re-render** the full frame after every action — don't append, replace.
-4. **Loop until quit.**
+1. **Read one keystroke (or one line)** at a time, dispatch to a handler that mutates state.
+1. **Re-render** the full frame after every action — don't append, replace.
+1. **Loop until quit.**
 
 The whole frame should fit on one screen.
 
