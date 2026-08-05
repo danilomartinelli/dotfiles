@@ -10,7 +10,7 @@ installer_banner "configuring KeyClu"
 
 if [ ! -d "/Applications/KeyClu.app" ]; then
   installer_warn "KeyClu not installed yet; skipping preferences"
-  echo "  Install with: brew install --cask keyclu" >&2
+  installer_hint "Install with: brew install --cask keyclu"
   exit 0
 fi
 

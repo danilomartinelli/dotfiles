@@ -18,6 +18,7 @@ make_checkout() {
   mkdir -p \
     "$checkout/_scripts" \
     "$checkout/sample" \
+    "$checkout/other" \
     "$checkout/home"
 
   cp "$PREAMBLE" "$checkout/_scripts/installer-preamble.sh"
@@ -34,6 +35,23 @@ write_synthetic_installer() {
   scenario_write_executable "$installer" <<EOF
 #!/bin/sh
 set -eu
+# shellcheck disable=SC1091
+. "\$(CDPATH='' cd -P -- "\$(dirname -- "\$0")/../_scripts" && pwd)/installer-preamble.sh"
+$*
+EOF
+}
+
+# Mirrors an installer whose $0 is wrong (bash via BASH_SOURCE), but keeps the
+# source path itself resolved from $0 so the assertions isolate the preamble.
+write_anchored_installer() {
+  local installer=$1
+  local anchor=$2
+  shift 2
+
+  scenario_write_executable "$installer" <<EOF
+#!/bin/sh
+set -eu
+INSTALLER_ANCHOR=$anchor
 # shellcheck disable=SC1091
 . "\$(CDPATH='' cd -P -- "\$(dirname -- "\$0")/../_scripts" && pwd)/installer-preamble.sh"
 $*
@@ -103,7 +121,9 @@ test_output_helpers() {
     'installer_banner "setting up sample"
 installer_success "sample configured"
 installer_note "customize locally"
-installer_warn "something optional"'
+installer_warn "something optional"
+installer_error "something required"
+installer_hint "Install with: brew install sample"'
 
   scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
   assert_contains "$home/stdout.log" '› setting up sample'
@@ -111,6 +131,11 @@ installer_warn "something optional"'
   assert_contains "$home/stdout.log" '  → customize locally'
   assert_contains "$home/stderr.log" 'Warning: something optional'
   assert_not_contains "$home/stdout.log" 'Warning: something optional'
+  assert_contains "$home/stderr.log" 'Error: something required'
+  assert_not_contains "$home/stdout.log" 'Error: something required'
+  # Hints continue the warning or error above them, so they stay on stderr.
+  assert_contains "$home/stderr.log" '  → Install with: brew install sample'
+  assert_not_contains "$home/stdout.log" 'Install with: brew install sample'
 }
 
 test_safe_under_set_eu() {
@@ -125,6 +150,52 @@ installer_success "done"'
   # Installer already uses set -eu via write_synthetic_installer.
   scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
   assert_contains "$home/stdout.log" '› eu safe'
+}
+
+test_anchor_overrides_argv_zero() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_anchored_installer "$checkout/sample/install.sh" '$HOME/../other/install.sh' \
+    'printf "%s\n" "$TOPIC_DIR" >"$HOME/topic_dir"
+printf "%s\n" "$DOTFILES_ROOT" >"$HOME/dotfiles_root"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  assert_equal "$checkout/other" "$(cat "$home/topic_dir")" 'anchored TOPIC_DIR'
+  assert_equal "$checkout" "$(cat "$home/dotfiles_root")" 'anchored DOTFILES_ROOT'
+}
+
+test_anchor_is_consumed_by_the_preamble() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_anchored_installer "$checkout/sample/install.sh" '$HOME/../other/install.sh' \
+    'printf "%s\n" "${INSTALLER_ANCHOR-unset}" >"$HOME/anchor_after"
+# A second source must fall back to $0 rather than reuse the stale anchor.
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/installer-preamble.sh"
+printf "%s\n" "$TOPIC_DIR" >"$HOME/topic_dir"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  assert_equal 'unset' "$(cat "$home/anchor_after")" 'INSTALLER_ANCHOR after sourcing'
+  assert_equal "$checkout/sample" "$(cat "$home/topic_dir")" 'TOPIC_DIR on re-source'
+}
+
+test_unresolvable_anchor_fails() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_anchored_installer "$checkout/sample/install.sh" '$HOME/missing-topic/install.sh' \
+    'printf "ran\n" >"$HOME/ran"'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for unresolvable anchor'
+  assert_contains "$home/stderr.log" 'installer-preamble: cannot resolve topic directory'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a bad anchor'
 }
 
 test_preamble_not_in_topic_catalog() {
@@ -153,6 +224,10 @@ scenario_run 'link-config wrapper delegates labels and policies' \
   test_link_config_wrapper_delegates
 scenario_run 'output helpers emit the inner vocabulary' test_output_helpers
 scenario_run 'sourcing is safe under set -eu' test_safe_under_set_eu
+scenario_run 'INSTALLER_ANCHOR overrides $0' test_anchor_overrides_argv_zero
+scenario_run 'INSTALLER_ANCHOR does not leak past the preamble' \
+  test_anchor_is_consumed_by_the_preamble
+scenario_run 'unresolvable INSTALLER_ANCHOR fails loudly' test_unresolvable_anchor_fails
 scenario_run 'preamble is excluded from topic discovery' \
   test_preamble_not_in_topic_catalog
 scenario_finish

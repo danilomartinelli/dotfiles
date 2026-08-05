@@ -53,7 +53,7 @@ if github_user=$(resolve_github_user); then
   installer_success "$user_root"
 else
   installer_note "GitHub username not resolved yet"
-  echo "  Set GITHUB_USER in ~/.localrc or: git config --global github.user <handle>"
+  installer_note "set GITHUB_USER in ~/.localrc or: git config --global github.user <handle>"
 fi
 
 installer_success "Workspace layout ready"

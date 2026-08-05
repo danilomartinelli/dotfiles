@@ -7,8 +7,8 @@ set -e
 
 # Validate mise is installed
 if ! command -v mise >/dev/null 2>&1; then
-  echo "Error: mise is not installed. Please install it first:" >&2
-  echo "  brew install mise" >&2
+  installer_error "mise is not installed"
+  installer_hint "Install with: brew install mise"
   exit 1
 fi
 
@@ -22,7 +22,7 @@ installer_banner "Installing Mise runtimes"
 if mise install; then
   installer_success "Mise runtimes installed successfully"
 else
-  echo "Error: Failed to install Mise runtimes" >&2
+  installer_error "Failed to install Mise runtimes"
   exit 1
 fi
 

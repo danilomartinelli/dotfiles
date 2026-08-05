@@ -34,7 +34,7 @@ if [ -f "$default_key" ]; then
   fi
 else
   installer_note "no default age identity yet"
-  echo "  Create one with: sops-key-create default"
+  installer_note "create one with: sops-key-create default"
 fi
 
 installer_success "sops configuration complete"

@@ -12,8 +12,8 @@ installer_banner "configuring dock (minimal)"
 
 # Validate dockutil is installed
 if ! command -v dockutil >/dev/null 2>&1; then
-  echo "Error: dockutil is required but not installed." >&2
-  echo "  Install with: brew install dockutil" >&2
+  installer_error "dockutil is required but not installed"
+  installer_hint "Install with: brew install dockutil"
   exit 1
 fi
 

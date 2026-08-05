@@ -10,8 +10,8 @@ installer_banner "setting Archiver as default app for compressed files"
 
 # Validate duti is installed
 if ! command -v duti >/dev/null 2>&1; then
-  echo "Error: duti is required but not installed." >&2
-  echo "  Install with: brew install duti" >&2
+  installer_error "duti is required but not installed"
+  installer_hint "Install with: brew install duti"
   exit 1
 fi
 
@@ -21,7 +21,7 @@ ARCHIVER_BUNDLE="com.incrediblebee.Archiver"
 # Check if Archiver app exists
 if ! /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "/Applications/Archiver.app/Contents/Info.plist" 2>/dev/null | grep -q "$ARCHIVER_BUNDLE"; then
   installer_warn "Archiver app not found at /Applications/Archiver.app"
-  echo "  Skipping default app configuration. Install Archiver from Mac App Store." >&2
+  installer_hint "Skipping default app configuration. Install Archiver from Mac App Store."
   exit 0
 fi
 
