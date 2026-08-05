@@ -28,17 +28,44 @@ topic-name/
 
 For configs that live under `~/.config/<tool>/` (Ghostty/Zed/AeroSpace style),
 keep the tracked files in the topic and have `install.sh` create the destination
-directory, then call `_scripts/link-config` (default policy `replace-with-backup`).
+directory, then call `installer_link_config` (default policy `replace-with-backup`).
 Use `--policy preserve-existing` when local machine tweaks must win, or
 `--policy numbered-backup` when collisions need free `.backup.N` suffixes (SSH).
 Do not reimplement link/backup logic inside the installer.
+
+## Installer scaffold
+
+When an installer is needed, start from the shared preamble — never copy boilerplate
+from another topic:
+
+```sh
+#!/bin/sh
+
+set -e
+
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
+
+installer_require_darwin # omit when the topic is cross-platform
+installer_banner "setting up topic-name"
+
+# topic-specific work using $TOPIC_DIR, installer_link_config, etc.
+
+installer_success "topic-name configured"
+```
+
+The preamble exports `TOPIC_DIR` and `DOTFILES_ROOT`, and provides
+`installer_require_darwin`, `installer_link_config`, `installer_banner`,
+`installer_success`, `installer_note`, and `installer_warn`. For bash installers,
+set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}` before sourcing.
 
 ## Rules
 
 1. Topic directory name must not start with `_` and must not be `bin`,
    `functions`, or `tests`.
-2. `install.sh` must use `set -e` (or `set -eu`), skip non-Darwin when
-   macOS-only, and be safe to run from both bootstrap and `dot`.
+2. `install.sh` must use `set -e` (or `set -eu`), source the installer preamble,
+   skip non-Darwin via `installer_require_darwin` when macOS-only, and be safe
+   to run from both bootstrap and `dot`.
 3. Do not generate credentials in installers. Use an explicit `bin/*-create`
    adapter when key material is needed (see SSH/SOPS).
 4. If the topic adds Homebrew packages, update `Brewfile`.
@@ -51,6 +78,7 @@ Do not reimplement link/backup logic inside the installer.
 ## Checklist
 
 - [ ] Create `topic-name/` with only the files that are needed
+- [ ] Scaffold `install.sh` from the preamble template above when an installer exists
 - [ ] `chmod +x topic-name/install.sh` when an installer exists
 - [ ] Document public surface in `README.md`
 - [ ] Mention the installer in `AGENTS.md` only if it changes a setup contract

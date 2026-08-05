@@ -135,6 +135,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
   cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
   cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$fixture/_scripts/adapter-checkout.sh"
+  cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$fixture/_scripts/installer-preamble.sh"
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"

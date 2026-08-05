@@ -16,6 +16,7 @@ make_fixture() {
   mkdir -p \
     "$fixture/.hidden" \
     "$fixture/_private" \
+    "$fixture/_scripts" \
     "$fixture/alpha/_private/nested" \
     "$fixture/alpha/.dot" \
     "$fixture/alpha/nested" \
@@ -41,6 +42,9 @@ private
 EOF
   scenario_write_file "$fixture/_private/private.symlink" <<'EOF'
 private
+EOF
+  scenario_write_file "$fixture/_scripts/installer-preamble.sh" <<'EOF'
+preamble
 EOF
   scenario_write_file "$fixture/alpha/alpha.symlink" <<'EOF'
 link

@@ -2,11 +2,11 @@
 
 set -e
 
-if [ "$(uname -s)" != "Darwin" ]; then
-  exit 0
-fi
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
-echo "› configuring Bartender"
+installer_require_darwin
+installer_banner "configuring Bartender"
 
 APP=""
 for candidate in "/Applications/Bartender 6.app" "/Applications/Bartender.app"; do
@@ -17,7 +17,7 @@ for candidate in "/Applications/Bartender 6.app" "/Applications/Bartender.app"; 
 done
 
 if [ -z "$APP" ]; then
-  echo "Warning: Bartender not installed yet; skipping preferences" >&2
+  installer_warn "Bartender not installed yet; skipping preferences"
   echo "  Install with: brew install --cask bartender" >&2
   exit 0
 fi
@@ -30,5 +30,5 @@ defaults write com.surteesstudios.Bartender updateAutoUpdate -bool true 2>/dev/n
 # Open once so macOS can prompt for Accessibility / Screen Recording if needed.
 open -ga "$APP" 2>/dev/null || true
 
-echo "  ✓ Bartender preferences applied (hide/show items are configured in the app UI)"
-echo "✓ Bartender configured"
+installer_success "Bartender preferences applied (hide/show items are configured in the app UI)"
+installer_success "Bartender configured"

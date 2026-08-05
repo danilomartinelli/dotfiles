@@ -2,6 +2,9 @@
 
 set -e
 
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
+
 # Validate mise is installed
 if ! command -v mise >/dev/null 2>&1; then
   echo "Error: mise is not installed. Please install it first:" >&2
@@ -15,9 +18,9 @@ if [ -e "$MISE_CONFIG" ]; then
   mise trust "$MISE_CONFIG" >/dev/null 2>&1 || true
 fi
 
-echo "› Installing Mise runtimes"
+installer_banner "Installing Mise runtimes"
 if mise install; then
-  echo "✓ Mise runtimes installed successfully"
+  installer_success "Mise runtimes installed successfully"
 else
   echo "Error: Failed to install Mise runtimes" >&2
   exit 1

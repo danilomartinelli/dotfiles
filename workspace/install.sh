@@ -2,13 +2,16 @@
 
 set -eu
 
-echo "› setting up Workspace layout"
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
+
+installer_banner "setting up Workspace layout"
 
 workspace_root=${WORKSPACE:-$HOME/Workspace}
 github_root=$workspace_root/github.com
 
 mkdir -p "$github_root"
-echo "  ✓ $github_root"
+installer_success "$github_root"
 
 # GitHub handles: 1–39 chars, alphanumeric or hyphen, no leading/trailing hyphen.
 is_github_username() {
@@ -47,10 +50,10 @@ resolve_github_user() {
 if github_user=$(resolve_github_user); then
   user_root=$github_root/$github_user
   mkdir -p "$user_root"
-  echo "  ✓ $user_root"
+  installer_success "$user_root"
 else
-  echo "  → GitHub username not resolved yet"
+  installer_note "GitHub username not resolved yet"
   echo "  Set GITHUB_USER in ~/.localrc or: git config --global github.user <handle>"
 fi
 
-echo "✓ Workspace layout ready"
+installer_success "Workspace layout ready"
