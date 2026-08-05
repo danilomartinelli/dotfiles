@@ -2,34 +2,30 @@
 
 set -e
 
-# Only run on macOS
-if [ "$(uname -s)" != "Darwin" ]; then
-  exit 0
-fi
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
-echo "› setting up Zed configuration"
+installer_require_darwin
+installer_banner "setting up Zed configuration"
 
-TOPIC_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(CDPATH='' cd -P -- "$TOPIC_DIR/.." && pwd)
 CONFIG_DIR="$HOME/.config/zed"
-LINK_CONFIG="$DOTFILES_ROOT/_scripts/link-config"
 
 mkdir -p "$CONFIG_DIR"
 
-"$LINK_CONFIG" --label "Zed settings" \
+installer_link_config --label "Zed settings" \
   "$TOPIC_DIR/settings.json" "$CONFIG_DIR/settings.json"
 
 ZED_BUNDLE="dev.zed.Zed"
 ZED_APP="/Applications/Zed.app"
 
 if [ ! -d "$ZED_APP" ]; then
-  echo "Warning: Zed not found at $ZED_APP; skipping default-app associations" >&2
-  echo "✓ Zed configuration linked (install Zed to register file associations)"
+  installer_warn "Zed not found at $ZED_APP; skipping default-app associations"
+  installer_success "Zed configuration linked (install Zed to register file associations)"
   exit 0
 fi
 
 if ! command -v duti >/dev/null 2>&1; then
-  echo "Warning: duti is required to set Zed as the default text editor" >&2
+  installer_warn "duti is required to set Zed as the default text editor"
   echo "  Install with: brew install duti" >&2
   exit 0
 fi
@@ -60,9 +56,9 @@ for uti in public.plain-text public.source-code public.script public.shell-scrip
 done
 
 if [ "$failed" -eq 0 ]; then
-  echo "  ✓ Zed set as default app for tracked text/source extensions"
+  installer_success "Zed set as default app for tracked text/source extensions"
 else
-  echo "Warning: Some Zed file associations could not be configured ($failed failed)" >&2
+  installer_warn "Some Zed file associations could not be configured ($failed failed)"
 fi
 
-echo "✓ Zed configured"
+installer_success "Zed configured"

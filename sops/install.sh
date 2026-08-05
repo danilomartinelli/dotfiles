@@ -2,7 +2,10 @@
 
 set -eu
 
-echo "› setting up sops configuration"
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
+
+installer_banner "setting up sops configuration"
 
 config_home=${XDG_CONFIG_HOME:-$HOME/.config}
 age_dir=$config_home/sops/age
@@ -25,13 +28,13 @@ for recipient_file in "$age_dir"/recipient*.txt; do
 done
 
 if [ -f "$default_key" ]; then
-  echo "  → default age identity already present"
+  installer_note "default age identity already present"
   if [ -f "$default_recipient" ]; then
-    echo "  → recipient: $(cat "$default_recipient")"
+    installer_note "recipient: $(cat "$default_recipient")"
   fi
 else
-  echo "  → no default age identity yet"
+  installer_note "no default age identity yet"
   echo "  Create one with: sops-key-create default"
 fi
 
-echo "✓ sops configuration complete"
+installer_success "sops configuration complete"

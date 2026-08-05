@@ -36,6 +36,7 @@ tests/homebrew_availability_test.sh
 tests/homebrew_bundle_test.sh
 tests/link_config_test.sh
 tests/link_dotfiles_test.sh
+tests/installer_preamble_test.sh
 tests/macos_defaults_test.sh
 tests/documentation_test.sh
 tests/topic_catalog_test.sh
@@ -81,6 +82,7 @@ Exact conventions matter:
 - Top-level `_` directories and nested `_` files/directories are ignored by topic discovery. The visible roots `bin/`, `functions/`, and `tests/` are explicit non-topics and are never classified as topics.
 - `_scripts/topic-catalog <repository-root>` is the single private interface that classifies the layout for setup, Zsh startup, and the documentation test. It emits sorted, tab-separated `kind<TAB>absolute-path` records with kinds `topic`, `link`, `installer`, `path`, `main`, `prompt`, `completion`, and `aliases` (`aliases.zsh` emits both `main` and `aliases`; only `zsh/prompt.zsh` is the authoritative prompt).
 - Installers must be named `install.sh` and be executable.
+- Topic installers source `_scripts/installer-preamble.sh` after `set -e` / `set -eu` (set `INSTALLER_ANCHOR` when `$0` is wrong, e.g. bash via `BASH_SOURCE`). That preamble exports `TOPIC_DIR` and `DOTFILES_ROOT`, and provides `installer_require_darwin`, `installer_link_config`, and the inner output helpers (`installer_banner` / `installer_success` / `installer_note` / `installer_warn`). Do not reintroduce per-installer path resolution or Darwin-guard boilerplate.
 - Only `*.symlink` files are automatically linked.
 - Setup executes sorted, top-level `topic/install.sh` files only. It skips reserved topics and `homebrew/install.sh`, which has its own phase.
 

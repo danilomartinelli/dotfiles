@@ -2,15 +2,15 @@
 
 set -e
 
-echo "› setting up Neovim configuration"
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
-TOPIC_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(CDPATH='' cd -P -- "$TOPIC_DIR/.." && pwd)
+installer_banner "setting up Neovim configuration"
+
 CONFIG_DIR="$HOME/.config/nvim"
-LINK_CONFIG="$DOTFILES_ROOT/_scripts/link-config"
 
 mkdir -p "$CONFIG_DIR"
 
-"$LINK_CONFIG" --label "Neovim init" "$TOPIC_DIR/init.vim" "$CONFIG_DIR/init.vim"
+installer_link_config --label "Neovim init" "$TOPIC_DIR/init.vim" "$CONFIG_DIR/init.vim"
 
-echo "✓ Neovim configured"
+installer_success "Neovim configured"

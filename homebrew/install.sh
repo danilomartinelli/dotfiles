@@ -4,9 +4,11 @@
 
 set -e
 
-SCRIPT_PATH=${BASH_SOURCE[0]}
-SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
-HOMEBREW_AVAILABILITY=$SCRIPT_DIR/_availability.sh
+INSTALLER_ANCHOR=${BASH_SOURCE[0]}
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "$(dirname -- "$INSTALLER_ANCHOR")/../_scripts" && pwd)/installer-preamble.sh"
+
+HOMEBREW_AVAILABILITY=$TOPIC_DIR/_availability.sh
 
 download_and_install() {
   local installer_url
