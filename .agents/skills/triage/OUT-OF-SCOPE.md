@@ -44,7 +44,7 @@ interface ThemeConfig {
   colors: ColorPalette; // single palette, resolved at build time
   fonts: FontStack;
 }
-````
+```
 
 ## Prior requests
 
@@ -52,7 +52,7 @@ interface ThemeConfig {
 - #87 — "Night theme for accessibility"
 - #134 — "Dark theme option"
 
-```
+````
 
 ### Naming the file
 
@@ -91,11 +91,11 @@ Do **not** write here when something is closed as `wontfix` because it's **alrea
 The flow:
 
 1. Maintainer decides a feature request is out of scope
-2. Check if a matching `.out-of-scope/` file already exists
-3. If yes: append the new issue to the "Prior requests" list
-4. If no: create a new file with the concept name, decision, reason, and first prior request
-5. Post a comment on the issue explaining the decision and mentioning the `.out-of-scope/` file
-6. Close the issue with the `wontfix` label
+1. Check if a matching `.out-of-scope/` file already exists
+1. If yes: append the new issue to the "Prior requests" list
+1. If no: create a new file with the concept name, decision, reason, and first prior request
+1. Post a comment on the issue explaining the decision and mentioning the `.out-of-scope/` file
+1. Close the issue with the `wontfix` label
 
 ## Updating or removing out-of-scope files
 
@@ -104,4 +104,3 @@ If the maintainer changes their mind about a previously rejected concept:
 - Delete the `.out-of-scope/` file
 - The skill does not need to reopen old issues — they're historical records
 - The new issue that triggered the reconsideration proceeds through normal triage
-```
