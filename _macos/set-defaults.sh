@@ -23,7 +23,7 @@ expand_value() {
 apply_catalog() {
   while IFS="$(printf '\t')" read -r domain key type value || [ -n "${domain:-}" ]; do
     case "${domain:-}" in
-      '' | \#*) 
+      '' | \#*)
         domain=
         continue
         ;;

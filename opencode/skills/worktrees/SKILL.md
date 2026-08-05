@@ -53,7 +53,7 @@ and keep it updated as lanes are transitioned, integrated, or pruned. Treat it
 as local workflow metadata by default; ask before making it part of a committed
 project convention.
 
----
+______________________________________________________________________
 
 ## Safety Guidelines
 
@@ -61,6 +61,7 @@ Before executing any Git mutation command, the Orchestrator must observe the
 following guards:
 
 ### 1. Pre-Flight Checklist
+
 - Confirm the current directory is inside a Git repository.
 - Check the current branch, base branch, and dirty/uncommitted state.
 - Inspect the output of `git worktree list` to avoid path or branch conflicts.
@@ -68,7 +69,9 @@ following guards:
 - Ensure `.slim/worktrees/` is ignored by Git before creating nested worktrees.
 
 ### 2. Mandatory User Confirmation
+
 You must seek explicit user confirmation before executing:
+
 - `git worktree add` or `git worktree remove`
 - Branch creation, deletion, or renaming
 - Merges, rebases, or cherry-picks
@@ -107,58 +110,64 @@ keeps them readable to OpenCode.
 # END oh-my-opencode-slim worktrees
 ```
 
----
+______________________________________________________________________
 
 ## Workflow Guide
 
 ### Phase 1: Planning & Setup
+
 1. Identify the task scope and determine a short `<slug>` for the worktree.
-2. Formulate a branch name. Default to `omos/<slug>` unless project/user conventions dictate otherwise.
-3. Validate repository safety. Ask the user for confirmation to initialize the lane.
-4. Before creating the lane, ensure the managed ignore blocks are present using
+1. Formulate a branch name. Default to `omos/<slug>` unless project/user conventions dictate otherwise.
+1. Validate repository safety. Ask the user for confirmation to initialize the lane.
+1. Before creating the lane, ensure the managed ignore blocks are present using
    the Ignore File Setup rules above.
-5. Run:
+1. Run:
    ```bash
    git worktree add -b <branch-name> .slim/worktrees/<slug> <base-commit/branch>
    ```
-6. Register the metadata in `.slim/worktrees.json`.
+1. Register the metadata in `.slim/worktrees.json`.
 
 ### Phase 2: Execution & Delegation
+
 1. Run all sub-agents with their working directory set strictly to the worktree
    path, such as `.slim/worktrees/<slug>`.
-2. Do not modify the main checkout for lane work. Keep build, test, and edit
+1. Do not modify the main checkout for lane work. Keep build, test, and edit
    operations isolated inside the lane.
-3. Track file or folder ownership per lane to avoid merge conflicts between
+1. Track file or folder ownership per lane to avoid merge conflicts between
    parallel agents.
-4. Commit progress within the worktree only when the user asked for commits or
+1. Commit progress within the worktree only when the user asked for commits or
    approved local checkpoint commits.
 
 ### Phase 3: Integration & Validation
+
 Before merging or integrating the worktree branch:
+
 1. Run lint, build, formatting, and unit tests inside the worktree directory.
-2. Generate and display a clear diff comparing the worktree branch to the
+1. Generate and display a clear diff comparing the worktree branch to the
    integration base branch.
-3. Ask the user for confirmation to integrate.
-4. Perform the approved integration, such as merge or cherry-pick, from the main
+1. Ask the user for confirmation to integrate.
+1. Perform the approved integration, such as merge or cherry-pick, from the main
    checkout or the user-approved integration checkout.
 
 ### Phase 4: Cleanup & Pruning
+
 1. Before cleaning the lane, ensure the managed ignore blocks follow the Ignore
    File Setup rules above.
-2. Ensure all changes are safely merged or archived.
-3. Confirm the worktree has no uncommitted changes.
-4. Request user approval to remove the worktree.
-5. Safely remove the worktree using:
+1. Ensure all changes are safely merged or archived.
+1. Confirm the worktree has no uncommitted changes.
+1. Request user approval to remove the worktree.
+1. Safely remove the worktree using:
    ```bash
    git worktree remove .slim/worktrees/<slug>
    ```
-6. Update `.slim/worktrees.json` to mark the lane as `archived` or remove it.
+1. Update `.slim/worktrees.json` to mark the lane as `archived` or remove it.
 
----
+______________________________________________________________________
 
 ## When to Use vs. Not Use
 
 ### Use When:
+
 - Performing risky or destructive refactoring that could break the active working environment.
 - Working on parallel tasks/bugfixes that require switching contexts without committing half-finished work.
 - Running independent background agents on separate branches.
@@ -167,5 +176,6 @@ Before merging or integrating the worktree branch:
 - Explicitly asked to use worktrees for a specific task.
 
 ### Do NOT Use When:
+
 - Making simple single-file changes, documentation updates, or minor bug fixes.
 - Working in a git repository that is not fully initialized or has complex multi-submodule states not supported easily by worktrees.

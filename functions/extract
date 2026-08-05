@@ -5,77 +5,83 @@
 # Note: .dmg/hdiutil is macOS-specific.
 #
 # credit: http://nparikh.org/notes/zshrc.txt
-extract () {
-    if [ -z "$1" ]; then
-        echo "Error: No file specified." >&2
-        echo "Usage: extract <file>" >&2
-        return 1
-    fi
+extract() {
+  if [ -z "$1" ]; then
+    echo "Error: No file specified." >&2
+    echo "Usage: extract <file>" >&2
+    return 1
+  fi
 
-    if [ ! -f "$1" ]; then
-        echo "Error: '$1' is not a valid file or does not exist." >&2
-        return 1
-    fi
+  if [ ! -f "$1" ]; then
+    echo "Error: '$1' is not a valid file or does not exist." >&2
+    return 1
+  fi
 
-    if [ ! -r "$1" ]; then
-        echo "Error: '$1' is not readable." >&2
-        return 1
-    fi
+  if [ ! -r "$1" ]; then
+    echo "Error: '$1' is not readable." >&2
+    return 1
+  fi
 
-    case "$1" in
-        *.7z)       if command -v 7z >/dev/null 2>&1; then
-                        7z x "$1"
-                    else
-                        echo "Error: 7z is not installed." >&2
-                        return 1
-                    fi
-                    ;;
-        *.tar.bz2)  tar -jxvf "$1"                        ;;
-        *.tar.gz)   tar -zxvf "$1"                        ;;
-        *.tar.xz)   tar -xvf "$1"                         ;;
-        *.tar.zst)  tar -xvf "$1"                         ;;
-        *.bz2)      bunzip2 "$1"                          ;;
-        *.dmg)      if [ "$(uname -s)" = "Darwin" ]; then
-                        hdiutil mount "$1"
-                    else
-                        echo "Error: .dmg files are only supported on macOS." >&2
-                        return 1
-                    fi
-                    ;;
-        *.gz)       gunzip "$1"                           ;;
-        *.lz4)      if command -v lz4 >/dev/null 2>&1; then
-                        lz4 -d "$1"
-                    else
-                        echo "Error: lz4 is not installed." >&2
-                        return 1
-                    fi
-                    ;;
-        *.tar)      tar -xvf "$1"                        ;;
-        *.tbz2)     tar -jxvf "$1"                        ;;
-        *.tgz)      tar -zxvf "$1"                        ;;
-        *.xz)       unxz "$1"                             ;;
-        *.zip)      unzip "$1"                            ;;
-        *.ZIP)      unzip "$1"                            ;;
-        *.pax)      pax -r < "$1"                         ;;
-        *.pax.Z)    uncompress -c "$1" | pax -r           ;;
-        *.rar)      if command -v unrar >/dev/null 2>&1; then
-                        unrar x "$1"
-                    else
-                        echo "Error: unrar is not installed." >&2
-                        return 1
-                    fi
-                    ;;
-        *.Z)        uncompress "$1"                       ;;
-        *.zst)      if command -v unzstd >/dev/null 2>&1; then
-                        unzstd "$1"
-                    else
-                        echo "Error: zstd is not installed." >&2
-                        return 1
-                    fi
-                    ;;
-        *)          echo "Error: '$1' cannot be extracted/mounted via extract()." >&2
-                    echo "Supported formats: 7z, tar.bz2, tar.gz, tar.xz, tar.zst, bz2, dmg, gz, lz4, tar, tbz2, tgz, xz, zip, pax, pax.Z, rar, Z, zst" >&2
-                    return 1
-                    ;;
-    esac
+  case "$1" in
+    *.7z)
+      if command -v 7z >/dev/null 2>&1; then
+        7z x "$1"
+      else
+        echo "Error: 7z is not installed." >&2
+        return 1
+      fi
+      ;;
+    *.tar.bz2) tar -jxvf "$1" ;;
+    *.tar.gz) tar -zxvf "$1" ;;
+    *.tar.xz) tar -xvf "$1" ;;
+    *.tar.zst) tar -xvf "$1" ;;
+    *.bz2) bunzip2 "$1" ;;
+    *.dmg)
+      if [ "$(uname -s)" = "Darwin" ]; then
+        hdiutil mount "$1"
+      else
+        echo "Error: .dmg files are only supported on macOS." >&2
+        return 1
+      fi
+      ;;
+    *.gz) gunzip "$1" ;;
+    *.lz4)
+      if command -v lz4 >/dev/null 2>&1; then
+        lz4 -d "$1"
+      else
+        echo "Error: lz4 is not installed." >&2
+        return 1
+      fi
+      ;;
+    *.tar) tar -xvf "$1" ;;
+    *.tbz2) tar -jxvf "$1" ;;
+    *.tgz) tar -zxvf "$1" ;;
+    *.xz) unxz "$1" ;;
+    *.zip) unzip "$1" ;;
+    *.ZIP) unzip "$1" ;;
+    *.pax) pax -r <"$1" ;;
+    *.pax.Z) uncompress -c "$1" | pax -r ;;
+    *.rar)
+      if command -v unrar >/dev/null 2>&1; then
+        unrar x "$1"
+      else
+        echo "Error: unrar is not installed." >&2
+        return 1
+      fi
+      ;;
+    *.Z) uncompress "$1" ;;
+    *.zst)
+      if command -v unzstd >/dev/null 2>&1; then
+        unzstd "$1"
+      else
+        echo "Error: zstd is not installed." >&2
+        return 1
+      fi
+      ;;
+    *)
+      echo "Error: '$1' cannot be extracted/mounted via extract()." >&2
+      echo "Supported formats: 7z, tar.bz2, tar.gz, tar.xz, tar.zst, bz2, dmg, gz, lz4, tar, tbz2, tgz, xz, zip, pax, pax.Z, rar, Z, zst" >&2
+      return 1
+      ;;
+  esac
 }

@@ -30,14 +30,14 @@ If neither file exists: Continue to Step 2 (Initialize).
 ### Step 2: Initialize (Only if no state exists)
 
 1. **Analyze the repository structure** - List files, understand directories
-2. **Infer patterns** for **core code/config files ONLY** to include:
+1. **Infer patterns** for **core code/config files ONLY** to include:
    - **Include**: `src/**/*.ts`, `package.json`, etc.
    - **Exclude (MANDATORY)**: Do NOT include tests, documentation, or translations.
      - Tests: `**/*.test.ts`, `**/*.spec.ts`, `tests/**`, `__tests__/**`
      - Docs: `docs/**`, `*.md` (except root `README.md` if needed), `LICENSE`
      - Build/Deps: `node_modules/**`, `dist/**`, `build/**`, `*.min.js`
    - Respect `.gitignore` automatically
-3. **Run codemap.mjs init**:
+1. **Run codemap.mjs init**:
 
 ```bash
 node ~/.config/opencode/skills/codemap/scripts/codemap.mjs init \
@@ -47,6 +47,7 @@ node ~/.config/opencode/skills/codemap/scripts/codemap.mjs init \
 ```
 
 This creates:
+
 - `.slim/codemap.json` - File and folder hashes for change detection
 - Empty `codemap.md` files in all relevant subdirectories
 
@@ -62,13 +63,15 @@ node ~/.config/opencode/skills/codemap/scripts/codemap.mjs changes \
 ```
 
 2. **Review the output** - It shows:
+
    - Added files
    - Removed files
    - Modified files
    - Affected folders
 
-3. **Only update affected codemaps** - Spawn one fixer per affected folder to update its `codemap.md`.
-4. **Run update** to save new state:
+1. **Only update affected codemaps** - Spawn one fixer per affected folder to update its `codemap.md`.
+
+1. **Run update** to save new state:
 
 ```bash
 node ~/.config/opencode/skills/codemap/scripts/codemap.mjs update \
@@ -79,17 +82,17 @@ node ~/.config/opencode/skills/codemap/scripts/codemap.mjs update \
 
 Once all specific directories are mapped, the Orchestrator must create or update the root `codemap.md`. This file serves as the **Master Entry Point** for any agent or human entering the repository.
 
-1.  **Map Root Assets**: Document the root-level files (e.g., `package.json`, `index.ts`, `plugin.json`) and the project's overall purpose.
-2.  **Aggregate Sub-Maps**: Create a "Repository Directory Map" section. For every folder that has a `codemap.md`, extract its **Responsibility** summary and include it in a table or list in the root map.
-3.  **Cross-Reference**: Ensure that the root map contains the absolute or relative paths to the sub-maps so agents can jump directly to the relevant details.
+1. **Map Root Assets**: Document the root-level files (e.g., `package.json`, `index.ts`, `plugin.json`) and the project's overall purpose.
+1. **Aggregate Sub-Maps**: Create a "Repository Directory Map" section. For every folder that has a `codemap.md`, extract its **Responsibility** summary and include it in a table or list in the root map.
+1. **Cross-Reference**: Ensure that the root map contains the absolute or relative paths to the sub-maps so agents can jump directly to the relevant details.
 
 ### Step 5: Register Codemap in AGENTS.md
 
 **OpenCode auto-loads `AGENTS.md` into agent context on every session.** To ensure agents automatically discover and use the codemap, update (or create) `AGENTS.md` at the repo root:
 
 1. If `AGENTS.md` already exists and already contains a `## Repository Map` section, **skip this step** - the reference is already set up.
-2. If `AGENTS.md` exists but has no `## Repository Map` section, **append** the section below.
-3. If `AGENTS.md` doesn't exist, **create** it with the section below.
+1. If `AGENTS.md` exists but has no `## Repository Map` section, **append** the section below.
+1. If `AGENTS.md` doesn't exist, **create** it with the section below.
 
 ```markdown
 ## Repository Map
