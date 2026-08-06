@@ -8,17 +8,13 @@ set -e
 installer_require_darwin
 installer_banner "configuring KeyClu"
 
-if [ ! -d "/Applications/KeyClu.app" ]; then
-  installer_warn "KeyClu not installed yet; skipping preferences"
-  installer_hint "Install with: brew install --cask keyclu"
-  exit 0
-fi
+installer_require_app KeyClu keyclu "/Applications/KeyClu.app"
 
 # Show shortcut overlay when holding Command (KeyClu's primary UX).
 defaults write com.0804Team.KeyClu SUEnableAutomaticChecks -bool true 2>/dev/null || true
 defaults write com.0804Team.KeyClu launchAtLogin -bool true 2>/dev/null || true
 
-open -ga "/Applications/KeyClu.app" 2>/dev/null || true
+open -ga "$INSTALLER_APP" 2>/dev/null || true
 
 installer_success "KeyClu ready — hold ⌘ to browse app shortcuts, or create custom ones in Settings"
 installer_success "KeyClu configured"

@@ -8,13 +8,9 @@ set -e
 installer_require_darwin
 installer_banner "configuring Tailscale"
 
-if [ -d "/Applications/Tailscale.app" ]; then
-  open -ga "/Applications/Tailscale.app" 2>/dev/null || true
-else
-  installer_warn "Tailscale.app not installed yet"
-  installer_hint "Install with: brew install --cask tailscale-app"
-  exit 0
-fi
+installer_require_app Tailscale tailscale-app "/Applications/Tailscale.app"
+
+open -ga "$INSTALLER_APP" 2>/dev/null || true
 
 if command -v tailscale >/dev/null 2>&1; then
   installer_success "tailscale CLI available"

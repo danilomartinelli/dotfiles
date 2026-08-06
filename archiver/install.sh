@@ -8,12 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting Archiver as default app for compressed files"
 
-# Validate duti is installed
-if ! command -v duti >/dev/null 2>&1; then
-  installer_error "duti is required but not installed"
-  installer_hint "Install with: brew install duti"
-  exit 1
-fi
+installer_require_command duti
 
 # Define Archiver's bundle ID
 ARCHIVER_BUNDLE="com.incrediblebee.Archiver"

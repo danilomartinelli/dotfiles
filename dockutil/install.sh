@@ -10,12 +10,7 @@ INSTALLER_ANCHOR=${BASH_SOURCE[0]}
 installer_require_darwin
 installer_banner "configuring dock (minimal)"
 
-# Validate dockutil is installed
-if ! command -v dockutil >/dev/null 2>&1; then
-  installer_error "dockutil is required but not installed"
-  installer_hint "Install with: brew install dockutil"
-  exit 1
-fi
+installer_require_command dockutil
 
 # Function to add app to dock if it exists
 add_app_to_dock() {
