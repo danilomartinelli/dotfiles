@@ -77,6 +77,22 @@ show_library_folder() {
   fi
 }
 
+# Advisory: point the default browser at Chrome. macOS shows a one-click
+# confirmation dialog the first time; the script does not wait for it.
+set_default_browser() {
+  if ! command -v defaultbrowser >/dev/null 2>&1; then
+    echo "  → defaultbrowser not installed yet; skipping default browser" >&2
+    return 0
+  fi
+  if defaultbrowser 2>/dev/null | grep -q '^\* *chrome$'; then
+    echo "  ✓ Chrome already the default browser"
+  elif defaultbrowser chrome 2>/dev/null; then
+    echo "  ✓ Default browser set to Chrome (confirm the macOS dialog)"
+  else
+    echo "  Warning: could not set the default browser (is Chrome installed?)" >&2
+  fi
+}
+
 restart_services() {
   echo "  → Restarting system services..."
   # cfprefsd is deliberately absent: killing it right after `defaults write`
@@ -88,4 +104,5 @@ restart_services() {
 ensure_screenshot_dir
 apply_catalog
 show_library_folder
+set_default_browser
 restart_services
