@@ -28,6 +28,39 @@ installer_require_darwin() {
   fi
 }
 
+# Hard dependency on a CLI command: stop the installer when it is missing.
+# Usage: installer_require_command <command> [formula]
+# The Homebrew formula defaults to the command name.
+installer_require_command() {
+  if command -v "$1" >/dev/null 2>&1; then
+    return 0
+  fi
+  installer_error "$1 is required but not installed"
+  installer_hint "Install with: brew install ${2:-$1}"
+  exit 1
+}
+
+# Optional app dependency: skip the rest of the installer (exit 0) when no
+# candidate path exists, mirroring installer_require_darwin. When one exists,
+# INSTALLER_APP holds the first match for later use (e.g. open -ga).
+# Usage: installer_require_app <name> <cask> </Applications/Name.app>...
+installer_require_app() {
+  _installer_app_name=$1
+  _installer_app_cask=$2
+  shift 2
+  for _installer_app_candidate in "$@"; do
+    if [ -d "$_installer_app_candidate" ]; then
+      # shellcheck disable=SC2034  # consumed by the sourcing installer
+      INSTALLER_APP=$_installer_app_candidate
+      unset _installer_app_name _installer_app_cask _installer_app_candidate
+      return 0
+    fi
+  done
+  installer_warn "$_installer_app_name not installed yet; skipping"
+  installer_hint "Install with: brew install --cask $_installer_app_cask"
+  exit 0
+}
+
 installer_link_config() {
   "$DOTFILES_ROOT/_scripts/link-config" "$@"
 }

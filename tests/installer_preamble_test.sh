@@ -93,6 +93,86 @@ printf "ran\n" >"$HOME/ran"'
   [[ ! -e $home/ran ]]
 }
 
+test_require_command_passes_when_present() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_require_command sh
+printf "ran\n" >"$HOME/ran"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  [[ -e $home/ran ]] || scenario_fail 'installer body did not run'
+}
+
+test_require_command_fails_with_formula_hint() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_require_command sample-missing-tool
+printf "ran\n" >"$HOME/ran"'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for a missing command'
+  assert_contains "$home/stderr.log" \
+    'Error: sample-missing-tool is required but not installed'
+  # The Homebrew formula defaults to the command name.
+  assert_contains "$home/stderr.log" \
+    '  → Install with: brew install sample-missing-tool'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a missing command'
+}
+
+test_require_command_accepts_formula_override() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_require_command sample-missing-tool sample-formula'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for a missing command'
+  assert_contains "$home/stderr.log" '  → Install with: brew install sample-formula'
+}
+
+test_require_app_skips_with_cask_hint() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_require_app Sample sample-cask "$HOME/Applications/Sample.app"
+printf "ran\n" >"$HOME/ran"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  assert_contains "$home/stderr.log" 'Warning: Sample not installed yet; skipping'
+  assert_contains "$home/stderr.log" '  → Install with: brew install --cask sample-cask'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a missing app'
+}
+
+test_require_app_sets_first_existing_candidate() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  mkdir -p "$home/Applications/Sample 2.app" "$home/Applications/Sample.app"
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_require_app Sample sample-cask \
+  "$HOME/Applications/Sample 3.app" \
+  "$HOME/Applications/Sample 2.app" \
+  "$HOME/Applications/Sample.app"
+printf "%s\n" "$INSTALLER_APP" >"$HOME/installer_app"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  assert_equal "$home/Applications/Sample 2.app" "$(cat "$home/installer_app")" \
+    'INSTALLER_APP'
+}
+
 test_link_config_wrapper_delegates() {
   local checkout home source target
 
@@ -220,6 +300,16 @@ scenario_run 'resolves TOPIC_DIR and DOTFILES_ROOT from the installer' \
   test_resolves_topic_dir_and_checkout_root
 scenario_run 'Darwin guard exits successfully on non-Darwin' \
   test_darwin_guard_skips_on_non_darwin
+scenario_run 'require_command passes when the command exists' \
+  test_require_command_passes_when_present
+scenario_run 'require_command fails loudly with a formula hint' \
+  test_require_command_fails_with_formula_hint
+scenario_run 'require_command honors a formula override' \
+  test_require_command_accepts_formula_override
+scenario_run 'require_app skips cleanly with a cask hint' \
+  test_require_app_skips_with_cask_hint
+scenario_run 'require_app records the first existing candidate' \
+  test_require_app_sets_first_existing_candidate
 scenario_run 'link-config wrapper delegates labels and policies' \
   test_link_config_wrapper_delegates
 scenario_run 'output helpers emit the inner vocabulary' test_output_helpers

@@ -55,10 +55,22 @@ installer_success "topic-name configured"
 ```
 
 The preamble exports `TOPIC_DIR` and `DOTFILES_ROOT`, and provides
-`installer_require_darwin`, `installer_link_config`, `installer_banner`,
-`installer_success`, `installer_note`, `installer_warn`, `installer_error`, and
-`installer_hint`. For bash installers, set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}`
-before sourcing.
+`installer_require_darwin`, `installer_require_command`, `installer_require_app`,
+`installer_link_config`, `installer_banner`, `installer_success`,
+`installer_note`, `installer_warn`, `installer_error`, and `installer_hint`. For
+bash installers, set `INSTALLER_ANCHOR=${BASH_SOURCE[0]}` before sourcing.
+
+Declare dependencies with the require helpers instead of hand-rolled checks:
+
+```sh
+# Hard CLI dependency — errors and exits 1 when missing.
+# The Homebrew formula defaults to the command name.
+installer_require_command duti
+
+# Optional app — warns and exits 0 (skips the topic) when no candidate
+# path exists; sets INSTALLER_APP to the first match.
+installer_require_app Ghostty ghostty "/Applications/Ghostty.app"
+```
 
 Never write installer output with a raw `echo`. `banner`, `success`, and `note`
 go to stdout; `warn`, `error`, and `hint` go to stderr. Use `installer_hint` —

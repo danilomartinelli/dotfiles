@@ -5,12 +5,7 @@ set -e
 # shellcheck disable=SC1091
 . "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
-# Validate mise is installed
-if ! command -v mise >/dev/null 2>&1; then
-  installer_error "mise is not installed"
-  installer_hint "Install with: brew install mise"
-  exit 1
-fi
+installer_require_command mise
 
 # Trust the linked global config so installs never prompt interactively.
 MISE_CONFIG="${MISE_GLOBAL_CONFIG_FILE:-$HOME/.mise.toml}"
