@@ -2,12 +2,10 @@ cask_args appdir: '/Applications'
 
 # Third-party taps (nikitabobko/tap is also trusted by homebrew/_bundle.sh)
 tap 'nikitabobko/tap'               # AeroSpace tiling window manager
-tap 'xo/xo'                         # archiver formula
 
 # Command line tools
 brew 'age'                          # Modern file encryption (SOPS identity backend)
 brew 'ansible'                      # Automation / configuration management CLI
-brew 'archiver'                     # Multi-format archive utility
 brew 'atuin'                        # Shell history in SQLite with optional sync
 brew 'aws-vault'                    # AWS credentials in the macOS Keychain (static keys + SSO)
 brew 'awscli'                       # AWS Command Line Interface
@@ -65,6 +63,7 @@ brew 'zsh-syntax-highlighting'      # Syntax highlighting for Zsh
 
 # Desktop applications
 cask 'android-studio'               # Android development IDE
+cask 'archiver-app'                 # Archive manager (open, compress, split files)
 cask 'bartender'                    # Menu bar icon organiser
 cask 'bitwarden'                    # Password manager
 cask 'caffeine'                     # Prevents the Mac from going to sleep

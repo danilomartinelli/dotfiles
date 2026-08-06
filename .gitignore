@@ -11,3 +11,6 @@ Brewfile.lock.json
 
 # Local agent workspace state
 .context/
+
+# Dump files
+*.dump

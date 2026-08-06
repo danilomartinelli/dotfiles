@@ -29,4 +29,5 @@ yarn = "4.11.0"
 [settings]
 idiomatic_version_file_enable_tools = ["node"]
 lockfile = true
+npm.shell_out = true
 python.uv_venv_auto = true

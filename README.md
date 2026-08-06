@@ -82,7 +82,7 @@ Other lifecycle commands:
 ## What gets installed
 
 `Brewfile` is the source of truth for machine packages, applications, and taps
-(including `xo/xo` for `archiver` and `nikitabobko/tap` for AeroSpace).
+(including `nikitabobko/tap` for AeroSpace).
 `homebrew/_bundle.sh` trusts `nikitabobko/tap` when needed, then runs
 `brew bundle` against that file.
 
@@ -92,7 +92,7 @@ Other lifecycle commands:
 | ------------------------- | ------------------------------------------------- |
 | `age`                     | Age encryption used as the SOPS identity backend  |
 | `ansible`                 | Automation and configuration management CLI       |
-| `archiver`                | Archive support used alongside the Archiver app   |
+
 | `atuin`                   | Shell history in SQLite (`Ctrl-R`, optional sync) |
 | `aws-vault`               | AWS credentials in the Keychain (keys + SSO)      |
 | `awscli`                  | AWS command-line interface                        |
@@ -155,14 +155,14 @@ Other lifecycle commands:
 | Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                     |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                      |
-| Browsers and productivity | `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`            |
+| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
 | Design and media          | `cleanshot`, `figma`, `spotify`                                                                         |
 | Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                        |
 | Fonts                     | `font-jetbrains-mono-nerd-font`                                                                         |
 
-The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
-itself must already be installed from the Mac App Store; `archiver/install.sh`
-only assigns its supported file associations when the app is present.
+The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
+assigns supported file associations when `Archiver.app` is present (installed
+via the `archiver-app` cask or from the Mac App Store).
 
 Topic installers link or apply machine config for Ghostty, Zed (settings +
 default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
