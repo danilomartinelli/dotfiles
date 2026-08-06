@@ -1,14 +1,16 @@
 {
   "theme": {
     "mode": "system",
-    "light": "One Light",
+    "light": "Catppuccin Latte",
     "dark": "Catppuccin Macchiato",
   },
   "icon_theme": {
     "mode": "system",
-    "light": "Catppuccin Frappé",
+    "light": "Catppuccin Latte",
     "dark": "Catppuccin Macchiato",
   },
+  // Homebrew owns updates (cask); self-updating would drift from the Brewfile.
+  "auto_update": false,
   "base_keymap": "VSCode",
   "vim_mode": false,
   "ui_font_size": 16,
@@ -57,6 +59,18 @@
     "**/node_modules",
     "**/dist",
     "**/out",
+    "**/_build",
+    "**/deps",
+    "**/.elixir_ls",
+    "**/target",
+  ],
+  // Secrets never reach the assistant context or previews.
+  "private_files": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/id_*",
+    "**/secrets.yml",
   ],
   "languages": {
     "JavaScript": {
@@ -65,10 +79,14 @@
     "TypeScript": {
       "prettier": { "allowed": true },
       "inlay_hints": { "enabled": false },
+      // organizeImports is deliberately absent: pruning "unused" imports on
+      // save fights with in-progress edits.
+      "code_actions_on_format": { "source.fixAll.eslint": true },
     },
     "TSX": {
       "prettier": { "allowed": true },
       "inlay_hints": { "enabled": false },
+      "code_actions_on_format": { "source.fixAll.eslint": true },
     },
     "JSON": {
       "prettier": { "allowed": true },

@@ -49,6 +49,10 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     alt-minus = 'resize smart -50'
     alt-equal = 'resize smart +50'
 
+    alt-f = 'fullscreen'
+    alt-shift-f = 'macos-native-fullscreen'
+    alt-shift-space = 'layout floating tiling'
+
     alt-1 = 'workspace 1'
     alt-2 = 'workspace 2'
     alt-3 = 'workspace 3'
@@ -84,6 +88,44 @@ persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
 
+# Pin daily apps to fixed workspaces: 1 terminal, 2 browser, 3 editor,
+# 4 dev tools, 9 comms/media.
+[[on-window-detected]]
+if.app-id = 'com.mitchellh.ghostty'
+run = 'move-node-to-workspace 1'
+
+[[on-window-detected]]
+if.app-id = 'com.google.Chrome'
+run = 'move-node-to-workspace 2'
+
+[[on-window-detected]]
+if.app-id = 'dev.zed.Zed'
+run = 'move-node-to-workspace 3'
+
+[[on-window-detected]]
+if.app-id = 'com.tinyapp.TablePlus'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'com.postmanlabs.mac'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'com.electron.kontena-lens'
+run = 'move-node-to-workspace 4'
+
+[[on-window-detected]]
+if.app-id = 'net.whatsapp.WhatsApp'
+run = 'move-node-to-workspace 9'
+
+[[on-window-detected]]
+if.app-id = 'com.readdle.SparkDesktop'
+run = 'move-node-to-workspace 9'
+
+[[on-window-detected]]
+if.app-id = 'com.spotify.client'
+run = 'move-node-to-workspace 9'
+
 # Float utility / modal apps instead of tiling them.
 [[on-window-detected]]
 if.app-id = 'com.apple.systempreferences'
@@ -107,4 +149,16 @@ run = 'layout floating'
 
 [[on-window-detected]]
 if.app-id = 'com.apple.finder'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.ActivityMonitor'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.calculator'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-id = 'com.apple.archiveutility'
 run = 'layout floating'

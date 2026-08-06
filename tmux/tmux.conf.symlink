@@ -1,6 +1,11 @@
-# True color support (Ghostty)
+# True color support (Ghostty, plus SSH/editor sessions reporting 256color)
 set -g default-terminal "tmux-256color"
 set -as terminal-features ",xterm-ghostty:RGB"
+set -as terminal-features ",xterm-256color:RGB"
+
+# Let inner programs (spaceman-diff, opencode, aider) pass escape sequences
+# such as image protocols through to the outer terminal
+set -g allow-passthrough on
 
 # Write copy-mode selections to the system clipboard via OSC52
 set -s set-clipboard on
@@ -27,9 +32,36 @@ set -sg escape-time 10
 # Focus events for editors
 set -g focus-events on
 
-# Split panes keeping the current path
+# Splits and new windows keep the current path
 bind '"' split-window -v -c "#{pane_current_path}"
 bind % split-window -h -c "#{pane_current_path}"
+bind c new-window -c "#{pane_current_path}"
+
+# Vi-style pane navigation and resizing (mode-keys vi is already set)
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+bind -r H resize-pane -L 5
+bind -r J resize-pane -D 5
+bind -r K resize-pane -U 5
+bind -r L resize-pane -R 5
+
+# Killing the last window of a session moves to another session instead of
+# detaching from tmux entirely
+set -g detach-on-destroy off
+
+# Minimal Catppuccin Macchiato status bar (no plugin manager on purpose:
+# a plugin runtime is state this repo would have to install and update)
+set -g status-style "bg=#24273a,fg=#cad3f5"
+set -g status-left "#[bg=#8aadf4,fg=#24273a,bold] #S #[bg=#24273a] "
+set -g status-left-length 30
+set -g status-right "#[fg=#a5adcb]%H:%M #[bg=#363a4f,fg=#cad3f5] #h "
+setw -g window-status-current-style "bg=#363a4f,fg=#8aadf4,bold"
+setw -g window-status-style "fg=#a5adcb"
+set -g pane-active-border-style "fg=#8aadf4"
+set -g pane-border-style "fg=#363a4f"
+set -g message-style "bg=#363a4f,fg=#cad3f5"
 
 # Reload configuration
 bind r source-file ~/.tmux.conf \; display "tmux.conf reloaded"

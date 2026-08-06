@@ -5,7 +5,7 @@ Guidance for coding agents working in this personal macOS dotfiles repository.
 ## Scope and sources of truth
 
 - `Brewfile` declares Homebrew formulae, casks, fonts, and the Xcode Mac App Store installation.
-- `mise/mise.toml.symlink` declares language runtimes and global runtime tools.
+- `mise/mise.toml.symlink` declares language runtimes and global runtime tools; `mise/mise.lock.symlink` is the generated lockfile (`mise lock` / `mise upgrade`) that pins resolved versions and checksums. Do not edit the lock by hand.
 - `README.md` documents the user-facing install/update workflow and every command, function, and alias exposed by the repository.
 - `CLAUDE.md` points here so Claude Code and Cursor agents share one contract.
 - `.localrc` and `git/gitconfig.local.symlink` are generated, gitignored, machine-private files. Never read secrets into logs or commit them.
@@ -97,9 +97,9 @@ Exact conventions matter:
 
 `_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` files (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.
 
-`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, Neovim (`~/.config/nvim/init.vim` bridge), AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode, and Hermes Agent (`~/.hermes`).
+`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Git (`~/.config/git/allowed_signers` for SSH commit signing), Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, Neovim (`~/.config/nvim/init.vim` bridge), AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode, and Hermes Agent (`~/.hermes`).
 
-macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; DNS/Library/restart advisory). App-specific `defaults write` calls stay in topic installers.
+macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; Library/restart advisory). The apply never mutates DNS — resolver state belongs to the OS, Tailscale, or the active VPN. App-specific `defaults write` calls stay in topic installers.
 
 Project agent skills live in `.agents/skills/*/SKILL.md` (discovered by OpenCode). Use the `add-topic` skill when scaffolding a new topic folder.
 
@@ -138,12 +138,12 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 ## Editing rules
 
 - Preserve unrelated work in a dirty worktree.
-- Add Homebrew dependencies to `Brewfile`, runtimes to `mise/mise.toml.symlink`, and public command documentation to `README.md`.
+- Add Homebrew dependencies to `Brewfile`, runtimes to `mise/mise.toml.symlink`, and public command documentation to `README.md`. Placement rule: CLIs distributed as language packages (npm, PyPI, gem, Go modules — e.g. `npm:wrangler`, `pipx:aider-chat`) are declared in `mise/mise.toml.symlink`; system binaries, libraries, and casks stay in `Brewfile`. See `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 - New topic installers must be idempotent and non-interactive because both bootstrap and daily updates run them.
 - Shell startup changes must remain safe to source repeatedly.
 - Keep secrets in `.localrc` with mode `600`; shared non-secret environment belongs in `.commonrc`.
 - Prefer fixture tests over commands that mutate the actual Mac.
-- Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`. Both come from `mise/mise.toml.symlink`, not Homebrew; run `mise install` rather than `brew install`.
+- Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`; lint shell with `shellcheck`. All three come from `mise/mise.toml.symlink`, not Homebrew; run `mise install` rather than `brew install`.
   - The `shfmt` flags are not optional: `-ci` (indent switch cases) and `-bn` (binary operators start the line) match the existing code, and dropping either rewrites the whole repository. Never run `shfmt` on Zsh topic files that use Zsh-only syntax.
   - `mdformat` needs the `mdformat-gfm` and `mdformat-frontmatter` plugins declared in the mise entry. Bare `mdformat` destroys the YAML frontmatter of every `SKILL.md` and mangles GFM tables.
 

@@ -4,7 +4,9 @@
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
-theme = "Catppuccin Macchiato"
+# Follow the system appearance; Zed does the same (One Light ↔ Catppuccin
+# would clash, so both terminals of the pair stay in the Catppuccin family).
+theme = dark:Catppuccin Macchiato,light:Catppuccin Latte
 
 macos-option-as-alt = true
 macos-titlebar-style = transparent
@@ -12,14 +14,18 @@ macos-titlebar-style = transparent
 window-padding-x = 8
 window-padding-y = 8
 
-clipboard-read = allow
+# Reads must prompt: any process (including remote SSH) can issue OSC 52
+# reads, and the clipboard may hold a password at that moment.
+clipboard-read = ask
 clipboard-write = allow
 copy-on-select = clipboard
 
 mouse-hide-while-typing = true
 
 shell-integration = zsh
-shell-integration-features = cursor,sudo,title
+# ssh-env/ssh-terminfo keep remote hosts working without xterm-ghostty
+# terminfo (colors, clear, and keys would otherwise break over SSH).
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
 
 # Truecolor / rich TUI apps (aider, opencode, etc.)
 term = xterm-ghostty
@@ -27,3 +33,9 @@ window-inherit-working-directory = true
 
 # Audible completion cues from TUIs that ring the bell (optional for aider --notifications)
 bell-features = attention
+
+# Homebrew owns updates (cask); self-updating would drift from the Brewfile.
+auto-update = off
+
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+keybind = cmd+shift+comma=reload_config

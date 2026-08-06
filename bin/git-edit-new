@@ -25,4 +25,6 @@ if [ -z "$(git ls-files --others --exclude-standard)" ]; then
   exit 0
 fi
 
-git ls-files --others --exclude-standard -z | xargs -0 "$EDITOR"
+# $EDITOR may carry flags (e.g. "zed --wait"); word-splitting is deliberate.
+# shellcheck disable=SC2086
+git ls-files --others --exclude-standard -z | xargs -0 $EDITOR

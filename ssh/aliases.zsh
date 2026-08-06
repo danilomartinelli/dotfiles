@@ -1,4 +1,16 @@
-alias sshclean='rm -f ~/.ssh/sockets/*; killall ssh 2>/dev/null; echo "SSH sockets cleaned"'
+# Close ControlMaster sessions politely (ssh -O exit per socket), then drop
+# orphaned socket files. Never killall: other terminals may hold live sessions.
+sshclean() {
+  local socket closed=0
+  for socket in "$HOME"/.ssh/sockets/*(N); do
+    if ssh -O exit -o ControlPath="$socket" _unused_host 2>/dev/null; then
+      ((closed++))
+    else
+      rm -f "$socket"
+    fi
+  done
+  print "=> SSH control sockets cleaned ($closed closed politely)."
+}
 
 # Copy the default public key, preferring Ed25519 with an RSA fallback.
 pubkey() {

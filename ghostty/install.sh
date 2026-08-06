@@ -14,10 +14,10 @@ mkdir -p "$CONFIG_DIR"
 
 installer_link_config --label "Ghostty config" "$TOPIC_DIR/config" "$CONFIG_DIR/config"
 
+installer_require_app Ghostty ghostty /Applications/Ghostty.app
+
 # Register Ghostty as the default handler for Unix executables (idempotent).
-if [ ! -d "/Applications/Ghostty.app" ]; then
-  installer_warn "Ghostty not found at /Applications/Ghostty.app; skipping default terminal handler"
-elif defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null | grep -q "com.mitchellh.ghostty"; then
+if defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null | grep -q "com.mitchellh.ghostty"; then
   installer_success "Ghostty already the default terminal handler"
 elif defaults write com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers -array-add '{LSHandlerContentType=public.unix-executable;LSHandlerRoleAll=com.mitchellh.ghostty;}' 2>/dev/null; then
   installer_success "Ghostty set as default terminal handler"

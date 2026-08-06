@@ -13,6 +13,7 @@ discussion and agent work.
 
 - **Topic** — Visible top-level tool/config folder discovered by `topic-catalog`.
 - **Topic catalog** — Private classifier (`_scripts/topic-catalog`) emitting kind/path records for setup, Zsh startup, and docs tests.
+- **Catalog cache** — Memoized topic-catalog output in `$XDG_CACHE_HOME/dotfiles/`, keyed by checkout path and invalidated by directory mtime; the classifier stays the source of truth (ADR 0002).
 - **Installer preamble** — Shared private module (`_scripts/installer-preamble.sh`) that topic `install.sh` scripts source to export `TOPIC_DIR` / `DOTFILES_ROOT`, skip non-Darwin platforms, wrap `link-config`, and emit the inner `›` / `✓` / `→` / `Warning:` vocabulary.
 - **Link-config** — Non-interactive config linker (`_scripts/link-config`) with policies `replace-with-backup`, `preserve-existing`, and `numbered-backup`.
 - **Link-dotfiles** — Bootstrap home linker (`_scripts/link-dotfiles`) for `.localrc` and topic `*.symlink` files (interactive or `--batch`).

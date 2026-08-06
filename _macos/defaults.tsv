@@ -29,6 +29,7 @@ com.apple.finder	_FXSortFoldersFirst	bool	true
 com.apple.finder	FXDefaultSearchScope	string	SCcf
 com.apple.finder	FXEnableExtensionChangeWarning	bool	false
 com.apple.finder	QuitMenuItem	bool	true
+com.apple.finder	ShowHardDrivesOnDesktop	bool	true
 com.apple.finder	ShowExternalHardDrivesOnDesktop	bool	true
 com.apple.finder	ShowRemovableMediaOnDesktop	bool	true
 com.apple.finder	ShowMountedServersOnDesktop	bool	true
@@ -73,6 +74,11 @@ com.apple.menuextra.clock	ShowDayOfWeek	bool	true
 # TIME MACHINE
 com.apple.TimeMachine	DoNotOfferNewDisksForBackup	bool	true
 
-# NETWORK
+# SAVE DIALOGS
+NSGlobalDomain	NSDocumentSaveNewDocumentsToCloud	bool	false
 
-# DEVELOPMENT ENVIRONMENT
+# SCREENSHOTS (set-defaults.sh creates the target directory first)
+com.apple.screencapture	location	string	$HOME/Downloads/Screenshots
+com.apple.screencapture	type	string	png
+com.apple.screencapture	disable-shadow	bool	true
+com.apple.screencapture	show-thumbnail	bool	false

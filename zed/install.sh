@@ -15,14 +15,12 @@ mkdir -p "$CONFIG_DIR"
 installer_link_config --label "Zed settings" \
   "$TOPIC_DIR/settings.json" "$CONFIG_DIR/settings.json"
 
-ZED_BUNDLE="dev.zed.Zed"
-ZED_APP="/Applications/Zed.app"
+installer_link_config --label "Zed keymap" \
+  "$TOPIC_DIR/keymap.json" "$CONFIG_DIR/keymap.json"
 
-if [ ! -d "$ZED_APP" ]; then
-  installer_warn "Zed not found at $ZED_APP; skipping default-app associations"
-  installer_success "Zed configuration linked (install Zed to register file associations)"
-  exit 0
-fi
+ZED_BUNDLE="dev.zed.Zed"
+
+installer_require_app Zed zed /Applications/Zed.app
 
 if ! command -v duti >/dev/null 2>&1; then
   installer_warn "duti is required to set Zed as the default text editor"
