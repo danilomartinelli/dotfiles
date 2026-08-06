@@ -18,7 +18,7 @@ SCRIPTS_DIR="$TOPIC_DIR/scripts"
 installer_success "Script commands live in $SCRIPTS_DIR"
 installer_note "Add that folder in Raycast → Settings → Extensions → Script Commands"
 
-# Sensible first-run defaults when the preference domain exists.
-defaults write com.raycast.macos SUEnableAutomaticChecks -bool true 2>/dev/null || true
+# Raycast extensions install through its in-app store only (not scriptable).
+installer_note "Recommended extensions (install in-app): ChatGPT, Google Drive, Google Workspace"
 
 installer_success "Raycast configured"

@@ -101,6 +101,7 @@ Other lifecycle commands:
 | `btop`                    | Resource monitor                                  |
 | `cocoapods`               | CocoaPods for React Native / iOS native deps      |
 | `coreutils`               | GNU utilities, including `gls` and `gdate`        |
+| `defaultbrowser`          | Get/set the macOS default browser                 |
 | `direnv`                  | Per-directory environment variables               |
 | `dockutil`                | Programmatic Dock configuration                   |
 | `duti`                    | Default application associations                  |
@@ -149,15 +150,15 @@ Other lifecycle commands:
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                               |
-| ------------------------- | -------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `block-goose`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                          |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                           |
-| Browsers and productivity | `caffeine`, `google-chrome`, `obsidian`, `paste`, `raycast`, `readdle-spark`                 |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                              |
-| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                             |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                              |
+| Group                     | Homebrew casks                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                     |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                      |
+| Browsers and productivity | `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`            |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                         |
+| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                        |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                         |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). Archiver
 itself must already be installed from the Mac App Store; `archiver/install.sh`
@@ -184,30 +185,33 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 version and artifact checksums for every declaration (`lockfile = true` in
 `[settings]`). Run `mise upgrade` to advance the lock deliberately:
 
-| Tool                            | Version      |
-| ------------------------------- | ------------ |
-| `aqua:koalaman/shellcheck`      | `latest`     |
-| `bun`                           | `1.3.2`      |
-| `elixir`                        | `1.18`       |
-| `erlang`                        | `27`         |
-| `go`                            | `1.25.5`     |
-| `go:mvdan.cc/sh/v3/cmd/shfmt`   | `latest`     |
-| `java`                          | `temurin-21` |
-| `node`                          | `lts`        |
-| `npm:@anthropic-ai/claude-code` | `2.1.223`    |
-| `npm:eas-cli`                   | `16.28.0`    |
-| `npm:opencode-ai`               | `1.18.14`    |
-| `npm:skills`                    | `1.5.21`     |
-| `npm:wrangler`                  | `4.119.0`    |
-| `pipx:aider-chat`               | `0.86.2`     |
-| `pipx:mdformat`                 | `latest`     |
-| `pnpm`                          | `10.23.0`    |
-| `python`                        | `3.14.0`     |
-| `ruby`                          | `3.4`        |
-| `rust`                          | `1.91.1`     |
-| `terraform`                     | `1.14.0`     |
-| `uv`                            | `latest`     |
-| `yarn`                          | `4.11.0`     |
+| Tool                                  | Version      |
+| ------------------------------------- | ------------ |
+| `aqua:koalaman/shellcheck`            | `latest`     |
+| `bun`                                 | `1.3.2`      |
+| `elixir`                              | `1.18`       |
+| `erlang`                              | `27`         |
+| `go`                                  | `1.25.5`     |
+| `go:mvdan.cc/sh/v3/cmd/shfmt`         | `latest`     |
+| `java`                                | `temurin-21` |
+| `node`                                | `lts`        |
+| `npm:@anthropic-ai/claude-code`       | `2.1.223`    |
+| `npm:@earendil-works/pi-coding-agent` | `0.84.0`     |
+| `npm:@openai/codex`                   | `0.146.1`    |
+| `npm:eas-cli`                         | `16.28.0`    |
+| `npm:opencode-ai`                     | `1.18.14`    |
+| `npm:skills`                          | `1.5.21`     |
+| `npm:wrangler`                        | `4.119.0`    |
+| `pipx:aider-chat`                     | `0.86.2`     |
+| `pipx:kimi-cli`                       | `1.49.0`     |
+| `pipx:mdformat`                       | `latest`     |
+| `pnpm`                                | `10.23.0`    |
+| `python`                              | `3.14.0`     |
+| `ruby`                                | `3.4`        |
+| `rust`                                | `1.91.1`     |
+| `terraform`                           | `1.14.0`     |
+| `uv`                                  | `latest`     |
+| `yarn`                                | `4.11.0`     |
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
@@ -238,10 +242,23 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 | `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work`   |
 | `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
 
-Two macOS conveniences stay manual on purpose (they need privileges or TCC
-grants that scripted `defaults write` cannot verify): Touch ID for `sudo`
-(`sudo sh -c 'echo "auth sufficient pam_tid.so" > /etc/pam.d/sudo_local'`) and
-Safari's Develop menu (Safari Settings → Advanced).
+Some macOS and app settings stay manual on purpose (they need privileges, TCC
+grants, or account state that scripted `defaults write` cannot verify):
+
+- Touch ID for `sudo`:
+  `sudo sh -c 'echo "auth sufficient pam_tid.so" > /etc/pam.d/sudo_local'`
+- Safari's Develop menu (Safari Settings → Advanced).
+- iCloud: signing out or disabling services is account state (System
+  Settings → Apple ID). The catalog only stops documents defaulting to
+  iCloud Drive. Siri is fully disabled by the catalog.
+- Accessibility features ship disabled by default; their domain requires
+  Full Disk Access, so the catalog leaves it alone.
+- ChatGPT: the Option+Space companion-window shortcut and the Google
+  Workspace/Drive connectors are configured in the app after signing in.
+- Google Drive: Finder (File Provider) integration activates after the
+  first sign-in.
+- CleanShot, Paste, Bartender, KeyClu, and Raycast persist their own
+  preferences; configure them in each app's UI.
 
 ### Git utilities
 
@@ -290,6 +307,7 @@ passed to the expanded command.
 | Homebrew                  | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc`                                                                                  |
 | Mise                      | `m`, `mi`, `mu`, `ml`, `mc`                                                                                                          |
 | Aider                     | `aider-architect`, `aider-ro`                                                                                                        |
+| Obsidian                  | `obs` → open Obsidian                                                                                                                |
 | Hermes                    | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update`                                                                     |
 | Docker                    | `d`, `dc`, `dps`, `dpsa`, `dimg`, `dex`, `dlog`, `dlogf`, `dctx`, `dcu`, `dcd`, `dcl`                                                |
 | tmux                      | `ta`, `tls`, `tn`, `tk`, `t` (fzf session picker)                                                                                    |

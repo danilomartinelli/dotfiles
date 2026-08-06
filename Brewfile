@@ -16,6 +16,7 @@ brew 'bitwarden-cli'                # Bitwarden password manager CLI
 brew 'btop'                         # Resource monitor for processes, memory, and network
 brew 'cocoapods'                    # iOS/macOS Cocoa dependency manager (React Native)
 brew 'coreutils'                    # GNU File, Shell, and Text utilities
+brew 'defaultbrowser'               # Get/set the macOS default browser from the CLI
 brew 'direnv'                       # Per-directory environment variables
 brew 'dockutil'                     # Command line utility for managing macOS dock items
 brew 'duti'                         # Set default applications for file types
@@ -67,11 +68,13 @@ cask 'android-studio'               # Android development IDE
 cask 'bartender'                    # Menu bar icon organiser
 cask 'bitwarden'                    # Password manager
 cask 'caffeine'                     # Prevents the Mac from going to sleep
+cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
 cask 'cleanshot'                    # Screenshot and screen recording tool
 cask 'figma'                        # Design tool
 cask 'font-jetbrains-mono-nerd-font' # JetBrains Mono with Nerd Font glyphs (terminal font)
 cask 'ghostty'                      # Fast, native GPU-accelerated terminal emulator
 cask 'google-chrome'                # Google Chrome browser
+cask 'google-drive'                 # Google Drive with Finder (File Provider) integration
 cask 'keyclu'                       # Discover and browse application shortcuts
 cask 'lens'                         # Kubernetes IDE
 cask 'nikitabobko/tap/aerospace'    # i3-like tiling window manager for macOS

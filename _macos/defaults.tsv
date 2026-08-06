@@ -77,6 +77,11 @@ com.apple.TimeMachine	DoNotOfferNewDisksForBackup	bool	true
 # SAVE DIALOGS
 NSGlobalDomain	NSDocumentSaveNewDocumentsToCloud	bool	false
 
+# SIRI (fully off: assistant, menu bar icon, and voice trigger)
+com.apple.assistant.support	Assistant Enabled	bool	false
+com.apple.Siri	StatusMenuVisible	bool	false
+com.apple.Siri	VoiceTriggerUserEnabled	bool	false
+
 # SCREENSHOTS (set-defaults.sh creates the target directory first)
 com.apple.screencapture	location	string	$HOME/Downloads/Screenshots
 com.apple.screencapture	type	string	png
