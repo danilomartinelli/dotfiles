@@ -39,7 +39,9 @@ done
 . "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/adapter-checkout.sh"
 
 if [ "$operation" = edit ]; then
-  exec "$EDITOR" "$DOTFILES_ROOT"
+  # $EDITOR may carry flags (e.g. "zed --wait"); word-splitting is deliberate.
+  # shellcheck disable=SC2086
+  exec ${EDITOR:-vi} "$DOTFILES_ROOT"
 fi
 
 exec "$DOTFILES_ROOT/_scripts/setup" update

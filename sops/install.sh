@@ -29,6 +29,7 @@ done
 
 if [ -f "$default_key" ]; then
   installer_note "default age identity already present"
+  installer_note "back up $default_key somewhere safe: losing it loses every secret encrypted to it"
   if [ -f "$default_recipient" ]; then
     installer_note "recipient: $(cat "$default_recipient")"
   fi

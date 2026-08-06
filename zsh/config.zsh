@@ -2,13 +2,13 @@ autoload -U colors && colors
 
 export LSCOLORS="exfxcxdxbxegedabagacad"
 export CLICOLOR=true
-export LESS_TERMCAP_mb=$'e[1;35m'
-export LESS_TERMCAP_md=$'e[1;36m'
-export LESS_TERMCAP_me=$'e[0m'
-export LESS_TERMCAP_se=$'e[0m'
-export LESS_TERMCAP_so=$'e[1;44;33m'
-export LESS_TERMCAP_ue=$'e[0m'
-export LESS_TERMCAP_us=$'e[1;32m'
+export LESS_TERMCAP_mb=$'\e[1;35m'
+export LESS_TERMCAP_md=$'\e[1;36m'
+export LESS_TERMCAP_me=$'\e[0m'
+export LESS_TERMCAP_se=$'\e[0m'
+export LESS_TERMCAP_so=$'\e[1;44;33m'
+export LESS_TERMCAP_ue=$'\e[0m'
+export LESS_TERMCAP_us=$'\e[1;32m'
 
 HISTFILE=~/.zsh_history
 HISTSIZE=100000
@@ -59,6 +59,26 @@ bindkey '^[[5D' beginning-of-line
 bindkey '^[[5C' end-of-line
 bindkey '^[[3~' delete-char
 bindkey '^?' backward-delete-char
+
+# Edit the current command line in $EDITOR (requires a --wait editor).
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^X^E' edit-command-line
+
+# Ctrl-W kills one path segment, not the whole path: drop / from word chars.
+WORDCHARS='*?_-.[]~&;!#$%^(){}<>'
+
+# Ctrl-S must not freeze the terminal (XOFF flow control).
+[[ -t 0 ]] && stty -ixon 2>/dev/null
+
+# fzf pickers use fd (respects .gitignore, includes dotfiles) with bat/eza
+# previews. Read at widget time, so order relative to `fzf --zsh` is free.
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+export FZF_DEFAULT_OPTS='--height 60% --layout=reverse --border --info=inline'
+export FZF_CTRL_T_OPTS="--preview 'bat -n --color=always --line-range :200 {}'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
 
 # Let new Apple Terminal tabs inherit the current working directory.
 if [[ $TERM_PROGRAM == Apple_Terminal && -z ${INSIDE_EMACS-} ]]; then

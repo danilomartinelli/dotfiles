@@ -1,8 +1,8 @@
 # Kubectl shortcuts
 alias k='kubectl'
 
-# Context and config management
-alias kctx='kubectl config use-context'
+# Context and config management (kubectx/kubens are interactive when run bare)
+alias kctx='kubectx'
 alias kctx-list='kubectl config get-contexts'
 alias kcurrent='kubectl config current-context'
 alias konfig='kubectl config view --minify --raw'
@@ -41,4 +41,4 @@ alias kwp='watch kubectl get pods'
 alias kwpa='watch kubectl get pods --all-namespaces'
 
 # Namespace switching
-alias kns='kubectl config set-context --current --namespace'
+alias kns='kubens'

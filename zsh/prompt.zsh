@@ -56,21 +56,19 @@ directory_name() {
 }
 
 battery_status() {
-  if [[ $(uname) != "Darwin" ]]
-  then
-    return 0
-  fi
-
-  # The hardware model is resolved once when this file is sourced; each prompt
-  # render runs in a subshell and could not cache it.
-  if [[ $_prompt_hw_model == *"Book"* ]]
+  if [[ -n $_prompt_has_battery ]]
   then
     $DOTFILES_ROOT/bin/battery-status
   fi
 }
 
-typeset -g _prompt_hw_model
-_prompt_hw_model=$(sysctl -n hw.model 2>/dev/null)
+# Battery presence is resolved once when this file is sourced; each prompt
+# render runs in a subshell and could not cache it. hw.model no longer says
+# "MacBook" on Apple Silicon, so ask the power manager directly.
+typeset -g _prompt_has_battery=''
+if [[ $(uname) == Darwin ]] && pmset -g batt 2>/dev/null | grep -q InternalBattery; then
+  _prompt_has_battery=1
+fi
 export PROMPT=$'\n$(battery_status)in $(directory_name) $(prompt_git_segment)\n› '
 
 _dotfiles_prompt_window_title() {

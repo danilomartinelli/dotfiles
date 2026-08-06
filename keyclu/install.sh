@@ -10,10 +10,8 @@ installer_banner "configuring KeyClu"
 
 installer_require_app KeyClu keyclu "/Applications/KeyClu.app"
 
-# Show shortcut overlay when holding Command (KeyClu's primary UX).
-defaults write com.0804Team.KeyClu SUEnableAutomaticChecks -bool true 2>/dev/null || true
-defaults write com.0804Team.KeyClu launchAtLogin -bool true 2>/dev/null || true
-
+# No `defaults write` here: launch-at-login is SMAppService territory on
+# modern macOS and the app persists its own preferences on quit.
 open -ga "$INSTALLER_APP" 2>/dev/null || true
 
 installer_success "KeyClu ready — hold ⌘ to browse app shortcuts, or create custom ones in Settings"

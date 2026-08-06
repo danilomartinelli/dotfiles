@@ -6,14 +6,15 @@
 # Put sensitive data in ~/.localrc instead.
 # =======================================
 
-# Locale
+# Locale. No LC_ALL: it overrides every category and breaks script-visible
+# collation and number formatting; LANG keeps the pt-BR interface.
 export LANG="pt_BR.UTF-8"
-export LC_ALL="pt_BR.UTF-8"
 
-# Default editor (override if needed). Git uses `zed --wait` via gitconfig.
-export EDITOR="zed"
-export VISUAL="zed"
-export GIT_EDITOR="zed --wait"
+# Default editor (override if needed). --wait keeps synchronous consumers
+# (crontab -e, visudo, sops, kubectl edit) blocked until the buffer closes.
+# Git resolves its editor via core.editor in gitconfig; no GIT_EDITOR here.
+export EDITOR="zed --wait"
+export VISUAL="zed --wait"
 
 # Workspace + projects root used by `c` / completion (override in .localrc)
 export WORKSPACE="${WORKSPACE:-$HOME/Workspace}"
@@ -29,6 +30,11 @@ export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_BAT=1
+
+# Man pages through bat for syntax highlighting (pairs with HOMEBREW_BAT).
+if command -v bat >/dev/null 2>&1; then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+fi
 
 # GPG / SSH helpers for interactive terminals
 export GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"

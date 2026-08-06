@@ -41,6 +41,20 @@ filetype indent on
 set autoread
 au FocusGained,BufEnter * silent! checktime
 
+" Modern defaults: system clipboard, line numbers, stable sign column,
+" mouse, and predictable split direction.
+set clipboard=unnamedplus
+set number
+set signcolumn=yes
+set mouse=a
+set cursorline
+set splitbelow
+set splitright
+set updatetime=250
+if has('nvim')
+    set inccommand=split
+endif
+
 " With a map leader it's possible to do extra key combinations
 " like <leader>w saves the current file
 let mapleader = ","
@@ -137,14 +151,19 @@ syntax enable
 " Set regular expression engine automatically
 set regexpengine=0
 
-" Enable 256 colors palette in Gnome Terminal
-if $COLORTERM == 'gnome-terminal'
-    set t_Co=256
+" Ghostty/tmux speak truecolor; without this Neovim renders in 256 colors.
+if has('termguicolors')
+    set termguicolors
 endif
 
+" habamax is the modern built-in scheme; desert is the fallback on old Vims.
 try
-    colorscheme desert
+    colorscheme habamax
 catch
+    try
+        colorscheme desert
+    catch
+    endtry
 endtry
 
 set background=dark
@@ -172,6 +191,16 @@ set nobackup
 set nowb
 set noswapfile
 
+" ...but keep persistent undo as the safety net across sessions.
+if has('persistent_undo')
+    let s:undodir = ($XDG_STATE_HOME != '' ? $XDG_STATE_HOME : $HOME . '/.local/state') . '/vim/undo'
+    if !isdirectory(s:undodir)
+        call mkdir(s:undodir, 'p', 0700)
+    endif
+    let &undodir = s:undodir
+    set undofile
+endif
+
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " => Text, tab and indent related
@@ -182,9 +211,10 @@ set expandtab
 " Be smart when using tabs ;)
 set smarttab
 
-" 1 tab == 4 spaces
-set shiftwidth=4
-set tabstop=4
+" 1 tab == 2 spaces, matching Zed's tab_size; Python stays at 4 via its
+" bundled ftplugin.
+set shiftwidth=2
+set tabstop=2
 
 " Linebreak on 500 characters
 set lbr

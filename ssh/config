@@ -5,18 +5,12 @@ Include ~/.orbstack/ssh/config
 
 # Does NOT change ABOVE this line
 # SSH Configuration - Dotfiles's Global Settings
+#
+# Order matters: OpenSSH keeps the FIRST value it sees for each option, so
+# machine-local overrides come first, specific hosts next, and the `Host *`
+# defaults last.
 
-Host *
-    AddKeysToAgent yes
-    UseKeychain yes
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
-    TCPKeepAlive yes
-    ControlMaster auto
-    ControlPath ~/.ssh/sockets/%C
-    ControlPersist 10m
-
-# Include local configurations if needed (not tracked by git)
+# Local configurations win over everything below (not tracked by git)
 Include ~/.ssh/config_local
 
 # === GITHUB CONFIGURATIONS ===
@@ -24,7 +18,8 @@ Host github.com
     HostName github.com
     User git
     IdentitiesOnly yes
-    # Try Ed25519 first, fall back to RSA if not available
+    # Both identities are offered in the handshake (listed order); the
+    # server accepts whichever matches an uploaded key.
     IdentityFile ~/.ssh/id_ed25519
     IdentityFile ~/.ssh/id_rsa
 
@@ -41,3 +36,22 @@ Host github-work
     IdentitiesOnly yes
     IdentityFile ~/.ssh/id_ed25519_work
     IdentityFile ~/.ssh/id_rsa_work
+
+# === GLOBAL DEFAULTS (kept last so anything above can override) ===
+Host *
+    # UseKeychain is macOS-only; keep Linux hosts from failing on it.
+    IgnoreUnknown UseKeychain
+    AddKeysToAgent yes
+    UseKeychain yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%C
+    ControlPersist 10m
+    # A compromised host must never reach the local agent.
+    ForwardAgent no
+    # Accept server-initiated host key rotation instead of manual prompts.
+    UpdateHostKeys yes
+    # A leaked known_hosts must not reveal which servers this machine uses.
+    HashKnownHosts yes

@@ -2,3 +2,7 @@
 *~
 *.swp
 *.orig
+*.log
+.aider*
+.direnv/
+.idea/

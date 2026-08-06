@@ -56,10 +56,33 @@ _dotfiles_path_files=()
 _dotfiles_main_files=()
 _dotfiles_completion_files=()
 
-if ! _dotfiles_catalog=$("$DOTFILES_ROOT/_scripts/topic-catalog" "$DOTFILES_ROOT" 2>/dev/null); then
-  print -u2 'dotfiles: topic catalog discovery failed'
-  unset ${(k)parameters[(I)_dotfiles_*]}
-  return 1
+# Memoized catalog. Classification only changes when files are added,
+# removed, or renamed, and those always bump a directory mtime; content
+# edits never change the catalog. The cache is keyed by checkout path so
+# parallel worktrees never share entries, and the classifier stays the
+# single source of truth. See _docs/adr/0002-topic-catalog-cache.md.
+typeset -g _dotfiles_catalog_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/topic-catalog${DOTFILES_ROOT//\//%}"
+typeset -g _dotfiles_catalog=''
+if [[ -r $_dotfiles_catalog_cache ]]; then
+  typeset -g _dotfiles_catalog_stale=''
+  for _dotfiles_dir in "$DOTFILES_ROOT" "$DOTFILES_ROOT"/*(N/); do
+    if [[ $_dotfiles_dir -nt $_dotfiles_catalog_cache ]]; then
+      _dotfiles_catalog_stale=1
+      break
+    fi
+  done
+  [[ -z $_dotfiles_catalog_stale ]] && _dotfiles_catalog=$(<"$_dotfiles_catalog_cache")
+fi
+
+if [[ -z $_dotfiles_catalog ]]; then
+  if ! _dotfiles_catalog=$("$DOTFILES_ROOT/_scripts/topic-catalog" "$DOTFILES_ROOT" 2>/dev/null); then
+    print -u2 'dotfiles: topic catalog discovery failed'
+    unset ${(k)parameters[(I)_dotfiles_*]}
+    return 1
+  fi
+  # Cache writes are best-effort; a read-only cache dir must not break startup.
+  mkdir -p "${_dotfiles_catalog_cache:h}" 2>/dev/null \
+    && print -r -- "$_dotfiles_catalog" >| "$_dotfiles_catalog_cache" 2>/dev/null
 fi
 
 for _dotfiles_record in "${(@f)_dotfiles_catalog}"; do
@@ -119,9 +142,15 @@ source "$_dotfiles_prompt_file"
 
 # Initialize completion exactly once in this startup pass, then let topics add
 # their completion definitions and styles. -i silently skips insecure
-# directories instead of prompting.
+# directories instead of prompting. When the dump is fresh (<24h), -C reuses
+# yesterday's fpath audit instead of rescanning every directory. The (#q)
+# qualifier needs EXTENDED_GLOB, set earlier by zsh/config.zsh.
 autoload -U compinit
-compinit -i
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh-24) ]]; then
+  compinit -C -i
+else
+  compinit -i
+fi
 
 for _dotfiles_file in "${_dotfiles_completion_files[@]}"; do
   source "$_dotfiles_file"

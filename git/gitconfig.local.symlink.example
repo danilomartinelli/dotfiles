@@ -3,3 +3,11 @@
         email = AUTHOREMAIL
 [credential]
         helper = GIT_CREDENTIAL_HELPER
+# Uncomment once ~/.ssh/id_ed25519 exists (ssh-key-create default) and the
+# public key is uploaded to GitHub as a *Signing Key*.
+# [user]
+#         signingkey = ~/.ssh/id_ed25519.pub
+# [commit]
+#         gpgsign = true
+# [tag]
+#         gpgsign = true

@@ -58,21 +58,10 @@ apply_catalog() {
   done <"$CATALOG"
 }
 
-configure_dns() {
-  if ! command -v networksetup >/dev/null 2>&1; then
-    echo "  Warning: networksetup not found, skipping DNS configuration" >&2
-    return 0
-  fi
-
-  if sudo -n true 2>/dev/null || sudo -v; then
-    if sudo networksetup -setdnsservers Wi-Fi 8.8.8.8 8.8.4.4 2>/dev/null; then
-      echo "  ✓ DNS servers configured"
-    else
-      echo "  Warning: Failed to set DNS servers (may require admin privileges)" >&2
-    fi
-  else
-    echo "  Warning: Skipping DNS configuration (sudo access required)" >&2
-  fi
+# The screencapture location default is silently ignored by macOS unless the
+# directory already exists, so create it before the catalog applies.
+ensure_screenshot_dir() {
+  mkdir -p "$HOME/Downloads/Screenshots"
 }
 
 show_library_folder() {
@@ -90,11 +79,13 @@ show_library_folder() {
 
 restart_services() {
   echo "  → Restarting system services..."
-  killall Finder Dock SystemUIServer ControlCenter ControlStrip cfprefsd 2>/dev/null || true
+  # cfprefsd is deliberately absent: killing it right after `defaults write`
+  # can discard preferences still buffered in the daemon.
+  killall Finder Dock SystemUIServer ControlCenter ControlStrip 2>/dev/null || true
   echo "  ✓ Services restarted (log out to apply keyboard settings)"
 }
 
+ensure_screenshot_dir
 apply_catalog
-configure_dns
 show_library_folder
 restart_services

@@ -5,6 +5,21 @@ alias awsl='aws configure list'
 alias awswho='aws sts get-caller-identity'
 alias awsregion='aws configure get region'
 
+# Profile and SSO management (aws-vault keeps credentials in the Keychain)
+alias awssso='aws sso login --profile'
+alias awslogout='aws sso logout'
+alias av='aws-vault exec'
+
+# Fuzzy-pick AWS_PROFILE from ~/.aws/config
+awsp() {
+  local profile
+  profile=$(grep -o '^\[profile [^]]*\]' ~/.aws/config 2>/dev/null \
+    | sed 's/^\[profile \(.*\)\]$/\1/' \
+    | fzf --prompt='AWS profile> ' --height=40%) || return
+  export AWS_PROFILE=$profile
+  print "=> AWS_PROFILE=$AWS_PROFILE"
+}
+
 # S3 shortcuts
 alias s3ls='aws s3 ls'
 alias s3cp='aws s3 cp'
@@ -15,13 +30,22 @@ alias s3mb='aws s3 mb'
 alias s3rb='aws s3 rb'
 alias s3web='aws s3 website'
 
-# EC2 shortcuts
-alias ec2ls='aws ec2 describe-instances --query "Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PublicIpAddress,Tags[?Key==`Name`]|[0].Value]" --output table'
+# EC2 shortcuts. The list/ip queries are functions: JMESPath backticks inside
+# a double-quoted alias body would be executed as command substitution.
+ec2ls() {
+  aws ec2 describe-instances \
+    --query 'Reservations[*].Instances[*].[InstanceId,State.Name,InstanceType,PublicIpAddress,Tags[?Key==`Name`]|[0].Value]' \
+    --output table "$@"
+}
+ec2ip() {
+  aws ec2 describe-instances \
+    --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`]|[0].Value,PublicIpAddress]' \
+    --output table "$@"
+}
 alias ec2start='aws ec2 start-instances --instance-ids'
 alias ec2stop='aws ec2 stop-instances --instance-ids'
 alias ec2reboot='aws ec2 reboot-instances --instance-ids'
 alias ec2terminate='aws ec2 terminate-instances --instance-ids'
-alias ec2ip='aws ec2 describe-instances --query "Reservations[*].Instances[*].[Tags[?Key==`Name`]|[0].Value,PublicIpAddress]" --output table'
 
 # Lambda shortcuts
 alias lambdals='aws lambda list-functions --query "Functions[*].[FunctionName,Runtime,LastModified]" --output table'
@@ -29,8 +53,12 @@ alias lambdainvoke='aws lambda invoke'
 alias lambdalogs='aws logs tail --follow'
 alias lambdadeploy='aws lambda update-function-code'
 
-# CloudFormation shortcuts
-alias cfnls='aws cloudformation list-stacks --query "StackSummaries[?StackStatus!=`DELETE_COMPLETE`].[StackName,StackStatus,LastUpdatedTime]" --output table'
+# CloudFormation shortcuts (cfnls is a function for the same backtick reason)
+cfnls() {
+  aws cloudformation list-stacks \
+    --query 'StackSummaries[?StackStatus!=`DELETE_COMPLETE`].[StackName,StackStatus,LastUpdatedTime]' \
+    --output table "$@"
+}
 alias cfnvalidate='aws cloudformation validate-template'
 alias cfnevents='aws cloudformation describe-stack-events'
 alias cfnoutputs='aws cloudformation describe-stacks --query "Stacks[*].[StackName,Outputs]" --output table'
@@ -69,7 +97,16 @@ alias dynamoscan='aws dynamodb scan --table-name'
 alias dynamoquery='aws dynamodb query --table-name'
 
 # Cost Explorer shortcuts
-alias awscost='aws ce get-cost-and-usage --time-period Start=$(gdate -u -d "30 days ago" +%Y-%m-%d),End=$(gdate -u +%Y-%m-%d) --granularity MONTHLY --metrics "UnblendedCost" --group-by Type=DIMENSION,Key=SERVICE'
+awscost() {
+  if ! command -v gdate >/dev/null 2>&1; then
+    print -u2 'awscost: gdate not found (brew install coreutils)'
+    return 1
+  fi
+  aws ce get-cost-and-usage \
+    --time-period "Start=$(gdate -u -d '30 days ago' +%Y-%m-%d),End=$(gdate -u +%Y-%m-%d)" \
+    --granularity MONTHLY --metrics UnblendedCost \
+    --group-by Type=DIMENSION,Key=SERVICE "$@"
+}
 
 # Common AWS operations with JSON output
 alias awsjson='aws --output json'

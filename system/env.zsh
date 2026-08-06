@@ -8,11 +8,7 @@ umask 022
 export PAGER="less"
 export LESS="-R"
 
-# Set default browser (can be overridden in .localrc)
-if [[ -z "$BROWSER" ]]; then
-  if [[ -d "/Applications/Google Chrome.app" ]]; then
-    export BROWSER="open -a 'Google Chrome'"
-  elif [[ -d "/Applications/Safari.app" ]]; then
-    export BROWSER="open -a Safari"
-  fi
-fi
+# Default browser (override in .localrc). A bare `open` delegates to the
+# macOS default browser; multi-word values with embedded quotes break every
+# consumer that word-splits $BROWSER.
+export BROWSER="${BROWSER:-open}"

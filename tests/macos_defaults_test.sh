@@ -79,21 +79,19 @@ test_catalog_order_and_expansion() {
   assert_before "$fixture/events.log" \
     'defaults write com.apple.finder FXPreferredViewStyle -string Nlsv' \
     "defaults write com.apple.finder NewWindowTargetPath -string file://$fixture/home/"
-  assert_before "$fixture/events.log" \
-    "defaults write com.apple.finder NewWindowTargetPath -string file://$fixture/home/" \
-    'networksetup -setdnsservers'
   assert_contains "$fixture/events.log" 'killall Finder'
   assert_contains "$fixture/events.log" 'chflags nohidden'
 }
 
-test_dns_advisory_without_sudo() {
+test_no_dns_mutation() {
   local fixture
 
   fixture=$(make_fixture)
-  export FAIL_SUDO=1
   invoke_defaults "$fixture"
-  unset FAIL_SUDO
-  assert_contains "$fixture/stderr.log" 'Skipping DNS configuration'
+  # DNS is owned by the OS/Tailscale/VPN; the apply must never touch it.
+  if grep -q 'networksetup' "$fixture/events.log"; then
+    return 1
+  fi
   assert_contains "$fixture/events.log" 'killall Finder'
 }
 
@@ -109,6 +107,6 @@ test_invalid_type_fails() {
 }
 
 scenario_run 'catalog applies in order with HOME expansion' test_catalog_order_and_expansion
-scenario_run 'DNS stays advisory without sudo' test_dns_advisory_without_sudo
+scenario_run 'the apply never mutates DNS' test_no_dns_mutation
 scenario_run 'invalid catalog types fail the apply' test_invalid_type_fails
 scenario_finish

@@ -12,12 +12,10 @@ CONFIG_DIR="$HOME/.config/aerospace"
 
 mkdir -p "$CONFIG_DIR"
 
+# Single destination on purpose: AeroSpace uses the first config it finds,
+# and a second link (~/.aerospace.toml) invites silent divergence.
 installer_link_config --label "AeroSpace config" \
   "$TOPIC_DIR/aerospace.toml" "$CONFIG_DIR/aerospace.toml"
-
-# Also satisfy the ~/.aerospace.toml lookup path used by some docs/tools.
-installer_link_config --label "~/.aerospace.toml" \
-  "$TOPIC_DIR/aerospace.toml" "$HOME/.aerospace.toml"
 
 if [ -d "/Applications/AeroSpace.app" ]; then
   installer_note "Start AeroSpace once from Spotlight/Raycast to grant Accessibility permission"

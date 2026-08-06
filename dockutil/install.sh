@@ -12,6 +12,16 @@ installer_banner "configuring dock (minimal)"
 
 installer_require_command dockutil
 
+# The declared layout wipes the Dock before rebuilding it, so it only runs on
+# the first apply (or when forced). Daily `dot` runs must never destroy manual
+# Dock arrangements — every other installer in this repo preserves user state.
+dock_marker="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/dock-applied"
+if [ -f "$dock_marker" ] && [ "${DOTFILES_DOCK_RESET:-0}" != 1 ]; then
+  installer_note "dock layout already applied; run DOTFILES_DOCK_RESET=1 dot to reapply"
+  installer_success "dock configured"
+  exit 0
+fi
+
 # Function to add app to dock if it exists
 add_app_to_dock() {
   local app_path="$1"
@@ -75,5 +85,8 @@ if killall Dock >/dev/null 2>&1; then
 else
   installer_warn "Failed to restart Dock"
 fi
+
+mkdir -p "$(dirname "$dock_marker")"
+touch "$dock_marker"
 
 installer_success "dock configured"

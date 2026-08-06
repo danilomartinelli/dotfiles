@@ -27,16 +27,18 @@ resolve_github_user() {
     candidate=$(git config --global github.user 2>/dev/null || true)
   fi
 
+  # gh is authoritative (the logged-in account); the user.name guess is the
+  # last resort because it can produce a well-formed but wrong handle.
+  if [ -z "$candidate" ] && command -v gh >/dev/null 2>&1; then
+    candidate=$(gh api user --jq .login 2>/dev/null || true)
+  fi
+
   if [ -z "$candidate" ] && command -v git >/dev/null 2>&1; then
     git_name=$(git config --global user.name 2>/dev/null || true)
     if [ -n "$git_name" ]; then
       # "Danilo Martinelli" → danilomartinelli
       candidate=$(printf '%s\n' "$git_name" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
     fi
-  fi
-
-  if [ -z "$candidate" ] && command -v gh >/dev/null 2>&1; then
-    candidate=$(gh api user --jq .login 2>/dev/null || true)
   fi
 
   if [ -n "$candidate" ] && is_github_username "$candidate"; then
