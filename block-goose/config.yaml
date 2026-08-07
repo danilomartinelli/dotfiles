@@ -1,4 +1,9 @@
 active_provider: claude-acp
+# Goose Desktop is launched by Finder and does not inherit the shell PATH,
+# so the mise-provisioned ACP adapters need an explicit search path.
+GOOSE_SEARCH_PATHS:
+  - "~/.local/share/mise/shims"
+  - "/opt/homebrew/bin"
 providers:
   claude-acp:
     enabled: true

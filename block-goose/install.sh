@@ -15,6 +15,10 @@ mkdir -p "$CONFIG_DIR"
 # Goose reaches Claude Code and Codex through ACP *providers*, not extensions.
 # Extensions of type stdio are MCP servers, so an ACP agent binary registered
 # there never initializes. See https://goose-docs.ai/docs/guides/acp-providers
+#
+# GOOSE_SEARCH_PATHS matters for Goose Desktop specifically: a GUI app launched
+# by Finder does not inherit the interactive shell PATH, so the mise-provisioned
+# ACP adapters are invisible to it without an explicit search path.
 if command -v yq >/dev/null 2>&1; then
   if [ ! -f "$CONFIG_FILE" ]; then
     printf '' >"$CONFIG_FILE"
@@ -30,6 +34,8 @@ if command -v yq >/dev/null 2>&1; then
     | .providers."codex-acp".configured = true
     | .providers."codex-acp".model = (.providers."codex-acp".model // "current")
     | .active_provider = (.active_provider // "claude-acp")
+    | .GOOSE_SEARCH_PATHS = ((.GOOSE_SEARCH_PATHS // [])
+        + ["~/.local/share/mise/shims", "/opt/homebrew/bin"] | unique_by(.))
     | del(.GOOSE_PROVIDER, .GOOSE_MODEL, .["claude-acp_configured"])
     | del(.extensions."codex-acp", .extensions."claude-acp")
   ' "$CONFIG_FILE"
