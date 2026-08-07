@@ -314,6 +314,7 @@ passed to the expanded command.
 | Aider                     | `aider-architect`, `aider-ro`                                                                                                        |
 | Obsidian                  | `obs` → open Obsidian                                                                                                                |
 | Hermes                    | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update`                                                                     |
+| Homelab                   | `hl` ssh in; `hlup` redeploy the NixOS flake; `hldoctor` run the health check; `hllog` tail homelab units; `hlbootstrap` first-boot  |
 | Docker                    | `d`, `dc`, `dps`, `dpsa`, `dimg`, `dex`, `dlog`, `dlogf`, `dctx`, `dcu`, `dcd`, `dcl`                                                |
 | tmux                      | `ta`, `tls`, `tn`, `tk`, `t` (fzf session picker)                                                                                    |
 | Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`                                                       |
