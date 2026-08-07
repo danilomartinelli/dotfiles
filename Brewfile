@@ -86,6 +86,7 @@ cask 'paste'                        # Clipboard history manager
 cask 'postman'                      # API development and testing tool
 cask 'raycast'                      # Spotlight alternative with extensions
 cask 'readdle-spark'                # Email client with smart features
+cask 'skim'                         # Free PDF reader with annotation support
 cask 'session-manager-plugin'       # AWS Systems Manager Session Manager plugin
 cask 'spotify'                      # Music streaming service
 cask 'tableplus'                    # Database management tool

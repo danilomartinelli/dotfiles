@@ -4,6 +4,7 @@
 # KEYBOARD & INPUT
 -g	ApplePressAndHoldEnabled	bool	false
 NSGlobalDomain	com.apple.keyboard.fnState	bool	true
+com.apple.HIToolbox	AppleFnUsageType	int	0
 NSGlobalDomain	KeyRepeat	int	1
 NSGlobalDomain	InitialKeyRepeat	int	10
 NSGlobalDomain	AppleKeyboardUIMode	int	3

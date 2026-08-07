@@ -211,12 +211,83 @@ install_checkout_root_link() {
   "$ROOT_RESOLVER" --install "$SETUP_PATH" >/dev/null
 }
 
+# Open an app in the background (best-effort; silently skipped if not installed).
+open_app() {
+  local app_path=$1
+  [ -d "$app_path" ] && open -ga "$app_path" 2>/dev/null || true
+}
+
+print_bootstrap_checklist() {
+  # Open apps that need a first-launch to request system permissions or
+  # to start their initial setup wizard.
+  # Apps whose own installer already calls open -ga are omitted:
+  #   Bartender, KeyClu, Tailscale, Raycast, Skim.
+  open_app '/Applications/Google Drive.app'
+  open_app '/Applications/Bitwarden.app'
+  open_app '/Applications/AeroSpace.app'
+  open_app '/Applications/Caffeine.app'
+  open_app '/Applications/ChatGPT.app'
+  open_app '/Applications/CleanShot X.app'
+  open_app '/Applications/Google Chrome.app'
+  open_app '/Applications/Paste.app'
+  open_app '/Applications/Spark.app'
+
+  printf '\n'
+  printf '  \033[00;34m==>\033[0m \033[1mPost-bootstrap checklist\033[0m\n'
+  printf '\n'
+  printf '  The following steps require manual action in the UI:\n'
+  printf '\n'
+  printf '  \033[1mCredentials & keys\033[0m\n'
+  printf '    ssh-key-create personal          # Ed25519 SSH key\n'
+  printf '    ssh-key-create work              # work SSH key\n'
+  printf '    sops-key-create personal         # age encryption key\n'
+  printf '    gh auth login                    # GitHub CLI\n'
+  printf '    aws configure                    # AWS credentials\n'
+  printf '\n'
+  printf '  \033[1mApps that opened — finish their setup wizards\033[0m\n'
+  printf '    AeroSpace      → grant Accessibility permission; log out and back in\n'
+  printf '    Bartender      → grant Screen Recording permission\n'
+  printf '    Bitwarden      → log in to unlock the vault\n'
+  printf '    Caffeine       → click the coffee cup in the menu bar to activate\n'
+  printf '    ChatGPT        → sign in; set Option+Space global shortcut\n'
+  printf '    CleanShot X    → grant Screen Recording + Accessibility permissions\n'
+  printf '    Google Chrome  → sign in to your Google account; set as default browser:\n'
+  printf '                     defaultbrowser chrome\n'
+  printf '    Google Drive   → sign in and choose folders to sync\n'
+  printf '    KeyClu         → grant Accessibility permission\n'
+  printf '    Paste          → grant Accessibility + Full Disk Access permissions\n'
+  printf '    Raycast        → complete the onboarding; add script commands dir:\n'
+  printf '      %s/raycast/scripts\n' "$DOTFILES_ROOT"
+  printf '    Spark          → sign in to your email accounts\n'
+  printf '    Tailscale      → sign in and connect to your network\n'
+  printf '\n'
+  printf '  \033[1mApps requiring in-app setup\033[0m\n'
+  printf '    Bitwarden      → enable browser extension in Chrome\n'
+  printf '    Bitwarden      → System Settings → Passwords → Password Options → enable Bitwarden\n'
+  printf '    Block Goose    → open once; configure provider API keys\n'
+  printf '    Figma          → sign in to your account\n'
+  printf '    Ghostty        → open once to verify font and shell\n'
+  printf '    Obsidian       → open or create your vault (Google Drive for sync)\n'
+  printf '    OrbStack       → open once and complete the onboarding wizard\n'
+  printf '    Archiver       → open once to register as default for archive types\n'
+  printf '    Postman        → sign in for workspace sync\n'
+  printf '    Raycast        → install extensions: ChatGPT, Google Drive, Google Workspace\n'
+  printf '    Skim           → open once to verify PDF associations\n'
+  printf '    Spotify        → sign in to your account\n'
+  printf '    WhatsApp       → scan QR code to pair with your phone\n'
+  printf '\n'
+  printf '  \033[1mShell\033[0m\n'
+  printf '    source ~/.zshrc   # or open a new terminal tab\n'
+  printf '\n'
+}
+
 run_bootstrap() {
   run_critical 'local environment' setup_local_environment
   run_critical 'Git identity' setup_gitconfig
   run_critical 'dotfile links' install_dotfile_links
   apply_macos_configuration
   run_dependency_pipeline bootstrap
+  print_bootstrap_checklist
 }
 
 run_update() {
@@ -231,12 +302,12 @@ if [ "$#" -ne 1 ]; then
 fi
 
 case "$1" in
-  bootstrap) run_bootstrap ;;
-  update) run_update ;;
-  *)
-    usage
-    exit 2
-    ;;
+bootstrap) run_bootstrap ;;
+update) run_update ;;
+*)
+  usage
+  exit 2
+  ;;
 esac
 
 printf '\n'

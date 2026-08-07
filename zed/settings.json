@@ -1,4 +1,21 @@
 {
+  "agent": {
+    "favorite_models": [],
+    "model_parameters": [],
+    "tool_permissions": {
+      "tools": {
+        "create_directory": {
+          "default": "allow"
+        },
+        "search_web": {
+          "default": "allow"
+        },
+        "terminal": {
+          "default": "allow"
+        }
+      }
+    }
+  },
   "theme": {
     "mode": "system",
     "light": "Catppuccin Latte",

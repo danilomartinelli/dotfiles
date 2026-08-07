@@ -26,7 +26,7 @@ EXTENSIONS=".zip .rar .7z .tar .gz .bz2 .xz .tgz .tbz2 .zst .lz4"
 # Set default app for each extension
 failed=0
 for ext in $EXTENSIONS; do
-  if ! duti -s "$ARCHIVER_BUNDLE" "$ext" all 2>/dev/null; then
+  if ! duti -s "$ARCHIVER_BUNDLE" "$ext" editor 2>/dev/null; then
     installer_warn "Failed to set Archiver as default for $ext"
     failed=$((failed + 1))
   fi

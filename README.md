@@ -150,15 +150,15 @@ Other lifecycle commands:
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                                          |
-| ------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed` |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                                     |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                      |
-| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark` |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                         |
-| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                        |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                         |
+| Group                     | Homebrew casks                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed`              |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                                  |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                   |
+| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `skim` |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                      |
+| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                                     |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                      |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
 assigns supported file associations when `Archiver.app` is present (installed

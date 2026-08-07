@@ -12,6 +12,10 @@ installer_require_app Raycast raycast "/Applications/Raycast.app"
 
 SCRIPTS_DIR="$TOPIC_DIR/scripts"
 
+# Open once so macOS can prompt for Accessibility permission and Raycast can
+# set itself as the Spotlight replacement on first launch.
+open -ga "$INSTALLER_APP" 2>/dev/null || true
+
 # Raycast stores most settings in its own sync store; script commands are the
 # durable, repo-friendly surface. Point Raycast at this directory once:
 #   Raycast → Settings → Extensions → Script Commands → Add Directories
