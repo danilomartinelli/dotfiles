@@ -45,6 +45,7 @@ brew 'mise'                         # Runtime version manager (successor to asdf
 brew 'mkcert'                       # Locally-trusted TLS certificates for development
 brew 'neovim'                       # Hyperextensible Vim-based text editor
 brew 'pandoc'                       # Document converter
+brew 'python@3.12'                  # Python 3.12 runtime (aider-chat requires <3.13)
 brew 'ripgrep'                      # Line-oriented recursive search tool
 brew 'sops'                         # Encrypt/decrypt secrets (age, KMS, PGP)
 brew 'spaceman-diff'                # Diff images from the command line

@@ -92,7 +92,6 @@ Other lifecycle commands:
 | ------------------------- | ------------------------------------------------- |
 | `age`                     | Age encryption used as the SOPS identity backend  |
 | `ansible`                 | Automation and configuration management CLI       |
-
 | `atuin`                   | Shell history in SQLite (`Ctrl-R`, optional sync) |
 | `aws-vault`               | AWS credentials in the Keychain (keys + SSO)      |
 | `awscli`                  | AWS command-line interface                        |
@@ -132,6 +131,7 @@ Other lifecycle commands:
 | `mkcert`                  | Locally-trusted TLS certificates                  |
 | `neovim`                  | Terminal editor                                   |
 | `pandoc`                  | Document conversion                               |
+| `python@3.12`             | Python 3.12 runtime (aider-chat requires <3.13)   |
 | `ripgrep`                 | Fast recursive search                             |
 | `sops`                    | Encrypt and decrypt secrets (age, KMS, PGP)       |
 | `spaceman-diff`           | Visual image diffs                                |
