@@ -1,11 +1,10 @@
-GOOSE_PROVIDER: claude-acp
-GOOSE_MODEL: current
-claude-acp_configured: true
-extensions:
+active_provider: claude-acp
+providers:
+  claude-acp:
+    enabled: true
+    model: default
+    configured: true
   codex-acp:
     enabled: true
-    type: stdio
-    name: codex-acp
-    cmd: codex-acp
-    args: []
-    description: OpenAI Codex via ACP for code generation and editing
+    model: current
+    configured: true

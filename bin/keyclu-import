@@ -1,0 +1,17 @@
+#!/bin/sh
+# Open the dotfiles-managed KeyClu custom-shortcuts file so the user can
+# import it via Settings -> My Shortcuts -> Import. KeyClu has no
+# programmatic import API, so an explicit `open` is the supported path.
+set -e
+
+DOTFILES_ROOT="${DOTFILES_ROOT:-$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)}"
+SHORTCUTS_FILE="$DOTFILES_ROOT/keyclu/custom-shortcuts.keyclu"
+
+if [ ! -f "$SHORTCUTS_FILE" ]; then
+  printf 'keyclu-import: shortcuts file not found at %s\n' "$SHORTCUTS_FILE" >&2
+  exit 1
+fi
+
+# `open -a` lets the user pick the right app if multiple claim .keyclu.
+open -a KeyClu "$SHORTCUTS_FILE"
+printf 'keyclu-import: %s handed to KeyClu — confirm Import in Settings -> My Shortcuts\n' "$SHORTCUTS_FILE"

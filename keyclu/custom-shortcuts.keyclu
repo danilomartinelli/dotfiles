@@ -1,0 +1,54 @@
+{
+    "com.apple.finder": {
+        "AeroSpace (main mode)": [
+            ["Open new Ghostty window", "option", 36],
+            ["Layout: tiles / horizontal / vertical", "option", 44],
+            ["Layout: accordion / horizontal / vertical", "option", 43],
+            ["Focus left", "option", 4],
+            ["Focus down", "option", 38],
+            ["Focus up", "option", 40],
+            ["Focus right", "option", 37],
+            ["Move node left", "option+shift", 4],
+            ["Move node down", "option+shift", 38],
+            ["Move node up", "option+shift", 40],
+            ["Move node right", "option+shift", 37],
+            ["Shrink smart -50", "option", 27],
+            ["Grow smart +50", "option", 24],
+            ["Fullscreen", "option", 3],
+            ["macOS native fullscreen", "option+shift", 3],
+            ["Toggle floating/tiling", "option+shift", 49],
+            ["Workspace 1-9", "option", 18],
+            ["Move node to workspace 1-9", "option+shift", 18],
+            ["Workspace back-and-forth", "option", 48],
+            ["Move workspace to next monitor", "option+shift", 48],
+            ["Enter service mode", "option+shift", 41]
+        ],
+        "AeroSpace (service mode)": [
+            ["Reload config", "", 53],
+            ["Flatten workspace tree", "", 15],
+            ["Toggle floating/tiling", "", 3],
+            ["Close all but current", "", 42],
+            ["Join with left", "option+shift", 4],
+            ["Join with down", "option+shift", 38],
+            ["Join with up", "option+shift", 40],
+            ["Join with right", "option+shift", 37]
+        ]
+    },
+    "dev.zed.Zed": {
+        "Project (keymap.json / not in menu)": [
+            ["Command palette", "shift+command", 3],
+            ["Project search", "shift+command", 11],
+            ["Toggle left dock", "command", 18],
+            ["Toggle right dock", "command", 19],
+            ["Toggle bottom dock", "command", 20],
+            ["Inline blame toggle", "", -1]
+        ]
+    },
+    "com.mitchellh.ghostty": {
+        "Config reload (in-config keybind)": [
+            ["Reload config", "shift+command+control+option", 15],
+            ["New window", "command+shift+option", 19],
+            ["Toggle secure input", "command+control", 19]
+        ]
+    }
+}

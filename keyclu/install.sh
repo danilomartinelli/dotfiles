@@ -20,5 +20,13 @@ if [ ! -f "$first_run_marker" ]; then
   touch "$first_run_marker"
 fi
 
-installer_success "KeyClu ready — hold ⌘ to browse app shortcuts, or create custom ones in Settings"
+SHORTCUTS_FILE="$TOPIC_DIR/custom-shortcuts.keyclu"
+if [ -f "$SHORTCUTS_FILE" ]; then
+  if [ -t 1 ]; then
+    installer_note "Custom shortcuts versioned at $SHORTCUTS_FILE"
+    installer_note "Run 'keyclu-import' (or press ⌘ twice and use Settings -> My Shortcuts -> Import) to load them"
+  fi
+fi
+
+installer_success "KeyClu ready — hold ⌘ to browse app shortcuts, or run 'keyclu-import' to load the dotfiles cheatsheet"
 installer_success "KeyClu configured"

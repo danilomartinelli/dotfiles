@@ -12,29 +12,41 @@ CONFIG_FILE="$CONFIG_DIR/config.yaml"
 
 mkdir -p "$CONFIG_DIR"
 
+# Goose reaches Claude Code and Codex through ACP *providers*, not extensions.
+# Extensions of type stdio are MCP servers, so an ACP agent binary registered
+# there never initializes. See https://goose-docs.ai/docs/guides/acp-providers
 if command -v yq >/dev/null 2>&1; then
   if [ ! -f "$CONFIG_FILE" ]; then
     printf '' >"$CONFIG_FILE"
     installer_note "Created empty $CONFIG_FILE"
   fi
-  # Merge provider keys (idempotent).
-  yq -i \
-    '.GOOSE_PROVIDER = "claude-acp" | .GOOSE_MODEL = "current" | .["claude-acp_configured"] = true' \
-    "$CONFIG_FILE"
-  # Merge codex-acp extension without clobbering existing extensions.
-  yq -i \
-    '.extensions.codex-acp.enabled = true
-     | .extensions.codex-acp.type = "stdio"
-     | .extensions.codex-acp.name = "codex-acp"
-     | .extensions.codex-acp.cmd = "codex-acp"
-     | .extensions.codex-acp.args = []
-     | .extensions.codex-acp.description = "OpenAI Codex via ACP for code generation and editing"' \
-    "$CONFIG_FILE"
-  installer_success "Merged provider and codex-acp extension into $CONFIG_FILE"
+  yq -i '
+      del(.active_provider | select(. == ""))
+    | .providers."claude-acp".enabled = true
+    | .providers."claude-acp".configured = true
+    | .providers."claude-acp".model = (.providers."claude-acp".model // "default")
+    | .providers."claude-acp".model |= (select(. == "current") = "default")
+    | .providers."codex-acp".enabled = true
+    | .providers."codex-acp".configured = true
+    | .providers."codex-acp".model = (.providers."codex-acp".model // "current")
+    | .active_provider = (.active_provider // "claude-acp")
+    | del(.GOOSE_PROVIDER, .GOOSE_MODEL, .["claude-acp_configured"])
+    | del(.extensions."codex-acp", .extensions."claude-acp")
+  ' "$CONFIG_FILE"
+  installer_success "Registered claude-acp and codex-acp providers in $CONFIG_FILE"
 else
   installer_link_config --policy preserve-existing --label "Goose config.yaml" \
     "$TOPIC_DIR/config.yaml" "$CONFIG_FILE"
 fi
 
-installer_note "Open Goose once to verify the claude-acp provider and codex-acp extension"
+# ACP providers shell out to their adapter binary, so a missing adapter only
+# fails once a session starts. Warn early instead of failing the update.
+for adapter in claude-agent-acp codex-acp; do
+  if ! command -v "$adapter" >/dev/null 2>&1; then
+    installer_warn "ACP adapter $adapter not found on PATH"
+    installer_hint "run 'mise install' to provision @agentclientprotocol/$adapter"
+  fi
+done
+
+installer_note "Pick the active provider in Goose Desktop under Settings > Models"
 installer_success "Block Goose configured"

@@ -131,7 +131,7 @@ Other lifecycle commands:
 | `mkcert`                  | Locally-trusted TLS certificates                  |
 | `neovim`                  | Terminal editor                                   |
 | `pandoc`                  | Document conversion                               |
-| `python@3.12`             | Python 3.12 runtime (aider-chat requires <3.13)   |
+| `python@3.12`             | Python 3.12 runtime (aider-chat requires \<3.13)  |
 | `ripgrep`                 | Fast recursive search                             |
 | `sops`                    | Encrypt and decrypt secrets (age, KMS, PGP)       |
 | `spaceman-diff`           | Visual image diffs                                |
@@ -241,6 +241,7 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 | `dot`             | Run daily dotfiles maintenance or open the checkout                                                    |
 | `e`               | `e [path]`: open a path, or the current directory, in `$EDITOR`                                        |
 | `headers`         | `headers URL`: print HTTP response headers using `curl`                                                |
+| `keyclu-import`   | Hand the versioned `keyclu/custom-shortcuts.keyclu` cheatsheet to KeyClu for one-tap import            |
 | `set-defaults`    | Apply `_macos/set-defaults.sh` from the active checkout                                                |
 | `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work`   |
 | `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
