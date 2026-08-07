@@ -1,0 +1,21 @@
+#!/bin/zsh
+#
+# Pi wrapper that always injects the shared AGENTS.md as a system-prompt
+# appendix. Use this instead of the bare `pi` binary so the
+# "ABC — Always Be Coaching" philosophy and the PM skills library are
+# available to every Pi session, matching what we already do for OpenCode,
+# Codex, Claude Code, and Aider.
+#
+# Defined as a Zsh function so it overrides PATH binaries by name
+# (functions/ is autoloaded at startup, before PATH lookup).
+
+emulate -L zsh
+
+local shared_agents_md="${DOTFILES_ROOT:-$HOME/.dotfiles}/_shared/agents/AGENTS.md"
+
+if [[ ! -f $shared_agents_md ]]; then
+  print -u2 "pi: shared AGENTS.md not found at $shared_agents_md"
+  return 1
+fi
+
+command pi --append-system-prompt-file "$shared_agents_md" "$@"

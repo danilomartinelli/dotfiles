@@ -150,16 +150,16 @@ Other lifecycle commands:
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                                                              |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Group                     | Homebrew casks                                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                                                         |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                          |
-| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`                         |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                             |
-| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                             |
-| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                                        |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                             |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                               |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                |
+| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`               |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                   |
+| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                   |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                              |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                   |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
 assigns supported file associations when `Archiver.app` is present (installed
@@ -298,6 +298,7 @@ The current public functions are:
 | `c`       | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`)                               |
 | `extract` | `extract archive`: extract supported tar, gzip, bzip2, xz, zstd, 7z, lz4, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
 | `gf`      | `gf remote-branch`: switch to the local branch, or create it tracking `origin/remote-branch`                                  |
+| `pi`      | `pi [args...]`: invoke the `pi` coding agent with the shared `_shared/agents/AGENTS.md` auto-appended as system prompt        |
 | `pubkey`  | Copy the default Ed25519 public key, falling back to RSA                                                                      |
 
 The shell also exposes these aliases. Arguments written after an alias are

@@ -20,3 +20,10 @@ analytics-disable: true
 fancy-input: true
 detect-urls: true
 suggest-shell-commands: true
+
+# Always preload the shared agents contract so Aider sessions follow the
+# "ABC — Always Be Coaching" philosophy and discover the PM skills library
+# the same way OpenCode/Codex/Claude Code do. The path is rendered at
+# install time by opencode/install.sh so the file stays portable.
+read:
+  - "__DOTFILES_ROOT__/_shared/agents/AGENTS.md"

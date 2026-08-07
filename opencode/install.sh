@@ -55,6 +55,24 @@ for skill_dir in "$TOPIC_DIR"/skills/*/; do
     "$skill_dir" "$CONFIG_DIR/skills/$skill_name"
 done
 
+# Make the engineering skills in opencode/.agents/skills/ discoverable to tools
+# that scan `.agents/skills/` from the cwd (Goose, Claude Code). The dotfiles
+# checkout exposes that path as $DOTFILES_ROOT/.agents/ so any tool that walks
+# up from the project root finds them. If the user has a pre-existing real
+# directory at that path (e.g. an old manual install), back it up once and
+# swap in a symlink.
+if [ -d "$TOPIC_DIR/.agents" ]; then
+  agents_path="$DOTFILES_ROOT/.agents"
+  agents_source="$TOPIC_DIR/.agents"
+  if [ ! -L "$agents_path" ] && [ -d "$agents_path" ]; then
+    backup="$agents_path.legacy.$(date +%Y%m%d%H%M%S)"
+    mv "$agents_path" "$backup"
+    installer_note "Moved existing $agents_path to $backup"
+  fi
+  installer_link_config --label "OpenCode agents dir" \
+    "$agents_source" "$agents_path"
+fi
+
 # Surface the shared PM skills library to OpenCode as well. We append the path
 # to skills.paths (rather than copying) so the orchestrator can route to any of
 # them and the source of truth stays in _shared/agents/skills. The library is
@@ -88,6 +106,33 @@ if [ -d "$SHARED_SKILLS_DIR" ]; then
     linked=$((linked + 1))
   done
   installer_success "Codex skills: $linked linked, $skipped already current in $CODEX_HOME/skills"
+
+  # Also expose the same library to global tooling that scans
+  # ~/.agents/skills/ — Goose, Claude Code, and any tool that does
+  # home-directory discovery. Each tool's *project-local* discovery still
+  # works through $DOTFILES_ROOT/.agents/skills above. Pre-existing entries
+  # (e.g. find-skills installed by another tool) are left alone.
+  global_agents_skills="$HOME/.agents/skills"
+  mkdir -p "$global_agents_skills"
+  global_linked=0
+  global_skipped=0
+  for skill_dir in "$SHARED_SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    target="$global_agents_skills/$skill_name"
+    source_canonical=$(CDPATH='' cd -P -- "$skill_dir" && pwd)
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$source_canonical" ]; then
+      global_skipped=$((global_skipped + 1))
+      continue
+    fi
+    if [ -e "$target" ]; then
+      global_skipped=$((global_skipped + 1))
+      continue
+    fi
+    ln -sfn "$source_canonical" "$target"
+    global_linked=$((global_linked + 1))
+  done
+  installer_success "Global skills: $global_linked linked, $global_skipped already present in $global_agents_skills"
 fi
 
 # Codex reads ~/.codex/AGENTS.md as the global instructions file. Symlink the
@@ -101,6 +146,24 @@ elif [ -f "$SHARED_AGENTS_MD" ] && [ -L "$CODEX_HOME/AGENTS.md" ]; then
 elif [ -f "$SHARED_AGENTS_MD" ]; then
   installer_warn "$CODEX_HOME/AGENTS.md exists and is not a symlink"
   installer_hint "Replace it with: ln -sfn '$SHARED_AGENTS_MD' '$CODEX_HOME/AGENTS.md'"
+fi
+
+# Claude Code auto-discovers ~/.claude/CLAUDE.md and walks it from every
+# project root. Symlinking the same shared contract here applies the
+# "ABC — Always Be Coaching" philosophy to Claude Code sessions, matching
+# Codex and the opencode Orchestrator append.
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+if [ -f "$SHARED_AGENTS_MD" ]; then
+  if [ ! -e "$CLAUDE_HOME/CLAUDE.md" ]; then
+    mkdir -p "$CLAUDE_HOME"
+    ln -s "$SHARED_AGENTS_MD" "$CLAUDE_HOME/CLAUDE.md"
+    installer_success "Linked $CLAUDE_HOME/CLAUDE.md -> $SHARED_AGENTS_MD"
+  elif [ -L "$CLAUDE_HOME/CLAUDE.md" ]; then
+    installer_note "$CLAUDE_HOME/CLAUDE.md already a symlink"
+  else
+    installer_warn "$CLAUDE_HOME/CLAUDE.md exists and is not a symlink"
+    installer_hint "Replace it with: ln -sfn '$SHARED_AGENTS_MD' '$CLAUDE_HOME/CLAUDE.md'"
+  fi
 fi
 
 if command -v opencode >/dev/null 2>&1; then
