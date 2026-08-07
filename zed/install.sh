@@ -29,6 +29,9 @@ if ! command -v duti >/dev/null 2>&1; then
 fi
 
 # Common source/text extensions opened in Zed by default.
+# Role "editor" is used throughout — never "all" — so that .html/.htm do not
+# claim the viewer role that macOS maps to the default web browser, which would
+# trigger the system confirmation dialog asking to change the default browser.
 EXTENSIONS="
 .txt .md .markdown .mdx .rst .adoc
 .json .jsonc .json5 .toml .yaml .yml .xml .csv .tsv
@@ -43,14 +46,16 @@ EXTENSIONS="
 
 failed=0
 for ext in $EXTENSIONS; do
-  if ! duti -s "$ZED_BUNDLE" "$ext" all 2>/dev/null; then
+  if ! duti -s "$ZED_BUNDLE" "$ext" editor 2>/dev/null; then
     failed=$((failed + 1))
   fi
 done
 
 # Broad UTIs for plain text / source when Launch Services supports them.
+# public.html is intentionally omitted: claiming it with any role other than
+# "editor" can prompt macOS to change the default browser.
 for uti in public.plain-text public.source-code public.script public.shell-script public.python-script public.ruby-script public.json public.yaml public.xml net.daringfireball.markdown; do
-  duti -s "$ZED_BUNDLE" "$uti" all 2>/dev/null || true
+  duti -s "$ZED_BUNDLE" "$uti" editor 2>/dev/null || true
 done
 
 if [ "$failed" -eq 0 ]; then
