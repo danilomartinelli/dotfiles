@@ -1,4 +1,18 @@
 {
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "agent_servers": {
+    "cursor": {
+      "type": "registry"
+    },
+    "codex-acp": {
+      "type": "registry"
+    },
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
   "agent": {
     "sandbox_permissions": {
       "network_hosts": [
