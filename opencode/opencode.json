@@ -10,6 +10,10 @@
   },
   "autoupdate": true,
   "lsp": true,
+  "skills": {
+    "paths": ["__DOTFILES_ROOT__/_shared/agents/skills"]
+  },
+  "instructions": ["__DOTFILES_ROOT__/_shared/agents/AGENTS.md"],
   "mcp": {
     "codegraph": {
       "enabled": true,
