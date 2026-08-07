@@ -72,6 +72,7 @@ if command -v nix >/dev/null 2>&1; then
   installer_success "nix available locally (optional)"
 else
   installer_note "nix not installed locally — fine, the server runs nix; deploy.sh uses ssh"
+  installer_note "For local 'nix flake check' before deploys, run: nix-install"
 fi
 
 installer_note "Run 'hl' to ssh in, 'hlup' to redeploy, 'hldoctor' for a health check"

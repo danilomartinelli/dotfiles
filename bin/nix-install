@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Explicit adapter to install the Nix CLI on this Mac via the Determinate
+# Systems installer. This creates the /nix APFS volume and a launchd daemon,
+# which is why it never runs automatically from bootstrap or `dot` — invoke
+# it deliberately, like ssh-key-create and sops-key-create.
+#
+# The local CLI is optional for the homelab: scripts/deploy.sh runs nix on
+# the server over SSH. Install it when you want `nix flake check` locally
+# before deploying.
+
+set -eu
+
+if command -v nix >/dev/null 2>&1; then
+  printf '✓ nix already installed: %s\n' "$(nix --version)"
+  exit 0
+fi
+
+printf '› Installing Nix via the Determinate Systems installer\n'
+printf '  This creates the /nix APFS volume and a launchd daemon.\n'
+printf '  The installer will ask for confirmation and sudo.\n\n'
+
+curl -fsSL https://install.determinate.systems/nix | sh -s -- install
+
+printf '\n✓ Done. Open a new shell, then verify with: nix --version\n'
+printf '  Validate the homelab flake with: nix flake check ~/Workspace/github.com/danilomartinelli/homelab\n'

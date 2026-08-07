@@ -242,6 +242,7 @@ Zsh adds it to `PATH`. A file named `git-foo` can be invoked as either
 | `e`               | `e [path]`: open a path, or the current directory, in `$EDITOR`                                        |
 | `headers`         | `headers URL`: print HTTP response headers using `curl`                                                |
 | `keyclu-import`   | Hand the versioned `keyclu/custom-shortcuts.keyclu` cheatsheet to KeyClu for one-tap import            |
+| `nix-install`     | Explicitly install the Nix CLI via the Determinate Systems installer (never runs from bootstrap/`dot`) |
 | `set-defaults`    | Apply `_macos/set-defaults.sh` from the active checkout                                                |
 | `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity for `default`, `personal`, or `work`   |
 | `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key for `default`, `personal`, or `work` |
