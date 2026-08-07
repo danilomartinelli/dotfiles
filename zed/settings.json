@@ -2,7 +2,8 @@
   "agent": {
     "sandbox_permissions": {
       "network_hosts": [
-        "registry.npmjs.org"
+        "registry.npmjs.org",
+        "formulae.brew.sh"
       ],
       "write_paths": [
         {

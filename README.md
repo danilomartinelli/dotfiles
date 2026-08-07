@@ -155,9 +155,10 @@ Other lifecycle commands:
 | Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                                         |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                          |
-| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `skim`        |
+| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`                         |
 | Design and media          | `cleanshot`, `figma`, `spotify`                                                                                             |
-| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                                            |
+| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                             |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                                        |
 | Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                             |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`

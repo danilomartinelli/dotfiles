@@ -70,6 +70,7 @@ cask 'bitwarden'                    # Password manager
 cask 'caffeine'                     # Prevents the Mac from going to sleep
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
 cask 'cleanshot'                    # Screenshot and screen recording tool
+cask 'discord'                      # Voice and text chat
 cask 'figma'                        # Design tool
 cask 'font-jetbrains-mono-nerd-font' # JetBrains Mono with Nerd Font glyphs (terminal font)
 cask 'ghostty'                      # Fast, native GPU-accelerated terminal emulator
@@ -92,6 +93,7 @@ cask 'session-manager-plugin'       # AWS Systems Manager Session Manager plugin
 cask 'spotify'                      # Music streaming service
 cask 'tableplus'                    # Database management tool
 cask 'tailscale-app'                # Mesh VPN based on WireGuard
+cask 'slack'                        # Team communication and collaboration
 cask 'whatsapp'                     # Messaging application
 cask 'yubico-authenticator'         # Authenticator for YubiKey security keys
 cask 'zed'                          # High-performance collaborative code editor

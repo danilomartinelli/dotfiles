@@ -229,7 +229,9 @@ print_bootstrap_checklist() {
   open_app '/Applications/ChatGPT.app'
   open_app '/Applications/CleanShot X.app'
   open_app '/Applications/Google Chrome.app'
+  open_app '/Applications/Discord.app'
   open_app '/Applications/Paste.app'
+  open_app '/Applications/Slack.app'
   open_app '/Applications/Spark.app'
 
   printf '\n'
@@ -258,6 +260,8 @@ print_bootstrap_checklist() {
   printf '    Paste          → grant Accessibility + Full Disk Access permissions\n'
   printf '    Raycast        → complete the onboarding; add script commands dir:\n'
   printf '      %s/raycast/scripts\n' "$DOTFILES_ROOT"
+  printf '    Discord        → sign in to your account\n'
+  printf '    Slack          → sign in to your workspace(s)\n'
   printf '    Spark          → sign in to your email accounts\n'
   printf '    Tailscale      → sign in and connect to your network\n'
   printf '\n'
@@ -273,6 +277,7 @@ print_bootstrap_checklist() {
   printf '    Postman        → sign in for workspace sync\n'
   printf '    Raycast        → install extensions: ChatGPT, Google Drive, Google Workspace\n'
   printf '    Skim           → open once to verify PDF associations\n'
+  printf '    Google Chat    → install as PWA in Chrome: open Chat, then ⋮ → Save and share → Install page as app\n'
   printf '    Spotify        → sign in to your account\n'
   printf '    WhatsApp       → scan QR code to pair with your phone\n'
   printf '\n'
