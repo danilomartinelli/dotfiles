@@ -10,7 +10,13 @@ installer_banner "configuring Tailscale"
 
 installer_require_app Tailscale tailscale-app "/Applications/Tailscale.app"
 
-open -ga "$INSTALLER_APP" 2>/dev/null || true
+# Only open on first install; subsequent runs skip to avoid interrupting work.
+first_run_marker="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/tailscale-opened"
+if [ ! -f "$first_run_marker" ]; then
+  open -ga "$INSTALLER_APP" 2>/dev/null || true
+  mkdir -p "$(dirname "$first_run_marker")"
+  touch "$first_run_marker"
+fi
 
 if command -v tailscale >/dev/null 2>&1; then
   installer_success "tailscale CLI available"

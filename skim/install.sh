@@ -11,7 +11,13 @@ installer_banner "setting Skim as default PDF viewer"
 installer_require_app Skim skim /Applications/Skim.app
 
 # Open once so macOS can prompt for permissions if needed.
-open -ga "$INSTALLER_APP" 2>/dev/null || true
+# Only open on first install; subsequent runs skip to avoid interrupting work.
+first_run_marker="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/skim-opened"
+if [ ! -f "$first_run_marker" ]; then
+  open -ga "$INSTALLER_APP" 2>/dev/null || true
+  mkdir -p "$(dirname "$first_run_marker")"
+  touch "$first_run_marker"
+fi
 
 installer_require_command duti
 

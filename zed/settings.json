@@ -1,5 +1,24 @@
 {
   "agent": {
+    "sandbox_permissions": {
+      "network_hosts": [
+        "registry.npmjs.org"
+      ],
+      "write_paths": [
+        {
+          "requested": "/Users/danilomartinelli/.local/share/mise/installs/npm-anthropic-ai-claude-code",
+          "resolved": "/Users/danilomartinelli/.local/share/mise/installs/npm-anthropic-ai-claude-code"
+        },
+        {
+          "requested": "/Users/danilomartinelli/.local/share/mise/installs/npm-opencode-ai",
+          "resolved": "/Users/danilomartinelli/.local/share/mise/installs/npm-opencode-ai"
+        },
+        {
+          "requested": "/Users/danilomartinelli/.codex",
+          "resolved": "/Users/danilomartinelli/.codex"
+        }
+      ]
+    },
     "favorite_models": [],
     "model_parameters": [],
     "tool_permissions": {

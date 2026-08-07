@@ -14,7 +14,13 @@ SCRIPTS_DIR="$TOPIC_DIR/scripts"
 
 # Open once so macOS can prompt for Accessibility permission and Raycast can
 # set itself as the Spotlight replacement on first launch.
-open -ga "$INSTALLER_APP" 2>/dev/null || true
+# Only open on first install; subsequent runs skip to avoid interrupting work.
+first_run_marker="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/raycast-opened"
+if [ ! -f "$first_run_marker" ]; then
+  open -ga "$INSTALLER_APP" 2>/dev/null || true
+  mkdir -p "$(dirname "$first_run_marker")"
+  touch "$first_run_marker"
+fi
 
 # Raycast stores most settings in its own sync store; script commands are the
 # durable, repo-friendly surface. Point Raycast at this directory once:

@@ -150,15 +150,15 @@ Other lifecycle commands:
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                                                       |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `orbstack`, `postman`, `tableplus`, `zed`              |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                                                  |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                   |
-| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `skim` |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                      |
-| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                                     |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                      |
+| Group                     | Homebrew casks                                                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                                         |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                          |
+| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `readdle-spark`, `skim`        |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                             |
+| Network and security      | `bitwarden`, `tailscale-app`, `whatsapp`, `yubico-authenticator`                                                            |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                             |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
 assigns supported file associations when `Archiver.app` is present (installed
@@ -185,42 +185,44 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 version and artifact checksums for every declaration (`lockfile = true` in
 `[settings]`). Run `mise upgrade` to advance the lock deliberately:
 
-| Tool                                  | Version      |
-| ------------------------------------- | ------------ |
-| `aqua:koalaman/shellcheck`            | `latest`     |
-| `bun`                                 | `1.3.2`      |
-| `elixir`                              | `1.18`       |
-| `erlang`                              | `27`         |
-| `go`                                  | `1.25.5`     |
-| `go:mvdan.cc/sh/v3/cmd/shfmt`         | `latest`     |
-| `java`                                | `temurin-21` |
-| `node`                                | `lts`        |
-| `npm:@anthropic-ai/claude-code`       | `2.1.223`    |
-| `npm:@earendil-works/pi-coding-agent` | `0.84.0`     |
-| `npm:@openai/codex`                   | `0.146.1`    |
-| `npm:eas-cli`                         | `16.28.0`    |
-| `npm:opencode-ai`                     | `1.18.14`    |
-| `npm:skills`                          | `1.5.21`     |
-| `npm:wrangler`                        | `4.119.0`    |
-| `pipx:aider-chat`                     | `0.86.2`     |
-| `pipx:kimi-cli`                       | `1.49.0`     |
-| `pipx:mdformat`                       | `latest`     |
-| `pnpm`                                | `10.23.0`    |
-| `python`                              | `3.14.0`     |
-| `ruby`                                | `3.4`        |
-| `rust`                                | `1.91.1`     |
-| `terraform`                           | `1.14.0`     |
-| `uv`                                  | `latest`     |
-| `yarn`                                | `4.11.0`     |
+| Tool                                        | Version      |
+| ------------------------------------------- | ------------ |
+| `aqua:koalaman/shellcheck`                  | `latest`     |
+| `bun`                                       | `1.3.2`      |
+| `elixir`                                    | `1.18`       |
+| `erlang`                                    | `28`         |
+| `go`                                        | `1.25.5`     |
+| `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`     |
+| `java`                                      | `temurin-21` |
+| `node`                                      | `lts`        |
+| `npm:@agentclientprotocol/claude-agent-acp` | `0.65.0`     |
+| `npm:@agentclientprotocol/codex-acp`        | `1.1.13`     |
+| `npm:@anthropic-ai/claude-code`             | `2.1.223`    |
+| `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
+| `npm:@openai/codex`                         | `0.146.1`    |
+| `npm:eas-cli`                               | `16.28.0`    |
+| `npm:opencode-ai`                           | `1.18.14`    |
+| `npm:skills`                                | `1.5.21`     |
+| `npm:wrangler`                              | `4.119.0`    |
+| `pipx:aider-chat`                           | `0.86.2`     |
+| `pipx:kimi-cli`                             | `1.49.0`     |
+| `pipx:mdformat`                             | `latest`     |
+| `pnpm`                                      | `10.23.0`    |
+| `python`                                    | `3.14.0`     |
+| `ruby`                                      | `3.4`        |
+| `rust`                                      | `1.91.1`     |
+| `terraform`                                 | `1.14.0`     |
+| `uv`                                        | `latest`     |
+| `yarn`                                      | `4.11.0`     |
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
 toolchain; `shellcheck` (aqua backend) lints the shell scripts. `npm:skills` is the Vercel Labs agent-skills CLI (`skills add`,
 `skills list`). Package managers `bun`, `pnpm`, and `yarn`, plus `terraform`,
 are also declared here so a fresh machine gets them via Mise. CLI tools
-distributed as language packages — `npm:opencode-ai` (OpenCode),
-`npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and `pipx:aider-chat`
-(Aider) — are declared here rather than in the `Brewfile`; see
+distributed as language packages — `npm:@agentclientprotocol/claude-agent-acp` (Claude ACP
+agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
+`pipx:aider-chat` (Aider) — are declared here rather than in the `Brewfile`; see
 `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 
 ## Public commands

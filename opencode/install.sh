@@ -35,6 +35,20 @@ else
   installer_note "Install OpenCode with: brew install opencode"
 fi
 
+# Suppress the codex chronicle feature warning if the config file already exists.
+# If the file does not exist yet, codex will create it on first run.
+CODEX_CONFIG="$HOME/.codex/config.toml"
+if [ -f "$CODEX_CONFIG" ] && ! grep -q "suppress_unstable_features_warning" "$CODEX_CONFIG"; then
+  # Prepend the key to suppress the chronicle feature warning.
+  tmp=$(mktemp)
+  {
+    printf 'suppress_unstable_features_warning = true\n\n'
+    cat "$CODEX_CONFIG"
+  } >"$tmp"
+  mv "$tmp" "$CODEX_CONFIG"
+  installer_success "Suppressed codex unstable features warning in $CODEX_CONFIG"
+fi
+
 installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
 installer_note "Select a model in OpenCode with /models (Zen/Go, Kimi, MiniMax, Z.AI/GLM)"
 installer_success "OpenCode configured"
