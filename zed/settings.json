@@ -31,6 +31,10 @@
         {
           "requested": "/Users/danilomartinelli/.codex",
           "resolved": "/Users/danilomartinelli/.codex"
+        },
+        {
+          "requested": "/Users/danilomartinelli/.local/share/mise/installs/npm-opencode-ai/1.18.14/node_modules/.mise/opencode-ai@1.18.14/node_modules/opencode-ai/bin",
+          "resolved": "/Users/danilomartinelli/.cache/aube/virtual-store/opencode-ai@1.18.14-dd8686a910b10b5e/node_modules/opencode-ai/bin"
         }
       ]
     },
