@@ -152,7 +152,7 @@ Other lifecycle commands:
 
 | Group                     | Homebrew casks                                                                                                              |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `onlook`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                                         |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                          |
 | Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`                         |
