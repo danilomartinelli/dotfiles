@@ -12,5 +12,9 @@ Brewfile.lock.json
 # Local agent workspace state
 .context/
 
+# Wrangler writes a per-directory cache (account id, auth state) wherever it
+# is invoked. It is machine-local and carries account identifiers.
+.wrangler/
+
 # Dump files
 *.dump
