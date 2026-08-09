@@ -44,6 +44,7 @@ brew 'mas'                          # Mac App Store command line interface
 brew 'mise'                         # Runtime version manager (successor to asdf)
 brew 'mkcert'                       # Locally-trusted TLS certificates for development
 brew 'neovim'                       # Hyperextensible Vim-based text editor
+brew 'nixfmt'                       # Formatter for the Nix language
 brew 'pandoc'                       # Document converter
 brew 'python@3.12'                  # Python 3.12 runtime (aider-chat requires <3.13)
 brew 'ripgrep'                      # Line-oriented recursive search tool

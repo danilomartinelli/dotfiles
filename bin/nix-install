@@ -11,8 +11,22 @@
 
 set -eu
 
+# Provision nixd, the Nix language server used by Zed. It has no Homebrew
+# formula and publishes no release binaries, so nixpkgs is the only sane
+# source — which is why this lives here rather than in the Brewfile.
+install_nixd() {
+  if command -v nixd >/dev/null 2>&1; then
+    printf '✓ nixd already installed: %s\n' "$(command -v nixd)"
+    return 0
+  fi
+  printf '› Installing nixd (Nix language server) from nixpkgs\n'
+  nix profile install nixpkgs#nixd
+  printf '✓ nixd installed\n'
+}
+
 if command -v nix >/dev/null 2>&1; then
   printf '✓ nix already installed: %s\n' "$(nix --version)"
+  install_nixd
   exit 0
 fi
 
@@ -22,5 +36,7 @@ printf '  The installer will ask for confirmation and sudo.\n\n'
 
 curl -fsSL https://install.determinate.systems/nix | sh -s -- install
 
-printf '\n✓ Done. Open a new shell, then verify with: nix --version\n'
-printf '  Validate the homelab flake with: nix flake check ~/Workspace/github.com/danilomartinelli/homelab\n'
+printf '\n✓ Nix installed. Open a NEW shell, then run this command again to\n'
+printf '  provision nixd (the current shell has no nix on PATH yet).\n\n'
+printf '  Afterwards, validate the homelab flake with:\n'
+printf '    nix flake check ~/Workspace/github.com/danilomartinelli/homelab\n'

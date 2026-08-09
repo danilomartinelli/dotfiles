@@ -130,6 +130,7 @@ Other lifecycle commands:
 | `mise`                    | Runtime manager                                   |
 | `mkcert`                  | Locally-trusted TLS certificates                  |
 | `neovim`                  | Terminal editor                                   |
+| `nixfmt`                  | Nix language formatter                            |
 | `pandoc`                  | Document conversion                               |
 | `python@3.12`             | Python 3.12 runtime (aider-chat requires \<3.13)  |
 | `ripgrep`                 | Fast recursive search                             |

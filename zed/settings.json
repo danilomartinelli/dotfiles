@@ -161,5 +161,20 @@
     "Python": {
       "tab_size": 4,
     },
+    // The Zed nix extension ships both nil and nixd. nixd is preferred here
+    // because it evaluates the flake, so completions resolve real option
+    // names instead of guessing from syntax alone. It is not a Homebrew
+    // formula and has no release binaries — `nix-install` provisions it
+    // from nixpkgs. Until then Zed falls back to nil.
+    "Nix": {
+      "tab_size": 2,
+      "language_servers": ["nixd", "nil"],
+      "formatter": {
+        "external": {
+          "command": "nixfmt",
+          "arguments": [],
+        },
+      },
+    },
   },
 }
