@@ -82,9 +82,10 @@ Other lifecycle commands:
 ## What gets installed
 
 `Brewfile` is the source of truth for machine packages, applications, and taps
-(including `nikitabobko/tap` for AeroSpace).
-`homebrew/_bundle.sh` trusts `nikitabobko/tap` when needed, then runs
-`brew bundle` against that file.
+(including `nikitabobko/tap` for AeroSpace and `vultr/vultr-cli` for the Vultr
+CLI).
+`homebrew/_bundle.sh` trusts `nikitabobko/tap` and `vultr/vultr-cli` when
+needed, then runs `brew bundle` against that file.
 
 ### Homebrew formulae
 
@@ -125,6 +126,7 @@ Other lifecycle commands:
 | `kubectx`                 | Context/namespace switching (`kubectx`/`kubens`)  |
 | `kubernetes-cli`          | `kubectl`                                         |
 | `kustomize`               | Kubernetes manifest customization                 |
+| `vultr-cli`               | Vultr CLI for managing Vultr resources and VKE    |
 | `lazygit`                 | Terminal UI for Git                               |
 | `mas`                     | Mac App Store CLI                                 |
 | `mise`                    | Runtime manager                                   |
@@ -148,6 +150,54 @@ Other lifecycle commands:
 | `zoxide`                  | Smarter `cd`                                      |
 | `zsh-autosuggestions`     | Zsh autosuggestions                               |
 | `zsh-syntax-highlighting` | Zsh syntax highlighting                           |
+
+### Vultr CLI and VKE
+
+VKE (Vultr Kubernetes Engine) access uses the `vultr-cli` formula. Keep
+`VULTR_API_KEY` exclusively in `~/.localrc`, which is private, mode `600`, and
+not versioned. Do not put the key in this repository, a checked-in `.env` file,
+or shell history. Add it locally with a placeholder for your own key:
+
+```bash
+# In ~/.localrc only:
+export VULTR_API_KEY='<your Vultr API key>'
+```
+
+Download a cluster kubeconfig to a path outside the checkout. Replace
+`<CLUSTER_ID>` with the target cluster's ID:
+
+```bash
+mkdir -p "$HOME/.kube"
+vultr-cli kubernetes config <CLUSTER_ID> \
+  --output-file "$HOME/.kube/vultr-<CLUSTER_ID>.yaml"
+```
+
+On macOS, `KUBECONFIG` is a colon-separated list. Merge the existing config and
+the downloaded VKE config, then clear the temporary variable:
+
+```bash
+export KUBECONFIG="$HOME/.kube/config:$HOME/.kube/vultr-<CLUSTER_ID>.yaml"
+kubectl config view --merge --flatten > "$HOME/.kube/config.merged"
+chmod 600 "$HOME/.kube/config.merged"
+mv "$HOME/.kube/config.merged" "$HOME/.kube/config"
+unset KUBECONFIG
+```
+
+Never version a downloaded or merged kubeconfig: it contains cluster access
+credentials. Before any sensitive operation, confirm the selected context
+and namespace. The existing relevant aliases are:
+
+| Alias         | Expansion                                  |
+| ------------- | ------------------------------------------ |
+| `k`           | `kubectl`                                  |
+| `kctx`        | `kubectx` (from the `kubectx` package)     |
+| `kctx-list`   | `kubectl config get-contexts`              |
+| `kcurrent`    | `kubectl config current-context`           |
+| `konfig`      | `kubectl config view --minify --raw`       |
+| `kns`         | `kubens` (from the `kubectx` package)      |
+
+Use `kctx-list` and `kcurrent` (or `kubectl config current-context`) to verify
+the target before applying, deleting, or changing cluster resources.
 
 ### Applications and fonts
 
