@@ -12,7 +12,7 @@ BREW_BIN=
 BREWFILE=$DOTFILES_ROOT/Brewfile
 
 # Third-party taps that Homebrew must explicitly trust (not expressible in Brewfile).
-TRUSTED_TAPS='nikitabobko/tap'
+TRUSTED_TAPS='nikitabobko/tap vultr/vultr-cli'
 
 usage() {
   cat >&2 <<'EOF'
@@ -61,7 +61,7 @@ if [ ! -f "$BREWFILE" ]; then
   exit 1
 fi
 
-# Trustable third-party taps must exist before brew bundle installs their casks.
+# Trustable third-party taps must exist before brew bundle installs their formulae or casks.
 for tap in $TRUSTED_TAPS; do
   "$BREW_BIN" tap "$tap" || exit 1
   if ! "$BREW_BIN" trust --tap "$tap"; then
