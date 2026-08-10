@@ -1,7 +1,8 @@
 cask_args appdir: '/Applications'
 
-# Third-party taps (nikitabobko/tap is also trusted by homebrew/_bundle.sh)
+# Third-party taps trusted by homebrew/_bundle.sh
 tap 'nikitabobko/tap'               # AeroSpace tiling window manager
+tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
 
 # Command line tools
 brew 'age'                          # Modern file encryption (SOPS identity backend)
@@ -39,6 +40,7 @@ brew 'k9s'                          # Terminal UI for Kubernetes clusters
 brew 'kubectx'                      # Switch kubectl contexts and namespaces (kubectx/kubens)
 brew 'kubernetes-cli'               # Kubernetes command line tools
 brew 'kustomize'                    # Kubernetes configuration management tool
+brew 'vultr-cli'                    # Vultr CLI for managing Vultr resources and VKE clusters
 brew 'lazygit'                      # Terminal UI for Git
 brew 'mas'                          # Mac App Store command line interface
 brew 'mise'                         # Runtime version manager (successor to asdf)
