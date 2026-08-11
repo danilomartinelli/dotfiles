@@ -250,6 +250,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@agentclientprotocol/claude-agent-acp` | `0.65.0`     |
 | `npm:@agentclientprotocol/codex-acp`        | `1.1.13`     |
 | `npm:@anthropic-ai/claude-code`             | `2.1.223`    |
+| `npm:@colbymchenry/codegraph`               | `1.5.0`      |
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
@@ -266,6 +267,13 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `terraform`                                 | `1.14.0`     |
 | `uv`                                        | `latest`     |
 | `yarn`                                      | `4.11.0`     |
+
+The `npm:@colbymchenry/codegraph` runtime exposes the `codegraph` binary
+globally through Mise. Project use is opt-in: run `codegraph init` from the
+project root to create a local `.codegraph/` directory, which may contain an
+index of the code. Do not version or share `.codegraph/` without evaluating its
+contents and the project's policy. CodeGraph does not automatically install
+MCP integrations or configure agents.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
