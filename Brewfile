@@ -37,6 +37,7 @@ brew 'hermes-agent'                 # Nous Research Hermes Agent CLI
 brew 'imagemagick'                  # Image manipulation library and tools
 brew 'jq'                           # Command-line JSON processor
 brew 'k9s'                          # Terminal UI for Kubernetes clusters
+brew 'ksops'                        # Kustomize SOPS exec plugin
 brew 'kubectx'                      # Switch kubectl contexts and namespaces (kubectx/kubens)
 brew 'kubernetes-cli'               # Kubernetes command line tools
 brew 'kustomize'                    # Kubernetes configuration management tool
