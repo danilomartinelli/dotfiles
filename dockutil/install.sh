@@ -45,7 +45,7 @@ fi
 
 # Add Apps (only if they exist)
 add_app_to_dock "/Applications/Ghostty.app" "Ghostty"
-add_app_to_dock "/Applications/Google Chrome.app" "Google Chrome"
+add_app_to_dock "/Applications/Dia.app" "Dia"
 add_app_to_dock "/Applications/Zed.app" "Zed"
 add_app_to_dock "/Applications/Goose.app" "Goose"
 add_app_to_dock "/Applications/Obsidian.app" "Obsidian"

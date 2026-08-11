@@ -206,7 +206,7 @@ the target before applying, deleting, or changing cluster resources.
 | Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                               |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                |
-| Browsers and productivity | `archiver-app`, `caffeine`, `google-chrome`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`               |
+| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`       |
 | Design and media          | `cleanshot`, `figma`, `spotify`                                                                                   |
 | Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                   |
 | Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                              |

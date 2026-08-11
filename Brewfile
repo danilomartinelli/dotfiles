@@ -77,7 +77,7 @@ cask 'discord'                      # Voice and text chat
 cask 'figma'                        # Design tool
 cask 'font-jetbrains-mono-nerd-font' # JetBrains Mono with Nerd Font glyphs (terminal font)
 cask 'ghostty'                      # Fast, native GPU-accelerated terminal emulator
-cask 'google-chrome'                # Google Chrome browser
+cask 'thebrowsercompany-dia'        # Dia browser
 cask 'google-drive'                 # Google Drive with Finder (File Provider) integration
 cask 'keyclu'                       # Discover and browse application shortcuts
 cask 'lens'                         # Kubernetes IDE

@@ -77,19 +77,19 @@ show_library_folder() {
   fi
 }
 
-# Advisory: point the default browser at Chrome. macOS shows a one-click
+# Advisory: point the default browser at Dia. macOS shows a one-click
 # confirmation dialog the first time; the script does not wait for it.
 set_default_browser() {
   if ! command -v defaultbrowser >/dev/null 2>&1; then
     echo "  → defaultbrowser not installed yet; skipping default browser" >&2
     return 0
   fi
-  if defaultbrowser 2>/dev/null | grep -q '^\* *chrome$'; then
-    echo "  ✓ Chrome already the default browser"
-  elif defaultbrowser chrome 2>/dev/null; then
-    echo "  ✓ Default browser set to Chrome (confirm the macOS dialog)"
+  if defaultbrowser 2>/dev/null | grep -q '^\* *dia$'; then
+    echo "  ✓ Dia already the default browser"
+  elif defaultbrowser dia 2>/dev/null; then
+    echo "  ✓ Default browser set to Dia (confirm the macOS dialog)"
   else
-    echo "  Warning: could not set the default browser (is Chrome installed?)" >&2
+    echo "  Warning: could not set the default browser (is Dia installed?)" >&2
   fi
 }
 
