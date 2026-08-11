@@ -123,6 +123,7 @@ needed, then runs `brew bundle` against that file.
 | `imagemagick`             | Image conversion and manipulation                 |
 | `jq`                      | JSON processing                                   |
 | `k9s`                     | Terminal UI for Kubernetes clusters               |
+| `ksops`                   | Kustomize SOPS exec plugin                       |
 | `kubectx`                 | Context/namespace switching (`kubectx`/`kubens`)  |
 | `kubernetes-cli`          | `kubectl`                                         |
 | `kustomize`               | Kubernetes manifest customization                 |
