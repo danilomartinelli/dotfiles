@@ -5,76 +5,54 @@ set -e
 # shellcheck disable=SC1091
 . "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
-installer_banner "setting up OpenCode configuration"
+installer_banner "setting up OpenCode"
 
-CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
+CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$HOME/.opencode}"
 
-mkdir -p "$CONFIG_DIR/skills" "$CONFIG_DIR/plugins" "$CONFIG_DIR/agents" "$CONFIG_DIR/commands"
-
-# Render the portable template directly instead of linking and then replacing
-# the link. `skills.paths` and `instructions` resolve relative to opencode's
-# cwd, so __DOTFILES_ROOT__ must become an absolute path. Comparing first keeps
-# repeated installs idempotent; a changed target is preserved in a numbered
-# backup before the new render replaces it.
-CONFIG_SOURCE="$TOPIC_DIR/opencode.json"
-CONFIG_TARGET="$CONFIG_DIR/opencode.json"
-rendered=$(mktemp "$CONFIG_DIR/.opencode.json.XXXXXX")
-if ! sed "s|__DOTFILES_ROOT__|$DOTFILES_ROOT|g" "$CONFIG_SOURCE" >"$rendered"; then
-  rm -f "$rendered"
-  exit 1
-fi
-
-if cmp -s "$rendered" "$CONFIG_TARGET"; then
-  rm "$rendered"
-  installer_success "OpenCode config already rendered"
+# Bootstrap owns *.symlink entries. The installer only verifies that the
+# OpenCode payload is available; duplicating link ownership here would make
+# conflict handling differ between first install and subsequent updates.
+if [ -d "$CONFIG_DIR" ]; then
+  installer_success "OpenCode config available at $CONFIG_DIR"
 else
-  if [ -e "$CONFIG_TARGET" ] || [ -L "$CONFIG_TARGET" ]; then
-    backup="$CONFIG_TARGET.backup"
-    backup_number=1
-    while [ -e "$backup" ] || [ -L "$backup" ]; do
-      backup="$CONFIG_TARGET.backup.$backup_number"
-      backup_number=$((backup_number + 1))
-    done
-    mv "$CONFIG_TARGET" "$backup"
-    installer_note "Existing OpenCode config moved to $backup"
-  fi
-  mv "$rendered" "$CONFIG_TARGET"
-  installer_success "OpenCode config rendered"
+  installer_warn "OpenCode config is not linked at $CONFIG_DIR"
+  installer_hint "Run $DOTFILES_ROOT/_scripts/link-dotfiles to link opencode/opencode.symlink"
 fi
 
-installer_link_config --label "OpenCode TUI config" \
-  "$TOPIC_DIR/tui.json" "$CONFIG_DIR/tui.json"
+# OCX 2.0 receipts may store this registry instruction relative to the config
+# directory even though the resolver interprets it relative to the workspace.
+# Normalize only the known legacy value; the receipt otherwise remains owned
+# by OCX and machine-local.
+OCX_RECEIPT="$HOME/.ocx/receipt.jsonc"
+if [ -f "$OCX_RECEIPT" ] && \
+  grep -Fq '"./tools/philosophy.md"' "$OCX_RECEIPT"; then
+  receipt_dir=$(dirname -- "$OCX_RECEIPT")
+  rendered_receipt=$(mktemp "$receipt_dir/.receipt.jsonc.XXXXXX")
+  if cp -p "$OCX_RECEIPT" "$rendered_receipt" && \
+    sed 's|"\./tools/philosophy\.md"|".opencode/tools/philosophy.md"|g' \
+      "$OCX_RECEIPT" >"$rendered_receipt" && \
+    grep -Fq '".opencode/tools/philosophy.md"' "$rendered_receipt" && \
+    mv "$rendered_receipt" "$OCX_RECEIPT"; then
+    installer_success "Migrated OCX receipt instruction path"
+  else
+    rm -f "$rendered_receipt"
+    installer_warn "Could not migrate $OCX_RECEIPT"
+    installer_hint "Replace ./tools/philosophy.md with .opencode/tools/philosophy.md"
+  fi
+fi
 
-# Link each skill directory so new skills can be added in-repo.
-for skill_dir in "$TOPIC_DIR"/skills/*/; do
-  [ -d "$skill_dir" ] || continue
-  skill_dir=${skill_dir%/}
-  skill_name=$(basename "$skill_dir")
-  installer_link_config --label "skill $skill_name" \
-    "$skill_dir" "$CONFIG_DIR/skills/$skill_name"
-done
-
-# OCX (https://github.com/kdcokenny/ocx) is the OpenCode extension manager.
 if command -v ocx >/dev/null 2>&1; then
   installer_success "ocx CLI available"
-
-  # The link helper owns the target path; creating ~/.opencode first would
-  # force every fresh install through the backup path.
-  installer_link_config --policy numbered-backup --label "OpenCode OCX config" \
-    "$TOPIC_DIR/extensions" "$HOME/.opencode"
-
-  installer_note "Launch OpenCode with a profile via: ocx oc -p <profile>"
 else
   installer_note "Install OCX with: mise install"
 fi
 
-# Install the opencode CLI if unavailable.
 if command -v opencode >/dev/null 2>&1; then
   installer_success "opencode CLI available"
 else
-  installer_note "Install OpenCode with: brew install opencode"
+  installer_note "Install OpenCode with: mise install"
 fi
 
 installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
-installer_note "Select a model in OpenCode with /models (Zen/Go, Kimi, MiniMax, Z.AI/GLM)"
+installer_note "Select a model in OpenCode with /models"
 installer_success "OpenCode configured"

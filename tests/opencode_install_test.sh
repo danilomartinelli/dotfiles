@@ -27,72 +27,99 @@ make_fake_clis() {
   printf '%s\n' "$fake_bin"
 }
 
-test_ocx_config_replaces_existing_directory_with_numbered_backup() {
+test_env_defaults_to_opencode_home_and_preserves_override() {
+  local home output
+
+  home=$(scenario_tmpdir env)
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
+  output=$(env -u OPENCODE_CONFIG_DIR HOME="$home" /bin/zsh -c \
+    'source "$1"; print -r -- "$OPENCODE_CONFIG_DIR"' zsh \
+    "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+  assert_equal "$home/.opencode" "$output" 'default OpenCode config directory'
+
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
+  output=$(env HOME="$home" XDG_CONFIG_HOME="$home/.config" \
+    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
+    /bin/zsh -c 'source "$1"; print -r -- "$OPENCODE_CONFIG_DIR"' zsh \
+    "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+  assert_equal "$home/.opencode" "$output" 'legacy OpenCode config directory'
+
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
+  output=$(env HOME="$home" OPENCODE_CONFIG_DIR="$home/custom-opencode" \
+    /bin/zsh -c 'source "$1"; print -r -- "$OPENCODE_CONFIG_DIR"' zsh \
+    "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+  assert_equal "$home/custom-opencode" "$output" 'OpenCode config override'
+}
+
+test_config_resolves_managed_instructions_through_config_dir() {
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc" \
+    '"{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md"'
+  [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md ]] \
+    || scenario_fail 'managed philosophy instructions are missing'
+}
+
+test_installer_verifies_linked_payload_without_relinking() {
+  local home fake_bin marker receipt receipt_hash
+
+  home=$(scenario_tmpdir linked)
+  fake_bin=$(make_fake_clis "$home")
+  marker=$home/.opencode/managed-marker
+  receipt=$home/.ocx/receipt.jsonc
+  mkdir -p "$home/.opencode" "$home/.ocx"
+  printf 'keep\n' >"$marker"
+  scenario_write_file "$receipt" <<'EOF'
+{
+  "untouched": true,
+  "opencode": {
+    "instructions": ["./tools/philosophy.md"]
+  }
+}
+EOF
+
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+
+  assert_contains "$home/stdout.log" "OpenCode config available at $home/.opencode"
+  assert_contains "$home/stdout.log" 'ocx CLI available'
+  assert_contains "$home/stdout.log" 'opencode CLI available'
+  assert_contains "$home/stdout.log" 'Migrated OCX receipt instruction path'
+  assert_contains "$marker" 'keep'
+  assert_contains "$receipt" '"untouched": true'
+  assert_contains "$receipt" '".opencode/tools/philosophy.md"'
+  assert_not_contains "$receipt" '"./tools/philosophy.md"'
+  [[ ! -e $home/.config/opencode ]] \
+    || scenario_fail 'installer recreated the legacy XDG config directory'
+
+  receipt_hash=$(shasum -a 256 "$receipt" | cut -d' ' -f1)
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_equal "$receipt_hash" \
+    "$(shasum -a 256 "$receipt" | cut -d' ' -f1)" \
+    'OCX receipt after idempotent reinstall'
+  assert_not_contains "$home/stdout.log" 'Migrated OCX receipt instruction path'
+}
+
+test_installer_explains_missing_bootstrap_link() {
   local home fake_bin
 
-  home=$(scenario_tmpdir home)
+  home=$(scenario_tmpdir missing)
   fake_bin=$(make_fake_clis "$home")
-  mkdir -p "$fake_bin" "$home/.opencode" "$home/.opencode.backup"
-  printf 'current config\n' >"$home/.opencode/current-marker"
-  printf 'older backup\n' >"$home/.opencode.backup/backup-marker"
 
-  scenario_capture "$home" env HOME="$home" \
-    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
 
-  [[ -L $home/.opencode ]] || scenario_fail 'OCX home config was not linked'
-  assert_equal "$REPOSITORY_ROOT/opencode/extensions" \
-    "$(readlink "$home/.opencode")" 'OCX config link target'
-  assert_contains "$home/.opencode.backup/backup-marker" 'older backup'
-  assert_contains "$home/.opencode.backup.1/current-marker" 'current config'
-  assert_contains "$home/stdout.log" 'OpenCode OCX config linked'
-
-  scenario_capture "$home" env HOME="$home" \
-    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-  assert_contains "$home/stdout.log" 'OpenCode OCX config already linked'
-  [[ ! -e $home/.opencode.backup.2 ]] \
-    || scenario_fail 'idempotent reinstall created another backup'
+  assert_contains "$home/stderr.log" \
+    "OpenCode config is not linked at $home/.opencode"
+  assert_contains "$home/stderr.log" \
+    'link opencode/opencode.symlink'
 }
 
-test_rendered_config_updates_with_an_existing_backup() {
-  local home fake_bin config expected
-
-  home=$(scenario_tmpdir rendered)
-  fake_bin=$(make_fake_clis "$home")
-  config=$home/.config/opencode/opencode.json
-  expected=$home/expected-opencode.json
-  mkdir -p "$(dirname "$config")"
-  printf 'stale rendered config\n' >"$config"
-  printf 'older backup\n' >"$config.backup"
-  sed "s|__DOTFILES_ROOT__|$REPOSITORY_ROOT|g" \
-    "$REPOSITORY_ROOT/opencode/opencode.json" >"$expected"
-
-  scenario_capture "$home" env HOME="$home" \
-    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  cmp -s "$expected" "$config" \
-    || scenario_fail 'OpenCode config was not refreshed from the template'
-  assert_contains "$config.backup" 'older backup'
-  assert_contains "$config.backup.1" 'stale rendered config'
-  assert_not_contains "$home/stderr.log" 'leaving OpenCode config untouched'
-  assert_contains "$home/stdout.log" 'OpenCode config rendered'
-
-  scenario_capture "$home" env HOME="$home" \
-    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-  assert_contains "$home/stdout.log" 'OpenCode config already rendered'
-  [[ ! -e $config.backup.2 ]] \
-    || scenario_fail 'idempotent config render created another backup'
-}
-
-scenario_run 'OCX config survives an existing backup and links ~/.opencode' \
-  test_ocx_config_replaces_existing_directory_with_numbered_backup
-scenario_run 'rendered OpenCode config updates despite an existing backup' \
-  test_rendered_config_updates_with_an_existing_backup
+scenario_run 'OpenCode env defaults to ~/.opencode and preserves overrides' \
+  test_env_defaults_to_opencode_home_and_preserves_override
+scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
+  test_config_resolves_managed_instructions_through_config_dir
+scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \
+  test_installer_verifies_linked_payload_without_relinking
+scenario_run 'OpenCode installer explains a missing bootstrap link' \
+  test_installer_explains_missing_bootstrap_link
 scenario_finish

@@ -17,6 +17,7 @@ make_fixture() {
     "$fixture/.hidden" \
     "$fixture/_private" \
     "$fixture/_scripts" \
+    "$fixture/alpha/bundle.symlink" \
     "$fixture/alpha/_private/nested" \
     "$fixture/alpha/.dot" \
     "$fixture/alpha/nested" \
@@ -48,6 +49,12 @@ preamble
 EOF
   scenario_write_file "$fixture/alpha/alpha.symlink" <<'EOF'
 link
+EOF
+  scenario_write_file "$fixture/alpha/bundle.symlink/config.json" <<'EOF'
+directory link
+EOF
+  scenario_write_file "$fixture/alpha/bundle.symlink/internal.zsh" <<'EOF'
+application-owned shell file
 EOF
   scenario_write_file "$fixture/alpha/_draft.symlink" <<'EOF'
 private
@@ -117,6 +124,7 @@ golden_manifest() {
   printf '%s\t%s\n' completion "$fixture/alpha/completion.zsh"
   printf '%s\t%s\n' installer "$fixture/alpha/install.sh"
   printf '%s\t%s\n' link "$fixture/alpha/alpha.symlink"
+  printf '%s\t%s\n' link "$fixture/alpha/bundle.symlink"
   printf '%s\t%s\n' link "$fixture/dotfiles-root.symlink"
   printf '%s\t%s\n' main "$fixture/alpha/aliases.zsh"
   printf '%s\t%s\n' main "$fixture/alpha/nested/deep.zsh"

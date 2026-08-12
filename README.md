@@ -22,8 +22,8 @@ Bootstrap performs the complete first-run workflow:
    mode `600`.
 1. Prompts for the Git author name and email and generates the private
    `git/gitconfig.local.symlink`.
-1. Links `.localrc` and every public `*.symlink` file into the home directory,
-   including the `~/.dotfiles-root` checkout resolver.
+1. Links `.localrc` and every public `*.symlink` file or directory into the
+   home directory, including the `~/.dotfiles-root` checkout resolver.
 1. Applies the tracked macOS defaults and attempts hostname normalization.
 1. Installs Homebrew, every dependency in `Brewfile`, and every top-level topic
    installer.
@@ -221,7 +221,7 @@ Topic installers link or apply machine config for Ghostty, Zed (settings +
 default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
 bridging to `~/.vimrc`), AeroSpace, OrbStack Docker engine
 defaults, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode
-(`~/.config/opencode`), Hermes Agent (`~/.hermes`), SOPS age directories,
+(`~/.opencode`), Hermes Agent (`~/.hermes`), SOPS age directories,
 Workspace (`~/Workspace/github.com/<user>`), Mise, SSH, Archiver, and the Dock.
 The declared Dock layout is applied once and then left alone so manual Dock
 changes survive updates; run `DOTFILES_DOCK_RESET=1 dot` to reapply it.
@@ -361,7 +361,7 @@ The current public functions are:
 | `c`       | `c [project]`: change to `$PROJECTS/project` (`$PROJECTS` defaults to `~/Workspace/github.com`)                               |
 | `extract` | `extract archive`: extract supported tar, gzip, bzip2, xz, zstd, 7z, lz4, zip, pax, rar, or `.Z` files; mount `.dmg` on macOS |
 | `gf`      | `gf remote-branch`: switch to the local branch, or create it tracking `origin/remote-branch`                                  |
-| `pi`      | `pi [args...]`: invoke the `pi` coding agent with the shared `_shared/agents/AGENTS.md` auto-appended as system prompt        |
+| `pi`      | `pi [args...]`: invoke the `pi` coding agent                                                                                  |
 | `pubkey`  | Copy the default Ed25519 public key, falling back to RSA                                                                      |
 
 The shell also exposes these aliases. Arguments written after an alias are
@@ -417,7 +417,7 @@ Topic directories may contain:
 ```text
 topic/
 ├── install.sh       # Optional installer run by bootstrap and dot
-├── *.symlink        # Linked into the home directory during bootstrap
+├── *.symlink        # File or directory linked into HOME during bootstrap
 ├── path.zsh         # Loaded first
 ├── aliases.zsh      # Loaded with main topic configuration
 ├── env.zsh          # Loaded with main topic configuration
@@ -473,11 +473,13 @@ OpenCode provider keys (`MOONSHOT_API_KEY` / Kimi, `MINIMAX_API_KEY`,
 `ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go), and Hermes /
 shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
 OpenCode reads those environment variables automatically once they are exported
-from `~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
-The OpenCode installer initializes [OCX](https://github.com/kdcokenny/ocx)
-(`npm:ocx`) by linking the tracked `opencode/extensions/` directory to
-`~/.opencode` when the CLI is on `PATH`; launch a profile with
-`ocx oc -p <profile>`.
+from `~/.localrc`. The `opencode/opencode.symlink/` payload is linked as
+`~/.opencode` and contains the OpenCode config plus the OCX-managed agents,
+commands, plugins, skills, and tools. `opencode/env.zsh` points
+`OPENCODE_CONFIG_DIR` there while preserving profile-specific overrides from
+[OCX](https://github.com/kdcokenny/ocx). OCX's mutable local receipt remains
+machine-local at `~/.ocx/receipt.jsonc`; the OpenCode installer idempotently
+normalizes the legacy philosophy instruction path when present.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally
@@ -496,6 +498,8 @@ tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
 tests/documentation_test.sh
 tests/topic_catalog_test.sh
+tests/link_dotfiles_test.sh
+tests/opencode_install_test.sh
 _scripts/test-checkout-root
 ```
 

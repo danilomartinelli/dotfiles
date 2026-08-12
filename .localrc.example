@@ -48,7 +48,7 @@
 # export MORPH_API_KEY="<CHANGE_ME>"
 # export TAVILY_API_KEY="<CHANGE_ME>"
 
-# OpenCode providers (loaded via {env:...} in ~/.config/opencode/opencode.json)
+# OpenCode providers (loaded via {env:...} in ~/.opencode/opencode.jsonc)
 # Kimi / Moonshot AI
 # export MOONSHOT_API_KEY="<CHANGE_ME>"
 #

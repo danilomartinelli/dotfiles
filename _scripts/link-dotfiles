@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Bootstrap home linking for .localrc and topic *.symlink files.
+# Bootstrap home linking for .localrc and topic *.symlink entries.
 
 set -e
 set -o pipefail
@@ -22,7 +22,7 @@ usage() {
   cat >&2 <<'EOF'
 Usage: link-dotfiles [--batch skip|overwrite|backup]
 
-  Link .localrc and topic *.symlink files into $HOME.
+  Link .localrc and topic *.symlink entries into $HOME.
   Without --batch, prompts on conflicts (bootstrap).
 EOF
 }

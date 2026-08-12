@@ -5,6 +5,7 @@ set -euo pipefail
 TEST_PATH=${BASH_SOURCE[0]}
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
 README=$REPOSITORY_ROOT/README.md
+GUIDELINES=$REPOSITORY_ROOT/GUIDELINES.md
 
 failures=0
 
@@ -71,12 +72,11 @@ done < <(
   ' "$REPOSITORY_ROOT/mise/config.toml"
 )
 
-# Both the agent contract and the scaffold skill must list every preamble
-# helper, or new installers fall back to raw echo for the undocumented ones.
+# The repository guidelines are the canonical installer-authoring contract.
+# They must list every preamble helper so new topics do not fall back to raw
+# echo for undocumented behavior.
 while IFS= read -r helper_name; do
-  assert_documented_in "$REPOSITORY_ROOT/AGENTS.md" 'preamble helper' "$helper_name"
-  assert_documented_in "$REPOSITORY_ROOT/.agents/skills/add-topic/SKILL.md" \
-    'preamble helper' "$helper_name"
+  assert_documented_in "$GUIDELINES" 'preamble helper' "$helper_name"
 done < <(
   sed -n 's/^\(installer_[a-z_]*\)() {$/\1/p' \
     "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" | sort -u

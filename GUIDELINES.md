@@ -69,7 +69,7 @@ Each visible top-level topic may contain:
 ```text
 topic/
 ├── install.sh       # Optional setup dependency phase
-├── *.symlink        # Linked to ~/.<basename> during bootstrap
+├── *.symlink        # File or directory linked to ~/.<basename> during bootstrap
 ├── path.zsh         # PATH extension, loaded first
 ├── aliases.zsh      # Main shell configuration
 ├── env.zsh          # Main shell configuration
@@ -83,7 +83,9 @@ Exact conventions matter:
 - `_scripts/topic-catalog <repository-root>` is the single private interface that classifies the layout for setup, Zsh startup, and the documentation test. It emits sorted, tab-separated `kind<TAB>absolute-path` records with kinds `topic`, `link`, `installer`, `path`, `main`, `prompt`, `completion`, and `aliases` (`aliases.zsh` emits both `main` and `aliases`; only `zsh/prompt.zsh` is the authoritative prompt).
 - Installers must be named `install.sh` and be executable.
 - Topic installers source `_scripts/installer-preamble.sh` after `set -e` / `set -eu` (set `INSTALLER_ANCHOR` when `$0` is wrong, e.g. bash via `BASH_SOURCE`). That preamble exports `TOPIC_DIR` and `DOTFILES_ROOT`, and provides `installer_require_darwin`, `installer_require_command` (hard CLI dependency: error plus formula hint, exit 1), `installer_require_app` (optional app: warn plus cask hint, exit 0 skip; sets `INSTALLER_APP` to the first candidate path found), `installer_link_config`, and the inner output helpers (`installer_banner` / `installer_success` / `installer_note` / `installer_warn` / `installer_error` / `installer_hint`). `banner`, `success`, and `note` write to stdout; `warn`, `error`, and `hint` write to stderr, so a hint stays on the same stream as the warning or error it continues. Do not reintroduce per-installer path resolution, Darwin-guard boilerplate, dependency-check boilerplate, or raw `echo` messages.
-- Only `*.symlink` files are automatically linked.
+- Only `*.symlink` files and directories are automatically linked.
+- Shell discovery does not descend into `*.symlink` directories; their
+  contents belong to the linked application, not Zsh startup.
 - Setup executes sorted, top-level `topic/install.sh` files only. It skips reserved topics and `homebrew/install.sh`, which has its own phase.
 
 ## Setup ownership and lifecycle
@@ -95,13 +97,15 @@ Exact conventions matter:
 
 `_scripts/bootstrap` and `bin/dot` are stable adapters. Required phases stop on failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the adapters.
 
-`_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` files (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.
+`_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` entries (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.
 
 `homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Git (`~/.config/git/allowed_signers` for SSH commit signing), Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, Neovim (`~/.config/nvim/init.vim` bridge), AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode, and Hermes Agent (`~/.hermes`).
 
 macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; Library/restart advisory). The apply never mutates DNS — resolver state belongs to the OS, Tailscale, or the active VPN. App-specific `defaults write` calls stay in topic installers.
 
-Project agent skills live in `.agents/skills/*/SKILL.md` (discovered by OpenCode). Use the `add-topic` skill when scaffolding a new topic folder.
+OpenCode's managed agents, commands, plugins, skills, and tools live in
+`opencode/opencode.symlink/`, which bootstrap links to `~/.opencode`. Use the
+`add-topic` skill when scaffolding a new topic folder.
 
 ## Checkout-root contract
 

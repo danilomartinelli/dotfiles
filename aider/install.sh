@@ -39,5 +39,4 @@ else
   installer_note "Install Aider with: mise install"
 fi
 
-installer_note "AGENTS.md auto-loads from $DOTFILES_ROOT/_shared/agents/AGENTS.md"
 installer_success "Aider configured"

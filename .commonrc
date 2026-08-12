@@ -47,6 +47,3 @@ export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
 if [[ -z "${DOCKER_HOST:-}" && -S "$HOME/.orbstack/run/docker.sock" ]]; then
   export DOCKER_HOST="unix://$HOME/.orbstack/run/docker.sock"
 fi
-
-# OpenCode config lives under XDG; secrets stay in .localrc
-export OPENCODE_CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$XDG_CONFIG_HOME/opencode}"

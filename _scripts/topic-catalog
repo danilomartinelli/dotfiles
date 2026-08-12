@@ -13,7 +13,7 @@ Usage: _scripts/topic-catalog <repository-root>
 Emit tab-separated kind/path records, sorted by kind and absolute path:
 
   topic       visible top-level topic directory
-  link        root-level or direct topic *.symlink file
+  link        root-level or direct topic *.symlink file or directory
   installer   direct topic install.sh (homebrew/install.sh excluded)
   path        visible topic path.zsh file
   main        other visible topic *.zsh file
@@ -89,7 +89,7 @@ scan_topic() {
   local topic_files
 
   for entry in "$topic_dir"/*.symlink; do
-    [ -f "$entry" ] || continue
+    [ -f "$entry" ] || [ -d "$entry" ] || continue
     entry_name=$(basename -- "$entry")
     case $entry_name in
       _*) continue ;;
@@ -101,7 +101,9 @@ scan_topic() {
     record installer "$topic_dir/install.sh"
   fi
 
-  topic_files=$(find "$topic_dir" -type f -name '*.zsh' -print) \
+  topic_files=$(find "$topic_dir" \
+    -type d -name '*.symlink' -prune -o \
+    -type f -name '*.zsh' -print) \
     || fail "discovery failed in topic: $topic_dir"
   while IFS= read -r file; do
     [ -n "$file" ] || continue
@@ -120,10 +122,16 @@ for entry in "$repository_root"/*; do
     _*) continue ;;
   esac
 
+  case $entry_name in
+    *.symlink)
+      if [ -f "$entry" ] || [ -d "$entry" ]; then
+        record link "$entry"
+      fi
+      continue
+      ;;
+  esac
+
   if [ -f "$entry" ]; then
-    case $entry_name in
-      *.symlink) record link "$entry" ;;
-    esac
     continue
   fi
 

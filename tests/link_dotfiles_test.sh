@@ -18,6 +18,8 @@ make_repo() {
   chmod +x "$repo/_scripts/link-dotfiles" "$repo/_scripts/topic-catalog" "$repo/dotfiles-root.symlink"
   printf '%s\n' 'localrc' >"$repo/.localrc"
   printf '%s\n' 'config body' >"$repo/sample/config.symlink"
+  mkdir -p "$repo/sample/bundle.symlink"
+  printf '%s\n' 'directory config' >"$repo/sample/bundle.symlink/config.json"
   printf '%s\n' 'ignored' >"$repo/bin/reserved.symlink"
   printf '%s\n' "$repo"
 }
@@ -37,7 +39,9 @@ test_batch_link_and_idempotent() {
   repo=$(make_repo)
   invoke_linker "$repo" --batch overwrite
   [[ -L $repo/home/.localrc ]]
+  [[ -L $repo/home/.bundle ]]
   [[ -L $repo/home/.config ]]
+  assert_contains "$repo/home/.bundle/config.json" 'directory config'
   [[ ! -e $repo/home/.reserved ]]
   assert_contains "$repo/stdout.log" 'linked'
 

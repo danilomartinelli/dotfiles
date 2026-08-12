@@ -11,11 +11,4 @@
 
 emulate -L zsh
 
-local shared_agents_md="${DOTFILES_ROOT:-$HOME/.dotfiles}/_shared/agents/AGENTS.md"
-
-if [[ ! -f $shared_agents_md ]]; then
-  print -u2 "pi: shared AGENTS.md not found at $shared_agents_md"
-  return 1
-fi
-
-command pi --append-system-prompt-file "$shared_agents_md" "$@"
+command pi "$@"
