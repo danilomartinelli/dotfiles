@@ -11,8 +11,12 @@
     "webfetch": "deny",
     "worktree_*": "deny",
   },
+  "model": "openai/gpt-5.6-terra",
+  "small_model": "openai/gpt-5.6-luna",
   "agent": {
     "researcher": {
+      "model": "openai/gpt-5.6-sol",
+      "variant": "high",
       "permission": {
         "context7_*": "allow",
         "exa_*": "allow",
@@ -66,7 +70,10 @@
       },
     },
     "scribe": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "low",
       "permission": {
+        "codegraph_*": "allow",
         "bash": {
           "*": "deny",
         },
@@ -79,7 +86,10 @@
       },
     },
     "coder": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high",
       "permission": {
+        "codegraph_*": "allow",
         "context7_*": "deny",
         "exa_*": "deny",
         "gh_grep_*": "deny",
@@ -94,6 +104,8 @@
       },
     },
     "reviewer": {
+      "model": "openai/gpt-5.6-sol",
+      "variant": "high",
       "temperature": 0.1,
       "permission": {
         "edit": "deny",
@@ -112,6 +124,8 @@
       },
     },
     "plan": {
+      "model": "openai/gpt-5.6-terra",
+      "variant": "high",
       "permission": {
         "edit": "deny",
         "write": "deny",
@@ -123,6 +137,8 @@
       },
     },
     "build": {
+      "model": "openai/gpt-5.6-terra",
+      "variant": "high",
       "prompt": "You are a **build orchestrator**. You coordinate implementation through delegation - you do NOT implement directly.\\\\\\\\n\\\\\\\\n## Your Role\\\\\\\\n- Delegate implementation to `coder`\\\\\\\\n- Delegate documentation to `scribe`\\\\\\\\n- Delegate codebase analysis to `explore`\\\\\\\\n- Delegate external research to `researcher`\\\\\\\\n- Interpret results and decide next steps\\\\\\\\n\\\\\\\\n## Critical Constraint\\\\\\\\nYou CANNOT edit files or run commands directly. For ALL implementation and verification, delegate to `coder`.",
       "permission": {
         "edit": "deny",
@@ -135,6 +151,8 @@
       },
     },
     "explore": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "low",
       "permission": {
         "edit": "deny",
         "write": "deny",
