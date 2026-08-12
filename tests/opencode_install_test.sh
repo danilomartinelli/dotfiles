@@ -58,15 +58,31 @@ test_config_resolves_managed_instructions_through_config_dir() {
     || scenario_fail 'managed philosophy instructions are missing'
 }
 
+test_plugin_dependency_matches_pinned_opencode_version() {
+  local opencode_version
+
+  opencode_version=$(sed -n \
+    's/^"npm:opencode-ai" = "\([^"]*\)"$/\1/p' \
+    "$REPOSITORY_ROOT/mise/config.toml")
+  [[ -n $opencode_version ]] \
+    || scenario_fail 'pinned OpenCode version is missing from mise/config.toml'
+
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/package.json" \
+    "\"@opencode-ai/plugin\": \"$opencode_version\""
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
+    'package-lock.json'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
+    'bun.lock'
+}
+
 test_installer_verifies_linked_payload_without_relinking() {
-  local home fake_bin marker receipt receipt_hash
+  local home fake_bin receipt receipt_hash
 
   home=$(scenario_tmpdir linked)
   fake_bin=$(make_fake_clis "$home")
-  marker=$home/.opencode/managed-marker
   receipt=$home/.ocx/receipt.jsonc
-  mkdir -p "$home/.opencode" "$home/.ocx"
-  printf 'keep\n' >"$marker"
+  mkdir -p "$home/.ocx"
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
   scenario_write_file "$receipt" <<'EOF'
 {
   "untouched": true,
@@ -83,7 +99,8 @@ EOF
   assert_contains "$home/stdout.log" 'ocx CLI available'
   assert_contains "$home/stdout.log" 'opencode CLI available'
   assert_contains "$home/stdout.log" 'Migrated OCX receipt instruction path'
-  assert_contains "$marker" 'keep'
+  assert_equal "$REPOSITORY_ROOT/opencode/opencode.symlink" \
+    "$(readlink "$home/.opencode")" 'managed OpenCode link target'
   assert_contains "$receipt" '"untouched": true'
   assert_contains "$receipt" '".opencode/tools/philosophy.md"'
   assert_not_contains "$receipt" '"./tools/philosophy.md"'
@@ -100,26 +117,77 @@ EOF
 }
 
 test_installer_explains_missing_bootstrap_link() {
-  local home fake_bin
+  local home fake_bin status
 
   home=$(scenario_tmpdir missing)
   fake_bin=$(make_fake_clis "$home")
 
-  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
+    scenario_fail 'installer accepted a missing OpenCode config link'
+  else
+    status=$?
+  fi
 
+  assert_equal 1 "$status" 'missing OpenCode config link status'
   assert_contains "$home/stderr.log" \
     "OpenCode config is not linked at $home/.opencode"
   assert_contains "$home/stderr.log" \
     'link opencode/opencode.symlink'
 }
 
+test_installer_normalizes_legacy_xdg_environment() {
+  local home fake_bin
+
+  home=$(scenario_tmpdir legacy-xdg)
+  fake_bin=$(make_fake_clis "$home")
+  mkdir -p "$home/.config/opencode"
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+
+  scenario_capture "$home" env HOME="$home" \
+    XDG_CONFIG_HOME="$home/.config" \
+    OPENCODE_CONFIG_DIR="$home/.config/opencode" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+
+  assert_contains "$home/stdout.log" \
+    "OpenCode config available at $home/.opencode"
+  [[ ! -L $home/.config/opencode ]] \
+    || scenario_fail 'legacy XDG runtime directory was replaced'
+}
+
+test_installer_rejects_default_directory_conflict() {
+  local home fake_bin status
+
+  home=$(scenario_tmpdir directory-conflict)
+  fake_bin=$(make_fake_clis "$home")
+  mkdir -p "$home/.opencode"
+  printf '%s\n' 'runtime content' >"$home/.opencode/package.json"
+
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
+    scenario_fail 'installer accepted a regular ~/.opencode directory'
+  else
+    status=$?
+  fi
+
+  assert_equal 1 "$status" 'OpenCode directory conflict status'
+  assert_contains "$home/stderr.log" \
+    "OpenCode config is not linked at $home/.opencode"
+  assert_contains "$home/.opencode/package.json" 'runtime content'
+}
+
 scenario_run 'OpenCode env defaults to ~/.opencode and preserves overrides' \
   test_env_defaults_to_opencode_home_and_preserves_override
 scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
   test_config_resolves_managed_instructions_through_config_dir
+scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
+  test_plugin_dependency_matches_pinned_opencode_version
 scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \
   test_installer_verifies_linked_payload_without_relinking
 scenario_run 'OpenCode installer explains a missing bootstrap link' \
   test_installer_explains_missing_bootstrap_link
+scenario_run 'OpenCode installer normalizes a legacy XDG environment' \
+  test_installer_normalizes_legacy_xdg_environment
+scenario_run 'OpenCode installer rejects a regular default config directory' \
+  test_installer_rejects_default_directory_conflict
 scenario_finish

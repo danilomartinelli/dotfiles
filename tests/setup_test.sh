@@ -125,6 +125,7 @@ make_fixture() {
     "$fixture/homebrew" \
     "$fixture/git" \
     "$fixture/sample" \
+    "$fixture/sample/bundle.symlink" \
     "$fixture/ssh" \
     "$fixture/bin" \
     "$fixture/fake-bin" \
@@ -169,6 +170,8 @@ make_fixture() {
   printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink.example"
   printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink"
   printf '%s\n' 'fixture config' >"$fixture/sample/config.symlink"
+  printf '%s\n' 'directory config' >"$fixture/sample/bundle.symlink/config.json"
+  printf '%s\n' 'tracked conflict' >"$fixture/sample/preserved.symlink"
   printf '%s\n' 'reserved link' >"$fixture/_ignored/hidden.symlink"
   printf '%s\n' 'reserved link' >"$fixture/bin/reserved.symlink"
 
@@ -246,6 +249,7 @@ test_update_sequence_and_cwd_independence() {
   local fixture_ssh_config
 
   fixture=$(make_fixture)
+  printf '%s\n' 'local conflict' >"$fixture/home/.preserved"
   fixture_ssh_config=$(cd "$fixture/ssh" && pwd -P)/config
   (
     cd "$TEST_ROOT" || exit 1
@@ -253,6 +257,9 @@ test_update_sequence_and_cwd_independence() {
   )
 
   assert_before "$fixture/events.log" 'rev-parse --is-inside-work-tree' ' pull'
+  assert_before "$fixture/stdout.log" 'checkout refresh' 'local environment'
+  assert_before "$fixture/stdout.log" 'local environment' 'dotfile links'
+  assert_before "$fixture/stdout.log" 'dotfile links' 'Homebrew available'
   assert_before "$fixture/events.log" ' pull' homebrew-installer
   assert_before "$fixture/events.log" homebrew-installer 'brew update'
   assert_before "$fixture/events.log" 'brew update' 'brew upgrade'
@@ -262,11 +269,15 @@ test_update_sequence_and_cwd_independence() {
   assert_not_contains "$fixture/events.log" macos-defaults
   assert_not_contains "$fixture/events.log" hostname
   assert_not_contains "$fixture/stdout.log" 'Git identity'
-  assert_not_contains "$fixture/stdout.log" 'dotfile links'
   assert_not_contains "$fixture/events.log" ssh-keygen
   assert_not_contains "$fixture/events.log" topic-bin
   assert_contains "$fixture/stdout.log" 'setup update complete'
   [ -L "$fixture/home/.dotfiles-root" ]
+  [ -L "$fixture/home/.config" ]
+  [ -L "$fixture/home/.bundle" ]
+  assert_contains "$fixture/home/.bundle/config.json" 'directory config'
+  assert_contains "$fixture/home/.preserved" 'local conflict'
+  [ ! -L "$fixture/home/.preserved" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
 }
 

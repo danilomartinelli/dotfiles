@@ -126,7 +126,7 @@ setup_catalog() {
 }
 
 install_dotfile_links() {
-  "$DOTFILES_ROOT/_scripts/link-dotfiles"
+  "$DOTFILES_ROOT/_scripts/link-dotfiles" "$@"
 }
 
 apply_macos_configuration() {
@@ -294,6 +294,8 @@ run_bootstrap() {
 run_update() {
   run_critical 'checkout root link' install_checkout_root_link
   run_advisory 'checkout refresh' update_checkout
+  run_critical 'local environment' setup_local_environment
+  run_critical 'dotfile links' install_dotfile_links --batch skip
   run_dependency_pipeline update
 }
 

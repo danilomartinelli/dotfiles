@@ -93,7 +93,11 @@ Exact conventions matter:
 `_scripts/setup` is the canonical implementation with two modes:
 
 - `bootstrap`: create the private environment and Git identity, install links, apply macOS defaults, ensure Homebrew, install the Brewfile, and run topic installers.
-- `update`: repair `~/.dotfiles-root`, attempt `git pull`, update/upgrade Homebrew, reconcile the Brewfile, and rerun topic installers. It does not relink all dotfiles or apply macOS defaults.
+- `update`: repair `~/.dotfiles-root`, attempt `git pull`, restore the private
+  environment file from its example when absent, conservatively recreate
+  missing dotfile links without overwriting conflicts, update/upgrade Homebrew,
+  reconcile the Brewfile, and rerun topic installers. It does not apply macOS
+  defaults.
 
 `_scripts/bootstrap` and `bin/dot` are stable adapters. Required phases stop on failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the adapters.
 

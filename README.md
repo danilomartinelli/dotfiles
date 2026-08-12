@@ -32,6 +32,10 @@ Existing destination files are never silently replaced: bootstrap offers to
 skip, overwrite, or back them up. Git identity prompts only appear when the
 private Git config does not exist yet.
 
+The daily `dot` update also recreates missing `*.symlink` links before running
+dependency and topic installers. Existing local conflicts are preserved
+without prompting.
+
 After bootstrap, open a new shell or run:
 
 ```bash
