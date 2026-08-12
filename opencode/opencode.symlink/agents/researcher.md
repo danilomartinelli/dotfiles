@@ -33,12 +33,15 @@ When you need real-world implementation patterns.
 - Search GitHub repositories for usage examples
 - Look for popular, well-maintained projects
 
-### GitHub CLI
-When you need repository data, file contents, issues, or PRs:
-- Use `gh` commands for comprehensive GitHub research
-- Prefer `gh` and `read` over MCP servers when fetching full implementations
+### GitHub and GitLab CLIs
+When you need repository data, file contents, issues, pull requests, or merge requests:
+- Use `gh` for GitHub and `glab` for GitLab research
+- Prefer the provider's CLI and `read` over MCP servers when fetching full implementations
 - Example: `gh api /repos/{owner}/{repo}/contents/{path}` for file contents
 - Example: `gh search code "pattern"` for code search
+- Example: `glab api projects/:id/repository/files/:path` for GitLab file contents
+- Example: `glab mr view 123` for a GitLab merge request
+- Keep both CLIs read-only. Never create, update, merge, approve, or delete remote resources.
 
 ### Web Search
 When you need current information, blog posts, or general research.

@@ -75,6 +75,37 @@ test_plugin_dependency_matches_pinned_opencode_version() {
     'bun.lock'
 }
 
+test_agent_delivery_and_provider_permissions_are_explicit() {
+  local config researcher workspace worktree
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  researcher=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/researcher.md
+  workspace=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/workspace-plugin.ts
+  worktree=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/worktree.ts
+
+  assert_contains "$config" '"gh pr view*": "allow"'
+  assert_contains "$config" '"glab mr view*": "allow"'
+  assert_contains "$config" '"gh run list*": "allow"'
+  assert_contains "$config" '"glab ci list*": "allow"'
+  assert_contains "$config" '"gh api *": "allow"'
+  assert_contains "$config" '"glab api *": "allow"'
+  assert_contains "$researcher" '### GitHub and GitLab CLIs'
+
+  assert_contains "$config" '"git commit*": "ask"'
+  assert_contains "$config" '"git pull --ff-only*": "ask"'
+  assert_contains "$config" '"git push*": "ask"'
+  assert_contains "$config" '"git push --force*": "deny"'
+  assert_contains "$config" '"worktree_delete": "deny"'
+  assert_contains "$config" '"worktree_delete": "ask"'
+  assert_contains "$workspace" 'All implementation MUST happen on a dedicated non-default branch'
+  assert_contains "$workspace" 'Commit only when the user explicitly requests a commit.'
+  assert_contains "$workspace" 'Push only when the user explicitly requests a push.'
+
+  assert_contains "$worktree" 'The working tree must already be clean.'
+  assert_contains "$worktree" 'Cannot delete a worktree with uncommitted changes.'
+  assert_not_contains "$worktree" 'chore(worktree): session snapshot'
+}
+
 test_installer_verifies_linked_payload_without_relinking() {
   local home fake_bin receipt receipt_hash
 
@@ -182,6 +213,8 @@ scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
   test_config_resolves_managed_instructions_through_config_dir
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
+scenario_run 'OpenCode agents isolate branches and own explicit delivery' \
+  test_agent_delivery_and_provider_permissions_are_explicit
 scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \
   test_installer_verifies_linked_payload_without_relinking
 scenario_run 'OpenCode installer explains a missing bootstrap link' \

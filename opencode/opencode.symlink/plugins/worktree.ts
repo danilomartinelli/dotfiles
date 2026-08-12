@@ -1139,7 +1139,7 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 			worktree_delete: tool({
 				description:
-					"Delete the current worktree and clean up. Changes will be committed before removal.",
+					"Delete the current worktree and clean up. The working tree must already be clean.",
 				args: {
 					reason: tool.schema
 						.string()
@@ -1150,6 +1150,17 @@ const WorktreePlugin: Plugin = async (ctx) => {
 					const session = getSession(database, toolCtx?.sessionID ?? "")
 					if (!session) {
 						return `No worktree associated with this session`
+					}
+
+					const statusResult = await git(["status", "--porcelain"], session.path)
+					if (!statusResult.ok) {
+						return `Failed to inspect worktree before cleanup: ${statusResult.error}`
+					}
+					if (statusResult.value) {
+						return [
+							"Cannot delete a worktree with uncommitted changes.",
+							"Commit intentionally or discard them explicitly before cleanup.",
+						].join(" ")
 					}
 
 					// Set pending delete for session.idle (atomic operation)
@@ -1174,15 +1185,15 @@ const WorktreePlugin: Plugin = async (ctx) => {
 					await runHooks(worktreePath, config.hooks.preDelete, log)
 				}
 
-				// Commit any uncommitted changes
-				const addResult = await git(["add", "-A"], worktreePath)
-				if (!addResult.ok) log.warn(`[worktree] git add failed: ${addResult.error}`)
-
-				const commitResult = await git(
-					["commit", "-m", "chore(worktree): session snapshot", "--allow-empty"],
-					worktreePath,
-				)
-				if (!commitResult.ok) log.warn(`[worktree] git commit failed: ${commitResult.error}`)
+				// Recheck at the idle boundary so changes made after the tool call are
+				// never committed or discarded implicitly.
+				const statusResult = await git(["status", "--porcelain"], worktreePath)
+				if (!statusResult.ok || statusResult.value) {
+					const detail = statusResult.ok ? "uncommitted changes remain" : statusResult.error
+					log.warn(`[worktree] Cleanup cancelled: ${detail}`)
+					clearPendingDelete(database)
+					return
+				}
 
 				// Remove worktree
 				const removeResult = await removeWorktree(directory, worktreePath)

@@ -416,6 +416,21 @@ You are in PLAN MODE. Your primary deliverable is a saved implementation plan.
 Saving your plan is a REQUIREMENT, not a request. Plans that are not saved will be lost when the session ends or mode changes. The user cannot see your plan unless you save it.
 
 </instruction>
+
+<branch-worktree-policy policy_level="critical">
+
+## Branch Handoff
+
+- Planning is read-only and does not require a new branch by itself.
+- Never begin implementation in the planning worktree.
+- After the plan is approved and the user requests implementation, call
+  worktree_create with a descriptive feature/, fix/, or chore/ branch before
+  handing execution to build.
+- If this session already belongs to a dedicated worktree branch, reuse it.
+- worktree_create opens a new terminal and forked session. Do not continue
+  implementation in the parent session.
+
+</branch-worktree-policy>
 </system-reminder>`
 
 const BUILD_RULES = `<system-reminder>
@@ -433,18 +448,20 @@ You coordinate work. You do NOT implement.
 
 **You may directly:**
 - Read files for quick context
+- Inspect Git state and perform explicitly authorized delivery operations
 
 **You may NOT:**
 - Edit or write any files
-- Run bash commands (delegate verification to \`coder\`)
+- Run non-delivery bash commands (delegate implementation and verification to \`coder\`)
 
 ## Verification Workflow
-For any command execution (bun check, bun test, git operations):
+For implementation command execution (bun check, bun test, linters, builds):
 1. Delegate to \`coder\` with specific instructions
 2. Coder runs commands and reports results
 3. You interpret results and decide next actions
 
-\`coder\` is your execution proxy for ALL bash operations.
+\`coder\` is your execution proxy for implementation and verification commands.
+Final Git delivery operations belong to \`build\` under the policy below.
 
 </delegation-mandate>
 
@@ -468,6 +485,21 @@ For any command execution (bun check, bun test, git operations):
 
 </workspace-routing>
 
+<branch-worktree-policy policy_level="critical">
+
+## Isolated Branch Required
+
+- All implementation MUST happen on a dedicated non-default branch inside an
+  isolated worktree.
+- Before delegating any write-capable task, inspect the current branch. If this
+  is the default branch or not a worktree session created for the task, call
+  worktree_create with a descriptive feature/, fix/, or chore/ branch.
+- worktree_create opens a new terminal and forked session. Stop in the parent
+  session; implementation continues only in the launched worktree.
+- Never implement directly on main, master, trunk, or the remote default branch.
+
+</branch-worktree-policy>
+
 <build-workflow>
 
 ### Before Writing Code
@@ -485,11 +517,35 @@ Load the relevant skill BEFORE delegating to coder:
 1. Orient: Read plan with \`plan_read\` and check delegation findings
 2. Load: Load relevant philosophy skill(s)
 3. Delegate: Send implementation tasks to \`coder\`
-4. Verify: Check coder's results, run \`bun check\` if needed
+4. Verify: Check the lint, type-check, build, and test results reported by \`coder\`
 5. Document: Delegate doc updates to \`scribe\`
 6. Update: Mark tasks complete in plan
 
 </build-workflow>
+
+<git-delivery-policy policy_level="critical">
+
+## Git Delivery Ownership
+
+build owns final integration after implementation, verification, and review.
+coder never commits or pushes.
+
+1. Inspect the branch, status, and diff directly.
+2. Stage only intended files. Never sweep unrelated dirty-worktree changes into
+   a commit.
+3. Ask scribe for a commit message when useful.
+4. Commit only when the user explicitly requests a commit.
+5. Fetch or pull only when explicitly requested or required to resolve known
+   remote divergence. Pulls must use --ff-only; never merge or rebase silently.
+6. Push only when the user explicitly requests a push. Never force-push.
+7. Create a GitHub pull request with gh or a GitLab merge request with glab only
+   when explicitly requested, choosing the provider from the Git remote.
+8. Report the branch, commit, remote, and PR/MR result precisely.
+
+The permission layer asks the user before every staging, commit, fetch, pull,
+push, or PR/MR creation command. Do not work around a denial.
+
+</git-delivery-policy>
 
 <code-review-protocol>
 
