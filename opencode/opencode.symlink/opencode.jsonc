@@ -29,6 +29,7 @@
         "todoread": "deny",
         "bash": {
           "*": "deny",
+          "glab *": "allow",
           "gh repo view*": "allow",
           "gh pr view*": "allow",
           "gh pr list*": "allow",
