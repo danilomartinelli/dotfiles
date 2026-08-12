@@ -1,4 +1,8 @@
 {
+  "edit_predictions": {
+    "provider": "copilot",
+    "allow_data_collection": "no"
+  },
   "cli_default_open_behavior": "new_window",
   "session": {
     "trust_all_worktrees": true
@@ -15,12 +19,17 @@
     }
   },
   "agent": {
+    "auto_compact": {
+      "threshold": "80%"
+    },
     "default_model": {
       "provider": "opencode",
       "model": "go/minimax-m3",
       "enable_thinking": false
     },
     "sandbox_permissions": {
+      "allow_fs_write_all": true,
+      "allow_all_hosts": true,
       "network_hosts": [
         "registry.npmjs.org",
         "formulae.brew.sh"
@@ -47,6 +56,7 @@
     "favorite_models": [],
     "model_parameters": [],
     "tool_permissions": {
+      "default": "allow",
       "tools": {
         "create_directory": {
           "default": "allow"
