@@ -256,6 +256,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
+| `npm:ocx`                                   | `2.0.14`     |
 | `npm:opencode-ai`                           | `1.18.14`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
@@ -283,7 +284,7 @@ toolchain; `shellcheck` (aqua backend) lints the shell scripts. `npm:skills` is 
 `skills list`). Package managers `bun`, `pnpm`, and `yarn`, plus `terraform`,
 are also declared here so a fresh machine gets them via Mise. CLI tools
 distributed as language packages — `npm:@agentclientprotocol/claude-agent-acp` (Claude ACP
-agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
+agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:opencode-ai` (OpenCode), `npm:ocx` (OpenCode extension manager), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
 `pipx:aider-chat` (Aider) — are declared here rather than in the `Brewfile`; see
 `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 
@@ -473,6 +474,9 @@ OpenCode provider keys (`MOONSHOT_API_KEY` / Kimi, `MINIMAX_API_KEY`,
 shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
 OpenCode reads those environment variables automatically once they are exported
 from `~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
+The OpenCode installer initializes [OCX](https://github.com/kdcokenny/ocx)
+(`npm:ocx`) with `ocx init --global` when the CLI is on `PATH`; launch a
+profile with `ocx oc -p <profile>`.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally

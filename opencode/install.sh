@@ -40,6 +40,20 @@ for skill_dir in "$TOPIC_DIR"/skills/*/; do
     "$skill_dir" "$CONFIG_DIR/skills/$skill_name"
 done
 
+# OCX (https://github.com/kdcokenny/ocx) is the OpenCode extension manager.
+# `init --global` is create-if-missing and will not overwrite opencode.json.
+if command -v ocx >/dev/null 2>&1; then
+  installer_success "ocx CLI available"
+  if ocx init --global --quiet; then
+    installer_success "OCX global config initialized"
+  else
+    installer_warn "ocx init --global failed"
+  fi
+  installer_note "Launch OpenCode with a profile via: ocx oc -p <profile>"
+else
+  installer_note "Install OCX with: mise install"
+fi
+
 # Install the opencode CLI if unavailable.
 if command -v opencode >/dev/null 2>&1; then
   installer_success "opencode CLI available"
