@@ -11,21 +11,35 @@ CONFIG_DIR="${OPENCODE_CONFIG_DIR:-$HOME/.config/opencode}"
 
 mkdir -p "$CONFIG_DIR/skills" "$CONFIG_DIR/plugins" "$CONFIG_DIR/agents" "$CONFIG_DIR/commands"
 
-installer_link_config --label "OpenCode config" \
-  "$TOPIC_DIR/opencode.json" "$CONFIG_DIR/opencode.json"
+# Render the portable template directly instead of linking and then replacing
+# the link. `skills.paths` and `instructions` resolve relative to opencode's
+# cwd, so __DOTFILES_ROOT__ must become an absolute path. Comparing first keeps
+# repeated installs idempotent; a changed target is preserved in a numbered
+# backup before the new render replaces it.
+CONFIG_SOURCE="$TOPIC_DIR/opencode.json"
+CONFIG_TARGET="$CONFIG_DIR/opencode.json"
+rendered=$(mktemp "$CONFIG_DIR/.opencode.json.XXXXXX")
+if ! sed "s|__DOTFILES_ROOT__|$DOTFILES_ROOT|g" "$CONFIG_SOURCE" >"$rendered"; then
+  rm -f "$rendered"
+  exit 1
+fi
 
-# Resolve __DOTFILES_ROOT__ placeholders in the opencode config copy. The
-# link above is a symlink, so we replace it with a real file at the target
-# path. `skills.paths` and `instructions` resolve relative to opencode's cwd,
-# not the config file, so the value has to be an absolute path. We keep the
-# placeholder in the repo so the file stays portable across machines; the
-# installer is the only place that knows the real $HOME.
-if [ -L "$CONFIG_DIR/opencode.json" ] && grep -q '__DOTFILES_ROOT__' "$CONFIG_DIR/opencode.json"; then
-  rendered=$(mktemp)
-  sed "s|__DOTFILES_ROOT__|$DOTFILES_ROOT|g" "$CONFIG_DIR/opencode.json" >"$rendered"
-  rm "$CONFIG_DIR/opencode.json"
-  mv "$rendered" "$CONFIG_DIR/opencode.json"
-  installer_success "Rendered __DOTFILES_ROOT__ in $CONFIG_DIR/opencode.json"
+if cmp -s "$rendered" "$CONFIG_TARGET"; then
+  rm "$rendered"
+  installer_success "OpenCode config already rendered"
+else
+  if [ -e "$CONFIG_TARGET" ] || [ -L "$CONFIG_TARGET" ]; then
+    backup="$CONFIG_TARGET.backup"
+    backup_number=1
+    while [ -e "$backup" ] || [ -L "$backup" ]; do
+      backup="$CONFIG_TARGET.backup.$backup_number"
+      backup_number=$((backup_number + 1))
+    done
+    mv "$CONFIG_TARGET" "$backup"
+    installer_note "Existing OpenCode config moved to $backup"
+  fi
+  mv "$rendered" "$CONFIG_TARGET"
+  installer_success "OpenCode config rendered"
 fi
 
 installer_link_config --label "OpenCode TUI config" \
@@ -44,8 +58,10 @@ done
 if command -v ocx >/dev/null 2>&1; then
   installer_success "ocx CLI available"
 
-  installer_link_config --label "OpenCode OCX config" \
-    "$TOPIC_DIR/ocx.jsonc" "$CONFIG_DIR/ocx.jsonc"
+  # The link helper owns the target path; creating ~/.opencode first would
+  # force every fresh install through the backup path.
+  installer_link_config --policy numbered-backup --label "OpenCode OCX config" \
+    "$TOPIC_DIR/extensions" "$HOME/.opencode"
 
   installer_note "Launch OpenCode with a profile via: ocx oc -p <profile>"
 else

@@ -475,8 +475,9 @@ shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
 OpenCode reads those environment variables automatically once they are exported
 from `~/.localrc`; the linked `~/.config/opencode/` tree also ships base skills.
 The OpenCode installer initializes [OCX](https://github.com/kdcokenny/ocx)
-(`npm:ocx`) with `ocx init --global` when the CLI is on `PATH`; launch a
-profile with `ocx oc -p <profile>`.
+(`npm:ocx`) by linking the tracked `opencode/extensions/` directory to
+`~/.opencode` when the CLI is on `PATH`; launch a profile with
+`ocx oc -p <profile>`.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally
