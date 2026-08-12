@@ -123,7 +123,7 @@ needed, then runs `brew bundle` against that file.
 | `imagemagick`             | Image conversion and manipulation                 |
 | `jq`                      | JSON processing                                   |
 | `k9s`                     | Terminal UI for Kubernetes clusters               |
-| `ksops`                   | Kustomize SOPS exec plugin                       |
+| `ksops`                   | Kustomize SOPS exec plugin                        |
 | `kubectx`                 | Context/namespace switching (`kubectx`/`kubens`)  |
 | `kubernetes-cli`          | `kubectl`                                         |
 | `kustomize`               | Kubernetes manifest customization                 |
@@ -188,30 +188,30 @@ Never version a downloaded or merged kubeconfig: it contains cluster access
 credentials. Before any sensitive operation, confirm the selected context
 and namespace. The existing relevant aliases are:
 
-| Alias         | Expansion                                  |
-| ------------- | ------------------------------------------ |
-| `k`           | `kubectl`                                  |
-| `kctx`        | `kubectx` (from the `kubectx` package)     |
-| `kctx-list`   | `kubectl config get-contexts`              |
-| `kcurrent`    | `kubectl config current-context`           |
-| `konfig`      | `kubectl config view --minify --raw`       |
-| `kns`         | `kubens` (from the `kubectx` package)      |
+| Alias       | Expansion                              |
+| ----------- | -------------------------------------- |
+| `k`         | `kubectl`                              |
+| `kctx`      | `kubectx` (from the `kubectx` package) |
+| `kctx-list` | `kubectl config get-contexts`          |
+| `kcurrent`  | `kubectl config current-context`       |
+| `konfig`    | `kubectl config view --minify --raw`   |
+| `kns`       | `kubens` (from the `kubectx` package)  |
 
 Use `kctx-list` and `kcurrent` (or `kubectl config current-context`) to verify
 the target before applying, deleting, or changing cluster resources.
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                                                    |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed`              |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                                               |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                |
-| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`       |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                   |
-| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                   |
-| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                              |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                   |
+| Group                     | Homebrew casks                                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed`          |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                         |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
+| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                             |
+| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                             |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                        |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                             |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
 assigns supported file associations when `Archiver.app` is present (installed
@@ -256,7 +256,6 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
-| `npm:ocx`                                   | `2.0.14`     |
 | `npm:opencode-ai`                           | `1.18.14`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
@@ -271,12 +270,6 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `uv`                                        | `latest`     |
 | `yarn`                                      | `4.11.0`     |
 
-The `npm:ocx` runtime is the Mise-managed OpenCode component CLI. In this
-checkout it owns the KDCO worktree plugin under `.opencode/plugins`, with
-provenance recorded in `.ocx/receipt.jsonc`. The small repository harness is
-local: it keeps OMO Slim as the orchestration layer and provides routing and
-inventory for the existing PM and Matt Pocock skills.
-
 The `npm:@colbymchenry/codegraph` runtime exposes the `codegraph` binary
 globally through Mise. Project use is opt-in: run `codegraph init` from the
 project root to create a local `.codegraph/` directory, which may contain an
@@ -290,8 +283,7 @@ toolchain; `shellcheck` (aqua backend) lints the shell scripts. `npm:skills` is 
 `skills list`). Package managers `bun`, `pnpm`, and `yarn`, plus `terraform`,
 are also declared here so a fresh machine gets them via Mise. CLI tools
 distributed as language packages — `npm:@agentclientprotocol/claude-agent-acp` (Claude ACP
-agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:ocx` (OpenCode
-component CLI), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
+agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
 `pipx:aider-chat` (Aider) — are declared here rather than in the `Brewfile`; see
 `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 

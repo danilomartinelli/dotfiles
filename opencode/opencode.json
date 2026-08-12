@@ -18,12 +18,8 @@
     "codegraph": {
       "enabled": true,
       "type": "local",
-      "command": [
-        "codegraph",
-        "serve",
-        "--mcp"
-      ]
+      "command": ["codegraph", "serve", "--mcp"]
     }
   },
-  "plugin": ["opencode-claude-auth@latest", "oh-my-opencode-slim"]
+  "plugin": ["opencode-claude-auth@latest"]
 }

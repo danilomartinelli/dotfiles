@@ -17,5 +17,5 @@
     "notifications": true,
     "sound": false
   },
-  "plugin": ["oh-my-opencode-slim"]
+  "plugin": []
 }

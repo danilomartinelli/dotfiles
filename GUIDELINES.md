@@ -1,6 +1,6 @@
-# AGENTS.md
+# Guidelines
 
-Guidance for coding agents working in this personal macOS dotfiles repository.
+Guidance for working in this personal macOS dotfiles repository.
 
 ## Scope and sources of truth
 
@@ -146,17 +146,3 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 - Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`; lint shell with `shellcheck`. All three come from `mise/config.toml`, not Homebrew; run `mise install` rather than `brew install`.
   - The `shfmt` flags are not optional: `-ci` (indent switch cases) and `-bn` (binary operators start the line) match the existing code, and dropping either rewrites the whole repository. Never run `shfmt` on Zsh topic files that use Zsh-only syntax.
   - `mdformat` needs the `mdformat-gfm` and `mdformat-frontmatter` plugins declared in the mise entry. Bare `mdformat` destroys the YAML frontmatter of every `SKILL.md` and mangles GFM tables.
-
-## Agent skills
-
-### Issue tracker
-
-Issues live in this repo's GitHub Issues, managed via `gh`. See `_docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `_docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: root `CONTEXT.md` + `_docs/adr/`. See `_docs/agents/domain.md`.

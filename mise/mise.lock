@@ -378,10 +378,6 @@ backend = "npm:@openai/codex"
 version = "16.28.0"
 backend = "npm:eas-cli"
 
-[[tools."npm:ocx"]]
-version = "2.0.14"
-backend = "npm:ocx"
-
 [[tools."npm:opencode-ai"]]
 version = "1.18.14"
 backend = "npm:opencode-ai"
