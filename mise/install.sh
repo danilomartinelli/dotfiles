@@ -7,11 +7,44 @@ set -e
 
 installer_require_command mise
 
+MISE_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/mise
+MISE_GLOBAL_CONFIG_FILE=$MISE_CONFIG_DIR/config.toml
+export MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE
+mkdir -p "$MISE_CONFIG_DIR"
+
+installer_link_config --label "Mise config" \
+  "$TOPIC_DIR/config.toml" "$MISE_CONFIG_DIR/config.toml"
+installer_link_config --label "Mise lock" \
+  "$TOPIC_DIR/mise.lock" "$MISE_CONFIG_DIR/mise.lock"
+
+remove_legacy_link() {
+  legacy_path=$1
+  legacy_source=$2
+
+  [ -L "$legacy_path" ] || return 0
+
+  legacy_target=$(readlink "$legacy_path") || return 0
+  case "$legacy_target" in
+    /*) ;;
+    *) legacy_target=$(dirname -- "$legacy_path")/$legacy_target ;;
+  esac
+
+  legacy_target_dir=$(CDPATH='' cd -P -- "$(dirname -- "$legacy_target")" 2>/dev/null && pwd) || return 0
+  legacy_target=$legacy_target_dir/$(basename -- "$legacy_target")
+  legacy_source_dir=$(CDPATH='' cd -P -- "$(dirname -- "$legacy_source")" 2>/dev/null && pwd) || return 0
+  legacy_source=$legacy_source_dir/$(basename -- "$legacy_source")
+
+  if [ "$legacy_target" = "$legacy_source" ]; then
+    rm -f "$legacy_path"
+    installer_note "Removed legacy Mise link $legacy_path"
+  fi
+}
+
+remove_legacy_link "$HOME/.mise.toml" "$TOPIC_DIR/mise.toml.symlink"
+remove_legacy_link "$HOME/.mise.lock" "$TOPIC_DIR/mise.lock.symlink"
+
 # Trust the linked global config so installs never prompt interactively.
-MISE_CONFIG="${MISE_GLOBAL_CONFIG_FILE:-$HOME/.mise.toml}"
-if [ -e "$MISE_CONFIG" ]; then
-  mise trust "$MISE_CONFIG" >/dev/null 2>&1 || true
-fi
+mise trust "$MISE_CONFIG_DIR/config.toml" >/dev/null 2>&1 || true
 
 installer_banner "Installing Mise runtimes"
 if mise install; then

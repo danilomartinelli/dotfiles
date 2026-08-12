@@ -56,7 +56,7 @@ for skill_dir in "$TOPIC_DIR"/skills/*/; do
 done
 
 # Make the engineering skills in opencode/.agents/skills/ discoverable to tools
-# that scan `.agents/skills/` from the cwd (Goose, Claude Code). The dotfiles
+# that scan `.agents/skills/` from the cwd (Claude Code). The dotfiles
 # checkout exposes that path as $DOTFILES_ROOT/.agents/ so any tool that walks
 # up from the project root finds them. If the user has a pre-existing real
 # directory at that path (e.g. an old manual install), back it up once and
@@ -108,7 +108,7 @@ if [ -d "$SHARED_SKILLS_DIR" ]; then
   installer_success "Codex skills: $linked linked, $skipped already current in $CODEX_HOME/skills"
 
   # Also expose the same library to global tooling that scans
-  # ~/.agents/skills/ — Goose, Claude Code, and any tool that does
+  # ~/.agents/skills/ — Claude Code and any tool that does
   # home-directory discovery. Each tool's *project-local* discovery still
   # works through $DOTFILES_ROOT/.agents/skills above. Pre-existing entries
   # (e.g. find-skills installed by another tool) are left alone.

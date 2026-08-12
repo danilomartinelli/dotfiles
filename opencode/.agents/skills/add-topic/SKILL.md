@@ -92,7 +92,7 @@ installer_hint "Install with: brew install --cask ghostty"
 1. Do not generate credentials in installers. Use an explicit `bin/*-create`
    adapter when key material is needed (see SSH/SOPS).
 1. If the topic adds Homebrew packages, update `Brewfile`.
-1. If the topic adds runtimes/tools, update `mise/mise.toml.symlink`.
+1. If the topic adds runtimes/tools, update `mise/config.toml`.
 1. Update `README.md` for every new public `bin/` command, alias, Brewfile
    package, and Mise tool — `tests/documentation_test.sh` enforces this.
 1. Prefer fixture tests over mutating the real Mac.

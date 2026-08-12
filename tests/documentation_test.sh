@@ -68,7 +68,7 @@ done < <(
       gsub(/[[:space:]\"]/, "", name)
       if (name != "") print name
     }
-  ' "$REPOSITORY_ROOT/mise/mise.toml.symlink"
+  ' "$REPOSITORY_ROOT/mise/config.toml"
 )
 
 # Both the agent contract and the scaffold skill must list every preamble

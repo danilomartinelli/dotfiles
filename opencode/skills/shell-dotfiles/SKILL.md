@@ -10,7 +10,7 @@ metadata:
 
 ## What I do
 
-- Follow `AGENTS.md` sources of truth (`Brewfile`, `mise/mise.toml.symlink`, `README.md`)
+- Follow `AGENTS.md` sources of truth (`Brewfile`, `mise/config.toml`, `README.md`)
 - Keep topic installers idempotent and non-interactive
 - Update README coverage so `tests/documentation_test.sh` stays green
 - Prefer fixture tests over commands that mutate the real Mac

@@ -204,7 +204,7 @@ the target before applying, deleting, or changing cluster resources.
 
 | Group                     | Homebrew casks                                                                                                    |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `block-goose`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed` |
+| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed`              |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                               |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`       |
@@ -232,9 +232,10 @@ Ghostty’s dark Catppuccin theme (`dark-mode`, pretty output, monokai code them
 
 ### Mise runtimes
 
-`mise/mise.toml.symlink` declares the following tools. Versions may float
+`mise/config.toml` declares the following tools and is linked to
+`~/.config/mise/config.toml`. Versions may float
 (`latest`, `lts`, bare minors); reproducibility comes from
-`mise/mise.lock.symlink` (`~/.mise.lock`), which pins the exact resolved
+`mise/mise.lock` (`~/.config/mise/mise.lock`), which pins the exact resolved
 version and artifact checksums for every declaration (`lockfile = true` in
 `[settings]`). Run `mise upgrade` to advance the lock deliberately:
 
@@ -255,6 +256,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
+| `npm:ocx`                                   | `2.0.14`     |
 | `npm:opencode-ai`                           | `1.18.14`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
@@ -269,6 +271,12 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `uv`                                        | `latest`     |
 | `yarn`                                      | `4.11.0`     |
 
+The `npm:ocx` runtime is the Mise-managed OpenCode component CLI. In this
+checkout it owns the KDCO worktree plugin under `.opencode/plugins`, with
+provenance recorded in `.ocx/receipt.jsonc`. The small repository harness is
+local: it keeps OMO Slim as the orchestration layer and provides routing and
+inventory for the existing PM and Matt Pocock skills.
+
 The `npm:@colbymchenry/codegraph` runtime exposes the `codegraph` binary
 globally through Mise. Project use is opt-in: run `codegraph init` from the
 project root to create a local `.codegraph/` directory, which may contain an
@@ -282,7 +290,8 @@ toolchain; `shellcheck` (aqua backend) lints the shell scripts. `npm:skills` is 
 `skills list`). Package managers `bun`, `pnpm`, and `yarn`, plus `terraform`,
 are also declared here so a fresh machine gets them via Mise. CLI tools
 distributed as language packages — `npm:@agentclientprotocol/claude-agent-acp` (Claude ACP
-agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
+agent), `npm:@agentclientprotocol/codex-acp` (Codex ACP agent), `npm:ocx` (OpenCode
+component CLI), `npm:opencode-ai` (OpenCode), `npm:wrangler` (Cloudflare Workers), `npm:eas-cli`, and
 `pipx:aider-chat` (Aider) — are declared here rather than in the `Brewfile`; see
 `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 
@@ -510,5 +519,5 @@ After changing shell configuration, run the relevant tests and then `reload!`.
 
 Create a non-reserved top-level topic, follow the filenames above, make any
 `install.sh` executable, and run it directly or use `dot`. Add Homebrew items to
-`Brewfile`; add runtimes to `mise/mise.toml.symlink`. Update this README in the
+`Brewfile`; add runtimes to `mise/config.toml`. Update this README in the
 same change—the documentation test will report uncovered public names.

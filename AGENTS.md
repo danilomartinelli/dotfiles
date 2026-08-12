@@ -5,7 +5,7 @@ Guidance for coding agents working in this personal macOS dotfiles repository.
 ## Scope and sources of truth
 
 - `Brewfile` declares Homebrew formulae, casks, fonts, and the Xcode Mac App Store installation.
-- `mise/mise.toml.symlink` declares language runtimes and global runtime tools; `mise/mise.lock.symlink` is the generated lockfile (`mise lock` / `mise upgrade`) that pins resolved versions and checksums. Do not edit the lock by hand.
+- `mise/config.toml` declares language runtimes and global runtime tools and is linked to `~/.config/mise/config.toml`; `mise/mise.lock` is the generated lockfile linked to `~/.config/mise/mise.lock` (`mise lock` / `mise upgrade`) that pins resolved versions and checksums. Do not edit the lock by hand.
 - `README.md` documents the user-facing install/update workflow and every command, function, and alias exposed by the repository.
 - `CLAUDE.md` points here so Claude Code and Cursor agents share one contract.
 - `.localrc` and `git/gitconfig.local.symlink` are generated, gitignored, machine-private files. Never read secrets into logs or commit them.
@@ -138,12 +138,12 @@ Reloading must keep paths, hooks, and implementation variables de-duplicated. Va
 ## Editing rules
 
 - Preserve unrelated work in a dirty worktree.
-- Add Homebrew dependencies to `Brewfile`, runtimes to `mise/mise.toml.symlink`, and public command documentation to `README.md`. Placement rule: CLIs distributed as language packages (npm, PyPI, gem, Go modules — e.g. `npm:wrangler`, `pipx:aider-chat`) are declared in `mise/mise.toml.symlink`; system binaries, libraries, and casks stay in `Brewfile`. See `_docs/adr/0001-language-package-clis-live-in-mise.md`.
+- Add Homebrew dependencies to `Brewfile`, runtimes to `mise/config.toml`, and public command documentation to `README.md`. Placement rule: CLIs distributed as language packages (npm, PyPI, gem, Go modules — e.g. `npm:wrangler`, `pipx:aider-chat`) are declared in `mise/config.toml`; system binaries, libraries, and casks stay in `Brewfile`. See `_docs/adr/0001-language-package-clis-live-in-mise.md`.
 - New topic installers must be idempotent and non-interactive because both bootstrap and daily updates run them.
 - Shell startup changes must remain safe to source repeatedly.
 - Keep secrets in `.localrc` with mode `600`; shared non-secret environment belongs in `.commonrc`.
 - Prefer fixture tests over commands that mutate the actual Mac.
-- Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`; lint shell with `shellcheck`. All three come from `mise/mise.toml.symlink`, not Homebrew; run `mise install` rather than `brew install`.
+- Format Markdown with `mdformat` and POSIX/bash shell with `shfmt -i 2 -ci -bn`; lint shell with `shellcheck`. All three come from `mise/config.toml`, not Homebrew; run `mise install` rather than `brew install`.
   - The `shfmt` flags are not optional: `-ci` (indent switch cases) and `-bn` (binary operators start the line) match the existing code, and dropping either rewrites the whole repository. Never run `shfmt` on Zsh topic files that use Zsh-only syntax.
   - `mdformat` needs the `mdformat-gfm` and `mdformat-frontmatter` plugins declared in the mise entry. Bare `mdformat` destroys the YAML frontmatter of every `SKILL.md` and mangles GFM tables.
 

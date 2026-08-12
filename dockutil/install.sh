@@ -47,7 +47,6 @@ fi
 add_app_to_dock "/Applications/Ghostty.app" "Ghostty"
 add_app_to_dock "/Applications/Dia.app" "Dia"
 add_app_to_dock "/Applications/Zed.app" "Zed"
-add_app_to_dock "/Applications/Goose.app" "Goose"
 add_app_to_dock "/Applications/Obsidian.app" "Obsidian"
 add_app_to_dock "/Applications/TablePlus.app" "TablePlus"
 add_app_to_dock "/Applications/Lens.app" "Lens"

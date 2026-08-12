@@ -1,4 +1,4 @@
-export MISE_GLOBAL_CONFIG_FILE="$HOME/.mise.toml"
+export MISE_GLOBAL_CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/mise/config.toml"
 
 # sup mise
 # https://mise.jdx.dev/

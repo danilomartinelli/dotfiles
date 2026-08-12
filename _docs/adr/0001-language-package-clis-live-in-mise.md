@@ -1,10 +1,10 @@
 # Language-package CLIs live in Mise, not Homebrew
 
 The repository declares tools in two places (`Brewfile` and
-`mise/mise.toml.symlink`) and historically split language-distributed CLIs
+`mise/config.toml`) and historically split language-distributed CLIs
 arbitrarily between them (`wrangler` and `aider` via Homebrew, `eas-cli` and
 `mdformat` via Mise). We decided on one rule: CLIs distributed as language
-packages (npm, PyPI, gem, Go modules) are declared in `mise/mise.toml.symlink`
+packages (npm, PyPI, gem, Go modules) are declared in `mise/config.toml`
 using the matching backend (`npm:`, `pipx:`, `gem:`, `go:`); system binaries,
 libraries, and casks stay in the `Brewfile`. Mise pins exact versions and
 already owns the language runtimes these packages run on, so this keeps one

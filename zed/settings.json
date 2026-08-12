@@ -15,6 +15,11 @@
     }
   },
   "agent": {
+    "default_model": {
+      "provider": "opencode",
+      "model": "go/minimax-m3",
+      "enable_thinking": false
+    },
     "sandbox_permissions": {
       "network_hosts": [
         "registry.npmjs.org",

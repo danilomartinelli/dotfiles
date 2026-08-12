@@ -84,7 +84,6 @@ cask 'keyclu'                       # Discover and browse application shortcuts
 cask 'lens'                         # Kubernetes IDE
 cask 'nikitabobko/tap/aerospace'    # i3-like tiling window manager for macOS
 cask 'obsidian'                     # Markdown knowledge base and notes app
-cask 'block-goose'                  # Desktop application for Goose AI agents
 cask 'opencode-desktop'             # OpenCode desktop application
 cask 'orbstack'                     # Docker Desktop alternative for macOS
 cask 'paste'                        # Clipboard history manager
