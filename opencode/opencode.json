@@ -1,13 +1,5 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "agent": {
-    "explore": {
-      "disable": true
-    },
-    "general": {
-      "disable": true
-    }
-  },
   "autoupdate": true,
   "lsp": true,
   "skills": {
