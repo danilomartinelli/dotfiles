@@ -111,7 +111,13 @@ macOS system preferences live in `_macos/defaults.tsv` and are applied by `_maco
 
 OpenCode's managed agents, commands, plugins, skills, and tools live in
 `opencode/opencode.symlink/`, which bootstrap links to `~/.opencode`. Use the
-`add-topic` skill when scaffolding a new topic folder.
+`add-topic` skill when scaffolding a new topic folder. Keep npm plugins pinned
+in `opencode.jsonc`; do not also commit an installer-generated copy under
+`plugins/`, because OpenCode auto-discovers local plugins and would load both.
+The `open-cursor` 2.5.6 CLI accepts strict JSON only, so its install and model
+sync commands must not rewrite the managed JSONC configuration. The OpenCode
+topic installs Cursor Agent from Cursor's official installer when absent, but
+only the user performs the interactive `cursor-agent login` step.
 
 ## Checkout-root contract
 

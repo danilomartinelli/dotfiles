@@ -24,6 +24,8 @@ make_fake_clis() {
   mkdir -p "$fake_bin"
   make_fake_command "$fake_bin/ocx"
   make_fake_command "$fake_bin/opencode"
+  make_fake_command "$fake_bin/open-cursor"
+  make_fake_command "$fake_bin/cursor-agent"
   printf '%s\n' "$fake_bin"
 }
 
@@ -73,6 +75,127 @@ test_plugin_dependency_matches_pinned_opencode_version() {
     'package-lock.json'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
     'bun.lock'
+}
+
+test_cursor_provider_uses_one_pinned_plugin_source() {
+  local config
+  local open_cursor_version
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  open_cursor_version=$(sed -n \
+    's/^"npm:@rama_nigg\/open-cursor" = "\([^"]*\)"$/\1/p' \
+    "$REPOSITORY_ROOT/mise/config.toml")
+  [[ -n $open_cursor_version ]] \
+    || scenario_fail 'pinned open-cursor version is missing from mise/config.toml'
+
+  assert_contains "$config" \
+    "\"@rama_nigg/open-cursor@$open_cursor_version\""
+  assert_not_contains "$config" '"cursor-acp",'
+  [[ ! -e $REPOSITORY_ROOT/opencode/opencode.symlink/plugins/cursor-acp.js ]] \
+    || scenario_fail 'generated cursor-acp bundle would duplicate the npm plugin'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/package.json" \
+    '"@ai-sdk/openai-compatible": "3.0.30"'
+  assert_contains "$config" '"npm": "@ai-sdk/openai-compatible"'
+}
+
+test_installer_provisions_cursor_agent_and_requests_login() {
+  local fake_bin
+  local home
+
+  home=$(scenario_tmpdir cursor-prerequisites)
+  fake_bin=$home/fake-bin
+  mkdir -p "$fake_bin"
+  make_fake_command "$fake_bin/ocx"
+  make_fake_command "$fake_bin/opencode"
+  make_fake_command "$fake_bin/open-cursor"
+  scenario_write_executable "$fake_bin/curl" <<'EOF'
+#!/bin/sh
+printf 'curl %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = -o ]; then
+    output=$2
+    break
+  fi
+  shift
+done
+[ -n "${output:-}" ] || exit 2
+cat >"$output" <<'INSTALLER'
+#!/bin/sh
+# Cursor Agent Installer
+mkdir -p "$HOME/.local/bin"
+cat >"$HOME/.local/bin/cursor-agent" <<'AGENT'
+#!/bin/sh
+exit 0
+AGENT
+chmod +x "$HOME/.local/bin/cursor-agent"
+INSTALLER
+EOF
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+
+  assert_contains "$home/events.log" \
+    'curl -fsSL https://cursor.com/install -o'
+  [[ -x $home/.local/bin/cursor-agent ]] \
+    || scenario_fail 'Cursor Agent installer did not create the CLI'
+  assert_contains "$home/stdout.log" 'cursor-agent CLI installed at'
+  assert_contains "$home/stdout.log" \
+    'Authenticate Cursor Agent once with: cursor-agent login'
+}
+
+test_installer_finds_open_cursor_through_mise() {
+  local fake_bin
+  local home
+
+  home=$(scenario_tmpdir open-cursor-mise)
+  fake_bin=$home/fake-bin
+  mkdir -p "$fake_bin" "$home/mise-bin"
+  make_fake_command "$fake_bin/ocx"
+  make_fake_command "$fake_bin/opencode"
+  make_fake_command "$fake_bin/cursor-agent"
+  make_fake_command "$home/mise-bin/open-cursor"
+  scenario_write_executable "$fake_bin/mise" <<EOF
+#!/bin/sh
+if [ "\$1" = which ] && [ "\$2" = open-cursor ]; then
+  printf '%s\\n' "$home/mise-bin/open-cursor"
+  exit 0
+fi
+exit 1
+EOF
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+
+  assert_contains "$home/stdout.log" \
+    "open-cursor CLI available at $home/mise-bin/open-cursor"
+  assert_not_contains "$home/stdout.log" 'Install open-cursor with: mise install'
+}
+
+test_cursor_agent_download_failure_is_fatal() {
+  local fake_bin
+  local home
+
+  home=$(scenario_tmpdir cursor-download-failure)
+  fake_bin=$home/fake-bin
+  mkdir -p "$fake_bin"
+  make_fake_command "$fake_bin/ocx"
+  make_fake_command "$fake_bin/opencode"
+  make_fake_command "$fake_bin/open-cursor"
+  scenario_write_executable "$fake_bin/curl" <<'EOF'
+#!/bin/sh
+exit 22
+EOF
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
+    scenario_fail 'installer accepted a failed Cursor Agent download'
+  fi
+
+  assert_contains "$home/stderr.log" \
+    'Failed to download the Cursor Agent installer'
 }
 
 test_agent_delivery_and_provider_permissions_are_explicit() {
@@ -213,6 +336,14 @@ scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
   test_config_resolves_managed_instructions_through_config_dir
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
+scenario_run 'Cursor provider has one pinned plugin source' \
+  test_cursor_provider_uses_one_pinned_plugin_source
+scenario_run 'OpenCode installer provisions Cursor Agent and requests login' \
+  test_installer_provisions_cursor_agent_and_requests_login
+scenario_run 'OpenCode installer finds open-cursor through Mise' \
+  test_installer_finds_open_cursor_through_mise
+scenario_run 'Cursor Agent download failures stop installation' \
+  test_cursor_agent_download_failure_is_fatal
 scenario_run 'OpenCode agents isolate branches and own explicit delivery' \
   test_agent_delivery_and_provider_permissions_are_explicit
 scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \

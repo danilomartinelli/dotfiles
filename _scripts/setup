@@ -250,6 +250,7 @@ print_bootstrap_checklist() {
   printf '    ssh-key-create work              # work SSH key\n'
   printf '    sops-key-create personal         # age encryption key\n'
   printf '    gh auth login                    # GitHub CLI\n'
+  printf '    cursor-agent login               # Cursor subscription\n'
   printf '    aws configure                    # AWS credentials\n'
   printf '\n'
   printf '  \033[1mApps that opened — finish their setup wizards\033[0m\n'

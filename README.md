@@ -485,7 +485,15 @@ commands, plugins, skills, and tools. `opencode/env.zsh` points
 `OPENCODE_CONFIG_DIR` there while preserving profile-specific overrides from
 [OCX](https://github.com/kdcokenny/ocx). OCX's mutable local receipt remains
 machine-local at `~/.ocx/receipt.jsonc`; the OpenCode installer idempotently
-normalizes the legacy philosophy instruction path when present.
+normalizes the legacy philosophy instruction path when present. The pinned
+`npm:@rama_nigg/open-cursor` tool provides diagnostics for the matching
+`@rama_nigg/open-cursor` OpenCode plugin. It requires the separately distributed
+Cursor Agent CLI, which `opencode/install.sh` installs idempotently from Cursor's
+official installer. Authentication remains interactive: after bootstrap, run
+`cursor-agent login` once.
+Do not run `open-cursor install` or `open-cursor sync-models` against the managed
+`opencode.jsonc`: version 2.5.6 parses strict JSON and cannot preserve JSONC
+comments or trailing commas. Update the provider models declaratively instead.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally

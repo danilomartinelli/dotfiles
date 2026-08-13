@@ -83,6 +83,71 @@ else
   installer_note "Install OpenCode with: mise install"
 fi
 
+if command -v open-cursor >/dev/null 2>&1; then
+  installer_success "open-cursor CLI available at $(command -v open-cursor)"
+elif command -v mise >/dev/null 2>&1 && \
+  open_cursor=$(mise which open-cursor 2>/dev/null) && \
+  [ -x "$open_cursor" ]; then
+  installer_success "open-cursor CLI available at $open_cursor"
+else
+  installer_note "Install open-cursor with: mise install"
+fi
+
+# open-cursor bridges OpenCode to Cursor through the separately distributed
+# Cursor Agent CLI. Dotfiles owns installation; authentication remains an
+# explicit user action because it opens Cursor's interactive browser flow.
+cursor_agent_binary() {
+  if command -v cursor-agent >/dev/null 2>&1; then
+    command -v cursor-agent
+  elif [ -x "$HOME/.local/bin/cursor-agent" ]; then
+    printf '%s\n' "$HOME/.local/bin/cursor-agent"
+  else
+    return 1
+  fi
+}
+
+install_cursor_agent() {
+  cursor_installer=$(mktemp "${TMPDIR:-/tmp}/cursor-agent-installer.XXXXXX")
+
+  installer_note "Downloading the official Cursor Agent installer..."
+  if ! curl -fsSL https://cursor.com/install -o "$cursor_installer"; then
+    rm -f "$cursor_installer"
+    installer_error "Failed to download the Cursor Agent installer"
+    return 1
+  fi
+
+  if ! grep -Fq "Cursor Agent Installer" "$cursor_installer" || \
+    ! grep -Fq "cursor-agent" "$cursor_installer"; then
+    rm -f "$cursor_installer"
+    installer_error "Downloaded script does not appear to be the Cursor Agent installer"
+    return 1
+  fi
+
+  installer_note "Executing the official Cursor Agent installer..."
+  if ! /bin/bash "$cursor_installer"; then
+    rm -f "$cursor_installer"
+    installer_error "Cursor Agent installation failed"
+    return 1
+  fi
+
+  rm -f "$cursor_installer"
+}
+
+if cursor_agent=$(cursor_agent_binary); then
+  installer_success "cursor-agent CLI available at $cursor_agent"
+else
+  installer_require_command curl
+  installer_banner "Installing Cursor Agent"
+  install_cursor_agent
+  cursor_agent=$(cursor_agent_binary) || {
+    installer_error "Cursor Agent installation completed, but cursor-agent was not found"
+    exit 1
+  }
+  installer_success "cursor-agent CLI installed at $cursor_agent"
+fi
+
+installer_note "Authenticate Cursor Agent once with: cursor-agent login"
+
 installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
 installer_note "Select a model in OpenCode with /models"
 installer_success "OpenCode configured"

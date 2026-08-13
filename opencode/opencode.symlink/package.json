@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.30",
     "@opencode-ai/plugin": "1.18.14"
   },
   "devDependencies": {

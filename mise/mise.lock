@@ -202,6 +202,22 @@ checksum = "sha256:d3227232221e68aa8790666e915604269d5471b61792a5d78a043ac653351
 url = "https://github.com/erlang/otp/releases/download/OTP-28.5/otp_win64_28.5.zip"
 url_api = "https://api.github.com/repos/erlang/otp/releases/assets/403511532"
 
+[[tools.erlang]]
+version = "28.5"
+backend = "core:erlang"
+
+[tools.erlang.options]
+precompiled_os = "ubuntu-24.04"
+
+[tools.erlang."platforms.linux-arm64"]
+url = "https://builds.hex.pm/builds/otp/arm64/ubuntu-24.04/OTP-28.5.tar.gz"
+
+[tools.erlang."platforms.linux-x64"]
+url = "https://builds.hex.pm/builds/otp/amd64/ubuntu-24.04/OTP-28.5.tar.gz"
+
+[tools.erlang."platforms.linux-x64-baseline"]
+url = "https://builds.hex.pm/builds/otp/amd64/ubuntu-24.04/OTP-28.5.tar.gz"
+
 [[tools.go]]
 version = "1.25.5"
 backend = "core:go"
@@ -306,6 +322,50 @@ url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0
 version = "24.15.0"
 backend = "core:node"
 
+[tools.node."platforms.linux-arm64"]
+checksum = "sha256:73afc234d558c24919875f51c2d1ea002a2ada4ea6f83601a383869fefa64eed"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-linux-arm64.tar.gz"
+
+[tools.node."platforms.linux-arm64-musl"]
+checksum = "sha256:31e98aa960a067da91edffd5d93bc46657b5d2a8029612c359f5f2ac0060152a"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.15.0/node-v24.15.0-linux-arm64-musl.tar.gz"
+
+[tools.node."platforms.linux-x64"]
+checksum = "sha256:44836872d9aec49f1e6b52a9a922872db9a2b02d235a616a5681b6a85fec8d89"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-linux-x64.tar.gz"
+
+[tools.node."platforms.linux-x64-baseline"]
+checksum = "sha256:44836872d9aec49f1e6b52a9a922872db9a2b02d235a616a5681b6a85fec8d89"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-linux-x64.tar.gz"
+
+[tools.node."platforms.linux-x64-musl"]
+checksum = "sha256:f55af5bd489c5347b113ca6594cae00a54b30ba57ac5875324311bfc6f4762e3"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.15.0/node-v24.15.0-linux-x64-musl.tar.gz"
+
+[tools.node."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:f55af5bd489c5347b113ca6594cae00a54b30ba57ac5875324311bfc6f4762e3"
+url = "https://unofficial-builds.nodejs.org/download/release/v24.15.0/node-v24.15.0-linux-x64-musl.tar.gz"
+
+[tools.node."platforms.macos-arm64"]
+checksum = "sha256:372331b969779ab5d15b949884fc6eaf88d5afe87bde8ba881d6400b9100ffc4"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-arm64.tar.gz"
+
+[tools.node."platforms.macos-x64"]
+checksum = "sha256:ffd5ee293467927f3ee731a553eb88fd1f48cf74eebc2d74a6babe4af228673b"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-x64.tar.gz"
+
+[tools.node."platforms.macos-x64-baseline"]
+checksum = "sha256:ffd5ee293467927f3ee731a553eb88fd1f48cf74eebc2d74a6babe4af228673b"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-darwin-x64.tar.gz"
+
+[tools.node."platforms.windows-x64"]
+checksum = "sha256:cc5149eabd53779ce1e7bdc5401643622d0c7e6800ade18928a767e940bb0e62"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-win-x64.zip"
+
+[tools.node."platforms.windows-x64-baseline"]
+checksum = "sha256:cc5149eabd53779ce1e7bdc5401643622d0c7e6800ade18928a767e940bb0e62"
+url = "https://nodejs.org/dist/v24.15.0/node-v24.15.0-win-x64.zip"
+
 [[tools."npm:@agentclientprotocol/claude-agent-acp"]]
 version = "0.65.0"
 backend = "npm:@agentclientprotocol/claude-agent-acp"
@@ -329,6 +389,10 @@ backend = "npm:@earendil-works/pi-coding-agent"
 [[tools."npm:@openai/codex"]]
 version = "0.146.1"
 backend = "npm:@openai/codex"
+
+[[tools."npm:@rama_nigg/open-cursor"]]
+version = "2.5.6"
+backend = "npm:@rama_nigg/open-cursor"
 
 [[tools."npm:eas-cli"]]
 version = "16.28.0"
