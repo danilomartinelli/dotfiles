@@ -171,6 +171,10 @@ install_declared_dependencies() {
     "$DOTFILES_ROOT/homebrew/_bundle.sh" --brew "$BREW_BIN" --file "$DOTFILES_ROOT/Brewfile"
 }
 
+reconcile_homebrew_legacy_state() {
+  "$DOTFILES_ROOT/homebrew/_maintenance.sh" --brew "$BREW_BIN"
+}
+
 install_topics() {
   local catalog
   local kind
@@ -197,6 +201,8 @@ run_dependency_pipeline() {
   mode=$1
 
   run_critical 'Homebrew available' ensure_homebrew
+
+  run_advisory 'Homebrew legacy cleanup' reconcile_homebrew_legacy_state
 
   if [ "$mode" = update ]; then
     run_advisory 'Homebrew update' "$BREW_BIN" update

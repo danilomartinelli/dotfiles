@@ -218,8 +218,10 @@ the target before applying, deleting, or changing cluster resources.
 | Fonts                     | `font-jetbrains-mono-nerd-font`                                                                             |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
-assigns supported file associations when `Archiver.app` is present (installed
-via the `archiver-app` cask or from the Mac App Store).
+assigns Archiver's declared archive types with the Launch Services `viewer`
+role when a correctly signed `Archiver.app` is present. A broken app signature
+is reported once and associations are skipped instead of producing one warning
+per extension.
 
 Topic installers link or apply machine config for Ghostty, Zed (settings +
 default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
@@ -500,6 +502,9 @@ tests/ssh_provisioning_test.sh
 tests/sops_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
+tests/homebrew_bundle_test.sh
+tests/homebrew_maintenance_test.sh
+tests/archiver_install_test.sh
 tests/documentation_test.sh
 tests/topic_catalog_test.sh
 tests/link_dotfiles_test.sh

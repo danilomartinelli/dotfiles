@@ -34,6 +34,8 @@ tests/sops_provisioning_test.sh
 tests/git_branch_state_test.sh
 tests/homebrew_availability_test.sh
 tests/homebrew_bundle_test.sh
+tests/homebrew_maintenance_test.sh
+tests/archiver_install_test.sh
 tests/link_config_test.sh
 tests/link_dotfiles_test.sh
 tests/installer_preamble_test.sh
@@ -103,7 +105,7 @@ Exact conventions matter:
 
 `_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` entries (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.
 
-`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Git (`~/.config/git/allowed_signers` for SSH commit signing), Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, Neovim (`~/.config/nvim/init.vim` bridge), AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode, and Hermes Agent (`~/.hermes`).
+`homebrew/install.sh` only makes Homebrew available. The private executable `homebrew/_availability.sh` owns executable discovery, prefix validation, and the non-failing startup fallback shared by installation, setup, and Zsh. `homebrew/_maintenance.sh` removes known legacy taps before upgrades only when they no longer own installed packages. `homebrew/_bundle.sh` owns Brewfile reconciliation and the small trust list (`nikitabobko/tap`, `vultr/vultr-cli`); taps are declared in `Brewfile`. Topic installers currently configure Archiver, Dock, Git (`~/.config/git/allowed_signers` for SSH commit signing), Mise, SSH, SOPS directories, Workspace (`~/Workspace/github.com/<user>`), Ghostty, Zed, Neovim (`~/.config/nvim/init.vim` bridge), AeroSpace, OrbStack, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode, and Hermes Agent (`~/.hermes`).
 
 macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; Library/restart advisory). The apply never mutates DNS — resolver state belongs to the OS, Tailscale, or the active VPN. App-specific `defaults write` calls stay in topic installers.
 

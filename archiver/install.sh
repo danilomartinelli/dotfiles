@@ -10,29 +10,49 @@ installer_banner "setting Archiver as default app for compressed files"
 
 installer_require_command duti
 
-# Define Archiver's bundle ID
 ARCHIVER_BUNDLE="com.incrediblebee.Archiver"
+ARCHIVER_APP=${ARCHIVER_APP:-/Applications/Archiver.app}
+PLIST_BUDDY_BIN=${PLIST_BUDDY_BIN:-/usr/libexec/PlistBuddy}
+CODESIGN_BIN=${CODESIGN_BIN:-/usr/bin/codesign}
+LSREGISTER_BIN=${LSREGISTER_BIN:-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister}
 
-# Check if Archiver app exists
-if ! /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "/Applications/Archiver.app/Contents/Info.plist" 2>/dev/null | grep -q "$ARCHIVER_BUNDLE"; then
-  installer_warn "Archiver app not found at /Applications/Archiver.app"
-  installer_hint "Skipping default app configuration. Install Archiver from Mac App Store."
+if ! "$PLIST_BUDDY_BIN" -c "Print :CFBundleIdentifier" "$ARCHIVER_APP/Contents/Info.plist" 2>/dev/null | grep -Fxq "$ARCHIVER_BUNDLE"; then
+  installer_warn "Archiver app not found at $ARCHIVER_APP"
+  installer_hint "Install Archiver from https://archiverapp.com/ and rerun dot."
   exit 0
 fi
 
-# List of compressed file extensions
-EXTENSIONS=".zip .rar .7z .tar .gz .bz2 .xz .tgz .tbz2 .zst .lz4"
+if ! "$CODESIGN_BIN" --verify --deep --strict "$ARCHIVER_APP" >/dev/null 2>&1; then
+  installer_warn "Archiver has an invalid code signature; skipping file associations"
+  installer_hint "Install a correctly signed Archiver build, then rerun dot."
+  exit 0
+fi
 
-# Set default app for each extension
+if [ ! -x "$LSREGISTER_BIN" ] || ! "$LSREGISTER_BIN" -f "$ARCHIVER_APP" >/dev/null 2>&1; then
+  installer_warn "macOS could not register Archiver; skipping file associations"
+  installer_hint "Open Archiver once, then rerun dot."
+  exit 0
+fi
+
 failed=0
-for ext in $EXTENSIONS; do
-  if ! duti -s "$ARCHIVER_BUNDLE" "$ext" editor 2>/dev/null; then
-    installer_warn "Failed to set Archiver as default for $ext"
+while IFS='|' read -r label uti; do
+  if ! duti -s "$ARCHIVER_BUNDLE" "$uti" viewer 2>/dev/null; then
+    installer_warn "Failed to set Archiver as default for $label"
     failed=$((failed + 1))
   fi
-done
+done <<'EOF'
+.zip|public.zip-archive
+.rar|public.rar-archive
+.7z|org.7-zip.7-zip-archive
+.tar|public.tar-archive
+.gz|org.gnu.gnu-zip-archive
+.bz2|public.bzip2-archive
+.xz|org.tukaani.xz-archive
+.tgz|org.gnu.gnu-zip-tar-archive
+.tbz2|public.bzip2-tar-archive
+EOF
 
-if [ $failed -eq 0 ]; then
+if [ "$failed" -eq 0 ]; then
   installer_success "Archiver set as default for compressed files"
 else
   installer_warn "Some file types could not be configured ($failed failed)"

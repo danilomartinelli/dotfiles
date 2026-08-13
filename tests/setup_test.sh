@@ -51,7 +51,21 @@ case "$1" in
     exit "${FAIL_BREW_UPGRADE:-0}"
     ;;
   tap)
+    if [ "$#" -eq 1 ]; then
+      [ -n "${FAKE_BREW_TAPS:-}" ] && printf '%s\n' "$FAKE_BREW_TAPS"
+      exit 0
+    fi
     exit "${FAIL_BREW_TAP:-0}"
+    ;;
+  list)
+    case "$2" in
+      --formula) [ -n "${FAKE_BREW_FORMULAE:-}" ] && printf '%s\n' "$FAKE_BREW_FORMULAE" ;;
+      --cask) [ -n "${FAKE_BREW_CASKS:-}" ] && printf '%s\n' "$FAKE_BREW_CASKS" ;;
+    esac
+    exit 0
+    ;;
+  untap)
+    exit "${FAIL_BREW_UNTAP:-0}"
     ;;
   bundle)
     exit "${FAIL_BREW_BUNDLE:-0}"
@@ -149,6 +163,7 @@ make_fixture() {
     "$REPOSITORY_ROOT/homebrew/_availability.sh" \
     >"$fixture/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
+  cp "$REPOSITORY_ROOT/homebrew/_maintenance.sh" "$fixture/homebrew/_maintenance.sh"
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
@@ -163,6 +178,7 @@ make_fixture() {
     "$fixture/dotfiles-root.symlink" \
     "$fixture/homebrew/_availability.sh" \
     "$fixture/homebrew/_bundle.sh" \
+    "$fixture/homebrew/_maintenance.sh" \
     "$fixture/ssh/install.sh"
 
   printf '%s\n' '# local environment' >"$fixture/.localrc.example"
@@ -262,6 +278,7 @@ test_update_sequence_and_cwd_independence() {
   assert_before "$fixture/stdout.log" 'dotfile links' 'Homebrew available'
   assert_before "$fixture/events.log" ' pull' homebrew-installer
   assert_before "$fixture/events.log" homebrew-installer 'brew update'
+  assert_before "$fixture/events.log" 'brew tap' 'brew update'
   assert_before "$fixture/events.log" 'brew update' 'brew upgrade'
   assert_before "$fixture/events.log" 'brew upgrade' 'brew tap nikitabobko/tap'
   assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
@@ -279,6 +296,18 @@ test_update_sequence_and_cwd_independence() {
   assert_contains "$fixture/home/.preserved" 'local conflict'
   [ ! -L "$fixture/home/.preserved" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
+}
+
+test_legacy_homebrew_cleanup_precedes_upgrade() {
+  local fixture
+
+  fixture=$(make_fixture)
+  export FAKE_BREW_TAPS=xo/xo
+  invoke "$fixture" "$fixture/_scripts/setup" update
+  unset FAKE_BREW_TAPS
+
+  assert_contains "$fixture/events.log" 'brew untap xo/xo'
+  assert_before "$fixture/events.log" 'brew untap xo/xo' 'brew update'
 }
 
 test_advisory_failures_continue() {
@@ -451,6 +480,7 @@ test_command_adapters() {
 scenario_run 'setup rejects unknown modes' test_setup_usage
 scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
 scenario_run 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
+scenario_run 'legacy Homebrew cleanup precedes update and upgrade' test_legacy_homebrew_cleanup_precedes_upgrade
 scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
 scenario_run 'critical failures stop the run' test_critical_failures_stop
 scenario_run 'bootstrap creates and links an interactive Git identity' test_interactive_git_identity
