@@ -56,8 +56,32 @@ test_env_defaults_to_opencode_home_and_preserves_override() {
 test_config_resolves_managed_instructions_through_config_dir() {
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc" \
     '"{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md"'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc" \
+    '"{env:OPENCODE_CONFIG_DIR}/tools/runtime.md"'
   [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md ]] \
     || scenario_fail 'managed philosophy instructions are missing'
+  [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md ]] \
+    || scenario_fail 'managed runtime instructions are missing'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'Cursor is only the model transport; it is not the active agent runtime.'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'Never switch to Cursor tools'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'If a search or tool call fails because of output, glob, or buffer limits'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'instead of changing runtimes or inventing another tool surface.'
+}
+
+test_cursor_provider_keeps_opencode_as_the_tool_runtime() {
+  local home output
+
+  home=$(scenario_tmpdir cursor-tool-loop)
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
+  output=$(env HOME="$home" /bin/zsh -c \
+    'source "$1"; print -r -- "$CURSOR_ACP_TOOL_LOOP_MODE|$CURSOR_ACP_ENABLE_OPENCODE_TOOLS"' \
+    zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+
+  assert_equal 'opencode|true' "$output" 'Cursor ACP OpenCode tool-loop contract'
 }
 
 test_plugin_dependency_matches_pinned_opencode_version() {
@@ -357,6 +381,8 @@ scenario_run 'OpenCode env defaults to ~/.opencode and preserves overrides' \
   test_env_defaults_to_opencode_home_and_preserves_override
 scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
   test_config_resolves_managed_instructions_through_config_dir
+scenario_run 'Cursor provider keeps OpenCode as the tool runtime' \
+  test_cursor_provider_keeps_opencode_as_the_tool_runtime
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
 scenario_run 'Cursor provider has one pinned plugin source' \

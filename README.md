@@ -483,7 +483,7 @@ never committed. `sops/env.zsh` exports `SOPS_AGE_KEY_FILE` and, when present,
 `SOPS_AGE_RECIPIENTS` from `recipient.txt`.
 
 `.localrc.example` includes commented templates for Git identity exports,
-OpenCode provider keys (`MOONSHOT_API_KEY` / Kimi, `MINIMAX_API_KEY`,
+OpenCode provider keys (`KIMI_API_KEY` / Kimi, `MINIMAX_API_KEY`,
 `ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go), and Hermes /
 shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
 OpenCode reads those environment variables automatically once they are exported
@@ -499,6 +499,10 @@ normalizes the legacy philosophy instruction path when present. The pinned
 Cursor Agent CLI, which `opencode/install.sh` installs idempotently from Cursor's
 official installer. Authentication remains interactive: after bootstrap, run
 `cursor-agent login` once.
+The bridge is pinned to OpenCode's tool loop, and a managed runtime instruction
+keeps OpenCode tools, permissions, and MCPs authoritative even when Cursor
+supplies the model. Tool-limit failures must be retried with narrower OpenCode
+queries rather than switching to Cursor's native tool surface.
 Do not run `open-cursor install` or `open-cursor sync-models` against the managed
 `opencode.jsonc`: version 2.5.6 parses strict JSON and cannot preserve JSONC
 comments or trailing commas. Update the provider models declaratively instead.
