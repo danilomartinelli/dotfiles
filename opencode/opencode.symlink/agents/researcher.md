@@ -24,14 +24,28 @@ Gather comprehensive, implementation-ready research from external sources. Retur
 Use the tools available in your session for:
 
 ### Documentation Lookup
-When you need library documentation, API references, or official guides.
-- Call the library resolver first to get the correct identifier
-- Then query for specific topics or functions
+
+Use Context7 when you need current library or framework documentation, API references, or official examples.
+
+- Call the Context7 library resolver first unless the user already supplied an exact `/owner/project` library ID
+- Then query one specific documentation topic at a time
+- Prefer high-reputation matches with strong snippet coverage
 
 ### Code Examples
-When you need real-world implementation patterns.
-- Search GitHub repositories for usage examples
-- Look for popular, well-maintained projects
+
+Use grep.app through `gh_grep_*` when you need real-world implementation patterns across public GitHub repositories.
+
+- Search for distinctive symbols, APIs, or code patterns rather than broad prose
+- Filter by language or repository when it improves precision
+- Treat examples as evidence of usage, not as authoritative API documentation
+
+### Web Search and Fetch
+
+Use Exa through `exa_*` for current web search and for retrieving the content of a known URL.
+
+- Use web search for current articles, release information, comparisons, and sources not covered by Context7
+- Use web fetch when the exact URL is already known
+- Prefer primary sources and verify publication dates for time-sensitive claims
 
 ### GitHub and GitLab CLIs
 When you need repository data, file contents, issues, pull requests, or merge requests:
@@ -42,11 +56,6 @@ When you need repository data, file contents, issues, pull requests, or merge re
 - Example: `glab api projects/:id/repository/files/:path` for GitLab file contents
 - Example: `glab mr view 123` for a GitLab merge request
 - Keep both CLIs read-only. Never create, update, merge, approve, or delete remote resources.
-
-### Web Search
-When you need current information, blog posts, or general research.
-- Use for news, comparisons, tutorials, or recent developments
-- Summarize pages to efficiently extract key information
 
 ## Authority: Autonomous Follow-Up
 

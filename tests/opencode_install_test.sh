@@ -199,9 +199,10 @@ EOF
 }
 
 test_agent_delivery_and_provider_permissions_are_explicit() {
-  local config researcher workspace worktree
+  local config explore researcher workspace worktree
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  explore=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/explore.md
   researcher=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/researcher.md
   workspace=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/workspace-plugin.ts
   worktree=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/worktree.ts
@@ -213,6 +214,28 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"gh api *": "allow"'
   assert_contains "$config" '"glab api *": "allow"'
   assert_contains "$researcher" '### GitHub and GitLab CLIs'
+  assert_contains "$researcher" 'Use Context7 when you need current library'
+  assert_contains "$researcher" 'Use grep.app through'
+  assert_contains "$researcher" 'Use Exa through'
+
+  assert_contains "$config" '"codegraph status*": "allow"'
+  assert_contains "$config" '"codegraph init*": "allow"'
+  assert_contains "$config" '"codegraph init --force*": "deny"'
+  assert_contains "$config" '"codegraph explore*": "allow"'
+  assert_contains "$explore" '## Prime Directive: CodeGraph First'
+  assert_contains "$explore" 'git rev-parse --show-toplevel'
+  assert_contains "$explore" 'Each linked worktree needs its own index.'
+  assert_contains "$explore" '**NEVER** use Context7, Exa, grep.app'
+  assert_contains "$REPOSITORY_ROOT/git/gitignore.symlink" '.codegraph/'
+  assert_contains "$REPOSITORY_ROOT/README.md" \
+    'Each linked worktree receives its own'
+  assert_contains "$REPOSITORY_ROOT/.localrc.example" \
+    'EXA_API_KEY="<CHANGE_ME>"'
+
+  assert_not_contains "$config" '"variant": "medium"'
+  assert_not_contains "$config" '"variant": "low"'
+  assert_contains "$config" '"model": "zai-coding-plan/glm-5.2-highspeed"'
+  assert_contains "$config" '"variant": "high"'
 
   assert_contains "$config" '"git commit*": "ask"'
   assert_contains "$config" '"git pull --ff-only*": "ask"'

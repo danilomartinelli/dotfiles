@@ -47,10 +47,12 @@
 # export TWENTYFIRST_API_KEY="<CHANGE_ME>"
 # export MORPH_API_KEY="<CHANGE_ME>"
 # export TAVILY_API_KEY="<CHANGE_ME>"
+# Exa API/local MCP clients (the hosted remote MCP also works keyless)
+# export EXA_API_KEY="<CHANGE_ME>"
 
 # OpenCode providers (loaded via {env:...} in ~/.opencode/opencode.jsonc)
 # Kimi / Moonshot AI
-# export MOONSHOT_API_KEY="<CHANGE_ME>"
+# export KIMI_API_KEY="<CHANGE_ME>"
 #
 # MiniMax (minimax.io Token Plan or API Console)
 # export MINIMAX_API_KEY="<CHANGE_ME>"

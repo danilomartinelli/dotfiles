@@ -11,12 +11,12 @@
     "webfetch": "deny",
     "worktree_*": "deny",
   },
-  "model": "openai/gpt-5.6-terra",
-  "small_model": "openai/gpt-5.6-luna",
+  "model": "cursor-acp/auto",
+  "small_model": "opencode-go/deepseek-v4-flash",
   "agent": {
     "researcher": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "high",
+      "variant": "xhigh",
       "permission": {
         "context7_*": "allow",
         "exa_*": "allow",
@@ -86,8 +86,7 @@
       },
     },
     "scribe": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "low",
+      "model": "kimi-for-coding/kimi-for-coding-highspeed",
       "permission": {
         "codegraph_*": "allow",
         "bash": {
@@ -102,8 +101,8 @@
       },
     },
     "coder": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high",
+      "model": "cursor-acp/cursor-grok-4.6",
+      "variant": "high-fast",
       "permission": {
         "codegraph_*": "allow",
         "context7_*": "deny",
@@ -120,7 +119,7 @@
       },
     },
     "reviewer": {
-      "model": "openai/gpt-5.6-sol",
+      "model": "openai/gpt-5.6-terra",
       "variant": "high",
       "temperature": 0.1,
       "permission": {
@@ -140,8 +139,8 @@
       },
     },
     "plan": {
-      "model": "openai/gpt-5.6-terra",
-      "variant": "high",
+      "model": "openai/gpt-5.6-sol",
+      "variant": "xhigh",
       "permission": {
         "edit": "deny",
         "write": "deny",
@@ -154,7 +153,7 @@
       },
     },
     "build": {
-      "model": "openai/gpt-5.6-terra",
+      "model": "zai-coding-plan/glm-5.2-highspeed",
       "variant": "high",
       "prompt": "You are a build orchestrator. Delegate implementation and verification to `coder`, documentation to `scribe`, codebase analysis to `explore`, and external research to `researcher`. You may inspect Git and perform final delivery only under the injected delivery policy. Do not edit files or run implementation and verification commands directly.",
       "permission": {
@@ -188,9 +187,12 @@
       },
     },
     "explore": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "low",
+      "model": "minimax-coding-plan/MiniMax-M2.7-highspeed",
       "permission": {
+        "codegraph_*": "allow",
+        "context7_*": "deny",
+        "exa_*": "deny",
+        "gh_grep_*": "deny",
         "edit": "deny",
         "write": "deny",
         "plan_read": "deny",
@@ -216,6 +218,11 @@
           "git blame*": "allow",
           "git branch*": "allow",
           "git ls-files*": "allow",
+          "git rev-parse --show-toplevel*": "allow",
+          "codegraph status*": "allow",
+          "codegraph init*": "allow",
+          "codegraph init --force*": "deny",
+          "codegraph explore*": "allow",
           "uname*": "allow",
           "hostname": "allow",
           "whoami": "allow",

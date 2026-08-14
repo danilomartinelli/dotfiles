@@ -16,7 +16,7 @@ node = "lts"
 "npm:@openai/codex" = "0.146.1"
 "npm:eas-cli" = "16.28.0"
 "npm:ocx" = "2.0.14"
-"npm:opencode-ai" = "1.18.14"
+"npm:opencode-ai" = "1.18.18"
 "npm:skills" = "1.5.21"
 "npm:wrangler" = "4.119.0"
 "pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" }

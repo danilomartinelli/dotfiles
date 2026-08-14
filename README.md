@@ -263,7 +263,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
 | `npm:ocx`                                   | `2.0.14`     |
-| `npm:opencode-ai`                           | `1.18.14`    |
+| `npm:opencode-ai`                           | `1.18.18`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
 | `pipx:aider-chat`                           | `0.86.2`     |
@@ -278,11 +278,19 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `yarn`                                      | `4.11.0`     |
 
 The `npm:@colbymchenry/codegraph` runtime exposes the `codegraph` binary
-globally through Mise. Project use is opt-in: run `codegraph init` from the
-project root to create a local `.codegraph/` directory, which may contain an
-index of the code. Do not version or share `.codegraph/` without evaluating its
-contents and the project's policy. CodeGraph does not automatically install
-MCP integrations or configure agents.
+globally through Mise. The managed OpenCode configuration connects its MCP
+server and gives the read-only `explore` agent a CodeGraph-first workflow. On
+the first structural exploration of a Git project, that agent initializes an
+index at the current worktree root when `codegraph` is available and the exact
+worktree has not been initialized yet. Each linked worktree receives its own
+local index so results always match the active branch.
+
+Generated `.codegraph/` directories are excluded by the global Git ignore and
+must never be committed. `codegraph init` builds the initial graph; the MCP
+server then watches source changes and keeps it synchronized. The agent never
+uses `--force` and does not initialize home, filesystem roots, non-Git
+directories, parent checkouts, or Git common directories. Run `codegraph init`
+manually when using the CLI outside OpenCode.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go

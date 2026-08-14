@@ -387,7 +387,7 @@ version = "2.0.14"
 backend = "npm:ocx"
 
 [[tools."npm:opencode-ai"]]
-version = "1.18.14"
+version = "1.18.18"
 backend = "npm:opencode-ai"
 
 [[tools."npm:skills"]]

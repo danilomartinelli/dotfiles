@@ -4,5 +4,6 @@
 *.orig
 *.log
 .aider*
+.codegraph/
 .direnv/
 .idea/
