@@ -63,9 +63,9 @@ test_config_resolves_managed_instructions_through_config_dir() {
   [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md ]] \
     || scenario_fail 'managed runtime instructions are missing'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
-    'Cursor is only the model transport; it is not the active agent runtime.'
+    'Model providers supply inference, but OpenCode'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
-    'Never switch to Cursor tools'
+    'Never switch to provider-native tools, IDE tools, internal agents, or another'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
     'If a search or tool call fails because of output, glob, or buffer limits'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
