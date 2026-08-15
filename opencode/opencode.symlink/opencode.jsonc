@@ -153,7 +153,7 @@
       },
     },
     "build": {
-      "model": "zai-coding-plan/glm-5.2-highspeed",
+      "model": "zai-coding-plan/glm-5.2",
       "variant": "high",
       "prompt": "You are a build orchestrator. Delegate implementation and verification to `coder`, documentation to `scribe`, codebase analysis to `explore`, and external research to `researcher`. You may inspect Git and perform final delivery only under the injected delivery policy. Do not edit files or run implementation and verification commands directly.",
       "permission": {
