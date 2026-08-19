@@ -28,6 +28,7 @@ brew 'git'                          # Version control system
 brew 'git-delta'                    # Syntax-highlighting pager for Git diffs
 brew 'git-lfs'                      # Git Large File Storage
 brew 'gitleaks'                     # Scan repositories for leaked secrets
+brew 'go-task'
 brew 'glab'                        # GitLab CLI for managing repositories
 brew 'gnu-sed'                      # GNU sed (gsed, portable sed -i)
 brew 'grc'                         # Colourise output of common Unix tools
