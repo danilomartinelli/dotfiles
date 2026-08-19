@@ -45,6 +45,7 @@ fi
 
 # Add Apps (only if they exist)
 add_app_to_dock "/Applications/Ghostty.app" "Ghostty"
+add_app_to_dock "/Applications/Linear.app" "Linear"
 add_app_to_dock "/Applications/Dia.app" "Dia"
 add_app_to_dock "/Applications/Zed.app" "Zed"
 add_app_to_dock "/Applications/Obsidian.app" "Obsidian"
