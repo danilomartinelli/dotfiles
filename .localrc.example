@@ -70,6 +70,12 @@
 # export OPENROUTER_API_KEY="<CHANGE_ME>"
 # Aider also reads provider keys from the environment / a repo `.env`
 #
+# Zed context servers (settings.json uses Zed's $VARIABLE interpolation)
+# Keep these exports in ~/.localrc; never put the token values in settings.json.
+# export BRAVE_API_KEY="<CHANGE_ME>"
+# export CONTEXT7_API_KEY="<CHANGE_ME>"
+# export GITHUB_PERSONAL_ACCESS_TOKEN="<CHANGE_ME>"
+#
 # Hermes Agent (brew install hermes-agent; topic: hermes/)
 # Prefer `hermes model` / `hermes setup` for provider config; keys above are shared.
 # export HERMES_HOME="$HOME/.hermes"

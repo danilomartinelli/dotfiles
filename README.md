@@ -211,7 +211,7 @@ the target before applying, deleting, or changing cluster resources.
 | Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed`          |
 | Terminal                  | `ghostty`, `session-manager-plugin`                                                                         |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
-| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
+| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `linear`, `obsidian`, `paste`, `raycast`, `skim` |
 | Design and media          | `cleanshot`, `figma`, `spotify`                                                                             |
 | Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                             |
 | Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                        |
@@ -481,6 +481,13 @@ not overwrite it.
 Age private keys for SOPS live in `~/.config/sops/age/` (mode `600`) and are
 never committed. `sops/env.zsh` exports `SOPS_AGE_KEY_FILE` and, when present,
 `SOPS_AGE_RECIPIENTS` from `recipient.txt`.
+
+Zed's tracked `zed/settings.json` references the Brave Search, Context7, and
+GitHub context-server credentials through Zed's `$VARIABLE` interpolation. Keep
+the corresponding `BRAVE_API_KEY`, `CONTEXT7_API_KEY`, and
+`GITHUB_PERSONAL_ACCESS_TOKEN` exports in the private `~/.localrc` (the
+`.localrc.example` template lists them). After changing them, reload the shell
+before launching or restarting Zed so its context servers inherit the values.
 
 `.localrc.example` includes commented templates for Git identity exports,
 OpenCode provider keys (`KIMI_API_KEY` / Kimi, `MINIMAX_API_KEY`,

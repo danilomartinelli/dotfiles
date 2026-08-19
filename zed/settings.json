@@ -1,4 +1,32 @@
 {
+  "context_servers": {
+    "browser-tools-context-server": {
+      "enabled": true,
+      "remote": false,
+      "settings": {}
+    },
+    "mcp-server-brave-search": {
+      "enabled": true,
+      "remote": false,
+      "settings": {
+        "brave_api_key": "$BRAVE_API_KEY"
+      }
+    },
+    "mcp-server-context7": {
+      "enabled": true,
+      "remote": false,
+      "settings": {
+        "context7_api_key": "$CONTEXT7_API_KEY"
+      }
+    },
+    "mcp-server-github": {
+      "enabled": true,
+      "remote": false,
+      "settings": {
+        "github_personal_access_token": "$GITHUB_PERSONAL_ACCESS_TOKEN"
+      }
+    }
+  },
   "edit_predictions": {
     "provider": "copilot",
     "allow_data_collection": "no"
@@ -8,6 +36,9 @@
     "trust_all_worktrees": true
   },
   "agent_servers": {
+    "opencode": {
+      "type": "registry"
+    },
     "cursor": {
       "type": "registry"
     },

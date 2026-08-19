@@ -82,6 +82,7 @@ cask 'thebrowsercompany-dia'        # Dia browser
 cask 'google-drive'                 # Google Drive with Finder (File Provider) integration
 cask 'keyclu'                       # Discover and browse application shortcuts
 cask 'lens'                         # Kubernetes IDE
+cask 'linear'                       # Project management and issue tracking
 cask 'nikitabobko/tap/aerospace'    # i3-like tiling window manager for macOS
 cask 'obsidian'                     # Markdown knowledge base and notes app
 cask 'opencode-desktop'             # OpenCode desktop application
