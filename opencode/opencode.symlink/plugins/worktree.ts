@@ -40,13 +40,14 @@ import {
 	toPersistedLaunchMetadata,
 } from "./worktree/launch-context"
 import {
-	addSession,
 	clearPendingDelete,
+	claimSession,
 	getPendingDelete,
 	getSession,
 	getWorktreePath,
 	initStateDb,
 	removeSession,
+	removeSessionById,
 	setPendingDelete,
 } from "./worktree/state"
 import { openTerminal, type TerminalResult } from "./worktree/terminal"
@@ -366,38 +367,97 @@ interface FinalizeWorktreeLaunchOptions {
 	}
 	log: Logger
 	openTerminalFn?: (cwd: string, argv?: string[], windowName?: string) => Promise<TerminalResult>
-	addSessionFn?: typeof addSession
+	claimSessionFn?: typeof claimSession
+	removeSessionFn?: typeof removeSessionById
 	deleteForkedSessionFn?: (sessionId: string) => Promise<void>
+	removeWorktreeFn?: () => Promise<void>
 }
 
 async function finalizeWorktreeLaunch(
 	options: FinalizeWorktreeLaunchOptions,
 ): Promise<TerminalResult> {
 	const openTerminalFn = options.openTerminalFn ?? openTerminal
-	const addSessionFn = options.addSessionFn ?? addSession
-	const deleteForkedSessionFn =
-		options.deleteForkedSessionFn ??
-		(async (_sessionId: string) => {
-			// Default no-op for tests without cleanup side effects.
-		})
+	const claimSessionFn = options.claimSessionFn ?? claimSession
+	const removeSessionFn = options.removeSessionFn ?? removeSessionById
+	const deleteForkedSessionFn = options.deleteForkedSessionFn
+	const cleanupErrors: string[] = []
+	let sessionClaimed = false
 
-	const terminalResult = await openTerminalFn(
-		options.worktreePath,
-		options.launchArgv,
-		options.branch,
-	)
-
-	if (!terminalResult.success) {
-		await deleteForkedSessionFn(options.forkedSessionId).catch((cleanupError) => {
-			options.log.warn(
-				`[worktree] Failed to clean up forked session ${options.forkedSessionId} after launch failure: ${cleanupError}`,
-			)
-		})
-		return terminalResult
+	const recordCleanupError = (operation: string, error: unknown): void => {
+		const message = error instanceof Error ? error.message : String(error)
+		cleanupErrors.push(`${operation}: ${message}`)
+		options.log.warn(`[worktree] ${operation} failed: ${message}`)
 	}
 
-	addSessionFn(options.database, options.sessionRecord)
-	return terminalResult
+	const cleanupLaunchArtifacts = async (): Promise<void> => {
+		if (sessionClaimed) {
+			try {
+				removeSessionFn(options.database, options.forkedSessionId)
+			} catch (error) {
+				recordCleanupError(
+					`Failed to remove claimed session ${options.forkedSessionId}`,
+					error,
+				)
+			}
+		}
+
+		if (deleteForkedSessionFn) {
+			try {
+				await deleteForkedSessionFn(options.forkedSessionId)
+			} catch (error) {
+				recordCleanupError(
+					`Failed to delete forked session ${options.forkedSessionId}`,
+					error,
+				)
+			}
+		}
+
+		if (options.removeWorktreeFn) {
+			try {
+				await options.removeWorktreeFn()
+			} catch (error) {
+				recordCleanupError("Failed to remove worktree after launch failure", error)
+			}
+		}
+	}
+
+	try {
+		// Claim durably before starting the child terminal. The child can only
+		// inherit the nested-worktree guard after this write succeeds.
+		claimSessionFn(options.database, options.sessionRecord)
+		sessionClaimed = true
+	} catch (error) {
+		await cleanupLaunchArtifacts()
+		const message = error instanceof Error ? error.message : String(error)
+		const cleanupDetail = cleanupErrors.length > 0 ? ` Cleanup failed: ${cleanupErrors.join("; ")}` : ""
+		return {
+			success: false,
+			error: `Failed to register forked session before terminal launch: ${message}.${cleanupDetail}`,
+		}
+	}
+
+	let terminalResult: TerminalResult
+	try {
+		terminalResult = await openTerminalFn(
+			options.worktreePath,
+			options.launchArgv,
+			options.branch,
+		)
+	} catch (error) {
+		terminalResult = {
+			success: false,
+			error: error instanceof Error ? error.message : String(error),
+		}
+	}
+
+	if (terminalResult.success) return terminalResult
+
+	await cleanupLaunchArtifacts()
+	const cleanupDetail = cleanupErrors.length > 0 ? ` Cleanup failed: ${cleanupErrors.join("; ")}` : ""
+	return {
+		...terminalResult,
+		error: `${terminalResult.error ?? "Terminal launch failed"}.${cleanupDetail}`,
+	}
 }
 
 /**
@@ -977,6 +1037,20 @@ async function loadWorktreeConfig(directory: string, log: Logger): Promise<Workt
 	}
 }
 
+type ManagedSessionLookup = (sessionID: string) => object | null
+
+/**
+ * Prevent a worktree session from creating another worktree after its fork.
+ * Keep the lookup injectable so the boundary can be tested without opening SQLite.
+ */
+function isManagedWorktreeSession(
+	sessionID: string | undefined,
+	lookup: ManagedSessionLookup,
+): boolean {
+	if (!sessionID) return false
+	return lookup(sessionID) !== null
+}
+
 // =============================================================================
 // PLUGIN ENTRY
 // =============================================================================
@@ -1021,6 +1095,12 @@ const WorktreePlugin: Plugin = async (ctx) => {
 						.describe("Base branch to create from (defaults to HEAD)"),
 				},
 				async execute(args, toolCtx) {
+					if (isManagedWorktreeSession(toolCtx?.sessionID, (sessionID) =>
+						getSession(database, sessionID),
+					)) {
+						return "❌ worktree_create cannot run from a session already managed by the worktree plugin. Continue in the existing worktree session instead."
+					}
+
 					// Validate branch name at boundary
 					const branchResult = branchNameSchema.safeParse(args.branch)
 					if (!branchResult.success) {
@@ -1127,10 +1207,16 @@ const WorktreePlugin: Plugin = async (ctx) => {
 						deleteForkedSessionFn: async (sessionId: string) => {
 							await client.session.delete({ path: { id: sessionId } })
 						},
+						removeWorktreeFn: async () => {
+							const cleanupResult = await removeWorktree(directory, worktreePath)
+							if (!cleanupResult.ok) {
+								throw new WorktreeError(cleanupResult.error, "cleanup")
+							}
+						},
 					})
 
 					if (!terminalResult.success) {
-						return `❌ Failed to launch worktree terminal: ${terminalResult.error ?? "unknown error"}\nWorktree created at ${worktreePath}. Verify launch settings and retry.`
+						return `❌ Failed to launch worktree terminal: ${terminalResult.error ?? "unknown error"}`
 					}
 
 					return `Worktree created at ${worktreePath}\n\nA new terminal has been opened with OpenCode.`

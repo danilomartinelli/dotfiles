@@ -2,6 +2,10 @@
   "name": "opencode-plugins",
   "private": true,
   "type": "module",
+  "scripts": {
+    "test": "bun test plugins",
+    "test:worktree": "bun test plugins/worktree-automation.test.ts"
+  },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.30",
     "@opencode-ai/plugin": "1.18.18"

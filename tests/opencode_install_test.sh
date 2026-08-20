@@ -223,12 +223,11 @@ EOF
 }
 
 test_agent_delivery_and_provider_permissions_are_explicit() {
-  local config explore researcher workspace worktree
+  local config explore researcher worktree
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
   explore=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/explore.md
   researcher=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/researcher.md
-  workspace=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/workspace-plugin.ts
   worktree=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/worktree.ts
 
   assert_contains "$config" '"gh pr view*": "allow"'
@@ -256,11 +255,6 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$REPOSITORY_ROOT/.localrc.example" \
     'EXA_API_KEY="<CHANGE_ME>"'
 
-  assert_not_contains "$config" '"variant": "medium"'
-  assert_not_contains "$config" '"variant": "low"'
-  assert_contains "$config" '"model": "zai-coding-plan/glm-5.2-highspeed"'
-  assert_contains "$config" '"variant": "high"'
-
   assert_contains "$config" '"git commit*": "ask"'
   assert_contains "$config" '"git pull --ff-only*": "ask"'
   assert_contains "$config" '"git push*": "ask"'
@@ -269,17 +263,50 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"worktree_delete": "ask"'
   assert_contains "$config" '"./plugins/workspace-plugin.ts"'
   assert_contains "$config" '"./plugins/worktree.ts"'
+  assert_contains "$config" '"./plugins/background-agents.ts"'
   assert_contains "$config" '"worktree_create": "allow"'
-  assert_contains "$workspace" 'All implementation MUST happen on a dedicated non-default branch'
-  assert_contains "$workspace" 'Build is the sole agent that invokes worktree_create'
-  assert_contains "$workspace" 'explicit build-boundary handoff, not a session-start hook'
-  assert_contains "$workspace" 'do not delegate'
-  assert_contains "$workspace" 'Commit only when the user explicitly requests a commit.'
-  assert_contains "$workspace" 'Push only when the user explicitly requests a push.'
+  assert_contains "$config" 'All implementation requires a dedicated non-default branch'
+  # shellcheck disable=SC2016 # Backticks are literal prompt content, not shell substitution.
+  assert_contains "$config" 'build is the sole agent responsible for the `worktree_create` implementation handoff'
+  assert_contains "$config" 'explicit approved implementation handoff, not a session-start hook'
+  assert_contains "$config" 'coder never commits or pushes'
+  assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
+  assert_contains "$config" 'Push only when explicitly requested; never force-push.'
+  assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command'
+  assert_not_contains "$config" 'delivery policy'
 
   assert_contains "$worktree" 'The working tree must already be clean.'
   assert_contains "$worktree" 'Cannot delete a worktree with uncommitted changes.'
   assert_not_contains "$worktree" 'chore(worktree): session snapshot'
+}
+
+test_plan_task_policy_is_structurally_read_only() {
+  local config
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
+    import { readFileSync } from "node:fs"
+    import { parse } from "jsonc-parser"
+
+    const config = parse(readFileSync(process.argv[1], "utf8"))
+    const task = config?.agent?.plan?.permission?.task
+    const expected = {
+      "*": "deny",
+      explore: "allow",
+      researcher: "allow",
+      reviewer: "allow",
+      build: "allow",
+    }
+    const normalize = (value) => Object.fromEntries(
+      Object.entries(value ?? {}).sort(([left], [right]) => left.localeCompare(right))
+    )
+    if (JSON.stringify(normalize(task)) !== JSON.stringify(normalize(expected))) {
+      console.error("plan task policy is not the approved read-only route set")
+      process.exit(1)
+    }
+  ' "$config"; then
+    scenario_fail 'plan task policy must deny by default and contain only approved read-only routes'
+  fi
 }
 
 test_installer_verifies_linked_payload_without_relinking() {

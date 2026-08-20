@@ -17,6 +17,7 @@ import type { Event, Message, Part, TextPart } from "@opencode-ai/sdk"
 import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator"
 import { getProjectId } from "./kdco-primitives/get-project-id"
 import type { OpencodeClient } from "./kdco-primitives/types"
+import { getSession, initStateDb } from "./worktree/state"
 
 // ==========================================
 // READABLE ID GENERATION
@@ -328,6 +329,82 @@ function isPermissionDenied(entry: PermissionEntry | undefined): boolean {
 	if (entry === "deny") return true
 	if (typeof entry === "object" && entry["*"] === "deny") return true
 	return false
+}
+
+/**
+ * Resolve the agent that owns a session from the persisted user message.
+ * Agent identity is runtime state, so parse it at the hook boundary instead
+ * of trusting tool arguments supplied by the child task.
+ */
+async function parseSessionAgent(
+	client: OpencodeClient,
+	sessionID: string,
+	log: Logger,
+): Promise<string | undefined> {
+	try {
+		const result = await client.session.messages({ path: { id: sessionID } })
+		const messages = (result.data ?? []) as Array<{
+			info?: { role?: string; agent?: string }
+		}>
+
+		for (const message of messages.slice().reverse()) {
+			if (message.info?.role !== "user") continue
+			const agent = message.info.agent?.trim()
+			if (agent) return agent
+		}
+
+		return undefined
+	} catch (error) {
+		log.warn(
+			`Session agent lookup failed for "${sessionID}": ${error instanceof Error ? error.message : String(error)}`,
+		)
+		return undefined
+	}
+}
+
+function isPlanDelegatingToWriteCapable(
+	parentAgent: string | undefined,
+	isTargetReadOnly: boolean,
+): boolean {
+	return parentAgent === "plan" && !isTargetReadOnly
+}
+
+async function isLinkedWorktree(directory: string, log: Logger): Promise<boolean> {
+	try {
+		const gitProcess = Bun.spawn(["git", "rev-parse", "--git-dir", "--git-common-dir"], {
+			cwd: directory,
+			stdout: "pipe",
+			stderr: "pipe",
+		})
+		const [stdout, stderr, exitCode] = await Promise.all([
+			new Response(gitProcess.stdout).text(),
+			new Response(gitProcess.stderr).text(),
+			gitProcess.exited,
+		])
+		if (exitCode !== 0) {
+			log.warn(
+				`Unable to resolve Git worktree identity for "${directory}": ${stderr.trim() || "git rev-parse failed"}`,
+			)
+			return false
+		}
+
+		const [gitDirectory, commonGitDirectory] = stdout
+			.trim()
+			.split(/\r?\n/)
+		if (!gitDirectory || !commonGitDirectory) {
+			log.warn(`Unable to resolve Git worktree identity for "${directory}"`)
+			return false
+		}
+
+		const resolveGitPath = (gitPath: string): string =>
+			path.resolve(path.isAbsolute(gitPath) ? gitPath : path.join(directory, gitPath))
+		return resolveGitPath(gitDirectory) !== resolveGitPath(commonGitDirectory)
+	} catch (error) {
+		log.warn(
+			`Unable to resolve Git worktree identity for "${directory}": ${error instanceof Error ? error.message : String(error)}`,
+		)
+		return false
+	}
 }
 
 /**
@@ -1820,7 +1897,6 @@ function formatDelegationContext(
  * Expected input for experimental.chat.system.transform hook.
  */
 interface SystemTransformInput {
-	agent?: string
 	sessionID?: string
 }
 
@@ -1834,6 +1910,14 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 	// Uses git root commit hash for cross-worktree consistency
 	const projectId = await getProjectId(directory)
 	const baseDir = path.join(os.homedir(), ".local", "share", "opencode", "delegations", projectId)
+	const worktreeDatabase = await initStateDb(directory)
+	const isNonDefaultWorktree = await isLinkedWorktree(directory, log)
+	const isManagedNonDefaultWorktreeSession = (sessionID: string | undefined): boolean => {
+		if (!isNonDefaultWorktree || !sessionID) return false
+		const session = getSession(worktreeDatabase, sessionID)
+		if (!session) return false
+		return path.resolve(session.path) === path.resolve(directory)
+	}
 
 	// Ensure base directory exists (for debug logs etc)
 	await fs.mkdir(baseDir, { recursive: true })
@@ -1851,7 +1935,7 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 
 		// Prevent read-only agents from using native task tool (symmetric to delegate enforcement)
 		"tool.execute.before": async (
-			input: { tool: string },
+			input: { tool: string; sessionID?: string },
 			output: { args?: { subagent_type?: string } },
 		) => {
 			// Guard: Only intercept task tool
@@ -1860,6 +1944,41 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 			// Guard: Require agent name
 			const agentName = output.args?.subagent_type
 			if (!agentName) return
+
+			// Capability is read from the installed target-agent configuration rather
+			// than inferred from its name. This keeps the guard correct as agents change.
+			const { isReadOnly: isTargetReadOnly } = await parseAgentWriteCapability(
+				client as OpencodeClient,
+				agentName,
+				log,
+			)
+
+			if (!isTargetReadOnly) {
+				const parentAgent = await parseSessionAgent(
+					client as OpencodeClient,
+					input.sessionID ?? "",
+					log,
+				)
+				if (!parentAgent) {
+					throw new Error(
+						`❌ Cannot authorize delegation to write-capable agent '${agentName}': caller session identity could not be resolved.`,
+					)
+				}
+
+				if (isPlanDelegatingToWriteCapable(parentAgent, isTargetReadOnly)) {
+					throw new Error(
+						`❌ Planning sessions cannot delegate to write-capable agent '${agentName}'. Hand off to a read-only route or the build orchestrator.`,
+					)
+				}
+
+				if (!isManagedNonDefaultWorktreeSession(input.sessionID)) {
+					throw new Error(
+						`❌ Write-capable agent '${agentName}' can only be delegated from a managed, non-default worktree session.`,
+					)
+				}
+
+				return
+			}
 
 			// Parse boundary 1: Check agent mode
 			const { isSubAgent } = await parseAgentMode(client as OpencodeClient, agentName, log)
@@ -1977,6 +2096,7 @@ const BackgroundAgentsPluginWithInternals = Object.assign(BackgroundAgentsPlugin
 	testInternals: {
 		DelegationManager,
 		formatDelegationContext,
+		isPlanDelegatingToWriteCapable,
 	},
 } as const)
 

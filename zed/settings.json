@@ -7,24 +7,15 @@
     },
     "mcp-server-brave-search": {
       "enabled": true,
-      "remote": false,
-      "settings": {
-        "brave_api_key": "$BRAVE_API_KEY"
-      }
+      "remote": false
     },
     "mcp-server-context7": {
       "enabled": true,
-      "remote": false,
-      "settings": {
-        "context7_api_key": "$CONTEXT7_API_KEY"
-      }
+      "remote": false
     },
     "mcp-server-github": {
       "enabled": true,
-      "remote": false,
-      "settings": {
-        "github_personal_access_token": "$GITHUB_PERSONAL_ACCESS_TOKEN"
-      }
+      "remote": false
     }
   },
   "edit_predictions": {

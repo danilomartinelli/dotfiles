@@ -70,8 +70,14 @@
 # export OPENROUTER_API_KEY="<CHANGE_ME>"
 # Aider also reads provider keys from the environment / a repo `.env`
 #
-# Zed context servers (settings.json uses Zed's $VARIABLE interpolation)
-# Keep these exports in ~/.localrc; never put the token values in settings.json.
+# Zed process-backed LSP and stdio MCP credentials may be exported here when the
+# underlying process natively reads the variable. Zed passes its inherited
+# process environment through; it does not interpolate variables in arbitrary
+# settings fields. Do not put $VARIABLE, ${VARIABLE}, or keychain references in
+# Zed settings.json. Literal-JSON-only extension/LSP/static-header auth has no
+# verified secret-safe tracked-settings mechanism in this installation; use
+# OAuth or a process-based integration that reads inherited environment, or do
+# not configure it. Never put plaintext credentials in Zed settings.
 # export BRAVE_API_KEY="<CHANGE_ME>"
 # export CONTEXT7_API_KEY="<CHANGE_ME>"
 # export GITHUB_PERSONAL_ACCESS_TOKEN="<CHANGE_ME>"

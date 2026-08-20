@@ -482,12 +482,66 @@ Age private keys for SOPS live in `~/.config/sops/age/` (mode `600`) and are
 never committed. `sops/env.zsh` exports `SOPS_AGE_KEY_FILE` and, when present,
 `SOPS_AGE_RECIPIENTS` from `recipient.txt`.
 
-Zed's tracked `zed/settings.json` references the Brave Search, Context7, and
-GitHub context-server credentials through Zed's `$VARIABLE` interpolation. Keep
-the corresponding `BRAVE_API_KEY`, `CONTEXT7_API_KEY`, and
-`GITHUB_PERSONAL_ACCESS_TOKEN` exports in the private `~/.localrc` (the
-`.localrc.example` template lists them). After changing them, reload the shell
-before launching or restarting Zed so its context servers inherit the values.
+Zed's tracked `zed/settings.json` contains no credential-bearing leaves or fake
+interpolation. Zed treats `$VARIABLE` and `${VARIABLE}` as literal strings in
+extension settings, LSP/MCP environment maps, and remote-MCP headers; a value
+such as `$BRAVE_API_KEY` can overwrite an inherited value with that literal
+text. Generic keychain interpolation is unsupported as well.
+
+The installer links the tracked file to `~/.config/zed/settings.json`. For
+literal-JSON-only extension or LSP settings, including static-header
+authentication, no supported secret-safe tracked-settings mechanism has been
+verified for this installation. Do not store plaintext secrets in any Zed
+settings layer, and do not add another unverified machine-local settings
+fallback: such fallback claims can be inactive or migrated. Use OAuth, use a
+process-based stdio MCP/LSP that reads inherited environment, or do not
+configure that integration.
+
+`.zed/settings.local.json` is project-scoped/local configuration, not a
+personal-secret layer. It must never contain credentials and must not be relied
+upon to layer personal secrets over tracked settings. Do not add this file for
+that purpose. Before using it for non-secret project preferences, ensure the
+repository's ignore rules keep it local.
+
+For an LSP or stdio MCP whose executable natively reads an environment
+variable, configure only its path/command and arguments in tracked settings and
+omit `binary.env` or MCP `env` entirely. Zed supplies its inherited process
+environment to spawned processes. For project-scoped environments, load the
+secret through a private `direnv` setup and use a tracked launcher with no
+credential value, for example:
+
+```json
+{
+  "context_servers": {
+    "service-mcp": {
+      "command": "direnv",
+      "args": ["exec", ".", "service-mcp", "--stdio"]
+    }
+  },
+  "lsp": {
+    "service-language-server": {
+      "binary": { "path": "service-language-server" }
+    }
+  }
+}
+```
+
+The `direnv` file that supplies the credential must remain machine-local; do
+not put the secret in a tracked `.envrc`. For remote MCP servers that support
+standard MCP OAuth, configure only the URL and let Zed store the OAuth session
+in the system keychain:
+
+```json
+{
+  "context_servers": {
+    "remote-service": { "url": "https://mcp.example.invalid/mcp" }
+  }
+}
+```
+
+Never put environment interpolation or a static bearer secret in `headers`.
+If OAuth is unavailable for a literal-header integration, do not configure it.
+After changing inherited environment or local settings, restart Zed.
 
 `.localrc.example` includes commented templates for Git identity exports,
 OpenCode provider keys (`KIMI_API_KEY` / Kimi, `MINIMAX_API_KEY`,
@@ -537,6 +591,7 @@ tests/topic_catalog_test.sh
 tests/link_dotfiles_test.sh
 tests/opencode_install_test.sh
 _scripts/test-checkout-root
+cd opencode/opencode.symlink && bun test
 ```
 
 The behavioral suites source `tests/_support/shell-scenario.sh` for temporary
@@ -551,6 +606,8 @@ shell alias, public function, Brewfile package, and Mise tool declaration.
 setup, and Zsh startup to resolve the same Homebrew executable and prefix rules.
 
 After changing shell configuration, run the relevant tests and then `reload!`.
+The OpenCode plugin suite is run from `opencode/opencode.symlink` with
+`bun test`; `bun run test:worktree` runs the worktree automation boundary suite.
 
 ## Adding a topic or dependency
 

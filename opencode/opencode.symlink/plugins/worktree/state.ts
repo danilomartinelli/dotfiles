@@ -259,7 +259,25 @@ function normalizeSessionRow(row: Record<string, string | null>): Session {
  * @param session - Session data to persist
  */
 export function addSession(db: Database, session: SessionInput): void {
-	// Parse at boundary for type safety
+	const parsedSession = parseSessionInput(session)
+
+	const stmt = db.prepare(`
+		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
+		VALUES ($id, $branch, $path, $createdAt, $launchMode, $profile, $ocxBin)
+	`)
+
+	stmt.run({
+		$id: parsedSession.id,
+		$branch: parsedSession.branch,
+		$path: parsedSession.path,
+		$createdAt: parsedSession.createdAt,
+		$launchMode: parsedSession.launchMode,
+		$profile: parsedSession.profile,
+		$ocxBin: parsedSession.ocxBin,
+	})
+}
+
+function parseSessionInput(session: SessionInput): Session & { launchMode: "plain" | "ocx" } {
 	const parsed = sessionSchema.parse(session)
 	const launchMetadata = parsePersistedLaunchMetadata({
 		launchMode: parsed.launchMode,
@@ -268,19 +286,39 @@ export function addSession(db: Database, session: SessionInput): void {
 	})
 	const serializedLaunchMetadata = serializePersistedLaunchMetadata(launchMetadata)
 
+	return {
+		id: parsed.id,
+		branch: parsed.branch,
+		path: parsed.path,
+		createdAt: parsed.createdAt,
+		launchMode: serializedLaunchMetadata.launchMode,
+		profile: serializedLaunchMetadata.profile,
+		ocxBin: serializedLaunchMetadata.ocxBin,
+	}
+}
+
+/**
+ * Claim a session before launching its child terminal.
+ *
+ * Unlike addSession, this intentionally does not replace an existing row. A
+ * duplicate claim is a launch-boundary failure and must prevent the child from
+ * starting without a durable nested-worktree guard.
+ */
+export function claimSession(db: Database, session: SessionInput): void {
+	const parsedSession = parseSessionInput(session)
 	const stmt = db.prepare(`
-		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
+		INSERT INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
 		VALUES ($id, $branch, $path, $createdAt, $launchMode, $profile, $ocxBin)
 	`)
 
 	stmt.run({
-		$id: parsed.id,
-		$branch: parsed.branch,
-		$path: parsed.path,
-		$createdAt: parsed.createdAt,
-		$launchMode: serializedLaunchMetadata.launchMode,
-		$profile: serializedLaunchMetadata.profile,
-		$ocxBin: serializedLaunchMetadata.ocxBin,
+		$id: parsedSession.id,
+		$branch: parsedSession.branch,
+		$path: parsedSession.path,
+		$createdAt: parsedSession.createdAt,
+		$launchMode: parsedSession.launchMode,
+		$profile: parsedSession.profile,
+		$ocxBin: parsedSession.ocxBin,
 	})
 }
 
@@ -320,6 +358,14 @@ export function removeSession(db: Database, branch: string): void {
 
 	const stmt = db.prepare(`DELETE FROM sessions WHERE branch = $branch`)
 	stmt.run({ $branch: branch })
+}
+
+/** Remove one claimed session without affecting another session on the branch. */
+export function removeSessionById(db: Database, sessionId: string): void {
+	if (!sessionId) return
+
+	const stmt = db.prepare(`DELETE FROM sessions WHERE id = $id`)
+	stmt.run({ $id: sessionId })
 }
 
 /**
