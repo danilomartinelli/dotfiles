@@ -21,6 +21,8 @@ This is non-negotiable. The philosophy defines the quality standards your code m
 - Follow existing project conventions and patterns
 - Write clean, readable code that adheres to the loaded philosophy
 - Run verification after changes (lint, type-check, tests)
+- When an observed or suspected defect is in scope, load `deterministic-diagnosis` and establish a repeatable red command before editing.
+- When behavior changes at a stable command, API, exported function, user workflow, or documented interface, load `public-seam-tdd`; do not load either skill for unrelated work.
 - Refactor if code violates philosophy principles
 - Return clear summaries of changes made
 

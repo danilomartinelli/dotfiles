@@ -118,6 +118,7 @@ needed, then runs `brew bundle` against that file.
 | `git-delta`               | Syntax-highlighting pager for Git diffs           |
 | `git-lfs`                 | Git Large File Storage                            |
 | `gitleaks`                | Scan repositories for leaked secrets              |
+| `go-task`                 | Task runner for project automation                 |
 | `glab`                    | GitLab CLI                                        |
 | `gnu-sed`                 | GNU `sed` (`gsed`, portable `sed -i`)             |
 | `grc`                     | Colourise output of common Unix tools             |
@@ -291,6 +292,17 @@ server then watches source changes and keeps it synchronized. The agent never
 uses `--force` and does not initialize home, filesystem roots, non-Git
 directories, parent checkouts, or Git common directories. Run `codegraph init`
 manually when using the CLI outside OpenCode.
+
+### Agent doctrine
+
+OpenCode uses the local selective doctrine skills for deterministic diagnosis,
+public-seam TDD, grilling, writing for agents, and the augmented code-review
+workflow. These are guidance only: existing permissions and project
+instructions take precedence. Taste doctrine is deferred until an eligible
+project target is named; frontend-philosophy and accessibility requirements
+remain the governing precedence for that future decision. See
+`docs/agent-doctrine/DECISION-RECORD.md` for authorization, provenance, and
+rollback boundaries.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go

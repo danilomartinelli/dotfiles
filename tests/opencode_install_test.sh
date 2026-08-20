@@ -72,6 +72,81 @@ test_config_resolves_managed_instructions_through_config_dir() {
     'instead of changing runtimes or inventing another tool surface.'
 }
 
+test_selective_skill_payloads_are_present_discoverable_and_scoped() {
+  local config skills_dir skill skill_name
+  local -a approved_skills
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  skills_dir=$REPOSITORY_ROOT/opencode/opencode.symlink/skills
+  approved_skills=(
+    code-philosophy
+    code-review
+    deterministic-diagnosis
+    frontend-philosophy
+    grilling
+    plan-protocol
+    plan-review
+    public-seam-tdd
+    writing-for-agents
+  )
+
+  for skill in "${approved_skills[@]}"; do
+    [[ -f $skills_dir/$skill/SKILL.md ]] \
+      || scenario_fail "approved skill payload is missing: $skill"
+    assert_contains "$skills_dir/$skill/SKILL.md" "name: $skill"
+  done
+
+  while IFS= read -r skill_dir; do
+    skill_name=$(basename -- "$skill_dir")
+    case " ${approved_skills[*]} " in
+      *" $skill_name "*) ;;
+      *) scenario_fail "unapproved skill payload is present: $skill_name" ;;
+    esac
+  done < <(find "$skills_dir" -mindepth 1 -maxdepth 1 -type d -print | sort)
+
+  # The managed payload is discovered from the OpenCode config directory's
+  # conventional skills directory; no broad external catalog is configured.
+  assert_not_contains "$config" '"skills":'
+  [[ ! -e $skills_dir/ask-matt ]] \
+    || scenario_fail 'the unapproved full Matt catalog payload is present'
+  [[ ! -e $skills_dir/taste ]] \
+    || scenario_fail 'the deferred Taste payload is present'
+}
+
+test_selective_skill_routes_are_relevant_and_taste_is_not_global() {
+  local config coder reviewer scribe review_command code_review_skill
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  coder=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/coder.md
+  reviewer=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/reviewer.md
+  scribe=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/scribe.md
+  review_command=$REPOSITORY_ROOT/opencode/opencode.symlink/commands/review.md
+  code_review_skill=$REPOSITORY_ROOT/opencode/opencode.symlink/skills/code-review/SKILL.md
+
+  assert_contains "$config" "load \`grilling\` and ask precise questions"
+  assert_contains "$config" "use the local \`deterministic-diagnosis\` skill"
+  assert_contains "$config" "use \`public-seam-tdd\`"
+  assert_not_contains "$config" 'diagnosing-bugs'
+  assert_not_contains "$config" 'ask-matt'
+  assert_not_contains "$config" 'taste'
+
+  assert_contains "$coder" "load \`deterministic-diagnosis\`"
+  assert_contains "$coder" "load \`public-seam-tdd\`"
+  assert_contains "$reviewer" 'fixed-point three-dot diff review'
+  assert_contains "$reviewer" 'Standards versus Spec'
+  assert_contains "$scribe" "Load \`writing-for-agents\`"
+  assert_contains "$review_command" 'fixed-point three-dot diff'
+  assert_contains "$review_command" 'Standards and Spec as independent axes'
+  assert_contains "$code_review_skill" 'fixed-point'
+  assert_contains "$code_review_skill" 'Standards axis'
+  assert_contains "$code_review_skill" 'Spec axis'
+
+  [[ ! -e $REPOSITORY_ROOT/opencode/opencode.symlink/commands/taste.md ]] \
+    || scenario_fail 'Taste is registered as a command without a target'
+  [[ ! -e $REPOSITORY_ROOT/opencode/opencode.symlink/commands/taste-audit.md ]] \
+    || scenario_fail 'Taste audit is registered without a target'
+}
+
 test_cursor_provider_keeps_opencode_as_the_tool_runtime() {
   local home output
 
@@ -414,6 +489,10 @@ scenario_run 'OpenCode env defaults to ~/.opencode and preserves overrides' \
   test_env_defaults_to_opencode_home_and_preserves_override
 scenario_run 'OpenCode instructions resolve through OPENCODE_CONFIG_DIR' \
   test_config_resolves_managed_instructions_through_config_dir
+scenario_run 'OpenCode keeps selective skill payloads present and scoped' \
+  test_selective_skill_payloads_are_present_discoverable_and_scoped
+scenario_run 'OpenCode routes skills only to relevant agents' \
+  test_selective_skill_routes_are_relevant_and_taste_is_not_global
 scenario_run 'Cursor provider keeps OpenCode as the tool runtime' \
   test_cursor_provider_keeps_opencode_as_the_tool_runtime
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \

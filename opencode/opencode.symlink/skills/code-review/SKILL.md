@@ -67,10 +67,19 @@ If uncertain about an issue:
 ## Review Process
 
 1. **Initial Scan** - Identify all files in scope, understand the change
-2. **Deep Analysis** - Apply all 4 layers systematically to each file
-3. **Context Evaluation** - Consider surrounding code, project patterns, existing conventions
-4. **Philosophy Check** - Verify against code-philosophy (5 Laws) if applicable
-5. **Synthesize Findings** - Group by severity, deduplicate, prioritize
+2. **Fix the comparison point** - Review the pull request's fixed-point
+   three-dot diff: compare the branch against its merge-base with the base
+   branch, not against a moving working tree or a two-dot range.
+3. **Deep Analysis** - Apply all 4 layers systematically to each file
+4. **Standards axis** - Independently check repository conventions, security,
+   maintainability, and required engineering practices.
+5. **Spec axis** - Independently check the requested behavior, acceptance
+   criteria, compatibility, and user-visible contract.
+6. **Context Evaluation** - Consider surrounding code, project patterns, and
+   existing conventions.
+7. **Philosophy Check** - Verify against code-philosophy (5 Laws) if applicable
+8. **Synthesize Findings** - Group by severity, deduplicate, prioritize, and
+   label each finding as Standards, Spec, or both.
 
 ## Output Format
 

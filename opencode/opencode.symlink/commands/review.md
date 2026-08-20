@@ -13,6 +13,7 @@ Otherwise, review the specified file(s) or directory.
 The reviewer agent will:
 - Load the code-review skill
 - Apply the 4 Review Layers (Correctness, Security, Performance, Style)
+- Review the fixed-point three-dot diff and assess Standards and Spec as independent axes.
 - Classify findings by severity (Critical, Major, Minor, Nitpick)
 - Only report findings with >=80% confidence
 - Include positive observations

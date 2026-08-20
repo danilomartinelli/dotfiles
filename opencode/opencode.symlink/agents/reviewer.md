@@ -26,7 +26,7 @@ Plan reviews check implementation plans against quality standards. Architecture 
 
 1. **Identify Scope** - List all files to be reviewed
 2. **Load Skills** - Load appropriate philosophy skills
-3. **Analyze Each File** - Apply the 4 Review Layers (Correctness, Security, Performance, Style)
+3. **Analyze Each File** - Apply the 4 Review Layers (Correctness, Security, Performance, Style), then independently apply the extended code-review axes: fixed-point three-dot diff review and Standards versus Spec.
 4. **Classify Findings** - Assign severity (🔴 Critical, 🟠 Major, 🟡 Minor, 🟢 Nitpick)
 5. **Filter by Confidence** - Only report ≥80% confidence findings
 6. **Format Output** - Use structured output format below
