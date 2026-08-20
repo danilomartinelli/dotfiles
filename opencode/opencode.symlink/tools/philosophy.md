@@ -3,7 +3,8 @@
 Before writing or modifying any code, you MUST:
 
 1. **Select the relevant philosophy** based on your task:
-   - Working on UI/frontend? → Load **`frontend-philosophy`** (The 5 Pillars of Intentional UI)
+   - Any frontend or visual UI work? → Load **`frontend-philosophy`** (contextual and accessible)
+   - Load **`frontend-design-discipline`** only when all three conditions are met: (1) the task identifies a frontend/UI target or surface; (2) the work is visual or interactive; and (3) the task creates a new surface or substantially redesigns an existing one. Do not load it for minor adjustments, mechanical maintenance, or frontend work that fails any condition.
    - Working on backend/logic? → Load **`code-philosophy`** (The 5 Laws of Elegant Defense)
    - Working on both? → Load both
 
@@ -13,4 +14,5 @@ Before writing or modifying any code, you MUST:
 
 4. **Refactor if needed** - if code violates any principle, fix it before proceeding
 
-This is NOT optional. These philosophies define how code must be written in this project.
+This is NOT optional. Apply frontend guidance conditionally and do not impose
+mandatory typography, color, motion, composition, gradient, or texture choices.

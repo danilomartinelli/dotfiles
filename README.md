@@ -36,6 +36,17 @@ The daily `dot` update also recreates missing `*.symlink` links before running
 dependency and topic installers. Existing local conflicts are preserved
 without prompting.
 
+Bootstrap and updates do not open graphical applications. The only intentional
+app-opening path is the interactive checklist:
+
+```bash
+_scripts/setup checklist --open-apps
+```
+
+Run it from an interactive terminal and complete any requested logins manually.
+The setup flow does not access or reset Keychain credentials; do not use it to
+recover credentials.
+
 After bootstrap, open a new shell or run:
 
 ```bash
@@ -298,11 +309,16 @@ manually when using the CLI outside OpenCode.
 OpenCode uses the local selective doctrine skills for deterministic diagnosis,
 public-seam TDD, grilling, writing for agents, and the augmented code-review
 workflow. These are guidance only: existing permissions and project
-instructions take precedence. Taste doctrine is deferred until an eligible
-project target is named; frontend-philosophy and accessibility requirements
-remain the governing precedence for that future decision. See
-`docs/agent-doctrine/DECISION-RECORD.md` for authorization, provenance, and
-rollback boundaries.
+instructions take precedence. The frontend philosophy emphasizes intentional,
+accessible, distinctive interfaces; the frontend design discipline is
+conditional and eligible only when all three conditions hold: (1) an
+identifiable frontend or UI target/surface; (2) visual or interactive work;
+and (3) creation of a new surface or a substantial redesign of an existing
+surface. Neither layer is a universal aesthetic policy. See
+[`docs/agent-doctrine/DECISION-RECORD.md`](docs/agent-doctrine/DECISION-RECORD.md)
+for authority, provenance, routing, and rollback boundaries, and the
+[taste-skill reference](skills/frontend-design-discipline/references/taste-skill.md)
+for the bounded adaptation.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go

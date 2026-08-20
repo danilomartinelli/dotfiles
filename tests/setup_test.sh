@@ -122,6 +122,12 @@ EOF
 #!/bin/sh
 printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 EOF
+
+  scenario_write_executable "$fixture/fake-bin/open" <<'EOF'
+#!/bin/sh
+printf 'open %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+exit 0
+EOF
 }
 
 make_fixture() {
@@ -296,6 +302,60 @@ test_update_sequence_and_cwd_independence() {
   assert_contains "$fixture/home/.preserved" 'local conflict'
   [ ! -L "$fixture/home/.preserved" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
+}
+
+test_standard_modes_never_open_apps_or_launch_checklist() {
+  local bootstrap_fixture
+  local update_fixture
+
+  bootstrap_fixture=$(make_fixture)
+  invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/setup" bootstrap
+  assert_not_contains "$bootstrap_fixture/events.log" 'open '
+  assert_not_contains "$bootstrap_fixture/stdout.log" 'Post-bootstrap checklist'
+  awk '/^run_bootstrap\(\)/,/^}/' "$bootstrap_fixture/_scripts/setup" \
+    >"$bootstrap_fixture/bootstrap-function.txt"
+  assert_not_contains "$bootstrap_fixture/bootstrap-function.txt" open
+  assert_not_contains "$bootstrap_fixture/bootstrap-function.txt" checklist
+
+  update_fixture=$(make_fixture)
+  invoke "$update_fixture" "$update_fixture/_scripts/setup" update
+  assert_not_contains "$update_fixture/events.log" 'open '
+  assert_not_contains "$update_fixture/stdout.log" 'Post-bootstrap checklist'
+  awk '/^run_update\(\)/,/^}/' "$update_fixture/_scripts/setup" \
+    >"$update_fixture/update-function.txt"
+  assert_not_contains "$update_fixture/update-function.txt" open
+  assert_not_contains "$update_fixture/update-function.txt" checklist
+}
+
+test_checklist_opening_requires_interactive_opt_in() {
+  local fixture
+  local status=0
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" checklist --open-apps || status=$?
+
+  assert_equal 1 "$status" 'non-interactive checklist status'
+  assert_contains "$fixture/stderr.log" \
+    'app checklist opening requires an interactive terminal'
+  assert_not_contains "$fixture/events.log" 'open '
+  assert_contains "$fixture/_scripts/setup" \
+    "[ \"\$#\" -eq 2 ] && [ \"\$1\" = checklist ] && [ \"\$2\" = --open-apps ]"
+}
+
+test_app_installers_never_launch_apps_implicitly() {
+  local installer
+
+  for installer in \
+    "$REPOSITORY_ROOT/bartender/install.sh" \
+    "$REPOSITORY_ROOT/keyclu/install.sh" \
+    "$REPOSITORY_ROOT/raycast/install.sh" \
+    "$REPOSITORY_ROOT/skim/install.sh" \
+    "$REPOSITORY_ROOT/tailscale/install.sh"; do
+    if grep -Fq -- 'open -ga' "$installer"; then
+      scenario_fail "installer launches an app implicitly: $installer"
+      return 1
+    fi
+  done
 }
 
 test_legacy_homebrew_cleanup_precedes_upgrade() {
@@ -480,6 +540,12 @@ test_command_adapters() {
 scenario_run 'setup rejects unknown modes' test_setup_usage
 scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
 scenario_run 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
+scenario_run 'standard modes never open apps or launch the checklist' \
+  test_standard_modes_never_open_apps_or_launch_checklist
+scenario_run 'checklist opening requires explicit interactive opt-in' \
+  test_checklist_opening_requires_interactive_opt_in
+scenario_run 'app installers never launch apps implicitly' \
+  test_app_installers_never_launch_apps_implicitly
 scenario_run 'legacy Homebrew cleanup precedes update and upgrade' test_legacy_homebrew_cleanup_precedes_upgrade
 scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
 scenario_run 'critical failures stop the run' test_critical_failures_stop

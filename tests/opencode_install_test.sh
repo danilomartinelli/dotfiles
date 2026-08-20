@@ -5,6 +5,7 @@ set -u
 TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
+# shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
 scenario_init dotfiles-opencode-install-tests
 
@@ -82,6 +83,7 @@ test_selective_skill_payloads_are_present_discoverable_and_scoped() {
     code-philosophy
     code-review
     deterministic-diagnosis
+    frontend-design-discipline
     frontend-philosophy
     grilling
     plan-protocol
@@ -359,6 +361,7 @@ test_plan_task_policy_is_structurally_read_only() {
   local config
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  # shellcheck disable=SC2016 # The embedded Bun program receives shell arguments explicitly.
   if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
     import { readFileSync } from "node:fs"
     import { parse } from "jsonc-parser"
@@ -381,6 +384,153 @@ test_plan_task_policy_is_structurally_read_only() {
     }
   ' "$config"; then
     scenario_fail 'plan task policy must deny by default and contain only approved read-only routes'
+  fi
+}
+
+test_opencode_contracts_are_parseable_and_semantically_aligned() {
+  local config skills_dir review_command reviewer coder code_review frontend discipline philosophy readme decision_record taste_reference
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  skills_dir=$REPOSITORY_ROOT/opencode/opencode.symlink/skills
+  review_command=$REPOSITORY_ROOT/opencode/opencode.symlink/commands/review.md
+  reviewer=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/reviewer.md
+  coder=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/coder.md
+  code_review=$skills_dir/code-review/SKILL.md
+  frontend=$skills_dir/frontend-philosophy/SKILL.md
+  discipline=$skills_dir/frontend-design-discipline/SKILL.md
+  philosophy=$REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md
+  readme=$REPOSITORY_ROOT/README.md
+  decision_record=$REPOSITORY_ROOT/docs/agent-doctrine/DECISION-RECORD.md
+  taste_reference=$REPOSITORY_ROOT/skills/frontend-design-discipline/references/taste-skill.md
+
+  # shellcheck disable=SC2016 # The embedded Bun program receives shell arguments explicitly.
+  if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
+    import { readdir, readFile } from "node:fs/promises"
+    import { parse } from "jsonc-parser"
+
+    const [configPath, skillsPath, reviewCommandPath, reviewerPath, coderPath,
+      codeReviewPath, frontendPath, disciplinePath, philosophyPath, readmePath,
+      decisionRecordPath, tasteReferencePath] = process.argv.slice(1)
+    const read = (path) => readFile(path, "utf8")
+    const fail = (message) => {
+      console.error(message)
+      process.exit(1)
+    }
+    const configText = await read(configPath)
+    const parseErrors = []
+    const config = parse(configText, parseErrors, { allowTrailingComma: true })
+    if (parseErrors.length > 0) fail("opencode.jsonc has parse errors")
+
+    const requiredMcps = ["codegraph", "context7", "gh_grep", "exa"]
+    for (const name of requiredMcps) {
+      const server = config.mcp?.[name]
+      if (!server || !server.enabled || !server.type) fail(`MCP is not discoverable: ${name}`)
+      if (server.type === "local" && !Array.isArray(server.command)) fail(`local MCP command is not an argv array: ${name}`)
+      if (server.type === "remote" && typeof server.url !== "string") fail(`remote MCP URL is missing: ${name}`)
+    }
+
+    const reviewerBash = config.agent?.reviewer?.permission?.bash ?? {}
+    const expectedGitRules = ["git diff*", "git merge-base *", "git log*", "git show*"]
+    for (const rule of expectedGitRules) {
+      if (reviewerBash[rule] !== "allow") fail(`reviewer is missing minimum Git permission: ${rule}`)
+    }
+    for (const rule of Object.keys(reviewerBash)) {
+      if (rule.startsWith("git ") && !expectedGitRules.includes(rule)) fail(`reviewer has an unnecessary Git permission: ${rule}`)
+    }
+    if (reviewerBash["*"] !== "deny") fail("reviewer Git permissions are not default-deny")
+
+    const reviewerPermission = config.agent?.reviewer?.permission ?? {}
+    if (reviewerPermission.skill !== "allow") fail("reviewer does not have the explicit skill permission")
+
+    const coderPermission = config.agent?.coder?.permission ?? {}
+    if (coderPermission.write !== "allow" || coderPermission.edit !== "allow" || coderPermission.skill !== "allow") {
+      fail("coder does not have the existing write/edit permissions plus explicit skill access")
+    }
+
+    const [reviewCommand, reviewer, coder, codeReview, frontend, discipline, philosophy, readme, decisionRecord, tasteReference] =
+      await Promise.all([reviewCommandPath, reviewerPath, coderPath, codeReviewPath, frontendPath, disciplinePath, philosophyPath, readmePath, decisionRecordPath, tasteReferencePath].map(read))
+    if (!/recent\s+<base-ref>/.test(reviewCommand) || !reviewCommand.includes("git merge-base") || /git diff HEAD~1|since last commit using/.test(reviewCommand)) fail("review command does not define an explicit merge-base branch mode")
+    if (!reviewCommand.includes("git diff --cached") || !reviewCommand.includes("not a three-dot")) fail("review command does not keep staged mode distinct")
+    for (const source of [reviewer, codeReview]) {
+      if (!source.includes("git merge-base") || !source.includes("HEAD~1") || !source.includes("git diff --cached")) fail("review prompt/skill lacks the complete comparison contract")
+    }
+    const section = (source, heading, nextHeading) => {
+      const start = source.indexOf(heading)
+      if (start < 0) return ""
+      const bodyStart = start + heading.length
+      const end = source.indexOf(nextHeading, bodyStart)
+      return source.slice(bodyStart, end < 0 ? source.length : end)
+    }
+    const testPolicy = section(coder, "## Responsibilities", "## Tools Available")
+    const autonomousAuthority = section(coder, "## Authority: Autonomous Actions", "## Process")
+    const forbiddenActions = section(coder, "## FORBIDDEN ACTIONS", "## Bash Command Guidelines")
+    if (!/Test changes \(creating, modifying, or fixing tests\) require either one explicit orchestrator assignment that covers the behavior or defect and names `public-seam-tdd` and\/or `deterministic-diagnosis`, or an explicit user\/orchestrator instruction to change tests\./.test(testPolicy)) fail("coder test-change gate is not explicit")
+    if (!/Fix tests broken by YOUR changes only when the explicit test-change gate above is satisfied/.test(autonomousAuthority)) fail("coder autonomous test repair is not gated")
+    if (/- Fix tests that YOUR changes broke(?! only when)/.test(autonomousAuthority)) fail("coder has contradictory autonomous test authorization")
+    const normalizedForbiddenActions = forbiddenActions.replace(/\s+/g, " ").trim()
+    if (!normalizedForbiddenActions.includes("NEVER** write tests unless the explicit test-change gate above is satisfied") || !normalizedForbiddenActions.includes("explicit user/orchestrator instruction to change tests")) fail("coder test prohibition contradicts the explicit test-change gate")
+
+    const skillNames = await readdir(skillsPath, { withFileTypes: true })
+    const requiredSkills = ["frontend-design-discipline", "frontend-philosophy", "code-review"]
+    for (const name of requiredSkills) {
+      if (!skillNames.some((entry) => entry.isDirectory() && entry.name === name)) fail(`skill directory is not discoverable: ${name}`)
+    }
+    for (const entry of skillNames) {
+      if (!entry.isDirectory()) continue
+      const skillFile = `${skillsPath}/${entry.name}/SKILL.md`
+      const source = await read(skillFile).catch(() => "")
+      const frontmatter = source.match(/^---\n([\s\S]*?)\n---/)
+      if (!frontmatter) fail(`skill frontmatter is missing: ${entry.name}`)
+      const declaredName = frontmatter[1].match(/^name:\s*([^\n]+)$/m)?.[1]?.trim()
+      const description = frontmatter[1].match(/^description:\s*(.+)$/m)?.[1]?.trim()
+      if (declaredName !== entry.name || !description) fail(`skill metadata is not discoverable: ${entry.name}`)
+    }
+    if (!/^# Frontend Design Discipline/m.test(discipline) || !discipline.includes("## Audit first") || !discipline.includes("## Preflight")) fail("frontend design discipline is missing its audit-first preflight")
+    const frontendDisciplineRule = /Load (?:\*\*)?`frontend-design-discipline`(?:\*\*)? only when all three conditions are met: \(1\) the task identifies a frontend\/UI target or surface; \(2\) the work is visual or interactive; and \(3\) the task creates a new surface or substantially redesigns an existing one\./
+    const normalizeMarkdown = (source) => source.replace(/\s+/g, " ").trim()
+    for (const source of [philosophy, coder, reviewer]) {
+      const normalizedSource = normalizeMarkdown(source)
+      if (!frontendDisciplineRule.test(normalizedSource)) fail("frontend design discipline routing is not unified")
+      if (!normalizedSource.includes("Do not load it for minor adjustments, mechanical maintenance, or frontend work that fails any condition.")) fail("frontend design discipline has no negative routing case")
+    }
+    const normalizedDiscipline = normalizeMarkdown(discipline)
+    if (!normalizedDiscipline.includes("Use this skill only when all three conditions are met") || !normalizedDiscipline.includes("Do not load it for minor adjustments, mechanical maintenance, or frontend work that fails any condition.")) fail("frontend design discipline skill lacks executable eligibility and exclusions")
+    const hasConcept = (source, patterns) => patterns.some((pattern) => pattern.test(normalizeMarkdown(source).toLowerCase()))
+    const assertCompleteEligibilityPredicate = (source, label) => {
+      const normalizedSource = normalizeMarkdown(source).toLowerCase()
+      const hasFrontendTarget = [
+        /\b(?:frontend|front-end|front end|ui|user interface)\b[\s\S]{0,120}\b(?:target|surface|screen|page|component|interface)\b/,
+        /\b(?:target|surface|screen|page|component|interface)\b[\s\S]{0,120}\b(?:frontend|front-end|front end|ui|user interface)\b/,
+      ].some((pattern) => pattern.test(normalizedSource))
+      const hasVisualOrInteractiveWork = hasConcept(source, [
+        /\b(?:visual|visually|interaction|interactive|interactivity)\b/,
+      ])
+      const hasNewSurfaceOrSubstantialRedesign = hasConcept(source, [
+        /\b(?:new|newly|creat(?:e|es|ed|ing|ion)|introduc(?:e|es|ed|ing))\b[\s\S]{0,80}\b(?:surface|screen|page|component|interface|experience)\b/,
+        /\b(?:substantial(?:ly)?|major|significant|extensive|large[- ]scale)\b[\s\S]{0,50}\b(?:redesign|rework|revision)(?:s|ed|ing)?\b/,
+        /\b(?:redesign|rework|revision)(?:s|ed|ing)?\b[\s\S]{0,50}\b(?:substantial(?:ly)?|major|significant|extensive|large[- ]scale)\b/,
+      ])
+      if (!hasFrontendTarget || !hasVisualOrInteractiveWork || !hasNewSurfaceOrSubstantialRedesign) {
+        const missing = [
+          !hasFrontendTarget && "an identifiable frontend/UI target or surface",
+          !hasVisualOrInteractiveWork && "visual or interactive work",
+          !hasNewSurfaceOrSubstantialRedesign && "a new surface or substantial redesign",
+        ].filter(Boolean).join(", ")
+        fail(`${label} does not express the complete frontend design eligibility predicate; missing: ${missing}`)
+      }
+    }
+    for (const [label, source] of [
+      ["decision record", decisionRecord],
+      ["README", readme],
+      ["Taste reference", tasteReference],
+    ]) assertCompleteEligibilityPredicate(source, label)
+    if (/5 Pillars|Typography with Character|Committed Color|gradient meshes|Avoid Inter/.test(frontend)) fail("frontend philosophy still imposes a visual style")
+    for (const source of [coder, reviewer, philosophy]) {
+      if (/Typography.*Distinctive|Color.*Bold|Motion.*Purposeful|Atmosphere.*gradient/i.test(source)) fail("visual checklist is duplicated outside frontend skills")
+    }
+    if (!readme.includes("docs/agent-doctrine/DECISION-RECORD.md")) fail("scribe-owned decision-record path is no longer documented")
+  ' "$config" "$skills_dir" "$review_command" "$reviewer" "$coder" "$code_review" "$frontend" "$discipline" "$philosophy" "$readme" "$decision_record" "$taste_reference"; then
+    scenario_fail 'OpenCode contracts must parse and remain semantically aligned'
   fi
 }
 
@@ -507,6 +657,8 @@ scenario_run 'Cursor Agent download failures stop installation' \
   test_cursor_agent_download_failure_is_fatal
 scenario_run 'OpenCode agents isolate branches and own explicit delivery' \
   test_agent_delivery_and_provider_permissions_are_explicit
+scenario_run 'OpenCode review, TDD, frontend, skill, MCP, and documentation contracts align' \
+  test_opencode_contracts_are_parseable_and_semantically_aligned
 scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \
   test_installer_verifies_linked_payload_without_relinking
 scenario_run 'OpenCode installer explains a missing bootstrap link' \

@@ -67,9 +67,12 @@ If uncertain about an issue:
 ## Review Process
 
 1. **Initial Scan** - Identify all files in scope, understand the change
-2. **Fix the comparison point** - Review the pull request's fixed-point
-   three-dot diff: compare the branch against its merge-base with the base
-   branch, not against a moving working tree or a two-dot range.
+2. **Fix the fixed-point comparison when branch mode applies** - Require an explicit
+   base ref, calculate `git merge-base <base-ref> HEAD`, and compare the branch
+   to that fixed point with `git diff <merge-base> HEAD` (equivalent to
+   `<base-ref>...HEAD`). Never use `HEAD~1`, a moving working-tree comparison,
+   or an inferred base. Staged mode is `git diff --cached`; path mode is the
+   named scope. Neither is a three-dot PR review.
 3. **Deep Analysis** - Apply all 4 layers systematically to each file
 4. **Standards axis** - Independently check repository conventions, security,
    maintainability, and required engineering practices.
@@ -106,6 +109,7 @@ Structure your review as:
 ## Adherence Checklist
 
 Before completing a review, verify:
+- [ ] The selected mode and comparison point are stated; three-dot is claimed only for branch mode
 - [ ] All 4 layers analyzed (Correctness, Security, Performance, Style)
 - [ ] Severity assigned to each finding
 - [ ] Confidence ≥80% for all reported issues (or uncertainty stated)

@@ -26,7 +26,7 @@ umask 077
 mkdir -p "$SSH_DIR" "$SSH_DIR/sockets"
 chmod 700 "$SSH_DIR" "$SSH_DIR/sockets"
 
-installer_link_config --policy numbered-backup --label '~/.ssh/config' \
+installer_link_config --policy numbered-backup --label "$HOME/.ssh/config" \
   "$SOURCE_CONFIG" "$SSH_CONFIG"
 
 if [ ! -e "$SSH_LOCAL_CONFIG" ] && [ ! -L "$SSH_LOCAL_CONFIG" ]; then

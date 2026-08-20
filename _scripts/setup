@@ -41,9 +41,12 @@ fail() {
 usage() {
   cat >&2 <<'EOF'
 Usage: _scripts/setup bootstrap|update
+       _scripts/setup checklist --open-apps
 
   bootstrap  Configure a new machine and install declared dependencies
   update     Refresh the checkout and installed dependencies
+  checklist  Open the app setup checklist and launch listed apps only with
+             the explicit --open-apps opt-in from an interactive terminal
 EOF
 }
 
@@ -217,31 +220,19 @@ install_checkout_root_link() {
   "$ROOT_RESOLVER" --install "$SETUP_PATH" >/dev/null
 }
 
-# Open an app in the background (best-effort; silently skipped if not installed).
+# Open an app in the background after the explicit interactive opt-in.
 open_app() {
   local app_path=$1
   [ -d "$app_path" ] && open -ga "$app_path" 2>/dev/null || true
 }
 
-print_bootstrap_checklist() {
-  # Open apps that need a first-launch to request system permissions or
-  # to start their initial setup wizard.
-  # Apps whose own installer already calls open -ga are omitted:
-  #   Bartender, KeyClu, Tailscale, Raycast, Skim.
-  open_app '/Applications/Google Drive.app'
-  open_app '/Applications/Bitwarden.app'
-  open_app '/Applications/AeroSpace.app'
-  open_app '/Applications/Caffeine.app'
-  open_app '/Applications/ChatGPT.app'
-  open_app '/Applications/CleanShot X.app'
-  open_app '/Applications/Dia.app'
-  open_app '/Applications/Discord.app'
-  open_app '/Applications/Paste.app'
-  open_app '/Applications/Slack.app'
-  open_app '/Applications/Spark.app'
-
+print_app_checklist() {
   printf '\n'
   printf '  \033[00;34m==>\033[0m \033[1mPost-bootstrap checklist\033[0m\n'
+  printf '\n'
+  printf '  Safety: this command does not access, create, delete, or modify Keychain items.\n'
+  printf '  Log in manually in each app. A missing Slack Key prompt can indicate a\n'
+  printf '  credential problem; stop and investigate it outside this setup flow.\n'
   printf '\n'
   printf '  The following steps require manual action in the UI:\n'
   printf '\n'
@@ -253,7 +244,7 @@ print_bootstrap_checklist() {
   printf '    cursor-agent login               # Cursor subscription\n'
   printf '    aws configure                    # AWS credentials\n'
   printf '\n'
-  printf '  \033[1mApps that opened — finish their setup wizards\033[0m\n'
+  printf '  \033[1mApps this opt-in command opens — finish their setup wizards\033[0m\n'
   printf '    AeroSpace      → grant Accessibility permission; log out and back in\n'
   printf '    Bartender      → grant Screen Recording permission\n'
   printf '    Bitwarden      → log in to unlock the vault\n'
@@ -267,7 +258,7 @@ print_bootstrap_checklist() {
   printf '    Raycast        → complete the onboarding; add script commands dir:\n'
   printf '      %s/raycast/scripts\n' "$DOTFILES_ROOT"
   printf '    Discord        → sign in to your account\n'
-  printf '    Slack          → sign in to your workspace(s)\n'
+  printf '    Slack          → sign in to your workspace(s) manually\n'
   printf '    Spark          → sign in to your email accounts\n'
   printf '    Tailscale      → sign in and connect to your network\n'
   printf '\n'
@@ -289,13 +280,40 @@ print_bootstrap_checklist() {
   printf '\n'
 }
 
+open_app_checklist() {
+  if [ ! -t 0 ] || [ ! -t 1 ]; then
+    fail 'app checklist opening requires an interactive terminal; no applications were opened'
+  fi
+
+  print_app_checklist
+
+  # This is deliberately separate from bootstrap and update. The caller must
+  # explicitly request checklist --open-apps from an interactive terminal.
+  open_app '/Applications/Google Drive.app'
+  open_app '/Applications/Bitwarden.app'
+  open_app '/Applications/AeroSpace.app'
+  open_app '/Applications/Bartender 6.app'
+  open_app '/Applications/Bartender.app'
+  open_app '/Applications/Caffeine.app'
+  open_app '/Applications/ChatGPT.app'
+  open_app '/Applications/CleanShot X.app'
+  open_app '/Applications/Dia.app'
+  open_app '/Applications/Discord.app'
+  open_app '/Applications/Paste.app'
+  open_app '/Applications/KeyClu.app'
+  open_app '/Applications/Raycast.app'
+  open_app '/Applications/Skim.app'
+  open_app '/Applications/Slack.app'
+  open_app '/Applications/Spark.app'
+  open_app '/Applications/Tailscale.app'
+}
+
 run_bootstrap() {
   run_critical 'local environment' setup_local_environment
   run_critical 'Git identity' setup_gitconfig
   run_critical 'dotfile links' install_dotfile_links
   apply_macos_configuration
   run_dependency_pipeline bootstrap
-  print_bootstrap_checklist
 }
 
 run_update() {
@@ -306,18 +324,23 @@ run_update() {
   run_dependency_pipeline update
 }
 
+if [ "$#" -eq 2 ] && [ "$1" = checklist ] && [ "$2" = --open-apps ]; then
+  open_app_checklist
+  exit 0
+fi
+
 if [ "$#" -ne 1 ]; then
   usage
   exit 2
 fi
 
 case "$1" in
-bootstrap) run_bootstrap ;;
-update) run_update ;;
-*)
-  usage
-  exit 2
-  ;;
+  bootstrap) run_bootstrap ;;
+  update) run_update ;;
+  *)
+    usage
+    exit 2
+    ;;
 esac
 
 printf '\n'

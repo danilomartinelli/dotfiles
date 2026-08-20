@@ -1,3 +1,5 @@
+#!/bin/sh
+# shellcheck disable=SC2317 # The standalone exit fallback is unreachable when sourced.
 # Shared preamble for topic installers.
 #
 # Source after set -e / set -eu from topic/install.sh.
@@ -42,7 +44,7 @@ installer_require_command() {
 
 # Optional app dependency: skip the rest of the installer (exit 0) when no
 # candidate path exists, mirroring installer_require_darwin. When one exists,
-# INSTALLER_APP holds the first match for later use (e.g. open -ga).
+# INSTALLER_APP holds the first match for manual UI follow-up by the user.
 # Usage: installer_require_app <name> <cask> </Applications/Name.app>...
 installer_require_app() {
   _installer_app_name=$1

@@ -25,13 +25,13 @@ installer_success "hermes CLI available"
 # would silently undo a model picked interactively with `hermes model`.
 current_model=$(hermes config get model 2>/dev/null | tail -1 || true)
 case "$current_model" in
-"" | *"not set"* | *"(auto)"*)
-  hermes config set model "$HERMES_DEFAULT_MODEL" >/dev/null 2>&1 &&
-    installer_success "Default model set to $HERMES_DEFAULT_MODEL"
-  ;;
-*)
-  installer_note "Model already set to $current_model"
-  ;;
+  "" | *"not set"* | *"(auto)"*)
+    hermes config set model "$HERMES_DEFAULT_MODEL" >/dev/null 2>&1 \
+      && installer_success "Default model set to $HERMES_DEFAULT_MODEL"
+    ;;
+  *)
+    installer_note "Model already set to $current_model"
+    ;;
 esac
 
 installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"

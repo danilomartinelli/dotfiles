@@ -101,6 +101,11 @@ Exact conventions matter:
   reconcile the Brewfile, and rerun topic installers. It does not apply macOS
   defaults.
 
+Bootstrap and update must not open graphical applications. The only intentional
+app-opening path is `_scripts/setup checklist --open-apps`; it requires an
+interactive terminal, and users complete logins manually. Setup does not access
+or reset Keychain credentials; it must not be used to recover credentials.
+
 `_scripts/bootstrap` and `bin/dot` are stable adapters. Required phases stop on failure. Checkout pull, Homebrew update/upgrade, and hostname normalization are advisory. Keep orchestration logic in `_scripts/setup`, not duplicated in the adapters.
 
 `_scripts/link-dotfiles` owns bootstrap home linking for `.localrc` and topic `*.symlink` entries (interactive prompts, or `--batch skip|overwrite|backup` for fixtures). `_scripts/link-config` owns non-interactive topic config linking with policies `replace-with-backup` (default), `preserve-existing`, and `numbered-backup`.

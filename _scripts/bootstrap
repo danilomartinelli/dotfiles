@@ -5,6 +5,7 @@
 set -e
 
 BOOTSTRAP_PATH=${BASH_SOURCE[0]}
+# shellcheck disable=SC2034 # Consumed by the sourced adapter-checkout script.
 ADAPTER_ANCHOR=$BOOTSTRAP_PATH
 # shellcheck disable=SC1091
 . "$(CDPATH='' cd -P -- "$(dirname -- "$BOOTSTRAP_PATH")" && pwd)/adapter-checkout.sh"

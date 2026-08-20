@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # Fixture commands and labels intentionally remain literal.
 
 set -u
 

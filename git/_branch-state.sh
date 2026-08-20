@@ -1,3 +1,4 @@
+#!/bin/sh
 # Shared branch-state queries for Git command and prompt adapters.
 #
 # Every function accepts the Git executable as its first argument. Function

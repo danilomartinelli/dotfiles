@@ -1,47 +1,39 @@
 ---
 name: frontend-philosophy
-description: Visual & UI philosophy (The 5 Pillars of Intentional UI). Understand deeply to avoid "AI slop" and create distinctive, memorable interfaces.
+description: Contextual, accessible, system-aware principles for frontend and visual UI work; use for any frontend implementation, review, or redesign.
 ---
 
-# Frontend Design Philosophy: The 5 Pillars of Intentional UI
+# Contextual Frontend Philosophy
 
-**Role:** Design Director for all **Visual & Aesthetic decisions** — applies to styling, layout, colors, typography, animations, and UI composition.
+Use this skill for frontend and visual UI work. It is a reasoning framework,
+not a required visual style. Make choices from the product context, existing
+system, content, platform conventions, user needs, and constraints.
 
-**Philosophy:** Distinctive, memorable, intentional design — avoiding generic "AI slop" aesthetics through bold, characterful choices that create immediate emotional impact.
+## Context before taste
 
-## The 5 Pillars
+- Identify the users, task, content hierarchy, interaction cost, and success
+  criteria before choosing presentation details.
+- Prefer a deliberate answer to the actual context over a fashionable default.
+- Treat visual distinctiveness as an available tool, never as a quality gate.
 
-### 1. Typography with Character
-- **Concept:** Fonts set the entire tone. Generic fonts create generic, forgettable interfaces.
-- **Rule:** Avoid Inter, Roboto, Arial, and system-ui defaults. Choose distinctive, characterful typefaces.
-- **Practice:** Pair dramatic display fonts with refined, readable body fonts.
+## Access as part of the design
 
-### 2. Committed Color & Theme
-- **Concept:** Timid palettes lack impact and feel algorithmically generated.
-- **Rule:** Use bold, dominant colors with sharp accent contrasts. Avoid evenly-distributed rainbow gradients.
-- **Practice:** Establish CSS variable systems early. Break away from the "purple gradient on white" AI cliché.
+- Preserve semantic structure, readable hierarchy, keyboard operation, usable
+  focus, sufficient contrast, meaningful labels, and appropriate motion
+  alternatives.
+- Check the experience across input methods, viewport sizes, zoom, and reduced
+  motion preferences when those contexts apply.
+- Do not trade accessibility for novelty, density, or visual effect.
 
-### 3. Purposeful Motion
-- **Concept:** Animation should delight, not distract. Scattered micro-interactions create noise.
-- **Rule:** One well-orchestrated animation beats a dozen minor transitions. Focus on high-impact moments.
-- **Practice:** Use CSS animations for HTML, Motion library for React. Prioritize staggered reveals and surprsing hover states.
+## Preserve the system
 
-### 4. Brave Spatial Composition
-- **Concept:** Predictable layouts are forgettable. Safe spacing feels automated.
-- **Rule:** Either generous negative space OR controlled density — not the middle ground.
-- **Practice:** Embrace asymmetry, overlap, diagonal flow, and grid-breaking elements.
+- Inspect the repository's existing tokens, components, patterns, content
+  rules, and interaction conventions before introducing a new treatment.
+- Extend or intentionally replace existing patterns only when the context
+  justifies it; avoid accidental one-off systems.
 
-### 5. Atmosphere & Depth
-- **Concept:** Flat solid backgrounds lack presence and feel unfinished.
-- **Rule:** Layer visual richness through gradient meshes, noise textures, geometric patterns, and transparencies.
-- **Practice:** Add dramatic shadows, decorative borders, grain overlays.
+## Calibrate, do not prescribe
 
----
-
-## Adherence Checklist
-Before completing your task, verify:
-- [ ] **Typography:** Did you avoid generic system fonts?
-- [ ] **Color:** Are the color choices bold and intentional?
-- [ ] **Motion:** Is there a primary, high-impact animation?
-- [ ] **Space:** Does the layout feel designed rather than templated?
-- [ ] **Depth:** Is there visual richness (textures, gradients, layering)?
+Typography, color, motion, composition, depth, and spacing should be calibrated
+to the context. None is mandatory: a restrained or conventional choice can be
+the most intentional choice when it improves clarity, access, or consistency.

@@ -54,15 +54,15 @@ fi
 # Normalize only the known legacy value; the receipt otherwise remains owned
 # by OCX and machine-local.
 OCX_RECEIPT="$HOME/.ocx/receipt.jsonc"
-if [ -f "$OCX_RECEIPT" ] && \
-  grep -Fq '"./tools/philosophy.md"' "$OCX_RECEIPT"; then
+if [ -f "$OCX_RECEIPT" ] \
+  && grep -Fq '"./tools/philosophy.md"' "$OCX_RECEIPT"; then
   receipt_dir=$(dirname -- "$OCX_RECEIPT")
   rendered_receipt=$(mktemp "$receipt_dir/.receipt.jsonc.XXXXXX")
-  if cp -p "$OCX_RECEIPT" "$rendered_receipt" && \
-    sed 's|"\./tools/philosophy\.md"|".opencode/tools/philosophy.md"|g' \
-      "$OCX_RECEIPT" >"$rendered_receipt" && \
-    grep -Fq '".opencode/tools/philosophy.md"' "$rendered_receipt" && \
-    mv "$rendered_receipt" "$OCX_RECEIPT"; then
+  if cp -p "$OCX_RECEIPT" "$rendered_receipt" \
+    && sed 's|"\./tools/philosophy\.md"|".opencode/tools/philosophy.md"|g' \
+      "$OCX_RECEIPT" >"$rendered_receipt" \
+    && grep -Fq '".opencode/tools/philosophy.md"' "$rendered_receipt" \
+    && mv "$rendered_receipt" "$OCX_RECEIPT"; then
     installer_success "Migrated OCX receipt instruction path"
   else
     rm -f "$rendered_receipt"
@@ -85,9 +85,9 @@ fi
 
 if command -v open-cursor >/dev/null 2>&1; then
   installer_success "open-cursor CLI available at $(command -v open-cursor)"
-elif command -v mise >/dev/null 2>&1 && \
-  open_cursor=$(mise which open-cursor 2>/dev/null) && \
-  [ -x "$open_cursor" ]; then
+elif command -v mise >/dev/null 2>&1 \
+  && open_cursor=$(mise which open-cursor 2>/dev/null) \
+  && [ -x "$open_cursor" ]; then
   installer_success "open-cursor CLI available at $open_cursor"
 else
   installer_note "Install open-cursor with: mise install"
@@ -116,8 +116,8 @@ install_cursor_agent() {
     return 1
   fi
 
-  if ! grep -Fq "Cursor Agent Installer" "$cursor_installer" || \
-    ! grep -Fq "cursor-agent" "$cursor_installer"; then
+  if ! grep -Fq "Cursor Agent Installer" "$cursor_installer" \
+    || ! grep -Fq "cursor-agent" "$cursor_installer"; then
     rm -f "$cursor_installer"
     installer_error "Downloaded script does not appear to be the Cursor Agent installer"
     return 1

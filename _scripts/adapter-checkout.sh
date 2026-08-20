@@ -1,3 +1,5 @@
+#!/bin/sh
+# shellcheck disable=SC2317 # The standalone exit fallback is unreachable when sourced.
 # Shared checkout resolution for public adapters.
 #
 # Source after setting ADAPTER_ANCHOR to the calling script path.
