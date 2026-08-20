@@ -267,7 +267,13 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"git push --force*": "deny"'
   assert_contains "$config" '"worktree_delete": "deny"'
   assert_contains "$config" '"worktree_delete": "ask"'
+  assert_contains "$config" '"./plugins/workspace-plugin.ts"'
+  assert_contains "$config" '"./plugins/worktree.ts"'
+  assert_contains "$config" '"worktree_create": "allow"'
   assert_contains "$workspace" 'All implementation MUST happen on a dedicated non-default branch'
+  assert_contains "$workspace" 'Build is the sole agent that invokes worktree_create'
+  assert_contains "$workspace" 'explicit build-boundary handoff, not a session-start hook'
+  assert_contains "$workspace" 'do not delegate'
   assert_contains "$workspace" 'Commit only when the user explicitly requests a commit.'
   assert_contains "$workspace" 'Push only when the user explicitly requests a push.'
 

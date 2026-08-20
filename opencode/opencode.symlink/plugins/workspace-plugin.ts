@@ -423,9 +423,10 @@ Saving your plan is a REQUIREMENT, not a request. Plans that are not saved will 
 
 - Planning is read-only and does not require a new branch by itself.
 - Never begin implementation in the planning worktree.
-- After the plan is approved and the user requests implementation, call
-  worktree_create with a descriptive feature/, fix/, or chore/ branch before
-  handing execution to build.
+- After the plan is approved and the user requests implementation, hand off to
+  the build orchestrator. Build is the sole agent that invokes worktree_create
+  for implementation, so planning cannot create a fork that loops back into
+  planning.
 - If this session already belongs to a dedicated worktree branch, reuse it.
 - worktree_create opens a new terminal and forked session. Do not continue
   implementation in the parent session.
@@ -494,6 +495,10 @@ Final Git delivery operations belong to \`build\` under the policy below.
 - Before delegating any write-capable task, inspect the current branch. If this
   is the default branch or not a worktree session created for the task, call
   worktree_create with a descriptive feature/, fix/, or chore/ branch.
+- This is an explicit build-boundary handoff, not a session-start hook: casual
+  chat, planning, research, and review do not create worktrees. After a
+  successful worktree_create call, stop the parent session and do not delegate
+  the coder from it; the forked worktree session continues the plan there.
 - worktree_create opens a new terminal and forked session. Stop in the parent
   session; implementation continues only in the launched worktree.
 - Never implement directly on main, master, trunk, or the remote default branch.
