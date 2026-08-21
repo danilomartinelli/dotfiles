@@ -694,13 +694,74 @@ async function branchExists(cwd: string, branch: string): Promise<boolean> {
 	return result.ok
 }
 
+interface LinkedWorktree {
+	path: string
+	branch: string | null
+	prunable: boolean
+}
+
+function parseLinkedWorktrees(output: string): LinkedWorktree[] {
+	return output
+		.split("\0\0")
+		.map((entry) => entry.split("\0").filter(Boolean))
+		.filter((fields) => fields.length > 0)
+		.map((fields) => {
+			const worktreeField = fields.find((field) => field.startsWith("worktree "))
+			const branchField = fields.find((field) => field.startsWith("branch refs/heads/"))
+			return {
+				path: worktreeField?.slice("worktree ".length) ?? "",
+				branch: branchField?.slice("branch refs/heads/".length) ?? null,
+				prunable: fields.some((field) => field === "prunable" || field.startsWith("prunable ")),
+			}
+		})
+		.filter((worktree) => worktree.path.length > 0)
+}
+
+async function listLinkedWorktrees(repoRoot: string): Promise<Result<LinkedWorktree[], string>> {
+	const result = await git(["worktree", "list", "--porcelain", "-z"], repoRoot)
+	return result.ok ? Result.ok(parseLinkedWorktrees(result.value)) : result
+}
+
+async function existingWorktreeForBranch(
+	repoRoot: string,
+	branch: string,
+): Promise<Result<LinkedWorktree | null, string>> {
+	const result = await listLinkedWorktrees(repoRoot)
+	if (!result.ok) return result
+	return Result.ok(result.value.find((worktree) => worktree.branch === branch) ?? null)
+}
+
+async function directoryExists(directory: string): Promise<boolean> {
+	const info = await stat(directory).catch(() => null)
+	return info?.isDirectory() ?? false
+}
+
 async function createWorktree(
 	repoRoot: string,
 	branch: string,
 	baseBranch?: string,
 	basePath?: string,
-): Promise<Result<string, string>> {
+): Promise<Result<{ path: string; reused: boolean }, string>> {
 	const worktreePath = await getWorktreePath(repoRoot, branch, basePath)
+	const existingResult = await existingWorktreeForBranch(repoRoot, branch)
+	if (!existingResult.ok) return existingResult
+	const existing = existingResult.value
+	if (existing) {
+		if (existing.prunable || !(await directoryExists(existing.path))) {
+			return Result.err(
+				`The branch "${branch}" has a stale worktree registration at ${existing.path}. ` +
+					"Choose whether to prune/archive that registration or use a different branch; no cleanup was performed automatically.",
+			)
+		}
+		return Result.ok({ path: existing.path, reused: true })
+	}
+
+	if (await pathExists(worktreePath)) {
+		return Result.err(
+			`The target path ${worktreePath} already exists but is not the registered worktree for branch "${branch}". ` +
+				"Choose whether to archive/remove it or create a workspace with a different branch; nothing was overwritten.",
+		)
+	}
 
 	// Ensure parent directory exists
 	await mkdir(path.dirname(worktreePath), { recursive: true })
@@ -710,12 +771,12 @@ async function createWorktree(
 	if (exists) {
 		// Checkout existing branch into worktree
 		const result = await git(["worktree", "add", worktreePath, branch], repoRoot)
-		return result.ok ? Result.ok(worktreePath) : result
+		return result.ok ? Result.ok({ path: worktreePath, reused: false }) : result
 	} else {
 		// Create new branch from base
 		const base = baseBranch ?? "HEAD"
 		const result = await git(["worktree", "add", "-b", branch, worktreePath, base], repoRoot)
-		return result.ok ? Result.ok(worktreePath) : result
+		return result.ok ? Result.ok({ path: worktreePath, reused: false }) : result
 	}
 }
 
@@ -970,8 +1031,8 @@ function resolveHomePath(p: string): string {
 }
 
 /**
- * Load worktree-specific configuration from .opencode/worktree.jsonc
- * Auto-creates config file with helpful defaults if it doesn't exist.
+ * Load optional worktree-specific configuration from .opencode/worktree.jsonc.
+ * Missing configuration is read-only and falls back to defaults.
  */
 async function loadWorktreeConfig(directory: string, log: Logger): Promise<WorktreeConfig> {
 	const configPath = path.join(directory, ".opencode", "worktree.jsonc")
@@ -979,45 +1040,7 @@ async function loadWorktreeConfig(directory: string, log: Logger): Promise<Workt
 	try {
 		const file = Bun.file(configPath)
 		if (!(await file.exists())) {
-			// Auto-create config with helpful defaults and comments
-			const defaultConfig = `{
-  "$schema": "https://registry.kdco.dev/schemas/worktree.json",
-
-  // Worktree plugin configuration
-  // Documentation: https://github.com/kdcokenny/ocx
-
-  // Custom base path for worktree storage (supports ~)
-  // Default: ~/.local/share/opencode/worktree
-  // "worktreePath": "~/my-worktrees",
-
-  "sync": {
-    // Files to copy from main worktree to new worktrees
-    // Example: [".env", ".env.local", "dev.sqlite"]
-    "copyFiles": [],
-
-    // Directories to symlink (saves disk space)
-    // Example: ["node_modules"]
-    "symlinkDirs": [],
-
-    // Patterns to exclude from copying
-    "exclude": []
-  },
-
-  "hooks": {
-    // Commands to run after worktree creation
-    // Example: ["pnpm install", "docker compose up -d"]
-    "postCreate": [],
-
-    // Commands to run before worktree deletion
-    // Example: ["docker compose down"]
-    "preDelete": []
-  }
-}
-`
-			// Ensure .opencode directory exists
-			await mkdir(path.join(directory, ".opencode"), { recursive: true })
-			await Bun.write(configPath, defaultConfig)
-			log.info(`[worktree] Created default config: ${configPath}`)
+			log.debug(`[worktree] No optional config at ${configPath}; using defaults`)
 			return worktreeConfigSchema.parse({})
 		}
 
@@ -1079,6 +1102,33 @@ function errorMessage(error: unknown): string {
 		if (typeof record.message === "string") return record.message
 	}
 	return String(error)
+}
+
+function getInProcessFetch(client: unknown): typeof fetch | undefined {
+	if (!client || typeof client !== "object") return undefined
+	const embedded = (client as { _client?: { getConfig?: () => { fetch?: unknown } } })._client
+	const configuredFetch = embedded?.getConfig?.().fetch
+	return typeof configuredFetch === "function" ? (configuredFetch as typeof fetch) : undefined
+}
+
+function toWorkspaceInfo(workspace: {
+	id: string
+	type: string
+	name: string
+	branch?: string | null
+	directory?: string | null
+	extra?: unknown | null
+	projectID: string
+}): WorkspaceInfo {
+	return {
+		id: workspace.id,
+		type: workspace.type,
+		name: workspace.name,
+		branch: workspace.branch ?? null,
+		directory: workspace.directory ?? null,
+		extra: workspace.extra ?? null,
+		projectID: workspace.projectID,
+	}
 }
 
 async function bindSessionToWorkspace(
@@ -1165,7 +1215,11 @@ function createWorkspaceAdapter(mainRoot: string, log: Logger): WorkspaceAdapter
 		async configure(config) {
 			if (!config.branch) throw new Error("A branch is required for an OCX worktree workspace")
 			const worktreeConfig = await loadWorktreeConfig(mainRoot, log)
-			const directory = await getWorktreePath(mainRoot, config.branch, worktreeConfig.worktreePath)
+			const existingResult = await existingWorktreeForBranch(mainRoot, config.branch)
+			if (!existingResult.ok) throw new Error(existingResult.error)
+			const directory =
+				existingResult.value?.path ??
+				(await getWorktreePath(mainRoot, config.branch, worktreeConfig.worktreePath))
 			return { ...config, name: config.branch, directory }
 		},
 		async create(config) {
@@ -1180,8 +1234,12 @@ function createWorkspaceAdapter(mainRoot: string, log: Logger): WorkspaceAdapter
 				worktreeConfig.worktreePath,
 			)
 			if (!result.ok) throw new Error(result.error)
-			if (path.resolve(result.value) !== path.resolve(config.directory)) {
-				throw new Error(`Workspace path mismatch: ${result.value} != ${config.directory}`)
+			if (path.resolve(result.value.path) !== path.resolve(config.directory)) {
+				throw new Error(`Workspace path mismatch: ${result.value.path} != ${config.directory}`)
+			}
+			if (result.value.reused) {
+				log.info(`[worktree] Reusing existing worktree for ${config.branch}: ${config.directory}`)
+				return
 			}
 
 			if (worktreeConfig.sync.copyFiles.length > 0) {
@@ -1248,14 +1306,32 @@ const WorktreePlugin: Plugin = async (ctx) => {
 	}
 
 	experimental_workspace.register(WORKSPACE_ADAPTER_TYPE, createWorkspaceAdapter(mainRoot, log))
+	const inProcessFetch = getInProcessFetch(client)
+	if (!inProcessFetch) {
+		log.warn("[worktree] OpenCode in-process transport is unavailable; workspace API may require a listening server")
+	}
 	const nativeClient = createOpencodeClientV2({
 		baseUrl: serverUrl.toString(),
 		directory: mainRoot,
+		...(inProcessFetch ? { fetch: inProcessFetch } : {}),
 	})
 	const createNativeWorkspace = async (
 		branch: string,
 		baseBranch?: string,
 	): Promise<WorkspaceInfo> => {
+		const listResponse = await nativeClient.experimental.workspace.list({ directory: mainRoot })
+		if (listResponse.error) throw listResponse.error
+		const existing = listResponse.data?.find(
+			(workspace) =>
+				workspace.type === WORKSPACE_ADAPTER_TYPE &&
+				workspace.branch === branch &&
+				!!workspace.directory,
+		)
+		if (existing?.directory && (await directoryExists(existing.directory))) {
+			log.info(`[worktree] Reusing registered workspace ${existing.id} for ${branch}`)
+			return toWorkspaceInfo(existing)
+		}
+
 		const response = await nativeClient.experimental.workspace.create({
 			directory: mainRoot,
 			type: WORKSPACE_ADAPTER_TYPE,
@@ -1264,15 +1340,7 @@ const WorktreePlugin: Plugin = async (ctx) => {
 		})
 		if (response.error) throw response.error
 		if (!response.data) throw new Error("OpenCode did not return the created workspace")
-		return {
-			id: response.data.id,
-			type: response.data.type,
-			name: response.data.name,
-			branch: response.data.branch ?? null,
-			directory: response.data.directory ?? null,
-			extra: response.data.extra ?? null,
-			projectID: response.data.projectID,
-		}
+		return toWorkspaceInfo(response.data)
 	}
 	const warpSession = async (workspaceId: string | null, sessionId: string): Promise<void> => {
 		const response = await nativeClient.experimental.workspace.warp({
@@ -1320,7 +1388,7 @@ const WorktreePlugin: Plugin = async (ctx) => {
 		tool: {
 			worktree_create: tool({
 				description:
-					"Create an isolated git worktree workspace and continue in it with the current session.",
+					"Create or safely reuse an isolated git worktree workspace and continue in it with the current session. Ambiguous stale or mismatched paths are reported without mutation.",
 				args: {
 					branch: tool.schema
 						.string()
@@ -1480,7 +1548,10 @@ const WorktreePlugin: Plugin = async (ctx) => {
 const WorktreePluginWithInternals = Object.assign(WorktreePlugin, {
 	testInternals: {
 		bindSessionToWorkspace,
+		createWorktree,
 		createWorkspaceAdapter,
+		getInProcessFetch,
+		parseLinkedWorktrees,
 		resumePendingContinuation,
 		isPathLikeCommand,
 		copyFiles,

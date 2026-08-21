@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite"
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
 import { parse as parseJsonc } from "jsonc-parser"
@@ -37,9 +37,13 @@ async function readAgentPromptsFromConfig(): Promise<Record<string, string>> {
 }
 
 function createClient(): OpencodeClient {
+	const inProcessFetch: typeof fetch = async () => new Response(null, { status: 204 })
 	return {
 		app: {
 			log: async () => undefined,
+		},
+		_client: {
+			getConfig: () => ({ fetch: inProcessFetch }),
 		},
 	} as unknown as OpencodeClient
 }
@@ -64,6 +68,19 @@ async function runCommand(command: string[], cwd: string): Promise<void> {
 	if (exitCode !== 0) {
 		throw new Error(`${command.join(" ")} failed: ${stderr.trim() || stdout.trim()}`)
 	}
+}
+
+async function readCommand(command: string[], cwd: string): Promise<string> {
+	const process = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" })
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(process.stdout).text(),
+		new Response(process.stderr).text(),
+		process.exited,
+	])
+	if (exitCode !== 0) {
+		throw new Error(`${command.join(" ")} failed: ${stderr.trim() || stdout.trim()}`)
+	}
+	return stdout.trim()
 }
 
 async function createGitRepository(prefix: string): Promise<{
@@ -213,6 +230,14 @@ describe("worktree automation boundaries", () => {
 		database.close()
 	})
 
+	test("reuses the plugin client's in-process transport instead of the fallback server URL", () => {
+		const client = createClient()
+		const configuredFetch = (client as unknown as { _client: { getConfig(): { fetch: typeof fetch } } })
+			._client.getConfig().fetch
+
+		expect(worktreePlugin.testInternals.getInProcessFetch(client)).toBe(configuredFetch)
+	})
+
 	test("rolls back the session claim and workspace when native warp fails", async () => {
 		const database = new Database(":memory:")
 		createSessionTable(database)
@@ -278,6 +303,7 @@ describe("worktree automation boundaries", () => {
 			await adapter.create(configured, {})
 			expect(configured.directory).toBeTruthy()
 			if (!configured.directory) throw new Error("adapter did not configure a directory")
+			expect(await Bun.file(path.join(repository, ".opencode")).exists()).toBe(false)
 			expect(await Bun.file(path.join(configured.directory, "README.md")).text()).toBe("test\n")
 			expect(await adapter.target(configured)).toEqual({
 				type: "local",
@@ -290,6 +316,71 @@ describe("worktree automation boundaries", () => {
 			else process.env.HOME = previousHome
 			await rm(home, { recursive: true, force: true })
 			await rm(repository, { recursive: true, force: true })
+		}
+	})
+
+	test("adopts an existing worktree for the requested branch without recreating it", async () => {
+		const { repository, worktree } = await createGitRepository("opencode-existing")
+		const adapter = worktreePlugin.testInternals.createWorkspaceAdapter(repository, {
+			debug() {}, info() {}, warn() {}, error() {},
+		})
+
+		try {
+			const configured = await adapter.configure({
+				id: "workspace-existing",
+				type: "ocx-git-worktree",
+				name: "workspace-existing",
+				branch: "feature/test",
+				directory: null,
+				extra: null,
+				projectID: "project-existing",
+			})
+
+			expect(await realpath(configured.directory)).toBe(await realpath(worktree))
+			await adapter.create(configured, {})
+			expect(await Bun.file(path.join(worktree, "README.md")).text()).toBe("test\n")
+			await adapter.remove(configured)
+			expect(await Bun.file(worktree).exists()).toBe(false)
+		} finally {
+			await runCommand(["git", "worktree", "remove", "--force", worktree], repository).catch(
+				() => undefined,
+			)
+			await rm(repository, { recursive: true, force: true })
+		}
+	})
+
+	test("returns an actionable conflict instead of overwriting an unrelated target path", async () => {
+		const repository = await mkdtemp(path.join(os.tmpdir(), "opencode-conflict-repo-"))
+		const basePath = await mkdtemp(path.join(os.tmpdir(), "opencode-conflict-base-"))
+
+		try {
+			await runCommand(["git", "init", "-q"], repository)
+			await runCommand(["git", "config", "user.email", "tests@example.invalid"], repository)
+			await runCommand(["git", "config", "user.name", "OpenCode tests"], repository)
+			await Bun.write(path.join(repository, "README.md"), "test\n")
+			await runCommand(["git", "add", "README.md"], repository)
+			await runCommand(["git", "commit", "-qm", "initial"], repository)
+			const rootCommit = await readCommand(["git", "rev-list", "--max-parents=0", "HEAD"], repository)
+			const conflictingPath = path.join(basePath, rootCommit, "feature/conflict")
+			await mkdir(conflictingPath, { recursive: true })
+			await Bun.write(path.join(conflictingPath, "KEEP.txt"), "preserve\n")
+
+			const result = await worktreePlugin.testInternals.createWorktree(
+				repository,
+				"feature/conflict",
+				"HEAD",
+				basePath,
+			)
+
+			expect(result.ok).toBe(false)
+			if (!result.ok) {
+				expect(result.error).toContain("already exists but is not the registered worktree")
+				expect(result.error).toContain("Choose whether to archive/remove it")
+			}
+			expect(await Bun.file(path.join(conflictingPath, "KEEP.txt")).text()).toBe("preserve\n")
+		} finally {
+			await rm(repository, { recursive: true, force: true })
+			await rm(basePath, { recursive: true, force: true })
 		}
 	})
 
@@ -523,6 +614,9 @@ describe("worktree automation boundaries", () => {
 		expect(prompts.build).toContain("binds this same build session to the new workspace")
 		expect(prompts.build).toContain("automatically resume this same session in the workspace")
 		expect(prompts.build).toContain("delegate `coder`, `reviewer`, and other child agents")
+		expect(prompts.build).toContain("safely adopts an existing valid worktree")
+		expect(prompts.build).toContain("do not retry the same request")
+		expect(prompts.build).toContain("never remove or overwrite it automatically")
 		expect(prompts.build).not.toContain("stop this parent session")
 		expect(prompts.build).not.toContain("implementation continues in the launched worktree")
 		expect(prompts.build).toContain("coder never commits or pushes")
