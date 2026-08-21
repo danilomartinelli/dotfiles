@@ -49,6 +49,13 @@ export async function loadProjectInstructions(
 			"Project instruction directory is outside the project root",
 		);
 	}
+	const canonicalRoot = await fs.realpath(resolvedRoot);
+	const canonicalDirectory = await fs.realpath(resolvedDirectory);
+	if (!isPathWithinRoot(canonicalRoot, canonicalDirectory)) {
+		throw new Error(
+			"Project instruction directory resolves outside the project root",
+		);
+	}
 
 	const relative = path.relative(resolvedRoot, resolvedDirectory);
 	const directories = [resolvedRoot];
@@ -71,12 +78,25 @@ export async function loadProjectInstructions(
 			throw error;
 		});
 		if (!info) continue;
-		if (!info.isFile() || info.isSymbolicLink()) {
+		if (!info.isFile() && !info.isSymbolicLink()) {
 			throw new Error(
-				`Project instruction must be a regular file: ${candidate}`,
+				`Project instruction must be a regular file or file symlink: ${candidate}`,
 			);
 		}
-		if (info.size > MAX_INSTRUCTION_BYTES) {
+
+		const canonicalCandidate = await fs.realpath(candidate);
+		if (!isPathWithinRoot(canonicalRoot, canonicalCandidate)) {
+			throw new Error(
+				`Project instruction resolves outside the project root: ${candidate}`,
+			);
+		}
+		const targetInfo = await fs.stat(canonicalCandidate);
+		if (!targetInfo.isFile()) {
+			throw new Error(
+				`Project instruction target must be a regular file: ${candidate}`,
+			);
+		}
+		if (targetInfo.size > MAX_INSTRUCTION_BYTES) {
 			throw new Error(
 				`Project instruction exceeds ${MAX_INSTRUCTION_BYTES} bytes: ${candidate}`,
 			);

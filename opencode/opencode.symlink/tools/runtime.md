@@ -60,8 +60,9 @@ instead of changing runtimes or inventing another tool surface.
   `opencode.jsonc`. Do not add direct `plugins/*.ts` entrypoints.
 - Native project config/plugin discovery and external skill catalogs are
   disabled. Project `AGENTS.md` files are loaded as bounded regular text files
-  by the managed instruction plugin; they cannot register executable runtime
-  components.
+  by the managed instruction plugin; an `AGENTS.md` symlink is accepted only
+  when its resolved target is a regular file inside the same repository. These
+  instruction files cannot register executable runtime components.
 - The `cursor-acp` provider is quarantined and explicitly disabled. Its
   subprocess can perform native side effects before OpenCode receives a tool
   call, so it cannot participate in this managed permission/worktree runtime.

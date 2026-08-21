@@ -1671,7 +1671,7 @@ describe("deterministic plugin and dependency topology", () => {
 		).toThrow("Controlled OpenCode discovery is not active");
 	});
 
-	test("loads hierarchical AGENTS.md without following instruction symlinks", async () => {
+	test("loads hierarchical AGENTS.md and only follows in-repository file symlinks", async () => {
 		const root = await mkdtemp(
 			path.join(os.tmpdir(), "opencode-project-instructions-"),
 		);
@@ -1689,6 +1689,15 @@ describe("deterministic plugin and dependency topology", () => {
 				"nested instructions",
 			]);
 
+			await Bun.write(path.join(root, "CLAUDE.md"), "shared instructions\n");
+			await rm(path.join(root, "AGENTS.md"));
+			await symlink("CLAUDE.md", path.join(root, "AGENTS.md"), "file");
+			const linkedInstructions = await loadProjectInstructions(root, nested);
+			expect(linkedInstructions.map((entry) => entry.content.trim())).toEqual([
+				"shared instructions",
+				"nested instructions",
+			]);
+
 			const symlinkRoot = path.join(root, "symlink-project");
 			await mkdir(symlinkRoot, { recursive: true });
 			await Bun.write(path.join(outside, "AGENTS.md"), "outside\n");
@@ -1699,7 +1708,7 @@ describe("deterministic plugin and dependency topology", () => {
 			);
 			await expect(
 				loadProjectInstructions(symlinkRoot, symlinkRoot),
-			).rejects.toThrow("must be a regular file");
+			).rejects.toThrow("resolves outside the project root");
 		} finally {
 			await rm(root, { recursive: true, force: true });
 			await rm(outside, { recursive: true, force: true });
