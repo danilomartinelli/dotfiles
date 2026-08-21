@@ -57,10 +57,14 @@ test_config_resolves_managed_instructions_through_config_dir() {
     '"{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md"'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc" \
     '"{env:OPENCODE_CONFIG_DIR}/tools/runtime.md"'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc" \
+    '"{env:OPENCODE_CONFIG_DIR}/tools/capabilities.md"'
   [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md ]] \
     || scenario_fail 'managed philosophy instructions are missing'
   [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md ]] \
     || scenario_fail 'managed runtime instructions are missing'
+  [[ -f $REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md ]] \
+    || scenario_fail 'managed capability matrix is missing'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
     'Model providers supply inference, but OpenCode'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
@@ -69,6 +73,10 @@ test_config_resolves_managed_instructions_through_config_dir() {
     'If a search or tool call fails because of output, glob, or buffer limits'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
     'instead of changing runtimes or inventing another tool surface.'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
+    'A dirty default checkout is not a creation blocker.'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
+    '`list_mcp_resources` and `list_mcp_resource_templates` enumerate MCP'
 }
 
 test_selective_skill_payloads_are_present_discoverable_and_scoped() {
@@ -137,6 +145,7 @@ test_selective_skill_routes_are_relevant_and_taste_is_not_global() {
   assert_contains "$scribe" "Load \`writing-for-agents\`"
   assert_contains "$review_command" 'fixed-point three-dot diff'
   assert_contains "$review_command" 'Standards and Spec as independent axes'
+  assert_contains "$review_command" 'agent: build'
   assert_contains "$code_review_skill" 'fixed-point'
   assert_contains "$code_review_skill" 'Standards axis'
   assert_contains "$code_review_skill" 'Spec axis'
@@ -220,20 +229,29 @@ test_unsafe_cursor_provider_is_quarantined() {
 }
 
 test_dcp_uses_one_pinned_managed_adapter() {
-  local adapter config dcp_version package
+  local adapter config dcp_version package tui
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
   package=$REPOSITORY_ROOT/opencode/opencode.symlink/package.json
+  tui=$REPOSITORY_ROOT/opencode/opencode.symlink/tui.json
   adapter=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/dcp.ts
-  dcp_version=3.1.3
+  dcp_version=3.1.15
 
   assert_contains "$package" \
     "\"@tarquinen/opencode-dcp\": \"$dcp_version\""
+  assert_contains "$package" '"solid-js": "1.9.12"'
+  assert_not_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/bun.lock" \
+    '@opencode-ai/sdk@1.18.18'
+  assert_not_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/bun.lock" \
+    'solid-js@1.9.15'
   assert_contains "$config" '"./plugins/ocx/dcp.ts"'
   assert_not_contains "$config" '"@tarquinen/opencode-dcp@'
   assert_contains "$adapter" 'assertNoProjectDcpOverride'
+  assert_contains "$tui" "\"@tarquinen/opencode-dcp@$dcp_version\""
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/dcp.jsonc" \
     '"allowSubAgents": false'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/dcp.jsonc" \
+    '"autoUpdate": false'
 }
 
 test_installer_accepts_generated_xdg_runtime_cache() {
@@ -311,13 +329,14 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$researcher" 'Shell-based GitHub and GitLab clients are intentionally unavailable'
   # Markdown code spans are intentionally literal assertions.
   # shellcheck disable=SC2016
-  assert_contains "$researcher" '`context7_*` for current library'
+  assert_contains "$researcher" '`context7_resolve-library-id`, then `context7_query-docs`'
   # shellcheck disable=SC2016
-  assert_contains "$researcher" '`gh_grep_*` for real-world public GitHub usage patterns'
+  assert_contains "$researcher" '`gh_grep_searchGitHub` for real-world public GitHub usage patterns'
   # shellcheck disable=SC2016
-  assert_contains "$researcher" '`exa_*`, `websearch`, and `webfetch` for current primary sources'
+  assert_contains "$researcher" '`exa_web_search_exa` and `exa_web_fetch_exa`'
 
   assert_contains "$explore" '## Prime Directive: CodeGraph First'
+  assert_contains "$explore" '`codegraph_codegraph_explore` MCP tool'
   assert_contains "$explore" 'never to this read-only agent'
   assert_contains "$explore" '**NEVER** use Context7, Exa, grep.app'
   assert_contains "$REPOSITORY_ROOT/git/gitignore.symlink" '.codegraph/'
@@ -349,6 +368,11 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
   assert_contains "$config" 'Push only when explicitly requested; never force-push.'
   assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command'
+  assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
+  assert_contains "$config" 'A dirty default checkout does not block `worktree_create`'
+  assert_contains "$config" '"git branch -a --no-color": "allow"'
+  assert_contains "$config" '"mcp:*": "deny"'
+  assert_contains "$config" '"apply_patch": "allow"'
   assert_not_contains "$config" 'delivery policy'
 
   assert_contains "$worktree" 'The working tree must already be clean.'
@@ -428,7 +452,8 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
 
     const reviewerPermission = config.agent?.reviewer?.permission ?? {}
     if (reviewerPermission.bash !== "deny") fail("reviewer shell access is not denied")
-    if (reviewerPermission.read !== "allow" || reviewerPermission.glob !== "allow" || reviewerPermission.grep !== "allow") {
+    const localReadOnly = (permission) => permission?.["*"] === "allow" && permission?.["mcp:*"] === "deny"
+    if (!localReadOnly(reviewerPermission.read) || reviewerPermission.glob !== "allow" || reviewerPermission.grep !== "allow") {
       fail("reviewer does not have the structured local inspection tools")
     }
     const reviewerSkills = reviewerPermission.skill ?? {}

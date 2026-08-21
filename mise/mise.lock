@@ -383,11 +383,11 @@ version = "3.6.0"
 backend = "npm:neonctl"
 
 [[tools."npm:ocx"]]
-version = "2.0.14"
+version = "2.0.15"
 backend = "npm:ocx"
 
 [[tools."npm:opencode-ai"]]
-version = "1.18.18"
+version = "1.18.21"
 backend = "npm:opencode-ai"
 
 [[tools."npm:skills"]]

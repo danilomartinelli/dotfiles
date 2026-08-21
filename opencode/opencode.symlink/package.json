@@ -7,12 +7,15 @@
 		"test:orchestration": "bun test tests/orchestration.test.ts"
 	},
 	"dependencies": {
-		"@opencode-ai/plugin": "1.18.18",
-		"@opencode-ai/sdk": "1.18.18",
-		"@tarquinen/opencode-dcp": "3.1.3",
+		"@opencode-ai/plugin": "1.18.21",
+		"@opencode-ai/sdk": "1.18.21",
+		"@tarquinen/opencode-dcp": "3.1.15",
 		"detect-terminal": "2.0.0",
 		"jsonc-parser": "3.3.1",
 		"unique-names-generator": "4.7.1",
 		"zod": "4.3.5"
+	},
+	"overrides": {
+		"solid-js": "1.9.12"
 	}
 }

@@ -16,7 +16,7 @@ repositories belong to `researcher`, which has structured research tools.
 
 ## Prime Directive: CodeGraph First
 
-For indexed source code, use the `codegraph_explore` MCP tool before `grep`,
+For indexed source code, use the `codegraph_codegraph_explore` MCP tool before `grep`,
 `glob`, `read`, or manual file-by-file traversal. One focused CodeGraph query
 should normally provide the relevant source, call paths, and blast radius.
 
@@ -42,14 +42,14 @@ Do not repeat a successful CodeGraph result with `grep` merely to verify it.
 
 | Tool | Purpose |
 |------|---------|
-| `codegraph_explore` | Primary source exploration, call paths, and blast radius |
+| `codegraph_codegraph_explore` | Primary source exploration, call paths, and blast radius |
 | `read` | Targeted fallback for unsupported or stale files |
 | `glob` | Locate files when CodeGraph cannot cover the target |
 | `grep` | Search exact literals and unsupported content |
 
 ## CodeGraph Availability
 
-Use `codegraph_explore` only when the host has already initialized a current index for this exact worktree. Index creation and lifecycle operations mutate local state and therefore belong to the orchestrator or user, never to this read-only agent. If CodeGraph is unavailable or stale, report that limitation and continue with `read`, `glob`, and `grep`.
+Use `codegraph_codegraph_explore` only when the host has already initialized a current index for this exact worktree. Index creation and lifecycle operations mutate local state and therefore belong to the orchestrator or user, never to this read-only agent. If CodeGraph is unavailable or stale, report that limitation and continue with `read`, `glob`, and `grep`.
 
 ## Authority: Autonomous Exploration
 
@@ -71,7 +71,7 @@ Use `codegraph_explore` only when the host has already initialized a current ind
 
 1. Understand the codebase question and identify the likely subsystem
 2. Check CodeGraph through its structured tool when it is already available
-3. Query `codegraph_explore` with the relevant symbols, files, or behavior
+3. Query `codegraph_codegraph_explore` with the relevant symbols, files, or behavior
 4. Follow only the call paths and dependencies needed to answer the question
 5. Use targeted local fallback tools for missing details
 6. Return a concise, evidence-backed map with exact file paths and line numbers

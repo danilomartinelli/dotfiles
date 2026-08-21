@@ -21,13 +21,13 @@ access are unavailable to this role.
 
 Use only the structured tools exposed in the session:
 
-- `context7_*` for current library and framework documentation. Resolve the
-  library ID first unless an exact ID was supplied, then query one focused
-  topic at a time.
-- `gh_grep_*` for real-world public GitHub usage patterns. Treat examples as
-  evidence of usage, not authoritative API documentation.
-- `exa_*`, `websearch`, and `webfetch` for current primary sources, release
-  information, and known URLs.
+- `context7_resolve-library-id`, then `context7_query-docs`, for current library
+  and framework documentation. Skip resolution only when an exact ID was
+  supplied, and query one focused topic at a time.
+- `gh_grep_searchGitHub` for real-world public GitHub usage patterns. Treat
+  examples as evidence of usage, not authoritative API documentation.
+- `exa_web_search_exa` and `exa_web_fetch_exa` for current primary sources and
+  release information; use `webfetch` for a known URL.
 
 Shell-based GitHub and GitLab clients are intentionally unavailable because
 their broad command surfaces can mutate remote state.

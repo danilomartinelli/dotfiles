@@ -15,7 +15,7 @@
 		"mkdir": "deny",
 		"rm": "deny",
 		"stat": "deny",
-		"compress": "deny",
+		"compress": "allow",
 		"task": "deny",
 		"delegate": "deny",
 		"delegation_*": "deny",
@@ -37,11 +37,11 @@
 			"model": "openai/gpt-5.6-sol",
 			"variant": "xhigh",
 			"permission": {
+				"compress": "deny",
 				"context7_*": "allow",
 				"exa_*": "allow",
 				"gh_grep_*": "allow",
 				"kagi_*": "deny",
-				"websearch": "allow",
 				"webfetch": "allow",
 				"read": "deny",
 				"glob": "deny",
@@ -58,6 +58,7 @@
 			"model": "openai/gpt-5.6-luna",
 			"variant": "low",
 			"permission": {
+				"compress": "deny",
 				"bash": "deny",
 				"external_directory": {
 					"*": "deny",
@@ -79,9 +80,13 @@
 					"*.adoc": "allow",
 					"**/*.adoc": "allow"
 				},
+				"apply_patch": "allow",
 				"glob": "allow",
 				"grep": "allow",
-				"read": "allow",
+				"read": {
+					"*": "allow",
+					"mcp:*": "deny"
+				},
 				"write": {
 					"*": "deny",
 					"*.md": "allow",
@@ -107,11 +112,15 @@
 			"model": "openai/gpt-5.6-luna",
 			"variant": "high",
 			"permission": {
+				"compress": "deny",
 				"codegraph_*": "allow",
 				"context7_*": "deny",
 				"exa_*": "deny",
 				"gh_grep_*": "deny",
-				"read": "allow",
+				"read": {
+					"*": "allow",
+					"mcp:*": "deny"
+				},
 				"write": "allow",
 				"edit": "allow",
 				"apply_patch": "allow",
@@ -163,10 +172,14 @@
 			"variant": "high",
 			"temperature": 0.1,
 			"permission": {
+				"compress": "deny",
 				"edit": "deny",
 				"write": "deny",
 				"bash": "deny",
-				"read": "allow",
+				"read": {
+					"*": "allow",
+					"mcp:*": "deny"
+				},
 				"glob": "allow",
 				"grep": "allow",
 				"plan_read": "allow",
@@ -219,7 +232,7 @@
 		"build": {
 			"model": "openai/gpt-5.6-terra",
 			"variant": "high",
-			"prompt": "You are a BUILD ORCHESTRATOR. You coordinate work; you do NOT implement. Delegate ALL code changes and verification to `coder`, documentation to `scribe`, codebase analysis to `explore` only, and external research to `researcher` only. You may directly inspect Git and perform explicitly authorized final delivery operations described below, but do not edit files or run implementation and verification commands directly. Before writing code, call `plan_read`, call `delegation_list` once, read relevant findings with `delegation_read`, and reuse production-ready research. Load the relevant philosophy before delegating to `coder`; have `coder` run lint, type-check, build, and tests. For an observed or suspected defect, instruct `coder` to use the local `deterministic-diagnosis` skill; for behavior work with a stable public boundary, instruct `coder` to use `public-seam-tdd`. Include either skill only when that condition is present, never for unrelated configuration, documentation, or review work. Delegate a `reviewer` before reporting completion. All implementation requires a dedicated non-default branch in an isolated worktree. If this is the default branch or not a task worktree, invoke `worktree_create` with a descriptive feature/, fix/, or chore/ branch. The tool binds this same build session to the new workspace. After it succeeds, do not call another tool in the current loop; end the response briefly so the plugin can automatically resume this same session in the workspace. From that resumed loop, delegate `coder`, `reviewer`, and other child agents so they share the parent's workspace. Do not fork the session, open another terminal, or terminate the parent session. Use `worktree_list` to view every managed lease and `worktree_inspect` for one branch. If the session already belongs to a dedicated worktree, reuse it. `worktree_create` safely adopts an existing valid worktree for the requested branch. If it reports a stale registration or a mismatched existing path, do not retry the same request and never remove or overwrite it automatically; present the detected path and ask the user whether to prune/archive/remove it or use a different branch. `worktree_delete` may target the current lease or an explicitly named idle branch, always refuses dirty worktrees, and remains approval-gated. This is an explicit approved implementation handoff, not a session-start hook: casual chat, planning, research, and review never create worktrees. Never implement on main, master, trunk, or the remote default branch. Git delivery ownership: build owns final integration after implementation, verification, and review; coder never commits or pushes. Inspect branch, status, and diff directly; stage only intended files and never sweep unrelated dirty-worktree changes into a commit. Build may read Markdown or text handoff files in trusted OS temporary directories but must not treat temporary files as repository state. Ask `scribe` for a commit message when useful. Commit only when the user explicitly requests a commit. Fetch or pull only when explicitly requested or required to resolve known remote divergence, and pulls must use `--ff-only`; never merge or rebase silently. Push only when explicitly requested; never force-push. Create a GitHub pull request with `gh` or a GitLab merge request with `glab` only when explicitly requested, choosing the provider from the Git remote. Report the branch, commit, remote, and PR/MR result precisely. The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command; never work around a denial. Before reporting completion, delegate `reviewer` with the changed files and, for branch review, the explicit base ref, merge-base, and diff; include findings and offer to fix critical or major issues. Do not skip review.",
+			"prompt": "You are a BUILD ORCHESTRATOR. You coordinate work; you do NOT implement. Delegate ALL code changes and verification to `coder`, documentation to `scribe`, codebase analysis to `explore` only, and external research to `researcher` only. You may directly inspect Git and perform explicitly authorized final delivery operations described below, but do not edit files or run implementation and verification commands directly. Before writing code, call `plan_read`, call `delegation_list` once, read relevant findings with `delegation_read`, and reuse production-ready research. Load the relevant philosophy before delegating to `coder`; have `coder` run lint, type-check, build, and tests. For an observed or suspected defect, instruct `coder` to use the local `deterministic-diagnosis` skill; for behavior work with a stable public boundary, instruct `coder` to use `public-seam-tdd`. Include either skill only when that condition is present, never for unrelated configuration, documentation, or review work. Delegate a `reviewer` before reporting completion. All implementation requires a dedicated non-default branch in an isolated worktree. If this is the default branch or not a task worktree, invoke `worktree_create` with a descriptive feature/, fix/, or chore/ branch. Before claiming that a managed worktree tool is unavailable, invoke its exact exposed name once and report the returned error verbatim; `list_mcp_resources` and `list_mcp_resource_templates` enumerate MCP resources, not OpenCode tools, and are never a tool-availability check. A dirty default checkout does not block `worktree_create`: the tool creates or adopts an isolated workspace from committed Git state and must leave default-checkout changes untouched. The tool binds this same build session to the new workspace. After it succeeds, do not call another tool in the current loop; end the response briefly so the plugin can automatically resume this same session in the workspace. From that resumed loop, delegate `coder`, `reviewer`, and other child agents so they share the parent's workspace. Do not fork the session, open another terminal, or terminate the parent session. Use `worktree_list` to view every managed lease and `worktree_inspect` for one branch. If the session already belongs to a dedicated worktree, reuse it. `worktree_create` safely adopts an existing valid worktree for the requested branch. If it reports a stale registration or a mismatched existing path, do not retry the same request and never remove or overwrite it automatically; present the detected path and ask the user whether to prune/archive/remove it or use a different branch. `worktree_delete` may target the current lease or an explicitly named idle branch, always refuses dirty worktrees, and remains approval-gated. This is an explicit approved implementation handoff, not a session-start hook: casual chat, planning, research, and review never create worktrees. Never implement on main, master, trunk, or the remote default branch. Git delivery ownership: build owns final integration after implementation, verification, and review; coder never commits or pushes. Inspect branch, status, and diff directly; stage only intended files and never sweep unrelated dirty-worktree changes into a commit. Build may read Markdown or text handoff files in trusted OS temporary directories but must not treat temporary files as repository state. Ask `scribe` for a commit message when useful. Commit only when the user explicitly requests a commit. Fetch or pull only when explicitly requested or required to resolve known remote divergence, and pulls must use `--ff-only`; never merge or rebase silently. Push only when explicitly requested; never force-push. Create a GitHub pull request with `gh` or a GitLab merge request with `glab` only when explicitly requested, choosing the provider from the Git remote. Report the branch, commit, remote, and PR/MR result precisely. The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command; never work around a denial. Before reporting completion, delegate `reviewer` with the changed files and, for branch review, the explicit base ref, merge-base, and diff; include findings and offer to fix critical or major issues. Do not skip review.",
 			"permission": {
 				"question": "allow",
 				"compress": "allow",
@@ -246,6 +259,18 @@
 					"git branch --show-current*": "allow",
 					"git branch --list*": "allow",
 					"git branch": "allow",
+					"git branch -a": "allow",
+					"git branch -a --no-color": "allow",
+					"git branch --all": "allow",
+					"git branch --all --no-color": "allow",
+					"git branch -r": "allow",
+					"git branch -r --no-color": "allow",
+					"git branch --remotes": "allow",
+					"git branch --remotes --no-color": "allow",
+					"git branch -v": "allow",
+					"git branch -v --no-color": "allow",
+					"git branch -vv": "allow",
+					"git branch -vv --no-color": "allow",
 					"git rev-parse*": "allow",
 					"git symbolic-ref*": "allow",
 					"git for-each-ref*": "allow",
@@ -278,7 +303,10 @@
 					"git push*-f*": "deny",
 					"git push*--mirror*": "deny"
 				},
-				"read": "allow",
+				"read": {
+					"*": "allow",
+					"mcp:*": "deny"
+				},
 				"glob": "allow",
 				"grep": "allow",
 				"delegate": "allow",
@@ -306,6 +334,7 @@
 			"model": "openai/gpt-5.6-luna",
 			"variant": "low",
 			"permission": {
+				"compress": "deny",
 				"codegraph_*": "allow",
 				"context7_*": "deny",
 				"exa_*": "deny",
@@ -314,7 +343,10 @@
 				"webfetch": "deny",
 				"edit": "deny",
 				"write": "deny",
-				"read": "allow",
+				"read": {
+					"*": "allow",
+					"mcp:*": "deny"
+				},
 				"glob": "allow",
 				"grep": "allow",
 				"plan_read": "deny",
@@ -322,6 +354,9 @@
 				"bash": "deny",
 				"skill": "deny"
 			}
+		},
+		"general": {
+			"disable": true
 		}
 	},
 	"mcp": {
@@ -348,6 +383,7 @@
 	},
 	"instructions": [
 		"{env:OPENCODE_CONFIG_DIR}/tools/runtime.md",
+		"{env:OPENCODE_CONFIG_DIR}/tools/capabilities.md",
 		"{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md"
 	],
 	"plugin": [

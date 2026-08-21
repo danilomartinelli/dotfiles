@@ -17,5 +17,5 @@
     "notifications": true,
     "sound": false
   },
-  "plugin": []
+	"plugin": ["@tarquinen/opencode-dcp@3.1.15"]
 }

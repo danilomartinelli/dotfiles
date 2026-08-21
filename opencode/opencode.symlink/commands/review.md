@@ -1,5 +1,6 @@
 ---
 description: Run a staged, branch-range, or path-scoped code review
+agent: build
 ---
 
 Delegate to the `reviewer` agent to perform a code review.

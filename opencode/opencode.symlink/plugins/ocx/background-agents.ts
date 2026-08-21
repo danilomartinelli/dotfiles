@@ -2467,37 +2467,12 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					input.sessionID ?? "",
 					log,
 				);
-				const allowedAgent =
-					callerAgent === "coder" ||
-					(input.tool !== "apply_patch" && callerAgent === "scribe");
+				const allowedAgent = callerAgent === "coder" || callerAgent === "scribe";
 				if (!allowedAgent) {
 					throw new Error(
 						`❌ ${input.tool} is restricted to an authorized write leaf inside a managed worktree.`,
 					);
 				}
-				if (callerAgent === "scribe") {
-					const targetPath = output.args?.filePath ?? output.args?.path;
-					if (
-						!targetPath ||
-						!SCRIBE_EXTENSIONS.has(path.extname(targetPath).toLowerCase())
-					) {
-						throw new Error(
-							"❌ Scribe may write only Markdown and text documentation files.",
-						);
-					}
-				}
-				const handoffRoot =
-					callerAgent === "scribe"
-						? await trustedTemporaryHandoffRoot(
-								output.args?.filePath ?? output.args?.path ?? "",
-							)
-						: null;
-				if (!(await isManagedNonDefaultWorktreeSession(input.sessionID))) {
-					throw new Error(
-						`❌ Agent '${callerAgent}' can only use ${input.tool} inside a managed, non-default worktree session.`,
-					);
-				}
-
 				const targetPaths =
 					input.tool === "apply_patch"
 						? extractApplyPatchPaths(output.args)
@@ -2507,7 +2482,28 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 						`❌ Cannot authorize ${input.tool}: no target paths were found.`,
 					);
 				}
+				if (
+					callerAgent === "scribe" &&
+					targetPaths.some(
+						(targetPath) =>
+							!SCRIBE_EXTENSIONS.has(path.extname(targetPath).toLowerCase()),
+					)
+				) {
+					throw new Error(
+						"❌ Scribe may write only Markdown and text documentation files.",
+					);
+				}
+				if (!(await isManagedNonDefaultWorktreeSession(input.sessionID))) {
+					throw new Error(
+						`❌ Agent '${callerAgent}' can only use ${input.tool} inside a managed, non-default worktree session.`,
+					);
+				}
+
 				for (const targetPath of targetPaths) {
+					const handoffRoot =
+						callerAgent === "scribe"
+							? await trustedTemporaryHandoffRoot(targetPath)
+							: null;
 					const violation = await mutationTargetViolation(
 						handoffRoot ?? directory,
 						targetPath,

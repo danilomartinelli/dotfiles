@@ -11,6 +11,9 @@ is the active agent runtime and the authority for tools and permissions.
   tool runtime
 - Never claim that an unavailable provider tool can replace an OpenCode tool
 - Treat OpenCode permissions as authoritative, including denied tools
+- Before claiming that an exposed tool is unavailable, call its exact name once
+  and preserve the returned error. MCP resource listing is not a catalog of
+  OpenCode tools.
 
 If a search or tool call fails because of output, glob, or buffer limits, narrow
 the path, pattern, or query and retry with the available OpenCode tools. If no
@@ -24,6 +27,12 @@ instead of changing runtimes or inventing another tool surface.
   `worktree_list` and `worktree_inspect` expose managed lease state without
   mutation; approval-gated `worktree_delete` removes only a clean current lease
   or an explicitly named lease whose owning session is idle.
+- Uncommitted changes in the default checkout do not block worktree creation.
+  Creation starts from committed Git state and must leave those changes in
+  place. Dirty state blocks deletion of the dirty managed worktree, not creation
+  of a separate one.
+- Shell `git worktree list` is diagnostic only. Never substitute shell commands
+  for the managed create, inspect, lease, adoption, or delete lifecycle.
 - OpenCode may expose its built-in `worktree` adapter. It is unmanaged by this
   configuration and never authorizes coder or scribe mutation.
 - A write-capable child must inherit a valid managed lease from its root build
@@ -57,6 +66,9 @@ instead of changing runtimes or inventing another tool surface.
   tools whose permissions and lease checks are enforced by this runtime.
 - Agent skill access is default-deny and role-specific. Discoverability of a
   skill does not grant an agent permission to load it.
+- MCP access is also default-deny and role-specific. Generic MCP resources are
+  not a substitute for the exact structured MCP tools assigned in the managed
+  capability matrix.
 - DCP context compression is available only to the `plan` and `build` primary
   orchestrators. Its managed adapter rejects repository overrides, disables
   subagent compression, and protects delegation, plan, and worktree artifacts

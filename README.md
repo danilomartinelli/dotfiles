@@ -276,8 +276,8 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
 | `npm:neonctl`                               | `3.6.0`      |
-| `npm:ocx`                                   | `2.0.14`     |
-| `npm:opencode-ai`                           | `1.18.18`    |
+| `npm:ocx`                                   | `2.0.15`     |
+| `npm:opencode-ai`                           | `1.18.21`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
 | `pipx:aider-chat`                           | `0.86.2`     |
@@ -603,10 +603,12 @@ effects before OpenCode receives a tool call, so neither OpenCode permissions
 nor the managed-worktree lease can authorize or stop those effects. Re-enable
 it only after the backend becomes model-only and every effect crosses the
 OpenCode tool boundary first.
-The DCP plugin is configured by the versioned `dcp.jsonc`; only `plan` and
-`build` may call `compress`, subagent compression is disabled, and delegation,
-plan, and worktree artifacts are protected from pruning. Its local adapter
-rejects repository-level DCP overrides.
+The pinned DCP server plugin is configured by the versioned `dcp.jsonc`, and its
+pinned TUI plugin exposes `/dcp`; automatic DCP updates are disabled. Only
+`plan` and `build` may call `compress`, subagent compression is disabled, and
+delegation, plan, and worktree artifacts are protected from pruning. Its local
+adapter rejects repository-level DCP overrides. `tools/capabilities.md` is the
+canonical agent, tool, MCP, skill, command, and worktree route matrix.
 Native project-config/plugin discovery and shared external skill scans are
 disabled. A dotfiles-owned read-only loader preserves hierarchical
 `AGENTS.md` instructions from the Git root to the active directory; project

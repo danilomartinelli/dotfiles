@@ -32,6 +32,7 @@ This is non-negotiable. The philosophy defines the quality standards your code m
 
 | Tool | Purpose |
 |------|---------|
+| `codegraph_codegraph_explore` | Indexed source exploration and call paths when the current worktree has a usable index |
 | `read` | Understand existing code before modifying |
 | `write` | Create new files |
 | `edit` | Modify existing files |
@@ -60,7 +61,7 @@ You have autonomy to handle implementation details without asking:
 
 ## Process
 
-1. **Read** - Understand the task, read relevant files
+1. **Explore** - Use `codegraph_codegraph_explore` first for indexed source, then targeted `read`, `glob`, or `grep` fallbacks
 2. **Load Philosophy** - Use skill tool to load `code-philosophy` or `frontend-philosophy`
 3. **Plan** - Brief internal strategy (not shared unless complex)
 4. **Implement** - Write/edit code following the philosophy

@@ -38,6 +38,7 @@ interface PermissionConfig {
 }
 
 interface AgentConfig {
+	disable?: boolean;
 	prompt?: string;
 	permission?: PermissionConfig;
 }
@@ -314,6 +315,7 @@ describe("permission and delegation enforcement", () => {
 		});
 		expect(config.agent?.coder?.permission?.delegate).toBeUndefined();
 		expect(config.agent?.coder?.permission?.apply_patch).toBe("allow");
+		expect(config.agent?.scribe?.permission?.apply_patch).toBe("allow");
 		expect(config.agent?.scribe?.permission?.write).toBeInstanceOf(Object);
 		expect(config.agent?.scribe?.permission?.external_directory).toMatchObject({
 			"*": "deny",
@@ -328,6 +330,7 @@ describe("permission and delegation enforcement", () => {
 		});
 		expect(config.agent?.build?.permission?.bash).toMatchObject({
 			"*": "deny",
+			"git branch -a --no-color": "allow",
 			"git worktree list*": "allow",
 			"git show*": "allow",
 			"git remote -v*": "allow",
@@ -336,12 +339,89 @@ describe("permission and delegation enforcement", () => {
 		});
 		expect(config.agent?.plan?.permission?.compress).toBe("allow");
 		expect(config.agent?.build?.permission?.compress).toBe("allow");
-		expect(config.agent?.reviewer?.permission?.compress).toBeUndefined();
+		for (const name of [
+			"researcher",
+			"scribe",
+			"coder",
+			"reviewer",
+			"explore",
+		]) {
+			expect(config.agent?.[name]?.permission?.compress, name).toBe("deny");
+		}
+		expect(config.agent?.general?.disable).toBe(true);
 		expect(config.disabled_providers).toContain("cursor-acp");
 		expect(config.provider?.["cursor-acp"]).toBeUndefined();
 		expect(config.plugin?.some((plugin) => plugin.includes("cursor"))).toBe(
 			false,
 		);
+	});
+
+	test("keeps local reads, MCPs, worktrees, skills, and commands role-scoped", async () => {
+		const config = await readConfig();
+		for (const name of ["scribe", "coder", "reviewer", "build", "explore"]) {
+			expect(config.agent?.[name]?.permission?.read, name).toMatchObject({
+				"*": "allow",
+				"mcp:*": "deny",
+			});
+		}
+
+		expect(config.agent?.researcher?.permission).toMatchObject({
+			"context7_*": "allow",
+			"exa_*": "allow",
+			"gh_grep_*": "allow",
+			webfetch: "allow",
+			read: "deny",
+			bash: "deny",
+			skill: "deny",
+		});
+		expect(config.agent?.researcher?.permission?.websearch).toBeUndefined();
+		expect(config.agent?.explore?.permission).toMatchObject({
+			"codegraph_*": "allow",
+			"context7_*": "deny",
+			"exa_*": "deny",
+			"gh_grep_*": "deny",
+			bash: "deny",
+			skill: "deny",
+		});
+		expect(config.agent?.coder?.permission).toMatchObject({
+			"codegraph_*": "allow",
+			"context7_*": "deny",
+			"exa_*": "deny",
+			"gh_grep_*": "deny",
+		});
+		expect(config.agent?.build?.permission).toMatchObject({
+			worktree_create: "allow",
+			"worktree_*": "allow",
+			worktree_delete: "ask",
+		});
+		for (const name of [
+			"plan",
+			"explore",
+			"researcher",
+			"coder",
+			"reviewer",
+			"scribe",
+		]) {
+			expect(config.agent?.[name]?.permission?.worktree_create, name).not.toBe(
+				"allow",
+			);
+		}
+
+		expect(config.instructions).toContain(
+			"{env:OPENCODE_CONFIG_DIR}/tools/capabilities.md",
+		);
+		const capabilityMatrix = await Bun.file(
+			new URL("../tools/capabilities.md", import.meta.url),
+		).text();
+		expect(capabilityMatrix).toContain("`codegraph_codegraph_explore`");
+		expect(capabilityMatrix).toContain("`context7_resolve-library-id`");
+		expect(capabilityMatrix).toContain("A dirty default checkout is not a creation blocker");
+		expect(capabilityMatrix).toContain("`list_mcp_resources`");
+
+		const reviewCommand = await Bun.file(
+			new URL("../commands/review.md", import.meta.url),
+		).text();
+		expect(reviewCommand).toMatch(/^---\ndescription:.*\nagent: build\n---/);
 	});
 
 	test("blocks shell for a read-only agent even if a future config regresses", async () => {
@@ -403,7 +483,15 @@ describe("permission and delegation enforcement", () => {
 				hook({ tool: "edit", sessionID: "coder-session" }, { args: {} }),
 			).rejects.toThrow("managed, non-default worktree");
 			await expect(
-				hook({ tool: "apply_patch", sessionID: "coder-session" }, { args: {} }),
+				hook(
+					{ tool: "apply_patch", sessionID: "coder-session" },
+					{
+						args: {
+							patchText:
+								"*** Begin Patch\n*** Update File: README.md\n*** End Patch",
+						},
+					},
+				),
 			).rejects.toThrow("managed, non-default worktree");
 		} finally {
 			if (previousHome === undefined) delete process.env.HOME;
@@ -443,6 +531,87 @@ describe("permission and delegation enforcement", () => {
 			else process.env.HOME = previousHome;
 			await rm(home, { recursive: true, force: true });
 			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
+	test("allows scribe patches only for documentation in the managed lease or a trusted handoff", async () => {
+		const home = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-scribe-patch-home-"),
+		);
+		const { repository, worktree } = await createGitRepository(
+			"opencode-scribe-patch",
+		);
+		const previousHome = process.env.HOME;
+		process.env.HOME = home;
+		try {
+			const state = await initStateDb(worktree);
+			claimSession(state, {
+				id: "scribe-session",
+				branch: "feature/test",
+				path: worktree,
+				workspaceId: "workspace-scribe-patch",
+				createdAt: new Date().toISOString(),
+			});
+			state.close();
+
+			const plugin = await backgroundAgentsPlugin({
+				directory: worktree,
+				client: createAgentClient(await readConfig(), "scribe"),
+			} as never);
+			const hook = plugin["tool.execute.before"];
+			if (!hook) throw new Error("permission hook is missing");
+
+			await expect(
+				hook(
+					{ tool: "apply_patch", sessionID: "scribe-session" },
+					{
+						args: {
+							patchText:
+								"*** Begin Patch\n*** Update File: README.md\n*** End Patch",
+						},
+					},
+				),
+			).resolves.toBeUndefined();
+			await expect(
+				hook(
+					{ tool: "apply_patch", sessionID: "scribe-session" },
+					{
+						args: {
+							patchText:
+								"*** Begin Patch\n*** Update File: src/application.ts\n*** End Patch",
+						},
+					},
+				),
+			).rejects.toThrow("documentation files");
+			await expect(
+				hook(
+					{ tool: "apply_patch", sessionID: "scribe-session" },
+					{
+						args: {
+							patchText: `*** Begin Patch\n*** Update File: ${path.join(repository, "outside.md")}\n*** End Patch`,
+						},
+					},
+				),
+			).rejects.toThrow("escapes the managed worktree");
+			await expect(
+				hook(
+					{ tool: "apply_patch", sessionID: "scribe-session" },
+					{
+						args: {
+							patchText: `*** Begin Patch\n*** Add File: ${path.join(os.tmpdir(), "scribe-runtime-handoff.md")}\n*** End Patch`,
+						},
+					},
+				),
+			).resolves.toBeUndefined();
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			await runCommand(
+				["git", "worktree", "remove", "--force", worktree],
+				repository,
+			).catch(() => undefined);
+			await rm(repository, { recursive: true, force: true });
+			await rm(home, { recursive: true, force: true });
 		}
 	});
 
@@ -1566,6 +1735,7 @@ describe("deterministic plugin and dependency topology", () => {
 		const dcp = parseJsonc(
 			await Bun.file(new URL("../dcp.jsonc", import.meta.url)).text(),
 		) as {
+			autoUpdate?: boolean;
 			experimental?: { allowSubAgents?: boolean; customPrompts?: boolean };
 			compress?: { permission?: string; protectedTools?: string[] };
 			strategies?: {
@@ -1574,9 +1744,19 @@ describe("deterministic plugin and dependency topology", () => {
 			};
 		};
 
-		expect(config.permission?.compress).toBe("deny");
+		expect(config.permission?.compress).toBe("allow");
 		expect(config.agent?.plan?.permission?.compress).toBe("allow");
 		expect(config.agent?.build?.permission?.compress).toBe("allow");
+		for (const name of [
+			"researcher",
+			"scribe",
+			"coder",
+			"reviewer",
+			"explore",
+		]) {
+			expect(config.agent?.[name]?.permission?.compress, name).toBe("deny");
+		}
+		expect(dcp.autoUpdate).toBe(false);
 		expect(dcp.experimental).toEqual({
 			allowSubAgents: false,
 			customPrompts: false,
