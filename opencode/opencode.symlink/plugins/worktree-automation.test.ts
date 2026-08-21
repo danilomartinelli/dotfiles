@@ -44,6 +44,16 @@ function createClient(): OpencodeClient {
 	} as unknown as OpencodeClient
 }
 
+function createWorktreePluginContext(directory: string, client: OpencodeClient) {
+	return {
+		directory,
+		worktree: directory,
+		client,
+		serverUrl: new URL("http://127.0.0.1:4096"),
+		experimental_workspace: { register() {} },
+	}
+}
+
 async function runCommand(command: string[], cwd: string): Promise<void> {
 	const process = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" })
 	const [stdout, stderr, exitCode] = await Promise.all([
@@ -113,6 +123,7 @@ function createSessionTable(database: Database): void {
 			branch TEXT NOT NULL,
 			path TEXT NOT NULL,
 			created_at TEXT NOT NULL,
+			workspace_id TEXT,
 			launch_mode TEXT,
 			profile TEXT,
 			ocx_bin TEXT
@@ -137,7 +148,7 @@ describe("worktree automation boundaries", () => {
 			})
 
 			const client = createClient()
-			const plugin = await worktreePlugin({ directory, client } as never)
+			const plugin = await worktreePlugin(createWorktreePluginContext(directory, client) as never)
 			const tool = plugin.tool?.worktree_create
 			if (!tool) throw new Error("worktree_create tool is not registered")
 
@@ -154,6 +165,160 @@ describe("worktree automation boundaries", () => {
 			await rm(home, { recursive: true, force: true })
 			await rm(directory, { recursive: true, force: true })
 		}
+	})
+
+	test("binds the original orchestrator session before continuing in the workspace", async () => {
+		const database = new Database(":memory:")
+		createSessionTable(database)
+		const order: string[] = []
+
+		const result = await worktreePlugin.testInternals.bindSessionToWorkspace({
+			database,
+			sessionId: "parent-session",
+			branch: "feature/shared-workspace",
+			createWorkspace: async () => {
+				order.push("workspace:create")
+				return {
+					id: "workspace-1",
+					type: "ocx-git-worktree",
+					name: "feature/shared-workspace",
+					branch: "feature/shared-workspace",
+					directory: "/tmp/shared-workspace",
+					extra: null,
+					projectID: "project-1",
+				}
+			},
+			warpSession: async (workspaceId, sessionId) => {
+				const claimed = getSession(database, sessionId)
+				order.push(`workspace:warp:${claimed?.workspaceId ?? "unclaimed"}`)
+				expect(workspaceId).toBe("workspace-1")
+				expect(sessionId).toBe("parent-session")
+			},
+			removeWorkspace: async () => {
+				order.push("workspace:remove")
+			},
+			log: { debug() {}, info() {}, warn() {}, error() {} },
+		})
+
+		expect(result).toEqual({
+			ok: true,
+			value: { workspaceId: "workspace-1", path: "/tmp/shared-workspace" },
+		})
+		expect(order).toEqual(["workspace:create", "workspace:warp:workspace-1"])
+		expect(getSession(database, "parent-session")).toMatchObject({
+			branch: "feature/shared-workspace",
+			path: "/tmp/shared-workspace",
+			workspaceId: "workspace-1",
+		})
+		database.close()
+	})
+
+	test("rolls back the session claim and workspace when native warp fails", async () => {
+		const database = new Database(":memory:")
+		createSessionTable(database)
+		const order: string[] = []
+
+		const result = await worktreePlugin.testInternals.bindSessionToWorkspace({
+			database,
+			sessionId: "parent-session",
+			branch: "fix/warp-failure",
+			createWorkspace: async () => ({
+				id: "workspace-2",
+				type: "ocx-git-worktree",
+				name: "fix/warp-failure",
+				branch: "fix/warp-failure",
+				directory: "/tmp/warp-failure",
+				extra: null,
+				projectID: "project-1",
+			}),
+			warpSession: async () => {
+				order.push("workspace:warp")
+				throw new Error("workspace API unavailable")
+			},
+			removeWorkspace: async (workspaceId) => {
+				order.push(`workspace:remove:${workspaceId}`)
+			},
+			log: { debug() {}, info() {}, warn() {}, error() {} },
+		})
+
+		expect(result.ok).toBe(false)
+		if (!result.ok) expect(result.error).toContain("workspace API unavailable")
+		expect(order).toEqual(["workspace:warp", "workspace:remove:workspace-2"])
+		expect(getSession(database, "parent-session")).toBeNull()
+		database.close()
+	})
+
+	test("native workspace adapter owns git worktree creation, targeting, and removal", async () => {
+		const home = await mkdtemp(path.join(os.tmpdir(), "opencode-native-workspace-home-"))
+		const repository = await mkdtemp(path.join(os.tmpdir(), "opencode-native-workspace-repo-"))
+		const previousHome = process.env.HOME
+		process.env.HOME = home
+
+		try {
+			await runCommand(["git", "init", "-q"], repository)
+			await runCommand(["git", "config", "user.email", "tests@example.invalid"], repository)
+			await runCommand(["git", "config", "user.name", "OpenCode tests"], repository)
+			await Bun.write(path.join(repository, "README.md"), "test\n")
+			await runCommand(["git", "add", "README.md"], repository)
+			await runCommand(["git", "commit", "-qm", "initial"], repository)
+
+			const adapter = worktreePlugin.testInternals.createWorkspaceAdapter(repository, {
+				debug() {}, info() {}, warn() {}, error() {},
+			})
+			const configured = await adapter.configure({
+				id: "workspace-native",
+				type: "ocx-git-worktree",
+				name: "workspace-native",
+				branch: "feature/native-workspace",
+				directory: null,
+				extra: null,
+				projectID: "project-native",
+			})
+
+			await adapter.create(configured, {})
+			expect(configured.directory).toBeTruthy()
+			if (!configured.directory) throw new Error("adapter did not configure a directory")
+			expect(await Bun.file(path.join(configured.directory, "README.md")).text()).toBe("test\n")
+			expect(await adapter.target(configured)).toEqual({
+				type: "local",
+				directory: configured.directory,
+			})
+			await adapter.remove(configured)
+			expect(await Bun.file(configured.directory).exists()).toBe(false)
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME
+			else process.env.HOME = previousHome
+			await rm(home, { recursive: true, force: true })
+			await rm(repository, { recursive: true, force: true })
+		}
+	})
+
+	test("resumes the parent session exactly once after its workspace-bound turn becomes idle", async () => {
+		const pending = new Map([["parent-session", "workspace-1"]])
+		const resumed: string[] = []
+		const log = { debug() {}, info() {}, warn() {}, error() {} }
+
+		expect(
+			await worktreePlugin.testInternals.resumePendingContinuation(
+				pending,
+				"parent-session",
+				async (sessionId, workspaceId) => {
+					resumed.push(`${sessionId}:${workspaceId}`)
+				},
+				log,
+			),
+		).toBe(true)
+		expect(
+			await worktreePlugin.testInternals.resumePendingContinuation(
+				pending,
+				"parent-session",
+				async (sessionId, workspaceId) => {
+					resumed.push(`${sessionId}:${workspaceId}`)
+				},
+				log,
+			),
+		).toBe(false)
+		expect(resumed).toEqual(["parent-session:workspace-1"])
 	})
 
 	test("claims before launch and removes the claim when terminal launch fails", async () => {
@@ -349,11 +514,17 @@ describe("worktree automation boundaries", () => {
 		expect(prompts.plan).toContain("`researcher` only")
 		expect(prompts.plan).toContain("Planning, research, review, and casual chat do not create worktrees")
 		expect(prompts.plan).toContain("hand off to the `build` orchestrator")
+		expect(prompts.plan).toContain("does not open a terminal or fork the session")
 
 		expect(prompts.build).toContain("BUILD ORCHESTRATOR")
 		expect(prompts.build).toContain("Delegate ALL code changes and verification to `coder`")
 		expect(prompts.build).toContain("plan_read")
 		expect(prompts.build).toContain("All implementation requires a dedicated non-default branch")
+		expect(prompts.build).toContain("binds this same build session to the new workspace")
+		expect(prompts.build).toContain("automatically resume this same session in the workspace")
+		expect(prompts.build).toContain("delegate `coder`, `reviewer`, and other child agents")
+		expect(prompts.build).not.toContain("stop this parent session")
+		expect(prompts.build).not.toContain("implementation continues in the launched worktree")
 		expect(prompts.build).toContain("coder never commits or pushes")
 		expect(prompts.build).toContain("Commit only when the user explicitly requests a commit")
 		expect(prompts.build).toContain("Push only when explicitly requested; never force-push")

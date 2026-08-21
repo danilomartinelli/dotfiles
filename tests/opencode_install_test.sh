@@ -161,6 +161,18 @@ test_cursor_provider_keeps_opencode_as_the_tool_runtime() {
   assert_equal 'opencode|true' "$output" 'Cursor ACP OpenCode tool-loop contract'
 }
 
+test_experimental_workspace_runtime_is_enabled() {
+  local home output
+
+  home=$(scenario_tmpdir workspace-runtime)
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
+  output=$(env HOME="$home" /bin/zsh -c \
+    'source "$1"; print -r -- "$OPENCODE_EXPERIMENTAL_WORKSPACES"' \
+    zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+
+  assert_equal 'true' "$output" 'native workspace runtime flag'
+}
+
 test_plugin_dependency_matches_pinned_opencode_version() {
   local opencode_version
 
@@ -172,6 +184,8 @@ test_plugin_dependency_matches_pinned_opencode_version() {
 
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/package.json" \
     "\"@opencode-ai/plugin\": \"$opencode_version\""
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/package.json" \
+    "\"@opencode-ai/sdk\": \"$opencode_version\""
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
     'package-lock.json'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
@@ -344,7 +358,11 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"worktree_create": "allow"'
   assert_contains "$config" 'All implementation requires a dedicated non-default branch'
   # shellcheck disable=SC2016 # Backticks are literal prompt content, not shell substitution.
-  assert_contains "$config" 'build is the sole agent responsible for the `worktree_create` implementation handoff'
+  assert_contains "$config" 'build is the sole agent responsible for creating and owning the implementation workspace'
+  assert_contains "$config" "binds this same build session to the new workspace"
+  assert_contains "$config" 'automatically resume this same session in the workspace'
+  assert_contains "$config" 'Do not fork the session, open another terminal, or terminate the parent session.'
+  assert_not_contains "$config" 'stop this parent session'
   assert_contains "$config" 'explicit approved implementation handoff, not a session-start hook'
   assert_contains "$config" 'coder never commits or pushes'
   assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
@@ -645,6 +663,8 @@ scenario_run 'OpenCode routes skills only to relevant agents' \
   test_selective_skill_routes_are_relevant_and_taste_is_not_global
 scenario_run 'Cursor provider keeps OpenCode as the tool runtime' \
   test_cursor_provider_keeps_opencode_as_the_tool_runtime
+scenario_run 'OpenCode enables the native workspace runtime' \
+  test_experimental_workspace_runtime_is_enabled
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
 scenario_run 'Cursor provider has one pinned plugin source' \

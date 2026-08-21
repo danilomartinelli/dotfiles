@@ -27,12 +27,14 @@ export interface Session {
 	branch: string
 	path: string
 	createdAt: string
+	workspaceId: string | null
 	launchMode: "plain" | "ocx"
 	profile: string | null
 	ocxBin: string | null
 }
 
-export type SessionInput = Omit<Session, "launchMode" | "profile" | "ocxBin"> & {
+export type SessionInput = Omit<Session, "workspaceId" | "launchMode" | "profile" | "ocxBin"> & {
+	workspaceId?: string | null
 	launchMode?: "plain" | "ocx"
 	profile?: string | null
 	ocxBin?: string | null
@@ -49,6 +51,7 @@ export interface PendingSpawn {
 export interface PendingDelete {
 	branch: string
 	path: string
+	sessionId: string
 }
 
 // =============================================================================
@@ -60,6 +63,7 @@ const sessionSchema = z.object({
 	branch: z.string().min(1),
 	path: z.string().min(1),
 	createdAt: z.string().min(1),
+	workspaceId: z.string().min(1).nullable().optional(),
 	launchMode: z.enum(["plain", "ocx"]).optional(),
 	profile: z.string().nullable().optional(),
 	ocxBin: z.string().nullable().optional(),
@@ -74,6 +78,7 @@ const pendingSpawnSchema = z.object({
 const pendingDeleteSchema = z.object({
 	branch: z.string().min(1),
 	path: z.string().min(1),
+	sessionId: z.string().min(1),
 })
 
 // =============================================================================
@@ -166,13 +171,14 @@ export async function initStateDb(projectRoot: string): Promise<Database> {
 			branch TEXT NOT NULL,
 			path TEXT NOT NULL,
 			created_at TEXT NOT NULL,
+			workspace_id TEXT,
 			launch_mode TEXT,
 			profile TEXT,
 			ocx_bin TEXT
 		)
 	`)
 
-	ensureSessionLaunchMetadataColumns(db)
+	ensureSessionMetadataColumns(db)
 
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS pending_operations (
@@ -187,9 +193,13 @@ export async function initStateDb(projectRoot: string): Promise<Database> {
 	return db
 }
 
-function ensureSessionLaunchMetadataColumns(db: Database): void {
+function ensureSessionMetadataColumns(db: Database): void {
 	const tableInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name?: string }>
 	const sessionColumns = new Set(tableInfo.map((column) => column.name).filter(Boolean))
+
+	if (!sessionColumns.has("workspace_id")) {
+		addSessionColumn(db, "workspace_id", "ALTER TABLE sessions ADD COLUMN workspace_id TEXT")
+	}
 
 	if (!sessionColumns.has("launch_mode")) {
 		addSessionColumn(db, "launch_mode", "ALTER TABLE sessions ADD COLUMN launch_mode TEXT")
@@ -241,6 +251,7 @@ function normalizeSessionRow(row: Record<string, string | null>): Session {
 		branch: String(row.branch),
 		path: String(row.path),
 		createdAt: String(row.createdAt),
+		workspaceId: row.workspaceId ? String(row.workspaceId) : null,
 		launchMode: serialized.launchMode,
 		profile: serialized.profile,
 		ocxBin: serialized.ocxBin,
@@ -262,8 +273,8 @@ export function addSession(db: Database, session: SessionInput): void {
 	const parsedSession = parseSessionInput(session)
 
 	const stmt = db.prepare(`
-		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
-		VALUES ($id, $branch, $path, $createdAt, $launchMode, $profile, $ocxBin)
+		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, workspace_id, launch_mode, profile, ocx_bin)
+		VALUES ($id, $branch, $path, $createdAt, $workspaceId, $launchMode, $profile, $ocxBin)
 	`)
 
 	stmt.run({
@@ -271,6 +282,7 @@ export function addSession(db: Database, session: SessionInput): void {
 		$branch: parsedSession.branch,
 		$path: parsedSession.path,
 		$createdAt: parsedSession.createdAt,
+		$workspaceId: parsedSession.workspaceId,
 		$launchMode: parsedSession.launchMode,
 		$profile: parsedSession.profile,
 		$ocxBin: parsedSession.ocxBin,
@@ -291,6 +303,7 @@ function parseSessionInput(session: SessionInput): Session & { launchMode: "plai
 		branch: parsed.branch,
 		path: parsed.path,
 		createdAt: parsed.createdAt,
+		workspaceId: parsed.workspaceId ?? null,
 		launchMode: serializedLaunchMetadata.launchMode,
 		profile: serializedLaunchMetadata.profile,
 		ocxBin: serializedLaunchMetadata.ocxBin,
@@ -298,17 +311,17 @@ function parseSessionInput(session: SessionInput): Session & { launchMode: "plai
 }
 
 /**
- * Claim a session before launching its child terminal.
+ * Claim a session before binding it to a native workspace.
  *
  * Unlike addSession, this intentionally does not replace an existing row. A
- * duplicate claim is a launch-boundary failure and must prevent the child from
- * starting without a durable nested-worktree guard.
+ * duplicate claim is a workspace-boundary failure and must prevent reassignment
+ * without a durable nested-worktree guard.
  */
 export function claimSession(db: Database, session: SessionInput): void {
 	const parsedSession = parseSessionInput(session)
 	const stmt = db.prepare(`
-		INSERT INTO sessions (id, branch, path, created_at, launch_mode, profile, ocx_bin)
-		VALUES ($id, $branch, $path, $createdAt, $launchMode, $profile, $ocxBin)
+		INSERT INTO sessions (id, branch, path, created_at, workspace_id, launch_mode, profile, ocx_bin)
+		VALUES ($id, $branch, $path, $createdAt, $workspaceId, $launchMode, $profile, $ocxBin)
 	`)
 
 	stmt.run({
@@ -316,6 +329,7 @@ export function claimSession(db: Database, session: SessionInput): void {
 		$branch: parsedSession.branch,
 		$path: parsedSession.path,
 		$createdAt: parsedSession.createdAt,
+		$workspaceId: parsedSession.workspaceId,
 		$launchMode: parsedSession.launchMode,
 		$profile: parsedSession.profile,
 		$ocxBin: parsedSession.ocxBin,
@@ -334,7 +348,7 @@ export function getSession(db: Database, sessionId: string): Session | null {
 	if (!sessionId) return null
 
 	const stmt = db.prepare(`
-		SELECT id, branch, path, created_at as createdAt, launch_mode as launchMode, profile, ocx_bin as ocxBin
+		SELECT id, branch, path, created_at as createdAt, workspace_id as workspaceId, launch_mode as launchMode, profile, ocx_bin as ocxBin
 		FROM sessions
 		WHERE id = $id
 	`)
@@ -376,7 +390,7 @@ export function removeSessionById(db: Database, sessionId: string): void {
  */
 export function getAllSessions(db: Database): Session[] {
 	const stmt = db.prepare(`
-		SELECT id, branch, path, created_at as createdAt, launch_mode as launchMode, profile, ocx_bin as ocxBin
+		SELECT id, branch, path, created_at as createdAt, workspace_id as workspaceId, launch_mode as launchMode, profile, ocx_bin as ocxBin
 		FROM sessions
 		ORDER BY created_at ASC
 	`)
@@ -505,12 +519,13 @@ export function setPendingDelete(db: Database, del: PendingDelete, client?: Open
 	// Atomic: replace any existing pending operation
 	const stmt = db.prepare(`
 		INSERT OR REPLACE INTO pending_operations (id, type, branch, path, session_id)
-		VALUES (1, 'delete', $branch, $path, NULL)
+		VALUES (1, 'delete', $branch, $path, $sessionId)
 	`)
 
 	stmt.run({
 		$branch: parsed.branch,
 		$path: parsed.path,
+		$sessionId: parsed.sessionId,
 	})
 }
 
@@ -522,7 +537,7 @@ export function setPendingDelete(db: Database, del: PendingDelete, client?: Open
  */
 export function getPendingDelete(db: Database): PendingDelete | null {
 	const stmt = db.prepare(`
-		SELECT type, branch, path
+		SELECT type, branch, path, session_id as sessionId
 		FROM pending_operations
 		WHERE id = 1 AND type = 'delete'
 	`)
@@ -533,6 +548,7 @@ export function getPendingDelete(db: Database): PendingDelete | null {
 	return {
 		branch: row.branch,
 		path: row.path,
+		sessionId: row.sessionId,
 	}
 }
 

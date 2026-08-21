@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.30",
-    "@opencode-ai/plugin": "1.18.18"
+    "@opencode-ai/plugin": "1.18.18",
+    "@opencode-ai/sdk": "1.18.18"
   },
   "devDependencies": {
     "detect-terminal": "2.0.0",

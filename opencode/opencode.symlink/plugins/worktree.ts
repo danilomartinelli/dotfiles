@@ -1,8 +1,8 @@
 /**
  * OCX Worktree Plugin
  *
- * Creates isolated git worktrees for AI development sessions with
- * seamless terminal spawning across macOS, Windows, and Linux.
+ * Creates isolated git worktrees and binds the current OpenCode session to
+ * them through the native experimental workspace lifecycle.
  *
  * Inspired by opencode-worktree-session by Felix Anhalt
  * https://github.com/felixAnhalt/opencode-worktree-session
@@ -16,8 +16,9 @@ import { constants as fsConstants } from "node:fs"
 import { access, copyFile, cp, lstat, mkdir, realpath, rm, stat, symlink } from "node:fs/promises"
 import * as os from "node:os"
 import * as path from "node:path"
-import { type Plugin, tool } from "@opencode-ai/plugin"
+import { type Plugin, tool, type WorkspaceAdapter, type WorkspaceInfo } from "@opencode-ai/plugin"
 import type { Event } from "@opencode-ai/sdk"
+import { createOpencodeClient as createOpencodeClientV2 } from "@opencode-ai/sdk/v2"
 import type { OpencodeClient } from "./kdco-primitives/types"
 
 /** Logger interface for structured logging */
@@ -46,7 +47,6 @@ import {
 	getSession,
 	getWorktreePath,
 	initStateDb,
-	removeSession,
 	removeSessionById,
 	setPendingDelete,
 } from "./worktree/state"
@@ -60,6 +60,8 @@ const DB_RETRY_DELAY_MS = 100
 
 /** Maximum depth to traverse session parent chain */
 const MAX_SESSION_CHAIN_DEPTH = 10
+
+const WORKSPACE_ADAPTER_TYPE = "ocx-git-worktree"
 
 // =============================================================================
 // TYPES & SCHEMAS
@@ -1051,12 +1053,180 @@ function isManagedWorktreeSession(
 	return lookup(sessionID) !== null
 }
 
+interface WorkspaceBindingOptions {
+	database: Database
+	sessionId: string
+	branch: string
+	baseBranch?: string
+	createWorkspace: (branch: string, baseBranch?: string) => Promise<WorkspaceInfo>
+	warpSession: (workspaceId: string, sessionId: string) => Promise<void>
+	removeWorkspace: (workspaceId: string) => Promise<void>
+	claimSessionFn?: typeof claimSession
+	removeSessionFn?: typeof removeSessionById
+	log: Logger
+}
+
+interface WorkspaceBinding {
+	workspaceId: string
+	path: string
+}
+
+function errorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	if (error && typeof error === "object") {
+		const record = error as { message?: unknown; data?: { message?: unknown } }
+		if (typeof record.data?.message === "string") return record.data.message
+		if (typeof record.message === "string") return record.message
+	}
+	return String(error)
+}
+
+async function bindSessionToWorkspace(
+	options: WorkspaceBindingOptions,
+): Promise<Result<WorkspaceBinding, string>> {
+	const claimSessionFn = options.claimSessionFn ?? claimSession
+	const removeSessionFn = options.removeSessionFn ?? removeSessionById
+	let workspace: WorkspaceInfo | null = null
+	let sessionClaimed = false
+	const cleanupErrors: string[] = []
+
+	const cleanup = async (): Promise<void> => {
+		if (sessionClaimed) {
+			try {
+				removeSessionFn(options.database, options.sessionId)
+			} catch (error) {
+				const detail = `session claim: ${errorMessage(error)}`
+				cleanupErrors.push(detail)
+				options.log.warn(`[worktree] Cleanup failed for ${detail}`)
+			}
+		}
+		if (workspace) {
+			try {
+				await options.removeWorkspace(workspace.id)
+			} catch (error) {
+				const detail = `workspace ${workspace.id}: ${errorMessage(error)}`
+				cleanupErrors.push(detail)
+				options.log.warn(`[worktree] Cleanup failed for ${detail}`)
+			}
+		}
+	}
+
+	try {
+		workspace = await options.createWorkspace(options.branch, options.baseBranch)
+		if (!workspace.id || !workspace.directory) {
+			throw new Error("OpenCode returned a workspace without an id or local directory")
+		}
+
+		claimSessionFn(options.database, {
+			id: options.sessionId,
+			branch: options.branch,
+			path: workspace.directory,
+			workspaceId: workspace.id,
+			createdAt: new Date().toISOString(),
+		})
+		sessionClaimed = true
+
+		await options.warpSession(workspace.id, options.sessionId)
+		return Result.ok({ workspaceId: workspace.id, path: workspace.directory })
+	} catch (error) {
+		await cleanup()
+		const cleanupDetail = cleanupErrors.length > 0 ? ` Cleanup errors: ${cleanupErrors.join("; ")}.` : ""
+		return Result.err(`${errorMessage(error)}.${cleanupDetail}`.trim())
+	}
+}
+
+function parseWorkspaceBaseBranch(extra: unknown): string | undefined {
+	if (!extra || typeof extra !== "object") return undefined
+	const baseBranch = (extra as { baseBranch?: unknown }).baseBranch
+	return typeof baseBranch === "string" && baseBranch.length > 0 ? baseBranch : undefined
+}
+
+async function resumePendingContinuation(
+	pending: Map<string, string>,
+	sessionId: string,
+	resume: (sessionId: string, workspaceId: string) => Promise<void>,
+	log: Logger,
+): Promise<boolean> {
+	const workspaceId = pending.get(sessionId)
+	if (!workspaceId) return false
+	pending.delete(sessionId)
+	try {
+		await resume(sessionId, workspaceId)
+	} catch (error) {
+		log.warn(`[worktree] Failed to resume session in workspace: ${errorMessage(error)}`)
+	}
+	return true
+}
+
+function createWorkspaceAdapter(mainRoot: string, log: Logger): WorkspaceAdapter {
+	return {
+		name: "OCX Git worktree",
+		description: "Isolated git worktree owned by the current orchestrator session",
+		async configure(config) {
+			if (!config.branch) throw new Error("A branch is required for an OCX worktree workspace")
+			const worktreeConfig = await loadWorktreeConfig(mainRoot, log)
+			const directory = await getWorktreePath(mainRoot, config.branch, worktreeConfig.worktreePath)
+			return { ...config, name: config.branch, directory }
+		},
+		async create(config) {
+			if (!config.branch || !config.directory) {
+				throw new Error("Workspace configuration is missing its branch or directory")
+			}
+			const worktreeConfig = await loadWorktreeConfig(mainRoot, log)
+			const result = await createWorktree(
+				mainRoot,
+				config.branch,
+				parseWorkspaceBaseBranch(config.extra),
+				worktreeConfig.worktreePath,
+			)
+			if (!result.ok) throw new Error(result.error)
+			if (path.resolve(result.value) !== path.resolve(config.directory)) {
+				throw new Error(`Workspace path mismatch: ${result.value} != ${config.directory}`)
+			}
+
+			if (worktreeConfig.sync.copyFiles.length > 0) {
+				await copyFiles(mainRoot, config.directory, worktreeConfig.sync.copyFiles, log)
+			}
+			if (worktreeConfig.sync.symlinkDirs.length > 0) {
+				await symlinkDirs(mainRoot, config.directory, worktreeConfig.sync.symlinkDirs, log)
+			}
+			if (worktreeConfig.hooks.postCreate.length > 0) {
+				await runHooks(config.directory, worktreeConfig.hooks.postCreate, log)
+			}
+		},
+		async remove(config) {
+			if (!config.directory) throw new Error("Workspace configuration is missing its directory")
+			const statusResult = await git(["status", "--porcelain"], config.directory)
+			if (!statusResult.ok) throw new Error(statusResult.error)
+			if (statusResult.value) throw new Error("Refusing to remove a worktree with uncommitted changes")
+
+			const worktreeConfig = await loadWorktreeConfig(mainRoot, log)
+			if (worktreeConfig.hooks.preDelete.length > 0) {
+				await runHooks(config.directory, worktreeConfig.hooks.preDelete, log)
+			}
+			const postHookStatus = await git(["status", "--porcelain"], config.directory)
+			if (!postHookStatus.ok) throw new Error(postHookStatus.error)
+			if (postHookStatus.value) {
+				throw new Error("Pre-delete hooks left uncommitted changes; workspace cleanup cancelled")
+			}
+
+			const removeResult = await removeWorktree(mainRoot, config.directory)
+			if (!removeResult.ok) throw new Error(removeResult.error)
+		},
+		target(config) {
+			if (!config.directory) throw new Error("Workspace configuration is missing its directory")
+			return { type: "local", directory: config.directory }
+		},
+	}
+}
+
 // =============================================================================
 // PLUGIN ENTRY
 // =============================================================================
 
 const WorktreePlugin: Plugin = async (ctx) => {
-	const { directory, client } = ctx
+	const { directory, client, experimental_workspace, serverUrl } = ctx
+	const mainRoot = ctx.worktree || directory
 
 	const log = {
 		debug: (msg: string) =>
@@ -1077,14 +1247,80 @@ const WorktreePlugin: Plugin = async (ctx) => {
 				.catch(() => {}),
 	}
 
-	// Initialize SQLite database
-	const database = await initDb(directory, log)
+	experimental_workspace.register(WORKSPACE_ADAPTER_TYPE, createWorkspaceAdapter(mainRoot, log))
+	const nativeClient = createOpencodeClientV2({
+		baseUrl: serverUrl.toString(),
+		directory: mainRoot,
+	})
+	const createNativeWorkspace = async (
+		branch: string,
+		baseBranch?: string,
+	): Promise<WorkspaceInfo> => {
+		const response = await nativeClient.experimental.workspace.create({
+			directory: mainRoot,
+			type: WORKSPACE_ADAPTER_TYPE,
+			branch,
+			extra: baseBranch ? { baseBranch } : null,
+		})
+		if (response.error) throw response.error
+		if (!response.data) throw new Error("OpenCode did not return the created workspace")
+		return {
+			id: response.data.id,
+			type: response.data.type,
+			name: response.data.name,
+			branch: response.data.branch ?? null,
+			directory: response.data.directory ?? null,
+			extra: response.data.extra ?? null,
+			projectID: response.data.projectID,
+		}
+	}
+	const warpSession = async (workspaceId: string | null, sessionId: string): Promise<void> => {
+		const response = await nativeClient.experimental.workspace.warp({
+			directory: mainRoot,
+			id: workspaceId,
+			sessionID: sessionId,
+			copyChanges: false,
+		})
+		if (response.error) throw response.error
+	}
+	const removeNativeWorkspace = async (workspaceId: string): Promise<void> => {
+		const response = await nativeClient.experimental.workspace.remove({
+			directory: mainRoot,
+			id: workspaceId,
+		})
+		if (response.error) throw response.error
+	}
+	const pendingContinuations = new Map<string, string>()
+	const continueSessionInWorkspace = async (
+		sessionId: string,
+		workspaceId: string,
+	): Promise<void> => {
+		const response = await nativeClient.session.promptAsync({
+			directory: mainRoot,
+			workspace: workspaceId,
+			sessionID: sessionId,
+			agent: "build",
+			parts: [
+				{
+					type: "text",
+					text: [
+						"The approved implementation workspace is now active for this same build session.",
+						"Continue the existing task now. Delegate implementation and verification to child agents from this workspace and keep tracking them in this session.",
+					].join(" "),
+				},
+			],
+		})
+		if (response.error) throw response.error
+	}
+
+	// Shared by the main checkout and all worktrees belonging to the repository.
+	const database = await initDb(mainRoot, log)
 
 	return {
 		tool: {
 			worktree_create: tool({
 				description:
-					"Create a new git worktree for isolated development. A new terminal will open with OpenCode in the worktree.",
+					"Create an isolated git worktree workspace and continue in it with the current session.",
 				args: {
 					branch: tool.schema
 						.string()
@@ -1115,111 +1351,26 @@ const WorktreePlugin: Plugin = async (ctx) => {
 						}
 					}
 
-					let activeLaunchContext: ActiveLaunchContext
-					try {
-						activeLaunchContext = parseActiveLaunchContext(
-							process.env as Record<string, string | undefined>,
-						)
-						activeLaunchContext = await ensureLaunchContextExecutable(
-							activeLaunchContext,
-							directory,
-						)
-						await ensureLaunchContextProfile(activeLaunchContext)
-					} catch (error) {
-						return `❌ ${error instanceof Error ? error.message : String(error)}`
-					}
-
-					// Load config first so worktreePath is available for createWorktree
-					const worktreeConfig = await loadWorktreeConfig(directory, log)
-
-					// Create worktree
-					const result = await createWorktree(
-						directory,
-						args.branch,
-						args.baseBranch,
-						worktreeConfig.worktreePath,
-					)
-					if (!result.ok) {
-						return `Failed to create worktree: ${result.error}`
-					}
-
-					const worktreePath = result.value
-
-					// Sync files from main worktree
-					const mainWorktreePath = directory // The repo root is the main worktree
-
-					// Copy files
-					if (worktreeConfig.sync.copyFiles.length > 0) {
-						await copyFiles(mainWorktreePath, worktreePath, worktreeConfig.sync.copyFiles, log)
-					}
-
-					// Symlink directories
-					if (worktreeConfig.sync.symlinkDirs.length > 0) {
-						await symlinkDirs(mainWorktreePath, worktreePath, worktreeConfig.sync.symlinkDirs, log)
-					}
-
-					// Run postCreate hooks
-					if (worktreeConfig.hooks.postCreate.length > 0) {
-						await runHooks(worktreePath, worktreeConfig.hooks.postCreate, log)
-					}
-
-					// Fork session with context (replaces --session resume)
-					const projectId = await getProjectId(worktreePath, client)
-					const { forkedSession, planCopied, delegationsCopied } = await forkWithContext(
-						client,
-						toolCtx.sessionID,
-						projectId,
-						async (sid) => {
-							// Walk up parentID chain to find root session
-							let currentId = sid
-							for (let depth = 0; depth < MAX_SESSION_CHAIN_DEPTH; depth++) {
-								const session = await client.session.get({ path: { id: currentId } })
-								if (!session.data?.parentID) return currentId
-								currentId = session.data.parentID
-							}
-							return currentId
-						},
-					)
-
-					log.debug(
-						`Forked session ${forkedSession.id}, plan: ${planCopied}, delegations: ${delegationsCopied}`,
-					)
-					const persistedLaunchMetadata = toPersistedLaunchMetadata(activeLaunchContext)
-					const launchArgv = buildSessionLaunchArgv(forkedSession.id, persistedLaunchMetadata)
-					const serializedLaunchMetadata = serializePersistedLaunchMetadata(persistedLaunchMetadata)
-
-					const terminalResult = await finalizeWorktreeLaunch({
+					const binding = await bindSessionToWorkspace({
 						database,
-						worktreePath,
-						launchArgv,
+						sessionId: toolCtx.sessionID,
 						branch: args.branch,
-						forkedSessionId: forkedSession.id,
-						sessionRecord: {
-							id: forkedSession.id,
-							branch: args.branch,
-							path: worktreePath,
-							createdAt: new Date().toISOString(),
-							launchMode: serializedLaunchMetadata.launchMode,
-							profile: serializedLaunchMetadata.profile,
-							ocxBin: serializedLaunchMetadata.ocxBin,
-						},
+						baseBranch: args.baseBranch,
+						createWorkspace: createNativeWorkspace,
+						warpSession: async (workspaceId, sessionId) => warpSession(workspaceId, sessionId),
+						removeWorkspace: removeNativeWorkspace,
 						log,
-						deleteForkedSessionFn: async (sessionId: string) => {
-							await client.session.delete({ path: { id: sessionId } })
-						},
-						removeWorktreeFn: async () => {
-							const cleanupResult = await removeWorktree(directory, worktreePath)
-							if (!cleanupResult.ok) {
-								throw new WorktreeError(cleanupResult.error, "cleanup")
-							}
-						},
 					})
-
-					if (!terminalResult.success) {
-						return `❌ Failed to launch worktree terminal: ${terminalResult.error ?? "unknown error"}`
+					if (!binding.ok) {
+						return `❌ Failed to create and bind worktree workspace: ${binding.error}`
 					}
+					pendingContinuations.set(toolCtx.sessionID, binding.value.workspaceId)
 
-					return `Worktree created at ${worktreePath}\n\nA new terminal has been opened with OpenCode.`
+					return [
+						`Worktree workspace created at ${binding.value.path}.`,
+						`The current session (${toolCtx.sessionID}) now owns this workspace.`,
+						"End this tool turn without calling more tools. When it becomes idle, the plugin will automatically resume this same session inside the workspace.",
+					].join("\n")
 				},
 			}),
 
@@ -1249,8 +1400,12 @@ const WorktreePlugin: Plugin = async (ctx) => {
 						].join(" ")
 					}
 
-					// Set pending delete for session.idle (atomic operation)
-					setPendingDelete(database, { branch: session.branch, path: session.path }, client)
+					// Defer until this exact session is idle; another session must not trigger cleanup.
+					setPendingDelete(
+						database,
+						{ branch: session.branch, path: session.path, sessionId: session.id },
+						client,
+					)
 
 					return `Worktree marked for cleanup. It will be removed when this session ends.`
 				},
@@ -1259,39 +1414,64 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 		event: async ({ event }: { event: Event }): Promise<void> => {
 			if (event.type !== "session.idle") return
+			const resumed = await resumePendingContinuation(
+				pendingContinuations,
+				event.properties.sessionID,
+				continueSessionInWorkspace,
+				log,
+			)
+			if (resumed) return
 
 			// Handle pending delete
 			const pendingDelete = getPendingDelete(database)
-			if (pendingDelete) {
-				const { path: worktreePath, branch } = pendingDelete
+			if (!pendingDelete || pendingDelete.sessionId !== event.properties.sessionID) return
 
-				// Run preDelete hooks before cleanup
-				const config = await loadWorktreeConfig(directory, log)
-				if (config.hooks.preDelete.length > 0) {
-					await runHooks(worktreePath, config.hooks.preDelete, log)
-				}
-
-				// Recheck at the idle boundary so changes made after the tool call are
-				// never committed or discarded implicitly.
-				const statusResult = await git(["status", "--porcelain"], worktreePath)
-				if (!statusResult.ok || statusResult.value) {
-					const detail = statusResult.ok ? "uncommitted changes remain" : statusResult.error
-					log.warn(`[worktree] Cleanup cancelled: ${detail}`)
-					clearPendingDelete(database)
-					return
-				}
-
-				// Remove worktree
-				const removeResult = await removeWorktree(directory, worktreePath)
-				if (!removeResult.ok) {
-					log.warn(`[worktree] Failed to remove worktree: ${removeResult.error}`)
-				}
-
-				// Clear pending delete atomically
+			const session = getSession(database, pendingDelete.sessionId)
+			if (!session) {
+				log.warn(`[worktree] Cleanup cancelled: managed session record is missing`)
 				clearPendingDelete(database)
+				return
+			}
 
-				// Remove session from database
-				removeSession(database, branch)
+			// Recheck at the idle boundary so changes made after the tool call are
+			// never committed or discarded implicitly.
+			const statusResult = await git(["status", "--porcelain"], session.path)
+			if (!statusResult.ok || statusResult.value) {
+				const detail = statusResult.ok ? "uncommitted changes remain" : statusResult.error
+				log.warn(`[worktree] Cleanup cancelled: ${detail}`)
+				clearPendingDelete(database)
+				return
+			}
+
+			let detached = false
+			try {
+				if (session.workspaceId) {
+					await warpSession(null, session.id)
+					detached = true
+					await removeNativeWorkspace(session.workspaceId)
+				} else {
+					// Backward compatibility for sessions created before native workspaces.
+					const config = await loadWorktreeConfig(mainRoot, log)
+					if (config.hooks.preDelete.length > 0) {
+						await runHooks(session.path, config.hooks.preDelete, log)
+					}
+					const removeResult = await removeWorktree(mainRoot, session.path)
+					if (!removeResult.ok) throw new Error(removeResult.error)
+				}
+				removeSessionById(database, session.id)
+				clearPendingDelete(database)
+			} catch (error) {
+				log.warn(`[worktree] Failed to remove workspace: ${errorMessage(error)}`)
+				if (detached && session.workspaceId) {
+					try {
+						await warpSession(session.workspaceId, session.id)
+					} catch (restoreError) {
+						log.warn(
+							`[worktree] Failed to restore workspace after cleanup error: ${errorMessage(restoreError)}`,
+						)
+					}
+				}
+				clearPendingDelete(database)
 			}
 		},
 	}
@@ -1299,6 +1479,9 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 const WorktreePluginWithInternals = Object.assign(WorktreePlugin, {
 	testInternals: {
+		bindSessionToWorkspace,
+		createWorkspaceAdapter,
+		resumePendingContinuation,
 		isPathLikeCommand,
 		copyFiles,
 		ensureLaunchContextExecutable,

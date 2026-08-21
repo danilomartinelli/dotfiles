@@ -10,6 +10,7 @@ case "${OPENCODE_CONFIG_DIR:-}" in
 esac
 
 export OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true
+export OPENCODE_EXPERIMENTAL_WORKSPACES=true
 
 # Cursor supplies models through open-cursor, but OpenCode remains responsible
 # for tool discovery, permissions, execution, and MCP integration.
