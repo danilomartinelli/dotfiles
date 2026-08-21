@@ -33,6 +33,10 @@ instead of changing runtimes or inventing another tool surface.
   of a separate one.
 - Shell `git worktree list` is diagnostic only. Never substitute shell commands
   for the managed create, inspect, lease, adoption, or delete lifecycle.
+- Never use `git -C`, shell `cd`, or a shell working-directory override to
+  inspect a linked worktree before adoption. Keep the external-directory deny;
+  pass the discovered branch to `worktree_create`, which safely reuses the
+  registered worktree and moves the current session into its workspace.
 - OpenCode may expose its built-in `worktree` adapter. It is unmanaged by this
   configuration and never authorizes coder or scribe mutation.
 - A write-capable child must inherit a valid managed lease from its root build

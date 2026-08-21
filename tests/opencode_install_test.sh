@@ -370,6 +370,7 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command'
   assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
   assert_contains "$config" 'A dirty default checkout does not block `worktree_create`'
+  assert_contains "$config" 'Do not use `git -C`, shell `cd`, or a shell working-directory override'
   assert_contains "$config" '"git branch -a --no-color": "allow"'
   assert_contains "$config" '"mcp:*": "deny"'
   assert_contains "$config" '"apply_patch": "allow"'

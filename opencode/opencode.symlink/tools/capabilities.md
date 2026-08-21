@@ -42,6 +42,10 @@ not user-selectable delegation targets.
   reported without automatic pruning, overwrite, or removal.
 - `git worktree list` is read-only diagnostic evidence. Shell Git commands never
   replace managed tools for create, adopt, inspect, lease, or delete lifecycle.
+- A linked sibling worktree remains an external directory until adoption. Do
+  not inspect it with `git -C`, shell `cd`, or a shell cwd override; pass its
+  branch to `worktree_create`, which safely reuses the registered worktree and
+  resumes the same session inside it.
 
 ## Git Inspection and Delivery
 

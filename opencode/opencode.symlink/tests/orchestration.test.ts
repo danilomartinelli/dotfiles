@@ -417,6 +417,7 @@ describe("permission and delegation enforcement", () => {
 		expect(capabilityMatrix).toContain("`context7_resolve-library-id`");
 		expect(capabilityMatrix).toContain("A dirty default checkout is not a creation blocker");
 		expect(capabilityMatrix).toContain("`list_mcp_resources`");
+		expect(capabilityMatrix).toContain("`git -C`");
 
 		const reviewCommand = await Bun.file(
 			new URL("../commands/review.md", import.meta.url),
