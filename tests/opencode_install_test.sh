@@ -25,8 +25,6 @@ make_fake_clis() {
   mkdir -p "$fake_bin"
   make_fake_command "$fake_bin/ocx"
   make_fake_command "$fake_bin/opencode"
-  make_fake_command "$fake_bin/open-cursor"
-  make_fake_command "$fake_bin/cursor-agent"
   printf '%s\n' "$fake_bin"
 }
 
@@ -149,16 +147,17 @@ test_selective_skill_routes_are_relevant_and_taste_is_not_global() {
     || scenario_fail 'Taste audit is registered without a target'
 }
 
-test_cursor_provider_keeps_opencode_as_the_tool_runtime() {
+test_unmanaged_runtime_discovery_is_disabled() {
   local home output
 
-  home=$(scenario_tmpdir cursor-tool-loop)
+  home=$(scenario_tmpdir controlled-discovery)
   # shellcheck disable=SC2016 # Expanded by the nested Zsh, not this Bash test.
   output=$(env HOME="$home" /bin/zsh -c \
-    'source "$1"; print -r -- "$CURSOR_ACP_TOOL_LOOP_MODE|$CURSOR_ACP_ENABLE_OPENCODE_TOOLS"' \
+    'source "$1"; print -r -- "$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS|${CURSOR_ACP_TOOL_LOOP_MODE-unset}"' \
     zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
 
-  assert_equal 'opencode|true' "$output" 'Cursor ACP OpenCode tool-loop contract'
+  assert_equal 'true|true|true|unset' "$output" \
+    'OpenCode controlled discovery without an active Cursor bridge'
 }
 
 test_experimental_workspace_runtime_is_enabled() {
@@ -188,32 +187,91 @@ test_plugin_dependency_matches_pinned_opencode_version() {
     "\"@opencode-ai/sdk\": \"$opencode_version\""
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
     'package-lock.json'
-  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
+  assert_not_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/.gitignore" \
     'bun.lock'
 }
 
-test_cursor_provider_uses_one_pinned_plugin_source() {
-  local config
-  local open_cursor_version
+test_unsafe_cursor_provider_is_quarantined() {
+  local config package
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
-  open_cursor_version=$(sed -n \
-    's/^"npm:@rama_nigg\/open-cursor" = "\([^"]*\)"$/\1/p' \
-    "$REPOSITORY_ROOT/mise/config.toml")
-  [[ -n $open_cursor_version ]] \
-    || scenario_fail 'pinned open-cursor version is missing from mise/config.toml'
+  package=$REPOSITORY_ROOT/opencode/opencode.symlink/package.json
 
-  assert_contains "$config" \
-    "\"@rama_nigg/open-cursor@$open_cursor_version\""
-  assert_not_contains "$config" '"cursor-acp",'
-  [[ ! -e $REPOSITORY_ROOT/opencode/opencode.symlink/plugins/cursor-acp.js ]] \
-    || scenario_fail 'generated cursor-acp bundle would duplicate the npm plugin'
-  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/package.json" \
-    '"@ai-sdk/openai-compatible": "3.0.30"'
-  assert_contains "$config" '"npm": "@ai-sdk/openai-compatible"'
+  if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
+    import { parse } from "jsonc-parser";
+    const config = parse(await Bun.file("opencode.jsonc").text());
+    if (!config.disabled_providers?.includes("cursor-acp")) process.exit(1);
+    if (config.provider?.["cursor-acp"]) process.exit(1);
+    if (config.plugin?.some((entry) => String(entry).includes("cursor"))) process.exit(1);
+  '; then
+    scenario_fail 'cursor-acp entered the active provider or plugin graph'
+  fi
+
+  assert_not_contains "$package" '"@rama_nigg/open-cursor"'
+  assert_not_contains "$package" '"@ai-sdk/openai-compatible"'
+  assert_not_contains "$REPOSITORY_ROOT/mise/config.toml" \
+    '"npm:@rama_nigg/open-cursor"'
+  [[ ! -e $REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/open-cursor-provider.ts ]] \
+    || scenario_fail 'quarantined Cursor provider adapter is still executable'
+  # Markdown code spans are intentionally literal assertions.
+  # shellcheck disable=SC2016
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'The `cursor-acp` provider is quarantined and explicitly disabled.'
 }
 
-test_installer_provisions_cursor_agent_and_requests_login() {
+test_dcp_uses_one_pinned_managed_adapter() {
+  local adapter config dcp_version package
+
+  config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
+  package=$REPOSITORY_ROOT/opencode/opencode.symlink/package.json
+  adapter=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/dcp.ts
+  dcp_version=3.1.3
+
+  assert_contains "$package" \
+    "\"@tarquinen/opencode-dcp\": \"$dcp_version\""
+  assert_contains "$config" '"./plugins/ocx/dcp.ts"'
+  assert_not_contains "$config" '"@tarquinen/opencode-dcp@'
+  assert_contains "$adapter" 'assertNoProjectDcpOverride'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/dcp.jsonc" \
+    '"allowSubAgents": false'
+}
+
+test_installer_accepts_generated_xdg_runtime_cache() {
+  local home fake_bin runtime_dir
+
+  home=$(scenario_tmpdir generated-xdg-cache)
+  fake_bin=$(make_fake_clis "$home")
+  runtime_dir=$home/.config/opencode
+  mkdir -p "$runtime_dir/node_modules" "$runtime_dir/plugin" \
+    "$runtime_dir/skills" "$runtime_dir/logs"
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+  scenario_write_file "$runtime_dir/package.json" <<'EOF'
+{
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.18"
+  }
+}
+EOF
+  scenario_write_file "$runtime_dir/dcp.jsonc" <<'EOF'
+{
+  "$schema": "https://raw.githubusercontent.com/Opencode-DCP/opencode-dynamic-context-pruning/master/dcp.schema.json",
+}
+EOF
+  scenario_write_file "$runtime_dir/package-lock.json" <<'EOF'
+{}
+EOF
+  scenario_write_file "$runtime_dir/.gitignore" <<'EOF'
+node_modules
+EOF
+
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
+
+  assert_contains "$home/stdout.log" \
+    "OpenCode config available at $home/.opencode"
+}
+
+test_installer_keeps_cursor_provider_quarantined_without_remote_execution() {
   local fake_bin
   local home
 
@@ -226,91 +284,19 @@ test_installer_provisions_cursor_agent_and_requests_login() {
   scenario_write_executable "$fake_bin/curl" <<'EOF'
 #!/bin/sh
 printf 'curl %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-while [ "$#" -gt 0 ]; do
-  if [ "$1" = -o ]; then
-    output=$2
-    break
-  fi
-  shift
-done
-[ -n "${output:-}" ] || exit 2
-cat >"$output" <<'INSTALLER'
-#!/bin/sh
-# Cursor Agent Installer
-mkdir -p "$HOME/.local/bin"
-cat >"$HOME/.local/bin/cursor-agent" <<'AGENT'
-#!/bin/sh
-exit 0
-AGENT
-chmod +x "$HOME/.local/bin/cursor-agent"
-INSTALLER
+exit 99
 EOF
   ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
 
-  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
 
-  assert_contains "$home/events.log" \
-    'curl -fsSL https://cursor.com/install -o'
-  [[ -x $home/.local/bin/cursor-agent ]] \
-    || scenario_fail 'Cursor Agent installer did not create the CLI'
-  assert_contains "$home/stdout.log" 'cursor-agent CLI installed at'
+  assert_not_contains "$home/events.log" 'curl '
+  [[ ! -e $home/.local/bin/cursor-agent ]] \
+    || scenario_fail 'installer unexpectedly created Cursor Agent'
   assert_contains "$home/stdout.log" \
-    'Authenticate Cursor Agent once with: cursor-agent login'
-}
-
-test_installer_finds_open_cursor_through_mise() {
-  local fake_bin
-  local home
-
-  home=$(scenario_tmpdir open-cursor-mise)
-  fake_bin=$home/fake-bin
-  mkdir -p "$fake_bin" "$home/mise-bin"
-  make_fake_command "$fake_bin/ocx"
-  make_fake_command "$fake_bin/opencode"
-  make_fake_command "$fake_bin/cursor-agent"
-  make_fake_command "$home/mise-bin/open-cursor"
-  scenario_write_executable "$fake_bin/mise" <<EOF
-#!/bin/sh
-if [ "\$1" = which ] && [ "\$2" = open-cursor ]; then
-  printf '%s\\n' "$home/mise-bin/open-cursor"
-  exit 0
-fi
-exit 1
-EOF
-  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
-
-  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_contains "$home/stdout.log" \
-    "open-cursor CLI available at $home/mise-bin/open-cursor"
-  assert_not_contains "$home/stdout.log" 'Install open-cursor with: mise install'
-}
-
-test_cursor_agent_download_failure_is_fatal() {
-  local fake_bin
-  local home
-
-  home=$(scenario_tmpdir cursor-download-failure)
-  fake_bin=$home/fake-bin
-  mkdir -p "$fake_bin"
-  make_fake_command "$fake_bin/ocx"
-  make_fake_command "$fake_bin/opencode"
-  make_fake_command "$fake_bin/open-cursor"
-  scenario_write_executable "$fake_bin/curl" <<'EOF'
-#!/bin/sh
-exit 22
-EOF
-  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
-
-  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
-    scenario_fail 'installer accepted a failed Cursor Agent download'
-  fi
-
-  assert_contains "$home/stderr.log" \
-    'Failed to download the Cursor Agent installer'
+    'cursor-acp is quarantined: provider-native effects cannot be gated'
+  assert_not_contains "$home/stdout.log" 'Authenticate Cursor Agent'
 }
 
 test_agent_delivery_and_provider_permissions_are_explicit() {
@@ -319,26 +305,20 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
   explore=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/explore.md
   researcher=$REPOSITORY_ROOT/opencode/opencode.symlink/agents/researcher.md
-  worktree=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/worktree.ts
+  worktree=$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/worktree.ts
 
-  assert_contains "$config" '"gh pr view*": "allow"'
-  assert_contains "$config" '"glab mr view*": "allow"'
-  assert_contains "$config" '"gh run list*": "allow"'
-  assert_contains "$config" '"glab ci list*": "allow"'
-  assert_contains "$config" '"gh api *": "allow"'
-  assert_contains "$config" '"glab api *": "allow"'
-  assert_contains "$researcher" '### GitHub and GitLab CLIs'
-  assert_contains "$researcher" 'Use Context7 when you need current library'
-  assert_contains "$researcher" 'Use grep.app through'
-  assert_contains "$researcher" 'Use Exa through'
+  assert_contains "$config" '"bash": "deny"'
+  assert_contains "$researcher" 'Shell-based GitHub and GitLab clients are intentionally unavailable'
+  # Markdown code spans are intentionally literal assertions.
+  # shellcheck disable=SC2016
+  assert_contains "$researcher" '`context7_*` for current library'
+  # shellcheck disable=SC2016
+  assert_contains "$researcher" '`gh_grep_*` for real-world public GitHub usage patterns'
+  # shellcheck disable=SC2016
+  assert_contains "$researcher" '`exa_*`, `websearch`, and `webfetch` for current primary sources'
 
-  assert_contains "$config" '"codegraph status*": "allow"'
-  assert_contains "$config" '"codegraph init*": "allow"'
-  assert_contains "$config" '"codegraph init --force*": "deny"'
-  assert_contains "$config" '"codegraph explore*": "allow"'
   assert_contains "$explore" '## Prime Directive: CodeGraph First'
-  assert_contains "$explore" 'git rev-parse --show-toplevel'
-  assert_contains "$explore" 'Each linked worktree needs its own index.'
+  assert_contains "$explore" 'never to this read-only agent'
   assert_contains "$explore" '**NEVER** use Context7, Exa, grep.app'
   assert_contains "$REPOSITORY_ROOT/git/gitignore.symlink" '.codegraph/'
   assert_contains "$REPOSITORY_ROOT/README.md" \
@@ -349,16 +329,17 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"git commit*": "ask"'
   assert_contains "$config" '"git pull --ff-only*": "ask"'
   assert_contains "$config" '"git push*": "ask"'
-  assert_contains "$config" '"git push --force*": "deny"'
+  assert_contains "$config" '"git push*--force*": "deny"'
+  assert_contains "$config" '"git push*-f*": "deny"'
   assert_contains "$config" '"worktree_delete": "deny"'
   assert_contains "$config" '"worktree_delete": "ask"'
-  assert_contains "$config" '"./plugins/workspace-plugin.ts"'
-  assert_contains "$config" '"./plugins/worktree.ts"'
-  assert_contains "$config" '"./plugins/background-agents.ts"'
+  assert_contains "$config" '"./plugins/ocx/workspace-plugin.ts"'
+  assert_contains "$config" '"./plugins/ocx/worktree.ts"'
+  assert_contains "$config" '"./plugins/ocx/background-agents.ts"'
   assert_contains "$config" '"worktree_create": "allow"'
   assert_contains "$config" 'All implementation requires a dedicated non-default branch'
   # shellcheck disable=SC2016 # Backticks are literal prompt content, not shell substitution.
-  assert_contains "$config" 'build is the sole agent responsible for creating and owning the implementation workspace'
+  assert_contains "$config" 'Build is the sole agent responsible for creating and owning the implementation workspace'
   assert_contains "$config" "binds this same build session to the new workspace"
   assert_contains "$config" 'automatically resume this same session in the workspace'
   assert_contains "$config" 'Do not fork the session, open another terminal, or terminate the parent session.'
@@ -372,6 +353,8 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
 
   assert_contains "$worktree" 'The working tree must already be clean.'
   assert_contains "$worktree" 'Cannot delete a worktree with uncommitted changes.'
+  assert_not_contains "$worktree" 'postCreate'
+  assert_not_contains "$worktree" 'postRemove'
   assert_not_contains "$worktree" 'chore(worktree): session snapshot'
 }
 
@@ -388,10 +371,6 @@ test_plan_task_policy_is_structurally_read_only() {
     const task = config?.agent?.plan?.permission?.task
     const expected = {
       "*": "deny",
-      explore: "allow",
-      researcher: "allow",
-      reviewer: "allow",
-      build: "allow",
     }
     const normalize = (value) => Object.fromEntries(
       Object.entries(value ?? {}).sort(([left], [right]) => left.localeCompare(right))
@@ -447,30 +426,44 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
       if (server.type === "remote" && typeof server.url !== "string") fail(`remote MCP URL is missing: ${name}`)
     }
 
-    const reviewerBash = config.agent?.reviewer?.permission?.bash ?? {}
-    const expectedGitRules = ["git diff*", "git merge-base *", "git log*", "git show*"]
-    for (const rule of expectedGitRules) {
-      if (reviewerBash[rule] !== "allow") fail(`reviewer is missing minimum Git permission: ${rule}`)
-    }
-    for (const rule of Object.keys(reviewerBash)) {
-      if (rule.startsWith("git ") && !expectedGitRules.includes(rule)) fail(`reviewer has an unnecessary Git permission: ${rule}`)
-    }
-    if (reviewerBash["*"] !== "deny") fail("reviewer Git permissions are not default-deny")
-
     const reviewerPermission = config.agent?.reviewer?.permission ?? {}
-    if (reviewerPermission.skill !== "allow") fail("reviewer does not have the explicit skill permission")
+    if (reviewerPermission.bash !== "deny") fail("reviewer shell access is not denied")
+    if (reviewerPermission.read !== "allow" || reviewerPermission.glob !== "allow" || reviewerPermission.grep !== "allow") {
+      fail("reviewer does not have the structured local inspection tools")
+    }
+    const reviewerSkills = reviewerPermission.skill ?? {}
+    for (const skill of ["code-review", "plan-review", "code-philosophy"]) {
+      if (reviewerSkills[skill] !== "allow") fail(`reviewer skill is not allowlisted: ${skill}`)
+    }
+    if (reviewerSkills["*"] !== "deny") fail("reviewer skills are not default-deny")
 
     const coderPermission = config.agent?.coder?.permission ?? {}
-    if (coderPermission.write !== "allow" || coderPermission.edit !== "allow" || coderPermission.skill !== "allow") {
+    const coderSkills = coderPermission.skill ?? {}
+    if (coderPermission.write !== "allow" || coderPermission.edit !== "allow" || coderSkills["*"] !== "deny") {
       fail("coder does not have the existing write/edit permissions plus explicit skill access")
+    }
+    if (coderSkills["code-philosophy"] !== "allow" || coderSkills["public-seam-tdd"] !== "allow") {
+      fail("coder implementation skills are not explicitly allowlisted")
+    }
+
+    const planPermission = config.agent?.plan?.permission ?? {}
+    if (planPermission.delegate !== "allow" || JSON.stringify(planPermission.task) !== JSON.stringify({ "*": "deny" })) {
+      fail("plan delegation is not restricted to the read-only async route")
+    }
+    const buildTask = config.agent?.build?.permission?.task ?? {}
+    if (buildTask["*"] !== "deny" || buildTask.coder !== "allow" || buildTask.scribe !== "allow" || Object.keys(buildTask).length !== 3) {
+      fail("build native task routes are not limited to write-capable leaves")
     }
 
     const [reviewCommand, reviewer, coder, codeReview, frontend, discipline, philosophy, readme, decisionRecord, tasteReference] =
       await Promise.all([reviewCommandPath, reviewerPath, coderPath, codeReviewPath, frontendPath, disciplinePath, philosophyPath, readmePath, decisionRecordPath, tasteReferencePath].map(read))
     if (!/recent\s+<base-ref>/.test(reviewCommand) || !reviewCommand.includes("git merge-base") || /git diff HEAD~1|since last commit using/.test(reviewCommand)) fail("review command does not define an explicit merge-base branch mode")
     if (!reviewCommand.includes("git diff --cached") || !reviewCommand.includes("not a three-dot")) fail("review command does not keep staged mode distinct")
-    for (const source of [reviewer, codeReview]) {
-      if (!source.includes("git merge-base") || !source.includes("HEAD~1") || !source.includes("git diff --cached")) fail("review prompt/skill lacks the complete comparison contract")
+    if (!reviewer.includes("explicit base ref, merge-base, and diff") || !reviewer.includes("HEAD~1") || !reviewer.includes("supplied diff")) {
+      fail("reviewer does not require the orchestrator-supplied comparison contract")
+    }
+    if (!codeReview.includes("git merge-base") || !codeReview.includes("HEAD~1") || !codeReview.includes("git diff --cached")) {
+      fail("code-review skill lacks the complete comparison contract")
     }
     const section = (source, heading, nextHeading) => {
       const start = source.indexOf(heading)
@@ -569,28 +562,75 @@ test_installer_verifies_linked_payload_without_relinking() {
 }
 EOF
 
-  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
 
   assert_contains "$home/stdout.log" "OpenCode config available at $home/.opencode"
   assert_contains "$home/stdout.log" 'ocx CLI available'
   assert_contains "$home/stdout.log" 'opencode CLI available'
-  assert_contains "$home/stdout.log" 'Migrated OCX receipt instruction path'
   assert_equal "$REPOSITORY_ROOT/opencode/opencode.symlink" \
     "$(readlink "$home/.opencode")" 'managed OpenCode link target'
   assert_contains "$receipt" '"untouched": true'
-  assert_contains "$receipt" '".opencode/tools/philosophy.md"'
-  assert_not_contains "$receipt" '"./tools/philosophy.md"'
+  assert_contains "$receipt" '"./tools/philosophy.md"'
   [[ ! -e $home/.config/opencode ]] \
     || scenario_fail 'installer recreated the legacy XDG config directory'
 
   receipt_hash=$(shasum -a 256 "$receipt" | cut -d' ' -f1)
-  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+  scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"
   assert_equal "$receipt_hash" \
     "$(shasum -a 256 "$receipt" | cut -d' ' -f1)" \
     'OCX receipt after idempotent reinstall'
-  assert_not_contains "$home/stdout.log" 'Migrated OCX receipt instruction path'
+}
+
+test_installer_rejects_overlapping_ocx_ownership() {
+  local home fake_bin status
+
+  home=$(scenario_tmpdir ocx-ownership)
+  fake_bin=$(make_fake_clis "$home")
+  mkdir -p "$home/.ocx"
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+  scenario_write_file "$home/.ocx/receipt.jsonc" <<'EOF'
+{
+  "installed": {
+    "component": {
+      "files": [{ "path": ".opencode/plugins/ocx/worktree.ts", "hash": "test" }]
+    }
+  }
+}
+EOF
+
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
+    scenario_fail 'installer accepted dual OCX and dotfiles ownership'
+  else
+    status=$?
+  fi
+
+  assert_equal 1 "$status" 'overlapping OCX ownership status'
+  assert_contains "$home/stderr.log" 'OCX receipt also claims the dotfiles-owned ~/.opencode payload'
+}
+
+test_installer_rejects_legacy_xdg_overlay() {
+  local home fake_bin status
+
+  home=$(scenario_tmpdir legacy-overlay)
+  fake_bin=$(make_fake_clis "$home")
+  mkdir -p "$home/.config/opencode"
+  ln -s "$REPOSITORY_ROOT/opencode/opencode.symlink" "$home/.opencode"
+  scenario_write_file "$home/.config/opencode/opencode.json" <<'EOF'
+{ "plugin": ["unmanaged-plugin"] }
+EOF
+
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
+    scenario_fail 'installer accepted a shadowing XDG config'
+  else
+    status=$?
+  fi
+
+  assert_equal 1 "$status" 'legacy XDG overlay status'
+  assert_contains "$home/stderr.log" 'Legacy OpenCode config can shadow the managed payload'
 }
 
 test_installer_explains_missing_bootstrap_link() {
@@ -599,7 +639,7 @@ test_installer_explains_missing_bootstrap_link() {
   home=$(scenario_tmpdir missing)
   fake_bin=$(make_fake_clis "$home")
 
-  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
     scenario_fail 'installer accepted a missing OpenCode config link'
   else
@@ -640,7 +680,7 @@ test_installer_rejects_default_directory_conflict() {
   mkdir -p "$home/.opencode"
   printf '%s\n' 'runtime content' >"$home/.opencode/package.json"
 
-  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR HOME="$home" \
+  if scenario_capture "$home" env -u OPENCODE_CONFIG_DIR -u XDG_CONFIG_HOME HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" "$REPOSITORY_ROOT/opencode/install.sh"; then
     scenario_fail 'installer accepted a regular ~/.opencode directory'
   else
@@ -661,26 +701,30 @@ scenario_run 'OpenCode keeps selective skill payloads present and scoped' \
   test_selective_skill_payloads_are_present_discoverable_and_scoped
 scenario_run 'OpenCode routes skills only to relevant agents' \
   test_selective_skill_routes_are_relevant_and_taste_is_not_global
-scenario_run 'Cursor provider keeps OpenCode as the tool runtime' \
-  test_cursor_provider_keeps_opencode_as_the_tool_runtime
+scenario_run 'OpenCode disables unmanaged runtime discovery' \
+  test_unmanaged_runtime_discovery_is_disabled
 scenario_run 'OpenCode enables the native workspace runtime' \
   test_experimental_workspace_runtime_is_enabled
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
-scenario_run 'Cursor provider has one pinned plugin source' \
-  test_cursor_provider_uses_one_pinned_plugin_source
-scenario_run 'OpenCode installer provisions Cursor Agent and requests login' \
-  test_installer_provisions_cursor_agent_and_requests_login
-scenario_run 'OpenCode installer finds open-cursor through Mise' \
-  test_installer_finds_open_cursor_through_mise
-scenario_run 'Cursor Agent download failures stop installation' \
-  test_cursor_agent_download_failure_is_fatal
+scenario_run 'Unsafe Cursor provider stays quarantined' \
+  test_unsafe_cursor_provider_is_quarantined
+scenario_run 'DCP has one pinned managed adapter' \
+  test_dcp_uses_one_pinned_managed_adapter
+scenario_run 'OpenCode installer keeps Cursor quarantined without remote execution' \
+  test_installer_keeps_cursor_provider_quarantined_without_remote_execution
 scenario_run 'OpenCode agents isolate branches and own explicit delivery' \
   test_agent_delivery_and_provider_permissions_are_explicit
 scenario_run 'OpenCode review, TDD, frontend, skill, MCP, and documentation contracts align' \
   test_opencode_contracts_are_parseable_and_semantically_aligned
 scenario_run 'OpenCode installer verifies the bootstrap-owned payload' \
   test_installer_verifies_linked_payload_without_relinking
+scenario_run 'OpenCode installer rejects overlapping OCX ownership' \
+  test_installer_rejects_overlapping_ocx_ownership
+scenario_run 'OpenCode installer rejects a legacy XDG overlay' \
+  test_installer_rejects_legacy_xdg_overlay
+scenario_run 'OpenCode installer accepts generated XDG runtime cache' \
+  test_installer_accepts_generated_xdg_runtime_cache
 scenario_run 'OpenCode installer explains a missing bootstrap link' \
   test_installer_explains_missing_bootstrap_link
 scenario_run 'OpenCode installer normalizes a legacy XDG environment' \

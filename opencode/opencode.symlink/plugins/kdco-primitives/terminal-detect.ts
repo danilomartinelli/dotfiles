@@ -30,5 +30,5 @@ export function isInsideTmux(): boolean {
 	// Law 1: Early Exit - simple boolean check, no complex parsing needed
 	// The TMUX env var contains socket info like "/tmp/tmux-1000/default,12345,0"
 	// We only care if it's set (truthy), not its contents
-	return !!process.env.TMUX
+	return !!process.env.TMUX;
 }

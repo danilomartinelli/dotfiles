@@ -35,6 +35,7 @@ This is non-negotiable. The philosophy defines the quality standards your code m
 | `read` | Understand existing code before modifying |
 | `write` | Create new files |
 | `edit` | Modify existing files |
+| `apply_patch` | Apply a scoped multi-file patch inside the managed worktree |
 | `glob` | Find files by pattern |
 | `grep` | Search for code patterns |
 | `bash` | Run builds, lints, type-checks, and tests |
@@ -99,7 +100,10 @@ You have autonomy to handle implementation details without asking:
 
 ## Bash Command Guidelines
 
-Use bash for verification and builds only:
+Use bash only for project-local implementation and verification commands
+inside the managed worktree. Dependency operations must remain project-local;
+system installs, publishing, privileged commands, and Git state or delivery
+operations belong outside this leaf role.
 
 ✅ **Allowed:**
 ```bash
@@ -109,11 +113,13 @@ bun run test
 bun run lint
 npm run build
 npx tsc --noEmit
+npm install some-project-dependency
 ```
 
 ❌ **Avoid:**
 ```bash
 rm -rf              # Destructive
+brew install ...    # System mutation
 git push --force    # Dangerous
 npm publish         # Irreversible
 sudo anything       # System-level

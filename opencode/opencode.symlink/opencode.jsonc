@@ -1,1760 +1,1812 @@
 {
-  "$schema": "https://opencode.ai/config.json",
-  "autoupdate": true,
-  "lsp": true,
-  "permission": {
-    "task": "deny",
-    "context7_*": "deny",
-    "exa_*": "deny",
-    "gh_grep_*": "deny",
-    "kagi_*": "deny",
-    "webfetch": "deny",
-    "worktree_*": "deny",
-  },
-  "model": "openai/gpt-5.6-terra",
-  "small_model": "openai/gpt-5.6-luna",
-  "agent": {
-    "researcher": {
-      "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh",
-      "permission": {
-        "context7_*": "allow",
-        "exa_*": "allow",
-        "gh_grep_*": "allow",
-        "kagi_*": "deny",
-        "webfetch": "allow",
-        "write": "deny",
-        "edit": "deny",
-        "plan_read": "deny",
-        "todoread": "deny",
-        "bash": {
-          "*": "deny",
-          "gh repo view*": "allow",
-          "gh pr view*": "allow",
-          "gh pr list*": "allow",
-          "gh issue view*": "allow",
-          "gh issue list*": "allow",
-          "gh release view*": "allow",
-          "gh release list*": "allow",
-          "gh run view*": "allow",
-          "gh run list*": "allow",
-          "gh workflow list*": "allow",
-          "gh search *": "allow",
-          "gh api *": "allow",
-          "glab repo view*": "allow",
-          "glab repo list*": "allow",
-          "glab mr view*": "allow",
-          "glab mr list*": "allow",
-          "glab issue view*": "allow",
-          "glab issue list*": "allow",
-          "glab release view*": "allow",
-          "glab release list*": "allow",
-          "glab ci get*": "allow",
-          "glab ci list*": "allow",
-          "glab ci status*": "allow",
-          "glab ci view*": "allow",
-          "glab ci config*": "allow",
-          "glab repo search*": "allow",
-          "glab search semantic*": "allow",
-          "glab api *": "allow",
-          "npm view*": "allow",
-          "npm info*": "allow",
-          "npm show*": "allow",
-          "pip show*": "allow",
-          "pip index*": "allow",
-          "cargo search*": "allow",
-          "cargo info*": "allow",
-          "man *": "allow",
-          "tldr *": "allow",
-          "dig *": "allow",
-          "nslookup *": "allow",
-          "whois *": "allow",
-          "host *": "allow",
-          "jq *": "allow",
-          "head *": "allow",
-          "tail *": "allow",
-          "base64 *": "allow",
-          "grep *": "allow",
-          "rg *": "allow",
-          "wc *": "allow",
-          "sort *": "allow",
-          "uniq *": "allow",
-          "cut *": "allow",
-          "awk *": "allow",
-          "tr *": "allow",
-        },
-      },
-    },
-    "scribe": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "low",
-      "permission": {
-        "codegraph_*": "allow",
-        "bash": {
-          "*": "deny",
-        },
-        "edit": "allow",
-        "glob": "allow",
-        "read": "allow",
-        "write": "allow",
-        "plan_read": "deny",
-        "todoread": "deny",
-      },
-    },
-    "coder": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high",
-      "permission": {
-        "codegraph_*": "allow",
-        "context7_*": "deny",
-        "exa_*": "deny",
-        "gh_grep_*": "deny",
-        "read": "allow",
-        "write": "allow",
-        "edit": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "bash": "allow",
-        "skill": "allow",
-        "plan_read": "deny",
-        "todoread": "deny",
-      },
-    },
-    "reviewer": {
-      "model": "openai/gpt-5.6-terra",
-      "variant": "high",
-      "temperature": 0.1,
-      "permission": {
-        "edit": "deny",
-        "write": "deny",
-        "bash": {
-          "*": "deny",
-          "git diff*": "allow",
-          "git merge-base *": "allow",
-          "git log*": "allow",
-          "git show*": "allow",
-          "rg *": "allow",
-        },
-        "plan_read": "allow",
-        "delegation_read": "allow",
-        "delegation_list": "allow",
-        "skill": "allow",
-      },
-    },
-    "plan": {
-      "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh",
-      "prompt": "You are a READ-ONLY planning orchestrator. Coordinate work; do not implement or search the codebase yourself. Delegate internal codebase questions to `explore` only, external documentation and APIs to `researcher` only, and human-facing content to `scribe`. `explore` cannot access external resources, `researcher` cannot search codebase files, and neither may be substituted by answering from memory. Planning is read-only: load `plan-protocol`, collaborate on a complete cited plan, and call `plan_save` with the finalized plan before leaving plan mode. When an unresolved design decision belongs to the user, load `grilling` and ask precise questions about evidence, falsifiers, and boundaries; do not use it for settled requirements or to invent a decision. Planning, research, review, and casual chat do not create worktrees. After the user approves implementation, hand off to the `build` orchestrator; build is the sole agent responsible for creating and owning the implementation workspace. If this session already belongs to a dedicated worktree, reuse it. `worktree_create` binds the build orchestrator's current session to the new workspace; it does not open a terminal or fork the session. Planning alone does not require a branch, and implementation must never begin in the planning worktree.",
-      "permission": {
-        "edit": "deny",
-        "write": "deny",
-        "bash": {
-          "*": "deny",
-        },
-        "task": {
-          "*": "deny",
-          "explore": "allow",
-          "researcher": "allow",
-          "reviewer": "allow",
-          "build": "allow",
-        },
-        "worktree_create": "deny",
-        "worktree_*": "deny",
-        "worktree_delete": "deny",
-      },
-    },
-    "build": {
-      "model": "openai/gpt-5.6-terra",
-      "variant": "high",
-      "prompt": "You are a BUILD ORCHESTRATOR. You coordinate work; you do NOT implement. Delegate ALL code changes and verification to `coder`, documentation to `scribe`, codebase analysis to `explore` only, and external research to `researcher` only. You may directly inspect Git and perform explicitly authorized final delivery operations described below, but do not edit files or run implementation and verification commands directly. Before writing code, call `plan_read`, call `delegation_list` once, read relevant findings with `delegation_read`, and reuse production-ready research. Load the relevant philosophy before delegating to `coder`; have `coder` run lint, type-check, build, and tests. For an observed or suspected defect, instruct `coder` to use the local `deterministic-diagnosis` skill; for behavior work with a stable public boundary, instruct `coder` to use `public-seam-tdd`. Include either skill only when that condition is present, never for unrelated configuration, documentation, or review work. Delegate a `reviewer` before reporting completion. All implementation requires a dedicated non-default branch in an isolated worktree. If this is the default branch or not a task worktree, invoke `worktree_create` with a descriptive feature/, fix/, or chore/ branch. The tool binds this same build session to the new workspace. After it succeeds, do not call another tool in the current loop; end the response briefly so the plugin can automatically resume this same session in the workspace. From that resumed loop, delegate `coder`, `reviewer`, and other child agents so they share the parent's workspace. Do not fork the session, open another terminal, or terminate the parent session. If the session already belongs to a dedicated worktree, reuse it. `worktree_create` safely adopts an existing valid worktree for the requested branch. If it reports a stale registration or a mismatched existing path, do not retry the same request and never remove or overwrite it automatically; present the detected path and ask the user whether to prune/archive/remove it or use a different branch. This is an explicit approved implementation handoff, not a session-start hook: casual chat, planning, research, and review never create worktrees. Never implement on main, master, trunk, or the remote default branch. Git delivery ownership: build owns final integration after implementation, verification, and review; coder never commits or pushes. Inspect branch, status, and diff directly; stage only intended files and never sweep unrelated dirty-worktree changes into a commit. Ask `scribe` for a commit message when useful. Commit only when the user explicitly requests a commit. Fetch or pull only when explicitly requested or required to resolve known remote divergence, and pulls must use `--ff-only`; never merge or rebase silently. Push only when explicitly requested; never force-push. Create a GitHub pull request with `gh` or a GitLab merge request with `glab` only when explicitly requested, choosing the provider from the Git remote. Report the branch, commit, remote, and PR/MR result precisely. The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command; never work around a denial. Before reporting completion, delegate `reviewer` with the changed files, include findings, and offer to fix critical or major issues. Do not skip review.",
-      "permission": {
-        "edit": "deny",
-        "write": "deny",
-        "bash": {
-          "*": "deny",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git branch --show-current*": "allow",
-          "git rev-parse*": "allow",
-          "git symbolic-ref*": "allow",
-          "git remote*": "allow",
-          "git add*": "ask",
-          "git commit*": "ask",
-          "git fetch*": "ask",
-          "git pull --ff-only*": "ask",
-          "git push*": "ask",
-          "gh pr create*": "ask",
-          "gh pr view*": "allow",
-          "gh pr status*": "allow",
-          "glab mr create*": "ask",
-          "glab mr view*": "allow",
-          "git push --force*": "deny",
-          "git push -f*": "deny",
-        },
-        "task": "allow",
-        "worktree_create": "allow",
-        "worktree_*": "allow",
-        "worktree_delete": "ask",
-      },
-    },
-    "explore": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "low",
-      "permission": {
-        "codegraph_*": "allow",
-        "context7_*": "deny",
-        "exa_*": "deny",
-        "gh_grep_*": "deny",
-        "edit": "deny",
-        "write": "deny",
-        "plan_read": "deny",
-        "todoread": "deny",
-        "bash": {
-          "*": "deny",
-          "ls *": "allow",
-          "tree *": "allow",
-          "pwd": "allow",
-          "cat *": "allow",
-          "head *": "allow",
-          "tail *": "allow",
-          "wc *": "allow",
-          "file *": "allow",
-          "stat *": "allow",
-          "grep *": "allow",
-          "rg *": "allow",
-          "find *": "allow",
-          "git status*": "allow",
-          "git log*": "allow",
-          "git diff*": "allow",
-          "git show*": "allow",
-          "git blame*": "allow",
-          "git branch*": "allow",
-          "git ls-files*": "allow",
-          "git rev-parse --show-toplevel*": "allow",
-          "codegraph status*": "allow",
-          "codegraph init*": "allow",
-          "codegraph init --force*": "deny",
-          "codegraph explore*": "allow",
-          "uname*": "allow",
-          "hostname": "allow",
-          "whoami": "allow",
-          "which *": "allow",
-          "realpath *": "allow",
-        },
-      },
-    },
-  },
-  "mcp": {
-    "codegraph": {
-      "enabled": true,
-      "type": "local",
-      "command": ["codegraph", "serve", "--mcp"],
-    },
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "enabled": true,
-    },
-    "exa": {
-      "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
-      "enabled": true,
-    },
-    "gh_grep": {
-      "type": "remote",
-      "url": "https://mcp.grep.app",
-      "enabled": true,
-    },
-  },
-  "instructions": [
-    "{env:OPENCODE_CONFIG_DIR}/tools/runtime.md",
-    "{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md",
-  ],
-  "plugin": [
-    "./plugins/workspace-plugin.ts",
-    "./plugins/worktree.ts",
-    "./plugins/background-agents.ts",
-    "@rama_nigg/open-cursor@2.5.6",
-    "opencode-claude-auth@latest",
-    "@tarquinen/opencode-dcp@3.1.3",
-    "@franlol/opencode-md-table-formatter@0.0.6",
-  ],
-  "provider": {
-    "cursor-acp": {
-      "name": "Cursor",
-      "npm": "@ai-sdk/openai-compatible",
-      "options": {
-        "baseURL": "http://127.0.0.1:32124/v1",
-      },
-      "models": {
-        "gpt-5.3-codex": {
-          "name": "Codex 5.3",
-          "options": {
-            "cursorModel": "gpt-5.3-codex",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gpt-5.3-codex-low",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.3-codex-low-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "fast": {
-              "cursorModel": "gpt-5.3-codex-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "high": {
-              "cursorModel": "gpt-5.3-codex-high",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.3-codex-high-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.3-codex-xhigh",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.3-codex-xhigh-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-          },
-          "cost": {
-            "input": 1.75,
-            "output": 14,
-            "cache_read": 0.175,
-            "cache_write": 1.75,
-          },
-        },
-        "gpt-5.2": {
-          "name": "GPT-5.2",
-          "options": {
-            "cursorModel": "gpt-5.2",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gpt-5.2-low",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.2-low-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "fast": {
-              "cursorModel": "gpt-5.2-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "high": {
-              "cursorModel": "gpt-5.2-high",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.2-high-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.2-xhigh",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.2-xhigh-fast",
-              "cost": {
-                "input": 1.75,
-                "output": 14,
-                "cache_read": 0.175,
-                "cache_write": 1.75,
-              },
-            },
-          },
-          "cost": {
-            "input": 1.75,
-            "output": 14,
-            "cache_read": 0.175,
-            "cache_write": 1.75,
-          },
-        },
-        "cursor-grok-4.6": {
-          "name": "Cursor Grok 4.6",
-          "options": {
-            "cursorModel": "cursor-grok-4.6-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "cursor-grok-4.6-low",
-            },
-            "low-fast": {
-              "cursorModel": "cursor-grok-4.6-low-fast",
-            },
-            "medium": {
-              "cursorModel": "cursor-grok-4.6-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "cursor-grok-4.6-medium-fast",
-            },
-            "high": {
-              "cursorModel": "cursor-grok-4.6-high",
-            },
-            "high-fast": {
-              "cursorModel": "cursor-grok-4.6-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "cursor-grok-4.6-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "cursor-grok-4.6-xhigh-fast",
-            },
-          },
-        },
-        "composer-2.5": {
-          "name": "Composer 2.5",
-          "options": {
-            "cursorModel": "composer-2.5",
-          },
-          "variants": {
-            "fast": {
-              "cursorModel": "composer-2.5-fast",
-            },
-          },
-        },
-        "claude-opus-5-thinking": {
-          "name": "Claude Opus 5 Thinking",
-          "options": {
-            "cursorModel": "claude-opus-5-thinking-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-opus-5-thinking-low",
-            },
-            "low-fast": {
-              "cursorModel": "claude-opus-5-thinking-low-fast",
-            },
-            "medium": {
-              "cursorModel": "claude-opus-5-thinking-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "claude-opus-5-thinking-medium-fast",
-            },
-            "high": {
-              "cursorModel": "claude-opus-5-thinking-high",
-            },
-            "high-fast": {
-              "cursorModel": "claude-opus-5-thinking-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "claude-opus-5-thinking-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "claude-opus-5-thinking-xhigh-fast",
-            },
-            "max": {
-              "cursorModel": "claude-opus-5-thinking-max",
-            },
-            "max-fast": {
-              "cursorModel": "claude-opus-5-thinking-max-fast",
-            },
-          },
-        },
-        "gpt-5.6-sol": {
-          "name": "GPT 5.6 Sol",
-          "options": {
-            "cursorModel": "gpt-5.6-sol-medium",
-          },
-          "variants": {
-            "none": {
-              "cursorModel": "gpt-5.6-sol-none",
-            },
-            "low": {
-              "cursorModel": "gpt-5.6-sol-low",
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.6-sol-low-fast",
-            },
-            "medium": {
-              "cursorModel": "gpt-5.6-sol-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "gpt-5.6-sol-medium-fast",
-            },
-            "high": {
-              "cursorModel": "gpt-5.6-sol-high",
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.6-sol-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.6-sol-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.6-sol-xhigh-fast",
-            },
-            "max": {
-              "cursorModel": "gpt-5.6-sol-max",
-            },
-            "max-fast": {
-              "cursorModel": "gpt-5.6-sol-max-fast",
-            },
-            "none-fast": {
-              "cursorModel": "gpt-5.6-sol-none-fast",
-            },
-          },
-        },
-        "claude-fable-5": {
-          "name": "Claude Fable 5",
-          "options": {
-            "cursorModel": "claude-fable-5-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-fable-5-low",
-            },
-            "medium": {
-              "cursorModel": "claude-fable-5-medium",
-            },
-            "high": {
-              "cursorModel": "claude-fable-5-high",
-            },
-            "xhigh": {
-              "cursorModel": "claude-fable-5-xhigh",
-            },
-            "max": {
-              "cursorModel": "claude-fable-5-max",
-            },
-            "thinking-low": {
-              "cursorModel": "claude-fable-5-thinking-low",
-            },
-            "thinking-medium": {
-              "cursorModel": "claude-fable-5-thinking-medium",
-            },
-            "thinking-high": {
-              "cursorModel": "claude-fable-5-thinking-high",
-            },
-            "thinking-xhigh": {
-              "cursorModel": "claude-fable-5-thinking-xhigh",
-            },
-            "thinking-max": {
-              "cursorModel": "claude-fable-5-thinking-max",
-            },
-          },
-        },
-        "cursor-grok-4.5": {
-          "name": "Cursor Grok 4.5",
-          "options": {
-            "cursorModel": "cursor-grok-4.5-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "cursor-grok-4.5-low",
-            },
-            "low-fast": {
-              "cursorModel": "cursor-grok-4.5-low-fast",
-            },
-            "medium": {
-              "cursorModel": "cursor-grok-4.5-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "cursor-grok-4.5-medium-fast",
-            },
-            "high": {
-              "cursorModel": "cursor-grok-4.5-high",
-            },
-            "high-fast": {
-              "cursorModel": "cursor-grok-4.5-high-fast",
-            },
-          },
-        },
-        "gemini-3.7-flash": {
-          "name": "Gemini 3.7 Flash",
-          "options": {
-            "cursorModel": "gemini-3.7-flash-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gemini-3.7-flash-low",
-            },
-            "medium": {
-              "cursorModel": "gemini-3.7-flash-medium",
-            },
-            "high": {
-              "cursorModel": "gemini-3.7-flash-high",
-            },
-          },
-        },
-        "claude-sonnet-5": {
-          "name": "Claude Sonnet 5",
-          "options": {
-            "cursorModel": "claude-sonnet-5-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-sonnet-5-low",
-            },
-            "medium": {
-              "cursorModel": "claude-sonnet-5-medium",
-            },
-            "high": {
-              "cursorModel": "claude-sonnet-5-high",
-            },
-            "xhigh": {
-              "cursorModel": "claude-sonnet-5-xhigh",
-            },
-            "max": {
-              "cursorModel": "claude-sonnet-5-max",
-            },
-            "thinking-low": {
-              "cursorModel": "claude-sonnet-5-thinking-low",
-            },
-            "thinking-medium": {
-              "cursorModel": "claude-sonnet-5-thinking-medium",
-            },
-            "thinking-high": {
-              "cursorModel": "claude-sonnet-5-thinking-high",
-            },
-            "thinking-xhigh": {
-              "cursorModel": "claude-sonnet-5-thinking-xhigh",
-            },
-            "thinking-max": {
-              "cursorModel": "claude-sonnet-5-thinking-max",
-            },
-          },
-        },
-        "gpt-5.6-luna": {
-          "name": "GPT 5.6 Luna",
-          "options": {
-            "cursorModel": "gpt-5.6-luna-medium",
-          },
-          "variants": {
-            "none": {
-              "cursorModel": "gpt-5.6-luna-none",
-            },
-            "low": {
-              "cursorModel": "gpt-5.6-luna-low",
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.6-luna-low-fast",
-            },
-            "medium": {
-              "cursorModel": "gpt-5.6-luna-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "gpt-5.6-luna-medium-fast",
-            },
-            "high": {
-              "cursorModel": "gpt-5.6-luna-high",
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.6-luna-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.6-luna-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.6-luna-xhigh-fast",
-            },
-            "max": {
-              "cursorModel": "gpt-5.6-luna-max",
-            },
-            "max-fast": {
-              "cursorModel": "gpt-5.6-luna-max-fast",
-            },
-            "none-fast": {
-              "cursorModel": "gpt-5.6-luna-none-fast",
-            },
-          },
-        },
-        "claude-opus-5": {
-          "name": "Claude Opus 5",
-          "options": {
-            "cursorModel": "claude-opus-5-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-opus-5-low",
-            },
-            "low-fast": {
-              "cursorModel": "claude-opus-5-low-fast",
-            },
-            "medium": {
-              "cursorModel": "claude-opus-5-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "claude-opus-5-medium-fast",
-            },
-            "high": {
-              "cursorModel": "claude-opus-5-high",
-            },
-            "high-fast": {
-              "cursorModel": "claude-opus-5-high-fast",
-            },
-          },
-        },
-        "claude-opus-4-8": {
-          "name": "Claude Opus 4 8",
-          "options": {
-            "cursorModel": "claude-opus-4-8-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-opus-4-8-low",
-            },
-            "low-fast": {
-              "cursorModel": "claude-opus-4-8-low-fast",
-            },
-            "medium": {
-              "cursorModel": "claude-opus-4-8-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "claude-opus-4-8-medium-fast",
-            },
-            "high": {
-              "cursorModel": "claude-opus-4-8-high",
-            },
-            "high-fast": {
-              "cursorModel": "claude-opus-4-8-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "claude-opus-4-8-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "claude-opus-4-8-xhigh-fast",
-            },
-            "max": {
-              "cursorModel": "claude-opus-4-8-max",
-            },
-            "thinking-low": {
-              "cursorModel": "claude-opus-4-8-thinking-low",
-            },
-            "thinking-medium": {
-              "cursorModel": "claude-opus-4-8-thinking-medium",
-            },
-            "thinking-high": {
-              "cursorModel": "claude-opus-4-8-thinking-high",
-            },
-            "thinking-high-fast": {
-              "cursorModel": "claude-opus-4-8-thinking-high-fast",
-            },
-            "thinking-xhigh": {
-              "cursorModel": "claude-opus-4-8-thinking-xhigh",
-            },
-            "thinking-max": {
-              "cursorModel": "claude-opus-4-8-thinking-max",
-            },
-            "max-fast": {
-              "cursorModel": "claude-opus-4-8-max-fast",
-            },
-            "thinking-low-fast": {
-              "cursorModel": "claude-opus-4-8-thinking-low-fast",
-            },
-            "thinking-max-fast": {
-              "cursorModel": "claude-opus-4-8-thinking-max-fast",
-            },
-            "thinking-medium-fast": {
-              "cursorModel": "claude-opus-4-8-thinking-medium-fast",
-            },
-            "thinking-xhigh-fast": {
-              "cursorModel": "claude-opus-4-8-thinking-xhigh-fast",
-            },
-          },
-        },
-        "gpt-5.5": {
-          "name": "GPT 5.5",
-          "options": {
-            "cursorModel": "gpt-5.5-medium",
-          },
-          "variants": {
-            "none": {
-              "cursorModel": "gpt-5.5-none",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "low": {
-              "cursorModel": "gpt-5.5-low",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.5-low-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "medium": {
-              "cursorModel": "gpt-5.5-medium",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "medium-fast": {
-              "cursorModel": "gpt-5.5-medium-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "high": {
-              "cursorModel": "gpt-5.5-high",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.5-high-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "extra-high": {
-              "cursorModel": "gpt-5.5-extra-high",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "extra-high-fast": {
-              "cursorModel": "gpt-5.5-extra-high-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-            "none-fast": {
-              "cursorModel": "gpt-5.5-none-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-                "context_over_200k": {
-                  "input": 10,
-                  "output": 45,
-                  "cache_read": 1,
-                  "cache_write": 10,
-                },
-              },
-            },
-          },
-          "cost": {
-            "input": 5,
-            "output": 30,
-            "cache_read": 0.5,
-            "cache_write": 5,
-            "context_over_200k": {
-              "input": 10,
-              "output": 45,
-              "cache_read": 1,
-              "cache_write": 10,
-            },
-          },
-        },
-        "gpt-5.6-terra": {
-          "name": "GPT 5.6 Terra",
-          "options": {
-            "cursorModel": "gpt-5.6-terra-medium",
-          },
-          "variants": {
-            "none": {
-              "cursorModel": "gpt-5.6-terra-none",
-            },
-            "low": {
-              "cursorModel": "gpt-5.6-terra-low",
-            },
-            "low-fast": {
-              "cursorModel": "gpt-5.6-terra-low-fast",
-            },
-            "medium": {
-              "cursorModel": "gpt-5.6-terra-medium",
-            },
-            "medium-fast": {
-              "cursorModel": "gpt-5.6-terra-medium-fast",
-            },
-            "high": {
-              "cursorModel": "gpt-5.6-terra-high",
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.6-terra-high-fast",
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.6-terra-xhigh",
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.6-terra-xhigh-fast",
-            },
-            "max": {
-              "cursorModel": "gpt-5.6-terra-max",
-            },
-            "max-fast": {
-              "cursorModel": "gpt-5.6-terra-max-fast",
-            },
-            "none-fast": {
-              "cursorModel": "gpt-5.6-terra-none-fast",
-            },
-          },
-        },
-        "claude-4.6": {
-          "name": "Claude 4.6",
-          "options": {
-            "cursorModel": "claude-4.6-sonnet-medium",
-          },
-          "variants": {
-            "sonnet-medium": {
-              "cursorModel": "claude-4.6-sonnet-medium",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-                "context_over_200k": {
-                  "input": 6,
-                  "output": 22.5,
-                  "cache_read": 0.6,
-                  "cache_write": 7.5,
-                },
-              },
-            },
-            "sonnet-medium-thinking": {
-              "cursorModel": "claude-4.6-sonnet-medium-thinking",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-                "context_over_200k": {
-                  "input": 6,
-                  "output": 22.5,
-                  "cache_read": 0.6,
-                  "cache_write": 7.5,
-                },
-              },
-            },
-          },
-          "cost": {
-            "input": 3,
-            "output": 15,
-            "cache_read": 0.3,
-            "cache_write": 3.75,
-            "context_over_200k": {
-              "input": 6,
-              "output": 22.5,
-              "cache_read": 0.6,
-              "cache_write": 7.5,
-            },
-          },
-        },
-        "claude-opus-4-7": {
-          "name": "Claude Opus 4 7",
-          "options": {
-            "cursorModel": "claude-opus-4-7-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "claude-opus-4-7-low",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "low-fast": {
-              "cursorModel": "claude-opus-4-7-low-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "medium": {
-              "cursorModel": "claude-opus-4-7-medium",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "medium-fast": {
-              "cursorModel": "claude-opus-4-7-medium-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "high": {
-              "cursorModel": "claude-opus-4-7-high",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "high-fast": {
-              "cursorModel": "claude-opus-4-7-high-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "xhigh": {
-              "cursorModel": "claude-opus-4-7-xhigh",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "xhigh-fast": {
-              "cursorModel": "claude-opus-4-7-xhigh-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "max": {
-              "cursorModel": "claude-opus-4-7-max",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-low": {
-              "cursorModel": "claude-opus-4-7-thinking-low",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-medium": {
-              "cursorModel": "claude-opus-4-7-thinking-medium",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-high": {
-              "cursorModel": "claude-opus-4-7-thinking-high",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-high-fast": {
-              "cursorModel": "claude-opus-4-7-thinking-high-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-xhigh": {
-              "cursorModel": "claude-opus-4-7-thinking-xhigh",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-max": {
-              "cursorModel": "claude-opus-4-7-thinking-max",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "max-fast": {
-              "cursorModel": "claude-opus-4-7-max-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-low-fast": {
-              "cursorModel": "claude-opus-4-7-thinking-low-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-max-fast": {
-              "cursorModel": "claude-opus-4-7-thinking-max-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-medium-fast": {
-              "cursorModel": "claude-opus-4-7-thinking-medium-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "thinking-xhigh-fast": {
-              "cursorModel": "claude-opus-4-7-thinking-xhigh-fast",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-          },
-          "cost": {
-            "input": 5,
-            "output": 25,
-            "cache_read": 0.5,
-            "cache_write": 6.25,
-          },
-        },
-        "gpt-5.4": {
-          "name": "GPT 5.4",
-          "options": {
-            "cursorModel": "gpt-5.4-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gpt-5.4-low",
-              "cost": {
-                "input": 2.5,
-                "output": 15,
-                "cache_read": 0.25,
-                "cache_write": 2.5,
-                "context_over_200k": {
-                  "input": 5,
-                  "output": 22.5,
-                  "cache_read": 0.5,
-                  "cache_write": 5,
-                },
-              },
-            },
-            "medium": {
-              "cursorModel": "gpt-5.4-medium",
-              "cost": {
-                "input": 2.5,
-                "output": 15,
-                "cache_read": 0.25,
-                "cache_write": 2.5,
-                "context_over_200k": {
-                  "input": 5,
-                  "output": 22.5,
-                  "cache_read": 0.5,
-                  "cache_write": 5,
-                },
-              },
-            },
-            "medium-fast": {
-              "cursorModel": "gpt-5.4-medium-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-              },
-            },
-            "high": {
-              "cursorModel": "gpt-5.4-high",
-              "cost": {
-                "input": 2.5,
-                "output": 15,
-                "cache_read": 0.25,
-                "cache_write": 2.5,
-                "context_over_200k": {
-                  "input": 5,
-                  "output": 22.5,
-                  "cache_read": 0.5,
-                  "cache_write": 5,
-                },
-              },
-            },
-            "high-fast": {
-              "cursorModel": "gpt-5.4-high-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-              },
-            },
-            "xhigh": {
-              "cursorModel": "gpt-5.4-xhigh",
-              "cost": {
-                "input": 2.5,
-                "output": 15,
-                "cache_read": 0.25,
-                "cache_write": 2.5,
-                "context_over_200k": {
-                  "input": 5,
-                  "output": 22.5,
-                  "cache_read": 0.5,
-                  "cache_write": 5,
-                },
-              },
-            },
-            "xhigh-fast": {
-              "cursorModel": "gpt-5.4-xhigh-fast",
-              "cost": {
-                "input": 5,
-                "output": 30,
-                "cache_read": 0.5,
-                "cache_write": 5,
-              },
-            },
-            "mini-high": {
-              "cursorModel": "gpt-5.4-mini-high",
-              "cost": {
-                "input": 0.75,
-                "output": 4.5,
-                "cache_read": 0.075,
-                "cache_write": 0.75,
-              },
-            },
-            "mini-low": {
-              "cursorModel": "gpt-5.4-mini-low",
-              "cost": {
-                "input": 0.75,
-                "output": 4.5,
-                "cache_read": 0.075,
-                "cache_write": 0.75,
-              },
-            },
-            "mini-medium": {
-              "cursorModel": "gpt-5.4-mini-medium",
-              "cost": {
-                "input": 0.75,
-                "output": 4.5,
-                "cache_read": 0.075,
-                "cache_write": 0.75,
-              },
-            },
-            "mini-none": {
-              "cursorModel": "gpt-5.4-mini-none",
-              "cost": {
-                "input": 0.75,
-                "output": 4.5,
-                "cache_read": 0.075,
-                "cache_write": 0.75,
-              },
-            },
-            "mini-xhigh": {
-              "cursorModel": "gpt-5.4-mini-xhigh",
-              "cost": {
-                "input": 0.75,
-                "output": 4.5,
-                "cache_read": 0.075,
-                "cache_write": 0.75,
-              },
-            },
-            "nano-high": {
-              "cursorModel": "gpt-5.4-nano-high",
-              "cost": {
-                "input": 0.2,
-                "output": 1.25,
-                "cache_read": 0.02,
-                "cache_write": 0.2,
-              },
-            },
-            "nano-low": {
-              "cursorModel": "gpt-5.4-nano-low",
-              "cost": {
-                "input": 0.2,
-                "output": 1.25,
-                "cache_read": 0.02,
-                "cache_write": 0.2,
-              },
-            },
-            "nano-medium": {
-              "cursorModel": "gpt-5.4-nano-medium",
-              "cost": {
-                "input": 0.2,
-                "output": 1.25,
-                "cache_read": 0.02,
-                "cache_write": 0.2,
-              },
-            },
-            "nano-none": {
-              "cursorModel": "gpt-5.4-nano-none",
-              "cost": {
-                "input": 0.2,
-                "output": 1.25,
-                "cache_read": 0.02,
-                "cache_write": 0.2,
-              },
-            },
-            "nano-xhigh": {
-              "cursorModel": "gpt-5.4-nano-xhigh",
-              "cost": {
-                "input": 0.2,
-                "output": 1.25,
-                "cache_read": 0.02,
-                "cache_write": 0.2,
-              },
-            },
-          },
-          "cost": {
-            "input": 2.5,
-            "output": 15,
-            "cache_read": 0.25,
-            "cache_write": 2.5,
-            "context_over_200k": {
-              "input": 5,
-              "output": 22.5,
-              "cache_read": 0.5,
-              "cache_write": 5,
-            },
-          },
-        },
-        "claude-4.6-opus": {
-          "name": "Claude 4.6 Opus",
-          "options": {
-            "cursorModel": "claude-4.6-opus-high",
-          },
-          "variants": {
-            "high": {
-              "cursorModel": "claude-4.6-opus-high",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "high-thinking": {
-              "cursorModel": "claude-4.6-opus-high-thinking",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "max": {
-              "cursorModel": "claude-4.6-opus-max",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "max-thinking": {
-              "cursorModel": "claude-4.6-opus-max-thinking",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-          },
-          "cost": {
-            "input": 5,
-            "output": 25,
-            "cache_read": 0.5,
-            "cache_write": 6.25,
-          },
-        },
-        "claude-4.5": {
-          "name": "Claude 4.5",
-          "options": {
-            "cursorModel": "claude-4.5-opus-high",
-          },
-          "variants": {
-            "opus-high": {
-              "cursorModel": "claude-4.5-opus-high",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "opus-high-thinking": {
-              "cursorModel": "claude-4.5-opus-high-thinking",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cache_read": 0.5,
-                "cache_write": 6.25,
-              },
-            },
-            "sonnet": {
-              "cursorModel": "claude-4.5-sonnet",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-                "context_over_200k": {
-                  "input": 6,
-                  "output": 22.5,
-                  "cache_read": 0.6,
-                  "cache_write": 7.5,
-                },
-              },
-            },
-            "sonnet-thinking": {
-              "cursorModel": "claude-4.5-sonnet-thinking",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-                "context_over_200k": {
-                  "input": 6,
-                  "output": 22.5,
-                  "cache_read": 0.6,
-                  "cache_write": 7.5,
-                },
-              },
-            },
-          },
-          "cost": {
-            "input": 5,
-            "output": 25,
-            "cache_read": 0.5,
-            "cache_write": 6.25,
-          },
-        },
-        "gemini-3.6-flash": {
-          "name": "Gemini 3.6 Flash",
-          "options": {
-            "cursorModel": "gemini-3.6-flash-medium",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gemini-3.6-flash-low",
-            },
-            "medium": {
-              "cursorModel": "gemini-3.6-flash-medium",
-            },
-            "high": {
-              "cursorModel": "gemini-3.6-flash-high",
-            },
-            "minimal": {
-              "cursorModel": "gemini-3.6-flash-minimal",
-            },
-          },
-        },
-        "gpt-5.1": {
-          "name": "GPT-5.1",
-          "options": {
-            "cursorModel": "gpt-5.1",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "gpt-5.1-low",
-              "cost": {
-                "input": 1.25,
-                "output": 10,
-                "cache_read": 0.125,
-                "cache_write": 1.25,
-              },
-            },
-            "high": {
-              "cursorModel": "gpt-5.1-high",
-              "cost": {
-                "input": 1.25,
-                "output": 10,
-                "cache_read": 0.125,
-                "cache_write": 1.25,
-              },
-            },
-          },
-          "cost": {
-            "input": 1.25,
-            "output": 10,
-            "cache_read": 0.125,
-            "cache_write": 1.25,
-          },
-        },
-        "claude-4": {
-          "name": "Claude 4",
-          "options": {
-            "cursorModel": "claude-4-sonnet",
-          },
-          "variants": {
-            "sonnet": {
-              "cursorModel": "claude-4-sonnet",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-              },
-            },
-            "sonnet-thinking": {
-              "cursorModel": "claude-4-sonnet-thinking",
-              "cost": {
-                "input": 3,
-                "output": 15,
-                "cache_read": 0.3,
-                "cache_write": 3.75,
-              },
-            },
-          },
-          "cost": {
-            "input": 3,
-            "output": 15,
-            "cache_read": 0.3,
-            "cache_write": 3.75,
-          },
-        },
-        "kimi-k3": {
-          "name": "Kimi K3",
-          "options": {
-            "cursorModel": "kimi-k3-high",
-          },
-          "variants": {
-            "low": {
-              "cursorModel": "kimi-k3-low",
-            },
-            "high": {
-              "cursorModel": "kimi-k3-high",
-            },
-            "max": {
-              "cursorModel": "kimi-k3-max",
-            },
-          },
-        },
-        "glm-5.2": {
-          "name": "Glm 5.2",
-          "options": {
-            "cursorModel": "glm-5.2-high",
-          },
-          "variants": {
-            "high": {
-              "cursorModel": "glm-5.2-high",
-            },
-            "max": {
-              "cursorModel": "glm-5.2-max",
-            },
-          },
-        },
-        "auto": {
-          "name": "Auto (current, default)",
-          "cost": {
-            "input": 1.25,
-            "output": 6,
-            "cache_read": 0.25,
-            "cache_write": 1.25,
-          },
-        },
-        "gemini-3.1-pro": {
-          "name": "Gemini 3.1 Pro",
-          "cost": {
-            "input": 2,
-            "output": 12,
-            "cache_read": 0.2,
-            "cache_write": 2,
-            "context_over_200k": {
-              "input": 4,
-              "output": 18,
-              "cache_read": 0.4,
-              "cache_write": 4,
-            },
-          },
-        },
-        "gemini-3-flash": {
-          "name": "Gemini 3 Flash",
-          "cost": {
-            "input": 0.5,
-            "output": 3,
-            "cache_read": 0.05,
-            "cache_write": 0.5,
-          },
-        },
-        "gemini-3.5-flash": {
-          "name": "Gemini 3.5 Flash",
-        },
-        "gpt-5-mini": {
-          "name": "GPT-5 Mini",
-          "cost": {
-            "input": 0.25,
-            "output": 2,
-            "cache_read": 0.025,
-            "cache_write": 0.25,
-          },
-        },
-        "kimi-k2.7-code": {
-          "name": "Kimi K2.7 Code",
-        },
-      },
-    },
-  },
+	"$schema": "https://opencode.ai/config.json",
+	"autoupdate": "notify",
+	"lsp": true,
+	"permission": {
+		"*": "deny",
+		"external_directory": "deny",
+		"bash": "deny",
+		"edit": "deny",
+		"write": "deny",
+		"apply_patch": "deny",
+		"oc_*": "deny",
+		"shell": "deny",
+		"ls": "deny",
+		"mkdir": "deny",
+		"rm": "deny",
+		"stat": "deny",
+		"compress": "deny",
+		"task": "deny",
+		"delegate": "deny",
+		"delegation_*": "deny",
+		"plan_*": "deny",
+		"codegraph_*": "deny",
+		"context7_*": "deny",
+		"exa_*": "deny",
+		"gh_grep_*": "deny",
+		"kagi_*": "deny",
+		"websearch": "deny",
+		"webfetch": "deny",
+		"skill": "deny",
+		"worktree_*": "deny"
+	},
+	"model": "openai/gpt-5.6-terra",
+	"small_model": "openai/gpt-5.6-luna",
+	"agent": {
+		"researcher": {
+			"model": "openai/gpt-5.6-sol",
+			"variant": "xhigh",
+			"permission": {
+				"context7_*": "allow",
+				"exa_*": "allow",
+				"gh_grep_*": "allow",
+				"kagi_*": "deny",
+				"websearch": "allow",
+				"webfetch": "allow",
+				"read": "deny",
+				"glob": "deny",
+				"grep": "deny",
+				"write": "deny",
+				"edit": "deny",
+				"plan_read": "deny",
+				"todoread": "deny",
+				"bash": "deny",
+				"skill": "deny"
+			}
+		},
+		"scribe": {
+			"model": "openai/gpt-5.6-luna",
+			"variant": "low",
+			"permission": {
+				"bash": "deny",
+				"edit": {
+					"*": "deny",
+					"*.md": "allow",
+					"**/*.md": "allow",
+					"*.mdx": "allow",
+					"**/*.mdx": "allow",
+					"*.txt": "allow",
+					"**/*.txt": "allow",
+					"*.rst": "allow",
+					"**/*.rst": "allow",
+					"*.adoc": "allow",
+					"**/*.adoc": "allow"
+				},
+				"glob": "allow",
+				"grep": "allow",
+				"read": "allow",
+				"write": {
+					"*": "deny",
+					"*.md": "allow",
+					"**/*.md": "allow",
+					"*.mdx": "allow",
+					"**/*.mdx": "allow",
+					"*.txt": "allow",
+					"**/*.txt": "allow",
+					"*.rst": "allow",
+					"**/*.rst": "allow",
+					"*.adoc": "allow",
+					"**/*.adoc": "allow"
+				},
+				"skill": {
+					"*": "deny",
+					"writing-for-agents": "allow"
+				},
+				"plan_read": "deny",
+				"todoread": "deny"
+			}
+		},
+		"coder": {
+			"model": "openai/gpt-5.6-luna",
+			"variant": "high",
+			"permission": {
+				"codegraph_*": "allow",
+				"context7_*": "deny",
+				"exa_*": "deny",
+				"gh_grep_*": "deny",
+				"read": "allow",
+				"write": "allow",
+				"edit": "allow",
+				"apply_patch": "allow",
+				"glob": "allow",
+				"grep": "allow",
+				"bash": {
+					"*": "allow",
+					"git add*": "deny",
+					"git branch*": "deny",
+					"git checkout*": "deny",
+					"git cherry-pick*": "deny",
+					"git clean*": "deny",
+					"git commit*": "deny",
+					"git config*": "deny",
+					"git fetch*": "deny",
+					"git merge*": "deny",
+					"git notes*": "deny",
+					"git pull*": "deny",
+					"git push*": "deny",
+					"git rebase*": "deny",
+					"git remote*": "deny",
+					"git reset*": "deny",
+					"git restore*": "deny",
+					"git revert*": "deny",
+					"git stash*": "deny",
+					"git switch*": "deny",
+					"git tag*": "deny",
+					"git worktree*": "deny",
+					"gh pr create*": "deny",
+					"glab mr create*": "deny",
+					"npm publish*": "deny",
+					"bun publish*": "deny",
+					"sudo *": "deny"
+				},
+				"skill": {
+					"*": "deny",
+					"code-philosophy": "allow",
+					"frontend-philosophy": "allow",
+					"frontend-design-discipline": "allow",
+					"deterministic-diagnosis": "allow",
+					"public-seam-tdd": "allow"
+				},
+				"plan_read": "deny",
+				"todoread": "deny"
+			}
+		},
+		"reviewer": {
+			"model": "openai/gpt-5.6-terra",
+			"variant": "high",
+			"temperature": 0.1,
+			"permission": {
+				"edit": "deny",
+				"write": "deny",
+				"bash": "deny",
+				"read": "allow",
+				"glob": "allow",
+				"grep": "allow",
+				"plan_read": "allow",
+				"delegation_read": "allow",
+				"delegation_list": "allow",
+				"skill": {
+					"*": "deny",
+					"code-review": "allow",
+					"plan-review": "allow",
+					"code-philosophy": "allow",
+					"frontend-philosophy": "allow",
+					"frontend-design-discipline": "allow"
+				}
+			}
+		},
+		"plan": {
+			"model": "openai/gpt-5.6-sol",
+			"variant": "xhigh",
+			"prompt": "You are a READ-ONLY planning orchestrator. Coordinate work; do not implement or search the codebase yourself. Delegate internal codebase questions to `explore` only and external documentation and APIs to `researcher` only. Planning artifacts are saved only with `plan_save`; do not invoke the write-capable `scribe` from plan mode. During implementation, `build` routes human-facing content to `scribe`. `explore` cannot access external resources, `researcher` cannot search codebase files, and neither may be substituted by answering from memory. Planning is read-only: load `plan-protocol`, collaborate on a complete cited plan, and call `plan_save` with the finalized plan before leaving plan mode. When an unresolved design decision belongs to the user, load `grilling` and ask precise questions about evidence, falsifiers, and boundaries; do not use it for settled requirements or to invent a decision. Planning, research, review, and casual chat do not create worktrees. After the user approves implementation, hand off control to the `build` orchestrator; do not spawn it as a subagent. Build is the sole agent responsible for creating and owning the implementation workspace. If this session already belongs to a dedicated worktree, reuse it. `worktree_create` binds the build orchestrator's current session to the new workspace; it does not open a terminal or fork the session. Planning alone does not require a branch, and implementation must never begin in the planning worktree.",
+			"permission": {
+				"question": "allow",
+				"compress": "allow",
+				"edit": "deny",
+				"write": "deny",
+				"bash": "deny",
+				"read": "deny",
+				"glob": "deny",
+				"grep": "deny",
+				"codegraph_*": "deny",
+				"websearch": "deny",
+				"webfetch": "deny",
+				"delegate": "allow",
+				"delegation_read": "allow",
+				"delegation_list": "allow",
+				"plan_save": "allow",
+				"plan_read": "allow",
+				"skill": {
+					"*": "deny",
+					"plan-protocol": "allow",
+					"grilling": "allow"
+				},
+				"task": {
+					"*": "deny"
+				},
+				"worktree_create": "deny",
+				"worktree_*": "deny",
+				"worktree_delete": "deny"
+			}
+		},
+		"build": {
+			"model": "openai/gpt-5.6-terra",
+			"variant": "high",
+			"prompt": "You are a BUILD ORCHESTRATOR. You coordinate work; you do NOT implement. Delegate ALL code changes and verification to `coder`, documentation to `scribe`, codebase analysis to `explore` only, and external research to `researcher` only. You may directly inspect Git and perform explicitly authorized final delivery operations described below, but do not edit files or run implementation and verification commands directly. Before writing code, call `plan_read`, call `delegation_list` once, read relevant findings with `delegation_read`, and reuse production-ready research. Load the relevant philosophy before delegating to `coder`; have `coder` run lint, type-check, build, and tests. For an observed or suspected defect, instruct `coder` to use the local `deterministic-diagnosis` skill; for behavior work with a stable public boundary, instruct `coder` to use `public-seam-tdd`. Include either skill only when that condition is present, never for unrelated configuration, documentation, or review work. Delegate a `reviewer` before reporting completion. All implementation requires a dedicated non-default branch in an isolated worktree. If this is the default branch or not a task worktree, invoke `worktree_create` with a descriptive feature/, fix/, or chore/ branch. The tool binds this same build session to the new workspace. After it succeeds, do not call another tool in the current loop; end the response briefly so the plugin can automatically resume this same session in the workspace. From that resumed loop, delegate `coder`, `reviewer`, and other child agents so they share the parent's workspace. Do not fork the session, open another terminal, or terminate the parent session. If the session already belongs to a dedicated worktree, reuse it. `worktree_create` safely adopts an existing valid worktree for the requested branch. If it reports a stale registration or a mismatched existing path, do not retry the same request and never remove or overwrite it automatically; present the detected path and ask the user whether to prune/archive/remove it or use a different branch. This is an explicit approved implementation handoff, not a session-start hook: casual chat, planning, research, and review never create worktrees. Never implement on main, master, trunk, or the remote default branch. Git delivery ownership: build owns final integration after implementation, verification, and review; coder never commits or pushes. Inspect branch, status, and diff directly; stage only intended files and never sweep unrelated dirty-worktree changes into a commit. Ask `scribe` for a commit message when useful. Commit only when the user explicitly requests a commit. Fetch or pull only when explicitly requested or required to resolve known remote divergence, and pulls must use `--ff-only`; never merge or rebase silently. Push only when explicitly requested; never force-push. Create a GitHub pull request with `gh` or a GitLab merge request with `glab` only when explicitly requested, choosing the provider from the Git remote. Report the branch, commit, remote, and PR/MR result precisely. The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command; never work around a denial. Before reporting completion, delegate `reviewer` with the changed files and, for branch review, the explicit base ref, merge-base, and diff; include findings and offer to fix critical or major issues. Do not skip review.",
+			"permission": {
+				"question": "allow",
+				"compress": "allow",
+				"edit": "deny",
+				"write": "deny",
+				"bash": {
+					"*": "deny",
+					"git status*": "allow",
+					"git diff*": "allow",
+					"git log*": "allow",
+					"git branch --show-current*": "allow",
+					"git rev-parse*": "allow",
+					"git symbolic-ref*": "allow",
+					"git remote*": "allow",
+					"git add*": "ask",
+					"git commit*": "ask",
+					"git fetch*": "ask",
+					"git pull --ff-only*": "ask",
+					"git push*": "ask",
+					"gh pr create*": "ask",
+					"gh pr view*": "allow",
+					"gh pr status*": "allow",
+					"glab mr create*": "ask",
+					"glab mr view*": "allow",
+					"git push*--force*": "deny",
+					"git push*-f*": "deny",
+					"git push*--mirror*": "deny"
+				},
+				"read": "allow",
+				"glob": "allow",
+				"grep": "allow",
+				"delegate": "allow",
+				"delegation_read": "allow",
+				"delegation_list": "allow",
+				"plan_read": "allow",
+				"plan_save": "deny",
+				"skill": {
+					"*": "deny",
+					"code-philosophy": "allow",
+					"frontend-philosophy": "allow",
+					"frontend-design-discipline": "allow"
+				},
+				"task": {
+					"*": "deny",
+					"coder": "allow",
+					"scribe": "allow"
+				},
+				"worktree_create": "allow",
+				"worktree_*": "allow",
+				"worktree_delete": "ask"
+			}
+		},
+		"explore": {
+			"model": "openai/gpt-5.6-luna",
+			"variant": "low",
+			"permission": {
+				"codegraph_*": "allow",
+				"context7_*": "deny",
+				"exa_*": "deny",
+				"gh_grep_*": "deny",
+				"websearch": "deny",
+				"webfetch": "deny",
+				"edit": "deny",
+				"write": "deny",
+				"read": "allow",
+				"glob": "allow",
+				"grep": "allow",
+				"plan_read": "deny",
+				"todoread": "deny",
+				"bash": "deny",
+				"skill": "deny"
+			}
+		}
+	},
+	"mcp": {
+		"codegraph": {
+			"enabled": true,
+			"type": "local",
+			"command": ["codegraph", "serve", "--mcp"]
+		},
+		"context7": {
+			"type": "remote",
+			"url": "https://mcp.context7.com/mcp",
+			"enabled": true
+		},
+		"exa": {
+			"type": "remote",
+			"url": "https://mcp.exa.ai/mcp",
+			"enabled": true
+		},
+		"gh_grep": {
+			"type": "remote",
+			"url": "https://mcp.grep.app",
+			"enabled": true
+		}
+	},
+	"instructions": [
+		"{env:OPENCODE_CONFIG_DIR}/tools/runtime.md",
+		"{env:OPENCODE_CONFIG_DIR}/tools/philosophy.md"
+	],
+	"plugin": [
+		"./plugins/ocx/project-instructions.ts",
+		"./plugins/ocx/background-agents.ts",
+		"./plugins/ocx/worktree.ts",
+		"./plugins/ocx/workspace-plugin.ts",
+		"./plugins/ocx/notify.ts",
+		"./plugins/ocx/dcp.ts",
+		"opencode-claude-auth@2.1.6",
+		"@franlol/opencode-md-table-formatter@0.0.6"
+	],
+	"disabled_providers": ["cursor-acp"],
+	/*
+	 * QUARANTINED: open-cursor 2.5.6 acknowledges that cursor-agent may perform
+	 * native side effects before OpenCode receives a tool call, and that its
+	 * sandbox did not prevent native edits. Keep these model definitions dormant
+	 * until the backend is model-only and every effect crosses OpenCode's tool,
+	 * permission, agent, and managed-worktree gates.
+	 *
+	"provider": {
+		"cursor-acp": {
+			"name": "Cursor",
+			"npm": "@ai-sdk/openai-compatible",
+			"options": {
+				"baseURL": "http://127.0.0.1:32124/v1"
+			},
+			"models": {
+				"gpt-5.3-codex": {
+					"name": "Codex 5.3",
+					"options": {
+						"cursorModel": "gpt-5.3-codex"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gpt-5.3-codex-low",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.3-codex-low-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"fast": {
+							"cursorModel": "gpt-5.3-codex-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"high": {
+							"cursorModel": "gpt-5.3-codex-high",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.3-codex-high-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.3-codex-xhigh",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.3-codex-xhigh-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						}
+					},
+					"cost": {
+						"input": 1.75,
+						"output": 14,
+						"cache_read": 0.175,
+						"cache_write": 1.75
+					}
+				},
+				"gpt-5.2": {
+					"name": "GPT-5.2",
+					"options": {
+						"cursorModel": "gpt-5.2"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gpt-5.2-low",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.2-low-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"fast": {
+							"cursorModel": "gpt-5.2-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"high": {
+							"cursorModel": "gpt-5.2-high",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.2-high-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.2-xhigh",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.2-xhigh-fast",
+							"cost": {
+								"input": 1.75,
+								"output": 14,
+								"cache_read": 0.175,
+								"cache_write": 1.75
+							}
+						}
+					},
+					"cost": {
+						"input": 1.75,
+						"output": 14,
+						"cache_read": 0.175,
+						"cache_write": 1.75
+					}
+				},
+				"cursor-grok-4.6": {
+					"name": "Cursor Grok 4.6",
+					"options": {
+						"cursorModel": "cursor-grok-4.6-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "cursor-grok-4.6-low"
+						},
+						"low-fast": {
+							"cursorModel": "cursor-grok-4.6-low-fast"
+						},
+						"medium": {
+							"cursorModel": "cursor-grok-4.6-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "cursor-grok-4.6-medium-fast"
+						},
+						"high": {
+							"cursorModel": "cursor-grok-4.6-high"
+						},
+						"high-fast": {
+							"cursorModel": "cursor-grok-4.6-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "cursor-grok-4.6-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "cursor-grok-4.6-xhigh-fast"
+						}
+					}
+				},
+				"composer-2.5": {
+					"name": "Composer 2.5",
+					"options": {
+						"cursorModel": "composer-2.5"
+					},
+					"variants": {
+						"fast": {
+							"cursorModel": "composer-2.5-fast"
+						}
+					}
+				},
+				"claude-opus-5-thinking": {
+					"name": "Claude Opus 5 Thinking",
+					"options": {
+						"cursorModel": "claude-opus-5-thinking-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-opus-5-thinking-low"
+						},
+						"low-fast": {
+							"cursorModel": "claude-opus-5-thinking-low-fast"
+						},
+						"medium": {
+							"cursorModel": "claude-opus-5-thinking-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "claude-opus-5-thinking-medium-fast"
+						},
+						"high": {
+							"cursorModel": "claude-opus-5-thinking-high"
+						},
+						"high-fast": {
+							"cursorModel": "claude-opus-5-thinking-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "claude-opus-5-thinking-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "claude-opus-5-thinking-xhigh-fast"
+						},
+						"max": {
+							"cursorModel": "claude-opus-5-thinking-max"
+						},
+						"max-fast": {
+							"cursorModel": "claude-opus-5-thinking-max-fast"
+						}
+					}
+				},
+				"gpt-5.6-sol": {
+					"name": "GPT 5.6 Sol",
+					"options": {
+						"cursorModel": "gpt-5.6-sol-medium"
+					},
+					"variants": {
+						"none": {
+							"cursorModel": "gpt-5.6-sol-none"
+						},
+						"low": {
+							"cursorModel": "gpt-5.6-sol-low"
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.6-sol-low-fast"
+						},
+						"medium": {
+							"cursorModel": "gpt-5.6-sol-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "gpt-5.6-sol-medium-fast"
+						},
+						"high": {
+							"cursorModel": "gpt-5.6-sol-high"
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.6-sol-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.6-sol-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.6-sol-xhigh-fast"
+						},
+						"max": {
+							"cursorModel": "gpt-5.6-sol-max"
+						},
+						"max-fast": {
+							"cursorModel": "gpt-5.6-sol-max-fast"
+						},
+						"none-fast": {
+							"cursorModel": "gpt-5.6-sol-none-fast"
+						}
+					}
+				},
+				"claude-fable-5": {
+					"name": "Claude Fable 5",
+					"options": {
+						"cursorModel": "claude-fable-5-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-fable-5-low"
+						},
+						"medium": {
+							"cursorModel": "claude-fable-5-medium"
+						},
+						"high": {
+							"cursorModel": "claude-fable-5-high"
+						},
+						"xhigh": {
+							"cursorModel": "claude-fable-5-xhigh"
+						},
+						"max": {
+							"cursorModel": "claude-fable-5-max"
+						},
+						"thinking-low": {
+							"cursorModel": "claude-fable-5-thinking-low"
+						},
+						"thinking-medium": {
+							"cursorModel": "claude-fable-5-thinking-medium"
+						},
+						"thinking-high": {
+							"cursorModel": "claude-fable-5-thinking-high"
+						},
+						"thinking-xhigh": {
+							"cursorModel": "claude-fable-5-thinking-xhigh"
+						},
+						"thinking-max": {
+							"cursorModel": "claude-fable-5-thinking-max"
+						}
+					}
+				},
+				"cursor-grok-4.5": {
+					"name": "Cursor Grok 4.5",
+					"options": {
+						"cursorModel": "cursor-grok-4.5-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "cursor-grok-4.5-low"
+						},
+						"low-fast": {
+							"cursorModel": "cursor-grok-4.5-low-fast"
+						},
+						"medium": {
+							"cursorModel": "cursor-grok-4.5-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "cursor-grok-4.5-medium-fast"
+						},
+						"high": {
+							"cursorModel": "cursor-grok-4.5-high"
+						},
+						"high-fast": {
+							"cursorModel": "cursor-grok-4.5-high-fast"
+						}
+					}
+				},
+				"gemini-3.7-flash": {
+					"name": "Gemini 3.7 Flash",
+					"options": {
+						"cursorModel": "gemini-3.7-flash-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gemini-3.7-flash-low"
+						},
+						"medium": {
+							"cursorModel": "gemini-3.7-flash-medium"
+						},
+						"high": {
+							"cursorModel": "gemini-3.7-flash-high"
+						}
+					}
+				},
+				"claude-sonnet-5": {
+					"name": "Claude Sonnet 5",
+					"options": {
+						"cursorModel": "claude-sonnet-5-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-sonnet-5-low"
+						},
+						"medium": {
+							"cursorModel": "claude-sonnet-5-medium"
+						},
+						"high": {
+							"cursorModel": "claude-sonnet-5-high"
+						},
+						"xhigh": {
+							"cursorModel": "claude-sonnet-5-xhigh"
+						},
+						"max": {
+							"cursorModel": "claude-sonnet-5-max"
+						},
+						"thinking-low": {
+							"cursorModel": "claude-sonnet-5-thinking-low"
+						},
+						"thinking-medium": {
+							"cursorModel": "claude-sonnet-5-thinking-medium"
+						},
+						"thinking-high": {
+							"cursorModel": "claude-sonnet-5-thinking-high"
+						},
+						"thinking-xhigh": {
+							"cursorModel": "claude-sonnet-5-thinking-xhigh"
+						},
+						"thinking-max": {
+							"cursorModel": "claude-sonnet-5-thinking-max"
+						}
+					}
+				},
+				"gpt-5.6-luna": {
+					"name": "GPT 5.6 Luna",
+					"options": {
+						"cursorModel": "gpt-5.6-luna-medium"
+					},
+					"variants": {
+						"none": {
+							"cursorModel": "gpt-5.6-luna-none"
+						},
+						"low": {
+							"cursorModel": "gpt-5.6-luna-low"
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.6-luna-low-fast"
+						},
+						"medium": {
+							"cursorModel": "gpt-5.6-luna-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "gpt-5.6-luna-medium-fast"
+						},
+						"high": {
+							"cursorModel": "gpt-5.6-luna-high"
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.6-luna-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.6-luna-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.6-luna-xhigh-fast"
+						},
+						"max": {
+							"cursorModel": "gpt-5.6-luna-max"
+						},
+						"max-fast": {
+							"cursorModel": "gpt-5.6-luna-max-fast"
+						},
+						"none-fast": {
+							"cursorModel": "gpt-5.6-luna-none-fast"
+						}
+					}
+				},
+				"claude-opus-5": {
+					"name": "Claude Opus 5",
+					"options": {
+						"cursorModel": "claude-opus-5-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-opus-5-low"
+						},
+						"low-fast": {
+							"cursorModel": "claude-opus-5-low-fast"
+						},
+						"medium": {
+							"cursorModel": "claude-opus-5-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "claude-opus-5-medium-fast"
+						},
+						"high": {
+							"cursorModel": "claude-opus-5-high"
+						},
+						"high-fast": {
+							"cursorModel": "claude-opus-5-high-fast"
+						}
+					}
+				},
+				"claude-opus-4-8": {
+					"name": "Claude Opus 4 8",
+					"options": {
+						"cursorModel": "claude-opus-4-8-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-opus-4-8-low"
+						},
+						"low-fast": {
+							"cursorModel": "claude-opus-4-8-low-fast"
+						},
+						"medium": {
+							"cursorModel": "claude-opus-4-8-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "claude-opus-4-8-medium-fast"
+						},
+						"high": {
+							"cursorModel": "claude-opus-4-8-high"
+						},
+						"high-fast": {
+							"cursorModel": "claude-opus-4-8-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "claude-opus-4-8-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "claude-opus-4-8-xhigh-fast"
+						},
+						"max": {
+							"cursorModel": "claude-opus-4-8-max"
+						},
+						"thinking-low": {
+							"cursorModel": "claude-opus-4-8-thinking-low"
+						},
+						"thinking-medium": {
+							"cursorModel": "claude-opus-4-8-thinking-medium"
+						},
+						"thinking-high": {
+							"cursorModel": "claude-opus-4-8-thinking-high"
+						},
+						"thinking-high-fast": {
+							"cursorModel": "claude-opus-4-8-thinking-high-fast"
+						},
+						"thinking-xhigh": {
+							"cursorModel": "claude-opus-4-8-thinking-xhigh"
+						},
+						"thinking-max": {
+							"cursorModel": "claude-opus-4-8-thinking-max"
+						},
+						"max-fast": {
+							"cursorModel": "claude-opus-4-8-max-fast"
+						},
+						"thinking-low-fast": {
+							"cursorModel": "claude-opus-4-8-thinking-low-fast"
+						},
+						"thinking-max-fast": {
+							"cursorModel": "claude-opus-4-8-thinking-max-fast"
+						},
+						"thinking-medium-fast": {
+							"cursorModel": "claude-opus-4-8-thinking-medium-fast"
+						},
+						"thinking-xhigh-fast": {
+							"cursorModel": "claude-opus-4-8-thinking-xhigh-fast"
+						}
+					}
+				},
+				"gpt-5.5": {
+					"name": "GPT 5.5",
+					"options": {
+						"cursorModel": "gpt-5.5-medium"
+					},
+					"variants": {
+						"none": {
+							"cursorModel": "gpt-5.5-none",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"low": {
+							"cursorModel": "gpt-5.5-low",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.5-low-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"medium": {
+							"cursorModel": "gpt-5.5-medium",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"medium-fast": {
+							"cursorModel": "gpt-5.5-medium-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"high": {
+							"cursorModel": "gpt-5.5-high",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.5-high-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"extra-high": {
+							"cursorModel": "gpt-5.5-extra-high",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"extra-high-fast": {
+							"cursorModel": "gpt-5.5-extra-high-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						},
+						"none-fast": {
+							"cursorModel": "gpt-5.5-none-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5,
+								"context_over_200k": {
+									"input": 10,
+									"output": 45,
+									"cache_read": 1,
+									"cache_write": 10
+								}
+							}
+						}
+					},
+					"cost": {
+						"input": 5,
+						"output": 30,
+						"cache_read": 0.5,
+						"cache_write": 5,
+						"context_over_200k": {
+							"input": 10,
+							"output": 45,
+							"cache_read": 1,
+							"cache_write": 10
+						}
+					}
+				},
+				"gpt-5.6-terra": {
+					"name": "GPT 5.6 Terra",
+					"options": {
+						"cursorModel": "gpt-5.6-terra-medium"
+					},
+					"variants": {
+						"none": {
+							"cursorModel": "gpt-5.6-terra-none"
+						},
+						"low": {
+							"cursorModel": "gpt-5.6-terra-low"
+						},
+						"low-fast": {
+							"cursorModel": "gpt-5.6-terra-low-fast"
+						},
+						"medium": {
+							"cursorModel": "gpt-5.6-terra-medium"
+						},
+						"medium-fast": {
+							"cursorModel": "gpt-5.6-terra-medium-fast"
+						},
+						"high": {
+							"cursorModel": "gpt-5.6-terra-high"
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.6-terra-high-fast"
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.6-terra-xhigh"
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.6-terra-xhigh-fast"
+						},
+						"max": {
+							"cursorModel": "gpt-5.6-terra-max"
+						},
+						"max-fast": {
+							"cursorModel": "gpt-5.6-terra-max-fast"
+						},
+						"none-fast": {
+							"cursorModel": "gpt-5.6-terra-none-fast"
+						}
+					}
+				},
+				"claude-4.6": {
+					"name": "Claude 4.6",
+					"options": {
+						"cursorModel": "claude-4.6-sonnet-medium"
+					},
+					"variants": {
+						"sonnet-medium": {
+							"cursorModel": "claude-4.6-sonnet-medium",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75,
+								"context_over_200k": {
+									"input": 6,
+									"output": 22.5,
+									"cache_read": 0.6,
+									"cache_write": 7.5
+								}
+							}
+						},
+						"sonnet-medium-thinking": {
+							"cursorModel": "claude-4.6-sonnet-medium-thinking",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75,
+								"context_over_200k": {
+									"input": 6,
+									"output": 22.5,
+									"cache_read": 0.6,
+									"cache_write": 7.5
+								}
+							}
+						}
+					},
+					"cost": {
+						"input": 3,
+						"output": 15,
+						"cache_read": 0.3,
+						"cache_write": 3.75,
+						"context_over_200k": {
+							"input": 6,
+							"output": 22.5,
+							"cache_read": 0.6,
+							"cache_write": 7.5
+						}
+					}
+				},
+				"claude-opus-4-7": {
+					"name": "Claude Opus 4 7",
+					"options": {
+						"cursorModel": "claude-opus-4-7-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "claude-opus-4-7-low",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"low-fast": {
+							"cursorModel": "claude-opus-4-7-low-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"medium": {
+							"cursorModel": "claude-opus-4-7-medium",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"medium-fast": {
+							"cursorModel": "claude-opus-4-7-medium-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"high": {
+							"cursorModel": "claude-opus-4-7-high",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"high-fast": {
+							"cursorModel": "claude-opus-4-7-high-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"xhigh": {
+							"cursorModel": "claude-opus-4-7-xhigh",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"xhigh-fast": {
+							"cursorModel": "claude-opus-4-7-xhigh-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"max": {
+							"cursorModel": "claude-opus-4-7-max",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-low": {
+							"cursorModel": "claude-opus-4-7-thinking-low",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-medium": {
+							"cursorModel": "claude-opus-4-7-thinking-medium",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-high": {
+							"cursorModel": "claude-opus-4-7-thinking-high",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-high-fast": {
+							"cursorModel": "claude-opus-4-7-thinking-high-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-xhigh": {
+							"cursorModel": "claude-opus-4-7-thinking-xhigh",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-max": {
+							"cursorModel": "claude-opus-4-7-thinking-max",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"max-fast": {
+							"cursorModel": "claude-opus-4-7-max-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-low-fast": {
+							"cursorModel": "claude-opus-4-7-thinking-low-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-max-fast": {
+							"cursorModel": "claude-opus-4-7-thinking-max-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-medium-fast": {
+							"cursorModel": "claude-opus-4-7-thinking-medium-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"thinking-xhigh-fast": {
+							"cursorModel": "claude-opus-4-7-thinking-xhigh-fast",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						}
+					},
+					"cost": {
+						"input": 5,
+						"output": 25,
+						"cache_read": 0.5,
+						"cache_write": 6.25
+					}
+				},
+				"gpt-5.4": {
+					"name": "GPT 5.4",
+					"options": {
+						"cursorModel": "gpt-5.4-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gpt-5.4-low",
+							"cost": {
+								"input": 2.5,
+								"output": 15,
+								"cache_read": 0.25,
+								"cache_write": 2.5,
+								"context_over_200k": {
+									"input": 5,
+									"output": 22.5,
+									"cache_read": 0.5,
+									"cache_write": 5
+								}
+							}
+						},
+						"medium": {
+							"cursorModel": "gpt-5.4-medium",
+							"cost": {
+								"input": 2.5,
+								"output": 15,
+								"cache_read": 0.25,
+								"cache_write": 2.5,
+								"context_over_200k": {
+									"input": 5,
+									"output": 22.5,
+									"cache_read": 0.5,
+									"cache_write": 5
+								}
+							}
+						},
+						"medium-fast": {
+							"cursorModel": "gpt-5.4-medium-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5
+							}
+						},
+						"high": {
+							"cursorModel": "gpt-5.4-high",
+							"cost": {
+								"input": 2.5,
+								"output": 15,
+								"cache_read": 0.25,
+								"cache_write": 2.5,
+								"context_over_200k": {
+									"input": 5,
+									"output": 22.5,
+									"cache_read": 0.5,
+									"cache_write": 5
+								}
+							}
+						},
+						"high-fast": {
+							"cursorModel": "gpt-5.4-high-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5
+							}
+						},
+						"xhigh": {
+							"cursorModel": "gpt-5.4-xhigh",
+							"cost": {
+								"input": 2.5,
+								"output": 15,
+								"cache_read": 0.25,
+								"cache_write": 2.5,
+								"context_over_200k": {
+									"input": 5,
+									"output": 22.5,
+									"cache_read": 0.5,
+									"cache_write": 5
+								}
+							}
+						},
+						"xhigh-fast": {
+							"cursorModel": "gpt-5.4-xhigh-fast",
+							"cost": {
+								"input": 5,
+								"output": 30,
+								"cache_read": 0.5,
+								"cache_write": 5
+							}
+						},
+						"mini-high": {
+							"cursorModel": "gpt-5.4-mini-high",
+							"cost": {
+								"input": 0.75,
+								"output": 4.5,
+								"cache_read": 0.075,
+								"cache_write": 0.75
+							}
+						},
+						"mini-low": {
+							"cursorModel": "gpt-5.4-mini-low",
+							"cost": {
+								"input": 0.75,
+								"output": 4.5,
+								"cache_read": 0.075,
+								"cache_write": 0.75
+							}
+						},
+						"mini-medium": {
+							"cursorModel": "gpt-5.4-mini-medium",
+							"cost": {
+								"input": 0.75,
+								"output": 4.5,
+								"cache_read": 0.075,
+								"cache_write": 0.75
+							}
+						},
+						"mini-none": {
+							"cursorModel": "gpt-5.4-mini-none",
+							"cost": {
+								"input": 0.75,
+								"output": 4.5,
+								"cache_read": 0.075,
+								"cache_write": 0.75
+							}
+						},
+						"mini-xhigh": {
+							"cursorModel": "gpt-5.4-mini-xhigh",
+							"cost": {
+								"input": 0.75,
+								"output": 4.5,
+								"cache_read": 0.075,
+								"cache_write": 0.75
+							}
+						},
+						"nano-high": {
+							"cursorModel": "gpt-5.4-nano-high",
+							"cost": {
+								"input": 0.2,
+								"output": 1.25,
+								"cache_read": 0.02,
+								"cache_write": 0.2
+							}
+						},
+						"nano-low": {
+							"cursorModel": "gpt-5.4-nano-low",
+							"cost": {
+								"input": 0.2,
+								"output": 1.25,
+								"cache_read": 0.02,
+								"cache_write": 0.2
+							}
+						},
+						"nano-medium": {
+							"cursorModel": "gpt-5.4-nano-medium",
+							"cost": {
+								"input": 0.2,
+								"output": 1.25,
+								"cache_read": 0.02,
+								"cache_write": 0.2
+							}
+						},
+						"nano-none": {
+							"cursorModel": "gpt-5.4-nano-none",
+							"cost": {
+								"input": 0.2,
+								"output": 1.25,
+								"cache_read": 0.02,
+								"cache_write": 0.2
+							}
+						},
+						"nano-xhigh": {
+							"cursorModel": "gpt-5.4-nano-xhigh",
+							"cost": {
+								"input": 0.2,
+								"output": 1.25,
+								"cache_read": 0.02,
+								"cache_write": 0.2
+							}
+						}
+					},
+					"cost": {
+						"input": 2.5,
+						"output": 15,
+						"cache_read": 0.25,
+						"cache_write": 2.5,
+						"context_over_200k": {
+							"input": 5,
+							"output": 22.5,
+							"cache_read": 0.5,
+							"cache_write": 5
+						}
+					}
+				},
+				"claude-4.6-opus": {
+					"name": "Claude 4.6 Opus",
+					"options": {
+						"cursorModel": "claude-4.6-opus-high"
+					},
+					"variants": {
+						"high": {
+							"cursorModel": "claude-4.6-opus-high",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"high-thinking": {
+							"cursorModel": "claude-4.6-opus-high-thinking",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"max": {
+							"cursorModel": "claude-4.6-opus-max",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"max-thinking": {
+							"cursorModel": "claude-4.6-opus-max-thinking",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						}
+					},
+					"cost": {
+						"input": 5,
+						"output": 25,
+						"cache_read": 0.5,
+						"cache_write": 6.25
+					}
+				},
+				"claude-4.5": {
+					"name": "Claude 4.5",
+					"options": {
+						"cursorModel": "claude-4.5-opus-high"
+					},
+					"variants": {
+						"opus-high": {
+							"cursorModel": "claude-4.5-opus-high",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"opus-high-thinking": {
+							"cursorModel": "claude-4.5-opus-high-thinking",
+							"cost": {
+								"input": 5,
+								"output": 25,
+								"cache_read": 0.5,
+								"cache_write": 6.25
+							}
+						},
+						"sonnet": {
+							"cursorModel": "claude-4.5-sonnet",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75,
+								"context_over_200k": {
+									"input": 6,
+									"output": 22.5,
+									"cache_read": 0.6,
+									"cache_write": 7.5
+								}
+							}
+						},
+						"sonnet-thinking": {
+							"cursorModel": "claude-4.5-sonnet-thinking",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75,
+								"context_over_200k": {
+									"input": 6,
+									"output": 22.5,
+									"cache_read": 0.6,
+									"cache_write": 7.5
+								}
+							}
+						}
+					},
+					"cost": {
+						"input": 5,
+						"output": 25,
+						"cache_read": 0.5,
+						"cache_write": 6.25
+					}
+				},
+				"gemini-3.6-flash": {
+					"name": "Gemini 3.6 Flash",
+					"options": {
+						"cursorModel": "gemini-3.6-flash-medium"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gemini-3.6-flash-low"
+						},
+						"medium": {
+							"cursorModel": "gemini-3.6-flash-medium"
+						},
+						"high": {
+							"cursorModel": "gemini-3.6-flash-high"
+						},
+						"minimal": {
+							"cursorModel": "gemini-3.6-flash-minimal"
+						}
+					}
+				},
+				"gpt-5.1": {
+					"name": "GPT-5.1",
+					"options": {
+						"cursorModel": "gpt-5.1"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "gpt-5.1-low",
+							"cost": {
+								"input": 1.25,
+								"output": 10,
+								"cache_read": 0.125,
+								"cache_write": 1.25
+							}
+						},
+						"high": {
+							"cursorModel": "gpt-5.1-high",
+							"cost": {
+								"input": 1.25,
+								"output": 10,
+								"cache_read": 0.125,
+								"cache_write": 1.25
+							}
+						}
+					},
+					"cost": {
+						"input": 1.25,
+						"output": 10,
+						"cache_read": 0.125,
+						"cache_write": 1.25
+					}
+				},
+				"claude-4": {
+					"name": "Claude 4",
+					"options": {
+						"cursorModel": "claude-4-sonnet"
+					},
+					"variants": {
+						"sonnet": {
+							"cursorModel": "claude-4-sonnet",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75
+							}
+						},
+						"sonnet-thinking": {
+							"cursorModel": "claude-4-sonnet-thinking",
+							"cost": {
+								"input": 3,
+								"output": 15,
+								"cache_read": 0.3,
+								"cache_write": 3.75
+							}
+						}
+					},
+					"cost": {
+						"input": 3,
+						"output": 15,
+						"cache_read": 0.3,
+						"cache_write": 3.75
+					}
+				},
+				"kimi-k3": {
+					"name": "Kimi K3",
+					"options": {
+						"cursorModel": "kimi-k3-high"
+					},
+					"variants": {
+						"low": {
+							"cursorModel": "kimi-k3-low"
+						},
+						"high": {
+							"cursorModel": "kimi-k3-high"
+						},
+						"max": {
+							"cursorModel": "kimi-k3-max"
+						}
+					}
+				},
+				"glm-5.2": {
+					"name": "Glm 5.2",
+					"options": {
+						"cursorModel": "glm-5.2-high"
+					},
+					"variants": {
+						"high": {
+							"cursorModel": "glm-5.2-high"
+						},
+						"max": {
+							"cursorModel": "glm-5.2-max"
+						}
+					}
+				},
+				"auto": {
+					"name": "Auto (current, default)",
+					"cost": {
+						"input": 1.25,
+						"output": 6,
+						"cache_read": 0.25,
+						"cache_write": 1.25
+					}
+				},
+				"gemini-3.1-pro": {
+					"name": "Gemini 3.1 Pro",
+					"cost": {
+						"input": 2,
+						"output": 12,
+						"cache_read": 0.2,
+						"cache_write": 2,
+						"context_over_200k": {
+							"input": 4,
+							"output": 18,
+							"cache_read": 0.4,
+							"cache_write": 4
+						}
+					}
+				},
+				"gemini-3-flash": {
+					"name": "Gemini 3 Flash",
+					"cost": {
+						"input": 0.5,
+						"output": 3,
+						"cache_read": 0.05,
+						"cache_write": 0.5
+					}
+				},
+				"gemini-3.5-flash": {
+					"name": "Gemini 3.5 Flash"
+				},
+				"gpt-5-mini": {
+					"name": "GPT-5 Mini",
+					"cost": {
+						"input": 0.25,
+						"output": 2,
+						"cache_read": 0.025,
+						"cache_write": 0.25
+					}
+				},
+				"kimi-k2.7-code": {
+					"name": "Kimi K2.7 Code"
+				}
+			}
+		}
+	}
+	*/
 }

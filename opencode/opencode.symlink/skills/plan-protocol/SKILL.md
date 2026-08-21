@@ -12,11 +12,12 @@ description: Guidelines for creating and managing implementation plans with cita
 When creating or updating a plan, ensure:
 
 - [ ] YAML frontmatter with `status`, `phase`, `updated`
+- [ ] Exactly one `# Implementation Plan` heading and canonical required sections
 - [ ] `## Goal` section (one sentence)
-- [ ] `## Context & Decisions` table with citations (`ref:delegation-id`)
+- [ ] `## Context & Decisions` table; every decision row cites a persisted delegation
 - [ ] Phases with status markers: `[COMPLETE]`, `[IN PROGRESS]`, `[PENDING]`
 - [ ] Tasks with hierarchical numbering (1.1, 1.2, 2.1)
-- [ ] Only ONE task marked `← CURRENT`
+- [ ] Lifecycle-consistent `← CURRENT` marker (exactly one only while `in-progress`)
 - [ ] Citations for all research-based decisions
 
 ---
@@ -92,6 +93,10 @@ ONE_SENTENCE_DESCRIBING_OUTCOME
 | `[COMPLETE]` | Finished successfully |
 | `[BLOCKED]` | Waiting on dependencies |
 
+The `Context & Decisions` heading and three-column table header are always
+required. If no delegated research informed a decision, leave the table with
+only its header and separator; do not invent a decision or citation.
+
 ---
 
 ## State Machine
@@ -115,10 +120,15 @@ not-started → in-progress → complete
 
 ### Critical Rules
 
-1. **Only ONE phase** may be `[IN PROGRESS]` at any time
-2. **Only ONE task** may have `← CURRENT` marker at any time
-3. **Move `← CURRENT`** immediately when starting a new task
-4. **Mark tasks `[x]`** immediately after completing them
+1. An `in-progress` plan has exactly one `[IN PROGRESS]` phase and exactly one unchecked `← CURRENT` task inside it
+2. A `not-started` plan has only `[PENDING]` phases and no `← CURRENT` task
+3. A `complete` plan has only `[COMPLETE]` phases, all tasks checked, and no `← CURRENT` task
+4. A `blocked` plan has exactly one `[BLOCKED]` phase, no `[IN PROGRESS]` phase, and at most one retained `← CURRENT` task
+5. Frontmatter `phase` always identifies the active or blocked phase
+6. Move `← CURRENT` immediately when starting a new task and mark completed tasks `[x]`
+7. Phase numbers are contiguous and ordered from 1; completed tasks never
+   appear after an unchecked task in the same phase
+8. `updated` is a real calendar date, not only a date-shaped string
 
 ---
 
@@ -211,7 +221,7 @@ Add authentication
 - [ ] **2.2 Task two** ← CURRENT
 ```
 
-**Error:** Only one task may be marked CURRENT.
+**Error:** An in-progress plan requires exactly one CURRENT task.
 
 ### ❌ WRONG: Decision without citation
 
@@ -239,7 +249,7 @@ Add authentication
 | Error Message | Fix |
 |---------------|-----|
 | "Missing frontmatter" | Add `---\nstatus: in-progress\nphase: 1\nupdated: 2026-01-02\n---` at top |
-| "Multiple CURRENT markers" | Remove `← CURRENT` from all but the active task |
+| "CURRENT task mismatch" | Apply the lifecycle rules above; an in-progress plan has exactly one active task |
 | "Invalid citation format" | Use `ref:delegation-id` format (e.g., `ref:swift-amber-falcon`) |
 | "Missing goal" | Add `## Goal` section with one-sentence description |
 | "Empty phase" | Add at least one task to each phase |
@@ -254,6 +264,6 @@ Before calling `plan_save`, verify:
 - [ ] **Frontmatter:** Has status, phase, and updated date?
 - [ ] **Goal:** Is there a clear, one-sentence goal?
 - [ ] **Citations:** Are all research-based decisions cited with `ref:id`?
-- [ ] **Single CURRENT:** Is exactly one task marked `← CURRENT`?
+- [ ] **Lifecycle:** Do plan, phase, checkbox, and CURRENT states agree?
 - [ ] **Valid markers:** Do all phases use valid status markers?
 - [ ] **Hierarchical IDs:** Are tasks numbered correctly (1.1, 1.2, 2.1)?

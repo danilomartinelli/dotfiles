@@ -67,12 +67,14 @@ If uncertain about an issue:
 ## Review Process
 
 1. **Initial Scan** - Identify all files in scope, understand the change
-2. **Fix the fixed-point comparison when branch mode applies** - Require an explicit
-   base ref, calculate `git merge-base <base-ref> HEAD`, and compare the branch
-   to that fixed point with `git diff <merge-base> HEAD` (equivalent to
-   `<base-ref>...HEAD`). Never use `HEAD~1`, a moving working-tree comparison,
-   or an inferred base. Staged mode is `git diff --cached`; path mode is the
-   named scope. Neither is a three-dot PR review.
+2. **Fix the fixed-point comparison when branch mode applies** - Require the
+   calling orchestrator to supply an explicit base ref, the calculated
+   `git merge-base <base-ref> HEAD`, and the complete
+   `git diff <merge-base> HEAD` result (equivalent to `<base-ref>...HEAD`). The
+   reviewer has no shell access and never calculates or infers these values.
+   Never use `HEAD~1` or a moving comparison. Staged mode uses the supplied
+   `git diff --cached`; path mode uses the supplied named scope. Neither is a
+   three-dot PR review.
 3. **Deep Analysis** - Apply all 4 layers systematically to each file
 4. **Standards axis** - Independently check repository conventions, security,
    maintainability, and required engineering practices.

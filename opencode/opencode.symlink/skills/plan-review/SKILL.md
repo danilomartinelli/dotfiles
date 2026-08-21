@@ -8,7 +8,7 @@ description: Criteria for reviewing implementation plans against quality standar
 > **Load this skill** when reviewing implementation plans (not code).
 
 ## TL;DR
-Systematic plan review focused on 3 quality categories: Citation Quality, Completeness, and Actionability. Structure is pre-validated by `plan_save`—focus on whether the plan provides actionable implementation guidance.
+Systematic plan review focused on 3 quality categories: Citation Quality, Completeness, and Actionability. `plan_save` validates structure, lifecycle consistency, and that cited delegation artifacts exist; review whether those sources actually support the claims and whether the plan is actionable.
 
 ## When to Use This Skill
 - When reviewing implementation plans before execution
@@ -23,7 +23,7 @@ Systematic plan review focused on 3 quality categories: Citation Quality, Comple
 ### 1. Structure (Pre-validated)
 
 > **Note:** Saved plans are structurally validated by `plan_save` before storage.
-> Format compliance (YAML frontmatter, status markers, CURRENT marker, numbering) is guaranteed.
+> Format compliance, lifecycle consistency, and citation artifact existence are guaranteed.
 > Focus your review on the quality aspects below.
 
 ### 2. Citation Quality
@@ -33,7 +33,7 @@ Systematic plan review focused on 3 quality categories: Citation Quality, Comple
 | Decisions reference sources | `ref:delegation-id` format used |
 | No unsubstantiated claims | Architectural decisions cite research |
 | Research phases show refs | Completed research tasks include citations |
-| Citations are verifiable | IDs match actual delegation outputs |
+| Citations support claims | Read each persisted artifact and confirm it supports the claim |
 
 **Red Flags:**
 - Decisions table with empty or `-` in Source column
@@ -131,7 +131,7 @@ APPROVE | REQUEST_CHANGES | NEEDS_DISCUSSION
 
 ## What NOT to Do
 
-- Do NOT re-validate format—`plan_save` handles structural validation
+- Do NOT re-validate format or artifact existence—`plan_save` handles those checks
 - Do NOT evaluate code quality (that's code-review's job)
 - Do NOT execute or modify the plan during review
 - Do NOT skip citation verification for decisions

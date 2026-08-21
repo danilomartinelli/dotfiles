@@ -16,7 +16,7 @@ and limited to the situations where it improves the work.
 
 ## Sources and review basis
 
-- Matt Pock's MIT-licensed doctrine research, adopted at commit
+- Matt Pocock's MIT-licensed doctrine research, adopted at commit
   `0ab1b63a410a03d3627979a109c8695de27af954`.
 - Leonxlnx's `taste-skill`, reviewed at commit
   `dfb6f9f9e93a39f673b1827c0889cc28326d1800`.
@@ -69,6 +69,43 @@ Resolve conflicts in this order:
 
 Lower-level doctrine cannot grant permission, expand scope, or override a
 higher-level requirement.
+
+## Runtime enforcement
+
+Doctrine routing is enforced as capability policy, not only prose. The global
+runtime denies shell, mutation, delegation, workspace, and skill access by
+default; each agent receives only its role-specific exceptions. Research and
+review agents use structured read-only tools without shell. Coder and scribe
+may mutate only from a child session that inherits an exclusive managed
+worktree lease, and coder cannot own Git delivery. Skill access is an explicit
+per-agent allowlist, so an installed skill cannot become ambient authority.
+
+Native repository config/plugin discovery and shared external skill scans are
+disabled. The runtime preserves project policy only through bounded regular
+`AGENTS.md` files loaded from the Git root to the active directory; repository
+content cannot register executable plugins, agents, commands, or skills. The
+only supported repository-local runtime input is strict data in
+`.opencode/worktree.jsonc`.
+
+`cursor-acp` is quarantined rather than adapted into the active plugin graph.
+The upstream bridge documents that `cursor-agent` may perform native side
+effects before OpenCode receives the corresponding tool event, including edits
+that its own sandbox did not stop. That ordering makes post-hoc hook stripping
+insufficient: provider-native effects bypass OpenCode permissions, agent roles,
+and the managed-worktree lease. Reconsider it only when the backend is
+model-only and every effect is first represented as an OpenCode tool call.
+
+The runtime also validates the target of every direct write against the leased
+worktree, including existing symlink ancestry. Persistence identifiers are
+single safe path segments, and agent-catalog or session-identity lookup failure
+denies capability-sensitive routing instead of guessing.
+
+Planning uses asynchronous delegation only for read-only specialists and
+cannot invoke native write-capable tasks. Build may invoke native tasks only
+for coder and scribe, while read-only exploration, research, and review use the
+persisted delegation channel. Plans must pass the lifecycle parser, and every
+decision citation must resolve to a non-empty artifact persisted under the
+same root session.
 
 ## Conditional routing
 

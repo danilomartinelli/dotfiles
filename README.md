@@ -157,6 +157,7 @@ needed, then runs `brew bundle` against that file.
 | `spaceman-diff`           | Visual image diffs                                |
 | `stern`                   | Tail logs from multiple Kubernetes pods           |
 | `tmux`                    | Terminal multiplexer                              |
+| `psviderski/tap/uncloud`  | Deploy and manage containerised apps with `uc`    |
 | `usage`                   | Usage-spec CLI support, including Mise completion |
 | `watch`                   | Repeat a command and watch the output             |
 | `watchexec`               | Run commands when watched files change            |
@@ -274,6 +275,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`     |
 | `npm:@openai/codex`                         | `0.146.1`    |
 | `npm:eas-cli`                               | `16.28.0`    |
+| `npm:neonctl`                               | `3.6.0`      |
 | `npm:ocx`                                   | `2.0.14`     |
 | `npm:opencode-ai`                           | `1.18.18`    |
 | `npm:skills`                                | `1.5.21`     |
@@ -577,24 +579,52 @@ OpenCode provider keys (`KIMI_API_KEY` / Kimi, `MINIMAX_API_KEY`,
 shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
 OpenCode reads those environment variables automatically once they are exported
 from `~/.localrc`. The `opencode/opencode.symlink/` payload is linked as
-`~/.opencode` and contains the OpenCode config plus the OCX-managed agents,
+`~/.opencode` and contains the dotfiles-owned OpenCode config, agents,
 commands, plugins, skills, and tools. `opencode/env.zsh` points
-`OPENCODE_CONFIG_DIR` there while preserving profile-specific overrides from
-[OCX](https://github.com/kdcokenny/ocx). OCX's mutable local receipt remains
-machine-local at `~/.ocx/receipt.jsonc`; the OpenCode installer idempotently
-normalizes the legacy philosophy instruction path when present. The pinned
-`npm:@rama_nigg/open-cursor` tool provides diagnostics for the matching
-`@rama_nigg/open-cursor` OpenCode plugin. It requires the separately distributed
-Cursor Agent CLI, which `opencode/install.sh` installs idempotently from Cursor's
-official installer. Authentication remains interactive: after bootstrap, run
-`cursor-agent login` once.
-The bridge is pinned to OpenCode's tool loop, and a managed runtime instruction
-keeps OpenCode tools, permissions, and MCPs authoritative even when Cursor
-supplies the model. Tool-limit failures must be retried with narrower OpenCode
-queries rather than switching to Cursor's native tool surface.
-Do not run `open-cursor install` or `open-cursor sync-models` against the managed
-`opencode.jsonc`: version 2.5.6 parses strict JSON and cannot preserve JSONC
-comments or trailing commas. Update the provider models declaratively instead.
+`OPENCODE_CONFIG_DIR` there while preserving an explicit machine-local override.
+[OCX](https://github.com/kdcokenny/ocx) is available as a CLI, but it does
+not own this customized payload: `ocx.jsonc` has no registry, and no OCX receipt
+may claim paths below `~/.opencode`. The installer rejects both overlapping OCX
+ownership and policy-bearing content in legacy `~/.config/opencode`, because
+either can silently overwrite or merge into the managed runtime. OpenCode may
+retain its generated dependency cache there; the installer accepts only that
+known cache shape, empty plugin/skill directories, and DCP's schema-only
+bootstrap file.
+
+Local plugin entrypoints are listed explicitly and in order under
+`plugins/ocx/`; the conventional direct `plugins/*.ts` scan root is kept empty
+to prevent duplicate loading. External plugins are pinned, OpenCode update is
+notify-only, and `bun.lock` is versioned. Provider bridge aliases that bypass
+canonical tool names are denied declaratively and rejected by the runtime hook.
+The `cursor-acp` provider is explicitly disabled and its former model catalog is
+kept only in a quarantined JSONC comment. `open-cursor` is not a plugin or local
+dependency: its documented `cursor-agent` subprocess can perform native side
+effects before OpenCode receives a tool call, so neither OpenCode permissions
+nor the managed-worktree lease can authorize or stop those effects. Re-enable
+it only after the backend becomes model-only and every effect crosses the
+OpenCode tool boundary first.
+The DCP plugin is configured by the versioned `dcp.jsonc`; only `plan` and
+`build` may call `compress`, subagent compression is disabled, and delegation,
+plan, and worktree artifacts are protected from pruning. Its local adapter
+rejects repository-level DCP overrides.
+Native project-config/plugin discovery and shared external skill scans are
+disabled. A dotfiles-owned read-only loader preserves hierarchical
+`AGENTS.md` instructions from the Git root to the active directory; project
+`.opencode/worktree.jsonc` remains the sole supported repository-local runtime
+configuration and is parsed as strict data.
+The native workspace API may still
+advertise OpenCode's built-in `worktree` adapter, but it is unmanaged and never
+authorizes mutation. Implementation must enter through `worktree_create`, the
+`ocx-git-worktree` adapter, and its exclusive session/branch/path/workspace
+lease. Repository `.opencode/worktree.jsonc` files may configure only worktree
+paths and safe explicit copy/symlink inputs; executable lifecycle hooks and
+unknown keys are rejected. Direct write targets are checked against the leased
+worktree, including symlink ancestry, and lifecycle recovery remains retryable
+after a transient native workspace API failure.
+
+Existing manually installed `open-cursor` or `cursor-agent` CLIs are outside the
+managed runtime and are not invoked by bootstrap. Do not run `open-cursor
+install` or `open-cursor sync-models` against the managed `opencode.jsonc`.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally
@@ -635,7 +665,8 @@ setup, and Zsh startup to resolve the same Homebrew executable and prefix rules.
 
 After changing shell configuration, run the relevant tests and then `reload!`.
 The OpenCode plugin suite is run from `opencode/opencode.symlink` with
-`bun test`; `bun run test:worktree` runs the worktree automation boundary suite.
+`bun test`; `bun run test:orchestration` runs the focused permission, workspace,
+plan, plugin-topology, and notification boundary suite.
 
 ## Adding a topic or dependency
 

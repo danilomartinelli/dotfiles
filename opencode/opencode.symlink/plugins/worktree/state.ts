@@ -1,564 +1,535 @@
 /**
- * SQLite State Module for Worktree Plugin
+ * Durable state for OCX-managed OpenCode workspaces.
  *
- * Provides atomic, crash-safe persistence for worktree sessions and pending operations.
- * Uses bun:sqlite for zero external dependencies.
- *
- * Database location: ~/.local/share/opencode/plugins/worktree/{project-id}.sqlite
- * Project ID is the first git root commit SHA (40-char hex), with SHA-256 path hash fallback (16-char).
+ * A session, branch, path, and native workspace ID form one exclusive lease.
+ * Pending continuation and deletion operations are keyed by session so
+ * concurrent orchestrators cannot overwrite each other's lifecycle state.
  */
 
-import { Database } from "bun:sqlite"
-import { mkdirSync } from "node:fs"
-import * as os from "node:os"
-import * as path from "node:path"
-import { z } from "zod"
-import type { OpencodeClient } from "../kdco-primitives"
-import { getProjectId, logWarn } from "../kdco-primitives"
-import { parsePersistedLaunchMetadata, serializePersistedLaunchMetadata } from "./launch-context"
+import { Database } from "bun:sqlite";
+import { mkdirSync } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { z } from "zod";
+import { getProjectId } from "../kdco-primitives";
+import { isSafeStorageSegment } from "../kdco-primitives/storage-id";
 
-// =============================================================================
-// TYPES
-// =============================================================================
-
-/** Represents an active worktree session */
 export interface Session {
-	id: string
-	branch: string
-	path: string
-	createdAt: string
-	workspaceId: string | null
-	launchMode: "plain" | "ocx"
-	profile: string | null
-	ocxBin: string | null
+	id: string;
+	branch: string;
+	path: string;
+	createdAt: string;
+	workspaceId: string | null;
 }
 
-export type SessionInput = Omit<Session, "workspaceId" | "launchMode" | "profile" | "ocxBin"> & {
-	workspaceId?: string | null
-	launchMode?: "plain" | "ocx"
-	profile?: string | null
-	ocxBin?: string | null
+export type SessionInput = Omit<Session, "workspaceId"> & {
+	workspaceId?: string | null;
+};
+
+export interface PendingContinuation {
+	sessionId: string;
+	workspaceId: string;
+	createdAt: string;
 }
 
-/** Pending spawn operation to be processed on session.idle */
-export interface PendingSpawn {
-	branch: string
-	path: string
-	sessionId: string
+export interface ClaimedContinuation extends PendingContinuation {
+	claimToken: string;
 }
 
-/** Pending delete operation to be processed on session.idle */
 export interface PendingDelete {
-	branch: string
-	path: string
-	sessionId: string
+	branch: string;
+	path: string;
+	sessionId: string;
+	createdAt: string;
 }
-
-// =============================================================================
-// SCHEMAS (Boundary Validation)
-// =============================================================================
 
 const sessionSchema = z.object({
-	id: z.string().min(1),
+	id: z.string().refine(isSafeStorageSegment, "Invalid session ID"),
 	branch: z.string().min(1),
 	path: z.string().min(1),
 	createdAt: z.string().min(1),
 	workspaceId: z.string().min(1).nullable().optional(),
-	launchMode: z.enum(["plain", "ocx"]).optional(),
-	profile: z.string().nullable().optional(),
-	ocxBin: z.string().nullable().optional(),
-})
+});
 
-const pendingSpawnSchema = z.object({
-	branch: z.string().min(1),
-	path: z.string().min(1),
-	sessionId: z.string().min(1),
-})
+const pendingContinuationSchema = z.object({
+	sessionId: z.string().refine(isSafeStorageSegment, "Invalid session ID"),
+	workspaceId: z.string().min(1),
+	createdAt: z.string().min(1),
+});
 
 const pendingDeleteSchema = z.object({
 	branch: z.string().min(1),
 	path: z.string().min(1),
-	sessionId: z.string().min(1),
-})
+	sessionId: z.string().refine(isSafeStorageSegment, "Invalid session ID"),
+	createdAt: z.string().min(1),
+});
 
-// =============================================================================
-// DATABASE UTILITIES
-// =============================================================================
-
-/**
- * Get the default base directory for worktree storage.
- * Location: ~/.local/share/opencode/worktree/
- */
 function getWorktreeBaseDirectory(): string {
-	return path.join(os.homedir(), ".local", "share", "opencode", "worktree")
+	return path.join(os.homedir(), ".local", "share", "opencode", "worktree");
 }
 
-/**
- * Get the worktree path for a given project and branch.
- *
- * @param projectRoot - Absolute path to the project root
- * @param branch - Branch name for the worktree
- * @param basePath - Optional custom base path (absolute). Defaults to ~/.local/share/opencode/worktree
- * @returns Absolute path to the worktree directory
- */
 export async function getWorktreePath(
 	projectRoot: string,
 	branch: string,
 	basePath?: string,
 ): Promise<string> {
-	if (!branch || typeof branch !== "string") {
-		throw new Error("branch is required")
+	if (!branch || typeof branch !== "string")
+		throw new Error("branch is required");
+	const projectId = await getProjectId(projectRoot);
+	const baseDirectory = basePath ?? getWorktreeBaseDirectory();
+	if (!path.isAbsolute(baseDirectory)) {
+		throw new Error("worktree base path must be absolute");
 	}
-	const projectId = await getProjectId(projectRoot)
-	return path.join(basePath ?? getWorktreeBaseDirectory(), projectId, branch)
+	const projectDirectory = path.resolve(baseDirectory, projectId);
+	const worktreePath = path.resolve(projectDirectory, branch);
+	const relative = path.relative(projectDirectory, worktreePath);
+	if (
+		relative === "" ||
+		relative.startsWith("..") ||
+		path.isAbsolute(relative)
+	) {
+		throw new Error("branch escapes the project worktree directory");
+	}
+	return worktreePath;
 }
 
-/**
- * Get the database directory path.
- * Location: ~/.local/share/opencode/plugins/worktree/
- */
 function getDbDirectory(): string {
-	const home = os.homedir()
-	return path.join(home, ".local", "share", "opencode", "plugins", "worktree")
+	return path.join(
+		os.homedir(),
+		".local",
+		"share",
+		"opencode",
+		"plugins",
+		"worktree",
+	);
 }
 
-/**
- * Get the full database file path for a project.
- * @param projectRoot - Absolute path to the project root
- */
 async function getDbPath(projectRoot: string): Promise<string> {
-	const projectId = await getProjectId(projectRoot)
-	return path.join(getDbDirectory(), `${projectId}.sqlite`)
+	const projectId = await getProjectId(projectRoot);
+	return path.join(getDbDirectory(), `${projectId}.sqlite`);
 }
 
-/**
- * Initialize the SQLite database for worktree state.
- * Creates the database file and schema if they don't exist.
- *
- * @param projectRoot - Absolute path to the project root
- * @returns Configured Database instance
- *
- * @example
- * ```ts
- * const db = await initStateDb("/home/user/my-project")
- * const sessions = getAllSessions(db)
- * db.close()
- * ```
- */
-export async function initStateDb(projectRoot: string): Promise<Database> {
-	// Guard: validate project root
-	if (!projectRoot || typeof projectRoot !== "string") {
-		throw new Error("initStateDb requires a valid project root path")
+function tableExists(db: Database, tableName: string): boolean {
+	const row = db
+		.prepare(
+			"SELECT name FROM sqlite_master WHERE type = 'table' AND name = $name",
+		)
+		.get({ $name: tableName }) as { name?: string } | null;
+	return row?.name === tableName;
+}
+
+function ensureWorkspaceIdColumn(db: Database): void {
+	const columns = db.prepare("PRAGMA table_info(sessions)").all() as Array<{
+		name?: string;
+	}>;
+	if (columns.some((column) => column.name === "workspace_id")) return;
+	db.exec("ALTER TABLE sessions ADD COLUMN workspace_id TEXT");
+}
+
+function ensurePendingContinuationClaimColumns(db: Database): void {
+	const columns = db
+		.prepare("PRAGMA table_info(pending_continuations)")
+		.all() as Array<{
+		name?: string;
+	}>;
+	const names = new Set(columns.map((column) => column.name));
+	if (!names.has("state")) {
+		db.exec(
+			"ALTER TABLE pending_continuations ADD COLUMN state TEXT NOT NULL DEFAULT 'pending'",
+		);
+	}
+	if (!names.has("claim_token")) {
+		db.exec("ALTER TABLE pending_continuations ADD COLUMN claim_token TEXT");
+	}
+	if (!names.has("claimed_at")) {
+		db.exec("ALTER TABLE pending_continuations ADD COLUMN claimed_at TEXT");
+	}
+}
+
+function describeDuplicateLease(db: Database): string | null {
+	for (const column of ["branch", "path", "workspace_id"] as const) {
+		const where =
+			column === "workspace_id" ? "WHERE workspace_id IS NOT NULL" : "";
+		const row = db
+			.prepare(
+				`SELECT ${column} AS value, COUNT(*) AS count FROM sessions ${where} GROUP BY ${column} HAVING COUNT(*) > 1 LIMIT 1`,
+			)
+			.get() as { value?: string; count?: number } | null;
+		if (row?.value) return `${column}=${row.value} (${row.count ?? 2} claims)`;
+	}
+	return null;
+}
+
+function createExclusiveLeaseIndexes(db: Database): void {
+	const duplicate = describeDuplicateLease(db);
+	if (duplicate) {
+		throw new Error(
+			`Cannot enable exclusive workspace leases while duplicate session state exists: ${duplicate}. Resolve the stale claims explicitly.`,
+		);
 	}
 
-	const dbPath = await getDbPath(projectRoot)
-	const dbDir = path.dirname(dbPath)
+	db.exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS sessions_branch_unique ON sessions(branch);
+		CREATE UNIQUE INDEX IF NOT EXISTS sessions_path_unique ON sessions(path);
+		CREATE UNIQUE INDEX IF NOT EXISTS sessions_workspace_unique
+			ON sessions(workspace_id) WHERE workspace_id IS NOT NULL;
+	`);
+}
 
-	// Create directory synchronously (required before opening DB)
-	mkdirSync(dbDir, { recursive: true })
+function migrateLegacyPendingOperations(db: Database): void {
+	if (!tableExists(db, "pending_operations")) return;
 
-	// Open database (creates if doesn't exist)
-	const db = new Database(dbPath)
+	const legacyDelete = db
+		.prepare(
+			"SELECT branch, path, session_id AS sessionId FROM pending_operations WHERE type = 'delete' LIMIT 1",
+		)
+		.get() as { branch?: string; path?: string; sessionId?: string } | null;
 
-	// Configure SQLite for concurrent access
-	db.exec("PRAGMA journal_mode=WAL")
-	db.exec("PRAGMA busy_timeout=5000")
+	if (legacyDelete?.branch && legacyDelete.path && legacyDelete.sessionId) {
+		const sessionExists = db
+			.prepare("SELECT 1 AS present FROM sessions WHERE id = $sessionId")
+			.get({ $sessionId: legacyDelete.sessionId }) as {
+			present: number;
+		} | null;
+		if (sessionExists) {
+			db.prepare(`
+				INSERT OR IGNORE INTO pending_deletes (session_id, branch, path, created_at)
+				VALUES ($sessionId, $branch, $path, $createdAt)
+			`).run({
+				$sessionId: legacyDelete.sessionId,
+				$branch: legacyDelete.branch,
+				$path: legacyDelete.path,
+				$createdAt: new Date().toISOString(),
+			});
+		}
+	}
 
-	// Create tables with schema
+	db.exec("DROP TABLE pending_operations");
+}
+
+export async function initStateDb(projectRoot: string): Promise<Database> {
+	if (!projectRoot || typeof projectRoot !== "string") {
+		throw new Error("initStateDb requires a valid project root path");
+	}
+
+	const dbPath = await getDbPath(projectRoot);
+	mkdirSync(path.dirname(dbPath), { recursive: true });
+	const db = new Database(dbPath);
+
+	db.exec("PRAGMA journal_mode=WAL");
+	db.exec("PRAGMA busy_timeout=5000");
+	db.exec("PRAGMA foreign_keys=ON");
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS sessions (
 			id TEXT PRIMARY KEY,
 			branch TEXT NOT NULL,
 			path TEXT NOT NULL,
 			created_at TEXT NOT NULL,
-			workspace_id TEXT,
-			launch_mode TEXT,
-			profile TEXT,
-			ocx_bin TEXT
-		)
-	`)
-
-	ensureSessionMetadataColumns(db)
-
+			workspace_id TEXT
+		);
+	`);
+	ensureWorkspaceIdColumn(db);
 	db.exec(`
-		CREATE TABLE IF NOT EXISTS pending_operations (
-			id INTEGER PRIMARY KEY CHECK (id = 1),
-			type TEXT NOT NULL,
-			branch TEXT NOT NULL,
-			path TEXT NOT NULL,
-			session_id TEXT
-		)
-	`)
-
-	return db
+		CREATE TABLE IF NOT EXISTS pending_continuations (
+			session_id TEXT PRIMARY KEY,
+			workspace_id TEXT NOT NULL UNIQUE,
+			created_at TEXT NOT NULL,
+			state TEXT NOT NULL DEFAULT 'pending',
+			claim_token TEXT,
+			claimed_at TEXT,
+			FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+		);
+		CREATE TABLE IF NOT EXISTS pending_deletes (
+			session_id TEXT PRIMARY KEY,
+			branch TEXT NOT NULL UNIQUE,
+			path TEXT NOT NULL UNIQUE,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+		);
+	`);
+	ensurePendingContinuationClaimColumns(db);
+	migrateLegacyPendingOperations(db);
+	createExclusiveLeaseIndexes(db);
+	return db;
 }
 
-function ensureSessionMetadataColumns(db: Database): void {
-	const tableInfo = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name?: string }>
-	const sessionColumns = new Set(tableInfo.map((column) => column.name).filter(Boolean))
-
-	if (!sessionColumns.has("workspace_id")) {
-		addSessionColumn(db, "workspace_id", "ALTER TABLE sessions ADD COLUMN workspace_id TEXT")
-	}
-
-	if (!sessionColumns.has("launch_mode")) {
-		addSessionColumn(db, "launch_mode", "ALTER TABLE sessions ADD COLUMN launch_mode TEXT")
-	}
-
-	if (!sessionColumns.has("profile")) {
-		addSessionColumn(db, "profile", "ALTER TABLE sessions ADD COLUMN profile TEXT")
-	}
-
-	if (!sessionColumns.has("ocx_bin")) {
-		addSessionColumn(db, "ocx_bin", "ALTER TABLE sessions ADD COLUMN ocx_bin TEXT")
-	}
-}
-
-function addSessionColumn(db: Database, columnName: string, sql: string): void {
-	try {
-		db.exec(sql)
-	} catch (error) {
-		if (isDuplicateColumnError(error, columnName)) {
-			return
-		}
-
-		throw error
-	}
-}
-
-function isDuplicateColumnError(error: unknown, columnName: string): boolean {
-	if (!(error instanceof Error)) {
-		return false
-	}
-
-	const normalizedMessage = error.message.toLowerCase()
-	return (
-		normalizedMessage.includes("duplicate column name") &&
-		normalizedMessage.includes(columnName.toLowerCase())
-	)
+function parseSessionInput(session: SessionInput): Session {
+	const parsed = sessionSchema.parse(session);
+	return {
+		id: parsed.id,
+		branch: parsed.branch,
+		path: path.resolve(parsed.path),
+		createdAt: parsed.createdAt,
+		workspaceId: parsed.workspaceId ?? null,
+	};
 }
 
 function normalizeSessionRow(row: Record<string, string | null>): Session {
-	const launchMetadata = parsePersistedLaunchMetadata({
-		launchMode: row.launchMode,
-		profile: row.profile,
-		ocxBin: row.ocxBin,
-	})
-	const serialized = serializePersistedLaunchMetadata(launchMetadata)
-
 	return {
 		id: String(row.id),
 		branch: String(row.branch),
 		path: String(row.path),
 		createdAt: String(row.createdAt),
 		workspaceId: row.workspaceId ? String(row.workspaceId) : null,
-		launchMode: serialized.launchMode,
-		profile: serialized.profile,
-		ocxBin: serialized.ocxBin,
-	}
+	};
 }
 
-// =============================================================================
-// SESSION CRUD
-// =============================================================================
-
-/**
- * Add a new session to the database.
- * Uses atomic INSERT OR REPLACE for idempotency.
- *
- * @param db - Database instance from initStateDb
- * @param session - Session data to persist
- */
+/** Upsert only the same session ID; branch/path/workspace conflicts fail. */
 export function addSession(db: Database, session: SessionInput): void {
-	const parsedSession = parseSessionInput(session)
-
-	const stmt = db.prepare(`
-		INSERT OR REPLACE INTO sessions (id, branch, path, created_at, workspace_id, launch_mode, profile, ocx_bin)
-		VALUES ($id, $branch, $path, $createdAt, $workspaceId, $launchMode, $profile, $ocxBin)
-	`)
-
-	stmt.run({
-		$id: parsedSession.id,
-		$branch: parsedSession.branch,
-		$path: parsedSession.path,
-		$createdAt: parsedSession.createdAt,
-		$workspaceId: parsedSession.workspaceId,
-		$launchMode: parsedSession.launchMode,
-		$profile: parsedSession.profile,
-		$ocxBin: parsedSession.ocxBin,
-	})
+	const parsed = parseSessionInput(session);
+	db.prepare(`
+		INSERT INTO sessions (id, branch, path, created_at, workspace_id)
+		VALUES ($id, $branch, $path, $createdAt, $workspaceId)
+		ON CONFLICT(id) DO UPDATE SET
+			branch = excluded.branch,
+			path = excluded.path,
+			created_at = excluded.created_at,
+			workspace_id = excluded.workspace_id
+	`).run({
+		$id: parsed.id,
+		$branch: parsed.branch,
+		$path: parsed.path,
+		$createdAt: parsed.createdAt,
+		$workspaceId: parsed.workspaceId,
+	});
 }
 
-function parseSessionInput(session: SessionInput): Session & { launchMode: "plain" | "ocx" } {
-	const parsed = sessionSchema.parse(session)
-	const launchMetadata = parsePersistedLaunchMetadata({
-		launchMode: parsed.launchMode,
-		profile: parsed.profile,
-		ocxBin: parsed.ocxBin,
-	})
-	const serializedLaunchMetadata = serializePersistedLaunchMetadata(launchMetadata)
-
-	return {
-		id: parsed.id,
-		branch: parsed.branch,
-		path: parsed.path,
-		createdAt: parsed.createdAt,
-		workspaceId: parsed.workspaceId ?? null,
-		launchMode: serializedLaunchMetadata.launchMode,
-		profile: serializedLaunchMetadata.profile,
-		ocxBin: serializedLaunchMetadata.ocxBin,
-	}
-}
-
-/**
- * Claim a session before binding it to a native workspace.
- *
- * Unlike addSession, this intentionally does not replace an existing row. A
- * duplicate claim is a workspace-boundary failure and must prevent reassignment
- * without a durable nested-worktree guard.
- */
+/** Acquire a new exclusive workspace lease. */
 export function claimSession(db: Database, session: SessionInput): void {
-	const parsedSession = parseSessionInput(session)
-	const stmt = db.prepare(`
-		INSERT INTO sessions (id, branch, path, created_at, workspace_id, launch_mode, profile, ocx_bin)
-		VALUES ($id, $branch, $path, $createdAt, $workspaceId, $launchMode, $profile, $ocxBin)
-	`)
-
-	stmt.run({
-		$id: parsedSession.id,
-		$branch: parsedSession.branch,
-		$path: parsedSession.path,
-		$createdAt: parsedSession.createdAt,
-		$workspaceId: parsedSession.workspaceId,
-		$launchMode: parsedSession.launchMode,
-		$profile: parsedSession.profile,
-		$ocxBin: parsedSession.ocxBin,
-	})
+	const parsed = parseSessionInput(session);
+	db.prepare(`
+		INSERT INTO sessions (id, branch, path, created_at, workspace_id)
+		VALUES ($id, $branch, $path, $createdAt, $workspaceId)
+	`).run({
+		$id: parsed.id,
+		$branch: parsed.branch,
+		$path: parsed.path,
+		$createdAt: parsed.createdAt,
+		$workspaceId: parsed.workspaceId,
+	});
 }
 
-/**
- * Get a session by ID.
- *
- * @param db - Database instance from initStateDb
- * @param sessionId - Session ID to look up
- * @returns Session if found, null otherwise
- */
 export function getSession(db: Database, sessionId: string): Session | null {
-	// Guard: empty session ID
-	if (!sessionId) return null
-
-	const stmt = db.prepare(`
-		SELECT id, branch, path, created_at as createdAt, workspace_id as workspaceId, launch_mode as launchMode, profile, ocx_bin as ocxBin
-		FROM sessions
-		WHERE id = $id
-	`)
-
-	const row = stmt.get({ $id: sessionId }) as Record<string, string | null> | null
-	if (!row) return null
-
-	return normalizeSessionRow(row)
+	if (!sessionId) return null;
+	const row = db
+		.prepare(`
+			SELECT id, branch, path, created_at AS createdAt, workspace_id AS workspaceId
+			FROM sessions WHERE id = $id
+		`)
+		.get({ $id: sessionId }) as Record<string, string | null> | null;
+	return row ? normalizeSessionRow(row) : null;
 }
 
-/**
- * Remove a session by branch name.
- * Deletes all sessions matching the branch.
- *
- * @param db - Database instance from initStateDb
- * @param branch - Branch name to remove
- */
-export function removeSession(db: Database, branch: string): void {
-	// Guard: empty branch
-	if (!branch) return
-
-	const stmt = db.prepare(`DELETE FROM sessions WHERE branch = $branch`)
-	stmt.run({ $branch: branch })
+export function getSessionByBranch(
+	db: Database,
+	branch: string,
+): Session | null {
+	if (!branch) return null;
+	const row = db
+		.prepare(`
+			SELECT id, branch, path, created_at AS createdAt, workspace_id AS workspaceId
+			FROM sessions WHERE branch = $branch
+		`)
+		.get({ $branch: branch }) as Record<string, string | null> | null;
+	return row ? normalizeSessionRow(row) : null;
 }
 
-/** Remove one claimed session without affecting another session on the branch. */
-export function removeSessionById(db: Database, sessionId: string): void {
-	if (!sessionId) return
-
-	const stmt = db.prepare(`DELETE FROM sessions WHERE id = $id`)
-	stmt.run({ $id: sessionId })
-}
-
-/**
- * Get all active sessions.
- *
- * @param db - Database instance from initStateDb
- * @returns Array of all sessions, empty if none
- */
 export function getAllSessions(db: Database): Session[] {
-	const stmt = db.prepare(`
-		SELECT id, branch, path, created_at as createdAt, workspace_id as workspaceId, launch_mode as launchMode, profile, ocx_bin as ocxBin
-		FROM sessions
-		ORDER BY created_at ASC
-	`)
-
-	const rows = stmt.all() as Array<Record<string, string | null>>
-	return rows.map((row) => normalizeSessionRow(row))
+	const rows = db
+		.prepare(`
+			SELECT id, branch, path, created_at AS createdAt, workspace_id AS workspaceId
+			FROM sessions ORDER BY created_at ASC
+		`)
+		.all() as Array<Record<string, string | null>>;
+	return rows.map(normalizeSessionRow);
 }
 
-// =============================================================================
-// PENDING SPAWN OPERATIONS
-// =============================================================================
+export function removeSessionById(db: Database, sessionId: string): void {
+	if (!sessionId) return;
+	db.prepare("DELETE FROM sessions WHERE id = $id").run({ $id: sessionId });
+}
 
-/**
- * Set a pending spawn operation. Uses singleton pattern (last-write-wins).
- *
- * If a pending spawn already exists, it will be REPLACED and a warning logged.
- * This is intentional: only the most recent spawn request should be processed.
- *
- * @param db - Database instance from initStateDb
- * @param spawn - Spawn operation data
- */
-export function setPendingSpawn(db: Database, spawn: PendingSpawn, client?: OpencodeClient): void {
-	// Parse at boundary for type safety
-	const parsed = pendingSpawnSchema.parse(spawn)
-
-	// Check for existing operations and warn about replacement
-	const existingSpawn = getPendingSpawn(db)
-	const existingDelete = getPendingDelete(db)
-
-	if (existingSpawn) {
-		logWarn(
-			client,
-			"worktree",
-			`Replacing pending spawn: "${existingSpawn.branch}" → "${parsed.branch}"`,
+export function setPendingContinuation(
+	db: Database,
+	continuation: Omit<PendingContinuation, "createdAt"> & { createdAt?: string },
+): void {
+	const parsed = pendingContinuationSchema.parse({
+		...continuation,
+		createdAt: continuation.createdAt ?? new Date().toISOString(),
+	});
+	db.prepare(`
+		INSERT INTO pending_continuations (
+			session_id, workspace_id, created_at, state, claim_token, claimed_at
 		)
-	} else if (existingDelete) {
-		logWarn(
-			client,
-			"worktree",
-			`Pending spawn replacing pending delete for: "${existingDelete.branch}"`,
-		)
-	}
-
-	// Atomic: replace any existing pending operation
-	const stmt = db.prepare(`
-		INSERT OR REPLACE INTO pending_operations (id, type, branch, path, session_id)
-		VALUES (1, 'spawn', $branch, $path, $sessionId)
-	`)
-
-	stmt.run({
-		$branch: parsed.branch,
-		$path: parsed.path,
+		VALUES ($sessionId, $workspaceId, $createdAt, 'pending', NULL, NULL)
+		ON CONFLICT(session_id) DO UPDATE SET
+			workspace_id = excluded.workspace_id,
+			created_at = excluded.created_at,
+			state = 'pending',
+			claim_token = NULL,
+			claimed_at = NULL
+	`).run({
 		$sessionId: parsed.sessionId,
-	})
+		$workspaceId: parsed.workspaceId,
+		$createdAt: parsed.createdAt,
+	});
+}
+
+export function getPendingContinuation(
+	db: Database,
+	sessionId: string,
+): PendingContinuation | null {
+	if (!sessionId) return null;
+	const row = db
+		.prepare(`
+			SELECT session_id AS sessionId, workspace_id AS workspaceId, created_at AS createdAt
+			FROM pending_continuations WHERE session_id = $sessionId
+		`)
+		.get({ $sessionId: sessionId }) as PendingContinuation | null;
+	return row ?? null;
+}
+
+export function getAllPendingContinuations(
+	db: Database,
+): PendingContinuation[] {
+	return db
+		.prepare(`
+			SELECT session_id AS sessionId, workspace_id AS workspaceId, created_at AS createdAt
+			FROM pending_continuations ORDER BY created_at ASC
+		`)
+		.all() as PendingContinuation[];
 }
 
 /**
- * Get the pending spawn operation if one exists.
- *
- * @param db - Database instance from initStateDb
- * @returns PendingSpawn if exists and type is 'spawn', null otherwise
+ * Atomically claim a continuation for delivery. A crashed dispatcher becomes
+ * recoverable after the supplied stale boundary, while concurrent dispatchers
+ * cannot send the same continuation at the same time.
  */
-export function getPendingSpawn(db: Database): PendingSpawn | null {
-	const stmt = db.prepare(`
-		SELECT type, branch, path, session_id as sessionId
-		FROM pending_operations
-		WHERE id = 1 AND type = 'spawn'
-	`)
-
-	const row = stmt.get() as Record<string, string> | null
-	if (!row) return null
-
-	return {
-		branch: row.branch,
-		path: row.path,
-		sessionId: row.sessionId,
-	}
+export function claimPendingContinuation(
+	db: Database,
+	sessionId: string,
+	claimToken: string,
+	staleBefore: string,
+	claimedAt = new Date().toISOString(),
+): ClaimedContinuation | null {
+	if (!sessionId || !claimToken) return null;
+	const row = db
+		.prepare(`
+			UPDATE pending_continuations
+			SET state = 'dispatching', claim_token = $claimToken, claimed_at = $claimedAt
+			WHERE session_id = $sessionId
+				AND (
+					state = 'pending'
+					OR claimed_at IS NULL
+					OR claimed_at <= $staleBefore
+				)
+			RETURNING
+				session_id AS sessionId,
+				workspace_id AS workspaceId,
+				created_at AS createdAt,
+				claim_token AS claimToken
+		`)
+		.get({
+			$sessionId: sessionId,
+			$claimToken: claimToken,
+			$claimedAt: claimedAt,
+			$staleBefore: staleBefore,
+		}) as ClaimedContinuation | null;
+	return row ?? null;
 }
 
-/**
- * Clear any pending spawn operation.
- * Removes the row if it's a spawn type, leaves deletes untouched.
- *
- * @param db - Database instance from initStateDb
- */
-export function clearPendingSpawn(db: Database): void {
-	const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'spawn'`)
-	stmt.run()
+export function completePendingContinuation(
+	db: Database,
+	sessionId: string,
+	claimToken: string,
+): boolean {
+	if (!sessionId || !claimToken) return false;
+	const result = db
+		.prepare(`
+			DELETE FROM pending_continuations
+			WHERE session_id = $sessionId AND claim_token = $claimToken
+		`)
+		.run({ $sessionId: sessionId, $claimToken: claimToken });
+	return result.changes === 1;
 }
 
-// =============================================================================
-// PENDING DELETE OPERATIONS
-// =============================================================================
+export function releasePendingContinuation(
+	db: Database,
+	sessionId: string,
+	claimToken: string,
+): boolean {
+	if (!sessionId || !claimToken) return false;
+	const result = db
+		.prepare(`
+			UPDATE pending_continuations
+			SET state = 'pending', claim_token = NULL, claimed_at = NULL
+			WHERE session_id = $sessionId AND claim_token = $claimToken
+		`)
+		.run({ $sessionId: sessionId, $claimToken: claimToken });
+	return result.changes === 1;
+}
 
-/**
- * Set a pending delete operation. Uses singleton pattern (last-write-wins).
- *
- * If a pending delete already exists, it will be REPLACED and a warning logged.
- * This is intentional: only the most recent delete request should be processed.
- *
- * @param db - Database instance from initStateDb
- * @param del - Delete operation data
- */
-export function setPendingDelete(db: Database, del: PendingDelete, client?: OpencodeClient): void {
-	// Parse at boundary for type safety
-	const parsed = pendingDeleteSchema.parse(del)
+export function clearPendingContinuation(
+	db: Database,
+	sessionId: string,
+): void {
+	if (!sessionId) return;
+	db.prepare(
+		"DELETE FROM pending_continuations WHERE session_id = $sessionId",
+	).run({
+		$sessionId: sessionId,
+	});
+}
 
-	// Check for existing operations and warn about replacement
-	const existingDelete = getPendingDelete(db)
-	const existingSpawn = getPendingSpawn(db)
-
-	if (existingDelete) {
-		logWarn(
-			client,
-			"worktree",
-			`Replacing pending delete: "${existingDelete.branch}" → "${parsed.branch}"`,
-		)
-	} else if (existingSpawn) {
-		logWarn(
-			client,
-			"worktree",
-			`Pending delete replacing pending spawn for: "${existingSpawn.branch}"`,
-		)
-	}
-
-	// Atomic: replace any existing pending operation
-	const stmt = db.prepare(`
-		INSERT OR REPLACE INTO pending_operations (id, type, branch, path, session_id)
-		VALUES (1, 'delete', $branch, $path, $sessionId)
-	`)
-
-	stmt.run({
-		$branch: parsed.branch,
-		$path: parsed.path,
+export function setPendingDelete(
+	db: Database,
+	del: Omit<PendingDelete, "createdAt"> & { createdAt?: string },
+): void {
+	const parsed = pendingDeleteSchema.parse({
+		...del,
+		createdAt: del.createdAt ?? new Date().toISOString(),
+	});
+	db.prepare(`
+		INSERT INTO pending_deletes (session_id, branch, path, created_at)
+		VALUES ($sessionId, $branch, $path, $createdAt)
+		ON CONFLICT(session_id) DO UPDATE SET
+			branch = excluded.branch,
+			path = excluded.path,
+			created_at = excluded.created_at
+	`).run({
 		$sessionId: parsed.sessionId,
-	})
+		$branch: parsed.branch,
+		$path: path.resolve(parsed.path),
+		$createdAt: parsed.createdAt,
+	});
 }
 
-/**
- * Get the pending delete operation if one exists.
- *
- * @param db - Database instance from initStateDb
- * @returns PendingDelete if exists and type is 'delete', null otherwise
- */
-export function getPendingDelete(db: Database): PendingDelete | null {
-	const stmt = db.prepare(`
-		SELECT type, branch, path, session_id as sessionId
-		FROM pending_operations
-		WHERE id = 1 AND type = 'delete'
-	`)
-
-	const row = stmt.get() as Record<string, string> | null
-	if (!row) return null
-
-	return {
-		branch: row.branch,
-		path: row.path,
-		sessionId: row.sessionId,
-	}
+export function getPendingDelete(
+	db: Database,
+	sessionId: string,
+): PendingDelete | null {
+	if (!sessionId) return null;
+	const row = db
+		.prepare(`
+			SELECT session_id AS sessionId, branch, path, created_at AS createdAt
+			FROM pending_deletes WHERE session_id = $sessionId
+		`)
+		.get({ $sessionId: sessionId }) as PendingDelete | null;
+	return row ?? null;
 }
 
-/**
- * Clear any pending delete operation.
- * Removes the row if it's a delete type, leaves spawns untouched.
- *
- * @param db - Database instance from initStateDb
- */
-export function clearPendingDelete(db: Database): void {
-	const stmt = db.prepare(`DELETE FROM pending_operations WHERE id = 1 AND type = 'delete'`)
-	stmt.run()
+export function getAllPendingDeletes(db: Database): PendingDelete[] {
+	return db
+		.prepare(`
+			SELECT session_id AS sessionId, branch, path, created_at AS createdAt
+			FROM pending_deletes ORDER BY created_at ASC
+		`)
+		.all() as PendingDelete[];
+}
+
+export function clearPendingDelete(db: Database, sessionId: string): void {
+	if (!sessionId) return;
+	db.prepare("DELETE FROM pending_deletes WHERE session_id = $sessionId").run({
+		$sessionId: sessionId,
+	});
 }

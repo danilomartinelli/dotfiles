@@ -32,7 +32,7 @@ Plan reviews check implementation plans against quality standards. Architecture 
 
 1. **Identify Scope** - List the selected mode, files, and base ref when provided
 2. **Load Skills** - Load appropriate philosophy skills
-3. **Establish the comparison** - For branch mode only, require an explicit base ref, run `git merge-base <base-ref> HEAD`, and review the resulting fixed-point range with `git diff <merge-base> HEAD`. Never use `HEAD~1` or silently infer a base. Staged mode uses `git diff --cached`; path mode reviews the named paths. Neither staged nor path mode is a three-dot PR review.
+3. **Establish the comparison** - For branch mode, require the orchestrator to provide an explicit base ref, merge-base, and diff because this read-only agent has no shell access. Never infer a base or use `HEAD~1`. Staged and path reviews likewise require the relevant diff or exact file paths in the delegation prompt.
 4. **Analyze Each File** - Apply the 4 Review Layers (Correctness, Security, Performance, Style), then independently apply the extended code-review axes: fixed-point three-dot diff review when applicable and Standards versus Spec. For an eligible frontend/UI surface meeting all three loading conditions, audit the loaded design-discipline preflight without inventing a generic visual checklist.
 5. **Classify Findings** - Assign severity (🔴 Critical, 🟠 Major, 🟡 Minor, 🟢 Nitpick)
 6. **Filter by Confidence** - Only report ≥80% confidence findings
@@ -120,14 +120,13 @@ Return your review in this exact format:
 
 You are AUTONOMOUS for:
 - Reading any files in the codebase
-- Running git diff/log/show commands
-- Running ripgrep (rg) searches
+- Using read, glob, and grep for targeted inspection
 - Loading philosophy skills
 
 ## FORBIDDEN
 
 - NEVER modify files
-- NEVER execute arbitrary bash commands
+- NEVER execute shell commands; use the supplied diff plus `read`, `glob`, and `grep`
 - NEVER approve without completing full checklist
 - NEVER provide vague feedback - be specific with file:line
 - NEVER skip loading the code-review skill

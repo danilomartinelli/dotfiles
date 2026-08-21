@@ -32,8 +32,8 @@
  * ```
  */
 export class Mutex {
-	private locked = false
-	private queue: (() => void)[] = []
+	private locked = false;
+	private queue: (() => void)[] = [];
 
 	/**
 	 * Acquire the mutex lock.
@@ -56,14 +56,14 @@ export class Mutex {
 	async acquire(): Promise<void> {
 		// Fast path: lock is available (Law 1: Early Exit)
 		if (!this.locked) {
-			this.locked = true
-			return
+			this.locked = true;
+			return;
 		}
 
 		// Slow path: wait in queue for lock release
 		return new Promise<void>((resolve) => {
-			this.queue.push(resolve)
-		})
+			this.queue.push(resolve);
+		});
 	}
 
 	/**
@@ -78,13 +78,13 @@ export class Mutex {
 	 * ```
 	 */
 	release(): void {
-		const next = this.queue.shift()
+		const next = this.queue.shift();
 		if (next) {
 			// Pass lock to next waiter (stays locked)
-			next()
+			next();
 		} else {
 			// No waiters, unlock
-			this.locked = false
+			this.locked = false;
 		}
 	}
 
@@ -112,11 +112,11 @@ export class Mutex {
 	 * ```
 	 */
 	async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
-		await this.acquire()
+		await this.acquire();
 		try {
-			return await fn()
+			return await fn();
 		} finally {
-			this.release()
+			this.release();
 		}
 	}
 }

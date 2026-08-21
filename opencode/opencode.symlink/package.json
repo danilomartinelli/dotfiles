@@ -1,21 +1,18 @@
 {
-  "name": "opencode-plugins",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "bun test plugins",
-    "test:worktree": "bun test plugins/worktree-automation.test.ts"
-  },
-  "dependencies": {
-    "@ai-sdk/openai-compatible": "3.0.30",
-    "@opencode-ai/plugin": "1.18.18",
-    "@opencode-ai/sdk": "1.18.18"
-  },
-  "devDependencies": {
-    "detect-terminal": "2.0.0",
-    "jsonc-parser": "3.3.1",
-    "node-notifier": "10.0.1",
-    "unique-names-generator": "4.7.1",
-    "zod": "4.3.5"
-  }
+	"name": "opencode-plugins",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "bun test tests",
+		"test:orchestration": "bun test tests/orchestration.test.ts"
+	},
+	"dependencies": {
+		"@opencode-ai/plugin": "1.18.18",
+		"@opencode-ai/sdk": "1.18.18",
+		"@tarquinen/opencode-dcp": "3.1.3",
+		"detect-terminal": "2.0.0",
+		"jsonc-parser": "3.3.1",
+		"unique-names-generator": "4.7.1",
+		"zod": "4.3.5"
+	}
 }

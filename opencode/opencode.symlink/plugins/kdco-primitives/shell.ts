@@ -12,7 +12,7 @@
  * Null bytes (\x00) cannot be represented in C strings and must be rejected.
  */
 // biome-ignore lint/suspicious/noControlCharactersInRegex: Null byte detection is intentional for security
-const SHELL_FORBIDDEN_CHARS = /[\x00]/
+const SHELL_FORBIDDEN_CHARS = /[\x00]/;
 
 /**
  * Assert that a string is safe for shell escaping.
@@ -38,7 +38,7 @@ export function assertShellSafe(value: string, context: string): void {
 	if (SHELL_FORBIDDEN_CHARS.test(value)) {
 		throw new Error(
 			`${context} contains null bytes which cannot be safely escaped for shell execution`,
-		)
+		);
 	}
 }
 
@@ -66,7 +66,7 @@ export function assertShellSafe(value: string, context: string): void {
  * ```
  */
 export function escapeBash(str: string): string {
-	assertShellSafe(str, "Bash argument")
+	assertShellSafe(str, "Bash argument");
 	return str
 		.replace(/\\/g, "\\\\") // Backslash first (order matters!)
 		.replace(/"/g, '\\"') // Double quotes
@@ -74,7 +74,7 @@ export function escapeBash(str: string): string {
 		.replace(/`/g, "\\`") // Backticks (command substitution)
 		.replace(/!/g, "\\!") // History expansion
 		.replace(/\n/g, " ") // Newlines -> spaces
-		.replace(/\r/g, " ") // Carriage returns -> spaces
+		.replace(/\r/g, " "); // Carriage returns -> spaces
 }
 
 /**
@@ -96,12 +96,12 @@ export function escapeBash(str: string): string {
  * ```
  */
 export function escapeAppleScript(str: string): string {
-	assertShellSafe(str, "AppleScript argument")
+	assertShellSafe(str, "AppleScript argument");
 	return str
 		.replace(/\\/g, "\\\\") // Backslash
 		.replace(/"/g, '\\"') // Double quotes
 		.replace(/\n/g, " ") // Newlines -> spaces
-		.replace(/\r/g, " ") // Carriage returns -> spaces
+		.replace(/\r/g, " "); // Carriage returns -> spaces
 }
 
 /**
@@ -127,12 +127,12 @@ export function escapeAppleScript(str: string): string {
  * ```
  */
 export function escapeBatch(str: string): string {
-	assertShellSafe(str, "Batch argument")
+	assertShellSafe(str, "Batch argument");
 	return str
 		.replace(/%/g, "%%") // Percent (double to escape)
 		.replace(/\^/g, "^^") // Caret (escape character itself)
 		.replace(/&/g, "^&") // Ampersand
 		.replace(/</g, "^<") // Less than
 		.replace(/>/g, "^>") // Greater than
-		.replace(/\|/g, "^|") // Pipe
+		.replace(/\|/g, "^|"); // Pipe
 }
