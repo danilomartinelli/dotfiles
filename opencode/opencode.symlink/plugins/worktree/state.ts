@@ -64,18 +64,32 @@ const pendingDeleteSchema = z.object({
 	createdAt: z.string().min(1),
 });
 
+function getRuntimeHomeDirectory(): string {
+	const configuredHome = process.env.HOME?.trim();
+	return configuredHome && path.isAbsolute(configuredHome)
+		? configuredHome
+		: os.homedir();
+}
+
 function getWorktreeBaseDirectory(): string {
-	return path.join(os.homedir(), ".local", "share", "opencode", "worktree");
+	return path.join(
+		getRuntimeHomeDirectory(),
+		".local",
+		"share",
+		"opencode",
+		"worktree",
+	);
 }
 
 export async function getWorktreePath(
 	projectRoot: string,
 	branch: string,
 	basePath?: string,
+	projectIdOverride?: string,
 ): Promise<string> {
 	if (!branch || typeof branch !== "string")
 		throw new Error("branch is required");
-	const projectId = await getProjectId(projectRoot);
+	const projectId = await resolveStateProjectId(projectRoot, projectIdOverride);
 	const baseDirectory = basePath ?? getWorktreeBaseDirectory();
 	if (!path.isAbsolute(baseDirectory)) {
 		throw new Error("worktree base path must be absolute");
@@ -95,7 +109,7 @@ export async function getWorktreePath(
 
 function getDbDirectory(): string {
 	return path.join(
-		os.homedir(),
+		getRuntimeHomeDirectory(),
 		".local",
 		"share",
 		"opencode",
@@ -104,8 +118,22 @@ function getDbDirectory(): string {
 	);
 }
 
-async function getDbPath(projectRoot: string): Promise<string> {
-	const projectId = await getProjectId(projectRoot);
+async function resolveStateProjectId(
+	projectRoot: string,
+	projectIdOverride?: string,
+): Promise<string> {
+	if (!projectIdOverride) return getProjectId(projectRoot);
+	if (!isSafeStorageSegment(projectIdOverride)) {
+		throw new Error("invalid native project ID");
+	}
+	return projectIdOverride;
+}
+
+async function getDbPath(
+	projectRoot: string,
+	projectIdOverride?: string,
+): Promise<string> {
+	const projectId = await resolveStateProjectId(projectRoot, projectIdOverride);
 	return path.join(getDbDirectory(), `${projectId}.sqlite`);
 }
 
@@ -160,6 +188,97 @@ function describeDuplicateLease(db: Database): string | null {
 	return null;
 }
 
+interface LegacySessionRow {
+	id: string;
+	branch: string;
+	path: string;
+	createdAt: string;
+	workspaceId: string | null;
+}
+
+/**
+ * Older plugin releases could persist the same logical lease twice while a
+ * session was being warped into a native workspace. Those rows are safe to
+ * consolidate only when both the branch and path are identical and at most
+ * one native workspace ID is claimed. Every other duplicate remains an
+ * explicit startup error so conflicting worktrees are never guessed away.
+ */
+function consolidateEquivalentDuplicateLeases(db: Database): void {
+	const duplicateGroups = db
+		.prepare(`
+			SELECT branch, path
+			FROM sessions
+			GROUP BY branch, path
+			HAVING COUNT(*) > 1
+		`)
+		.all() as Array<{ branch: string; path: string }>;
+
+	for (const group of duplicateGroups) {
+		const rows = db
+			.prepare(`
+				SELECT
+					id,
+					branch,
+					path,
+					created_at AS createdAt,
+					workspace_id AS workspaceId
+				FROM sessions
+				WHERE branch = $branch AND path = $path
+			`)
+			.all({ $branch: group.branch, $path: group.path }) as LegacySessionRow[];
+		const workspaceIds = new Set(
+			rows
+				.map((row) => row.workspaceId)
+				.filter((workspaceId): workspaceId is string => !!workspaceId),
+		);
+		if (workspaceIds.size > 1) {
+			throw new Error(
+				`Cannot consolidate equivalent legacy leases for branch=${group.branch} path=${group.path}: multiple native workspace IDs are claimed.`,
+			);
+		}
+
+		const survivor = [...rows].sort((left, right) => {
+			const workspacePreference =
+				Number(!!right.workspaceId) - Number(!!left.workspaceId);
+			if (workspacePreference !== 0) return workspacePreference;
+			const createdPreference = right.createdAt.localeCompare(left.createdAt);
+			return createdPreference !== 0
+				? createdPreference
+				: right.id.localeCompare(left.id);
+		})[0];
+		if (!survivor) continue;
+
+		const redundantIds = rows
+			.map((row) => row.id)
+			.filter((sessionId) => sessionId !== survivor.id);
+		for (const sessionId of redundantIds) {
+			const pending = db
+				.prepare(`
+					SELECT 'continuation' AS kind FROM pending_continuations WHERE session_id = $sessionId
+					UNION ALL
+					SELECT 'delete' AS kind FROM pending_deletes WHERE session_id = $sessionId
+					LIMIT 1
+				`)
+				.get({ $sessionId: sessionId }) as { kind?: string } | null;
+			if (pending?.kind) {
+				throw new Error(
+					`Cannot consolidate legacy lease session=${sessionId}: a pending ${pending.kind} must be resolved explicitly.`,
+				);
+			}
+		}
+
+		const removeRedundant = db.prepare(
+			"DELETE FROM sessions WHERE id = $sessionId",
+		);
+		const transaction = db.transaction(() => {
+			for (const sessionId of redundantIds) {
+				removeRedundant.run({ $sessionId: sessionId });
+			}
+		});
+		transaction();
+	}
+}
+
 function createExclusiveLeaseIndexes(db: Database): void {
 	const duplicate = describeDuplicateLease(db);
 	if (duplicate) {
@@ -207,12 +326,15 @@ function migrateLegacyPendingOperations(db: Database): void {
 	db.exec("DROP TABLE pending_operations");
 }
 
-export async function initStateDb(projectRoot: string): Promise<Database> {
+export async function initStateDb(
+	projectRoot: string,
+	projectIdOverride?: string,
+): Promise<Database> {
 	if (!projectRoot || typeof projectRoot !== "string") {
 		throw new Error("initStateDb requires a valid project root path");
 	}
 
-	const dbPath = await getDbPath(projectRoot);
+	const dbPath = await getDbPath(projectRoot, projectIdOverride);
 	mkdirSync(path.dirname(dbPath), { recursive: true });
 	const db = new Database(dbPath);
 
@@ -249,6 +371,7 @@ export async function initStateDb(projectRoot: string): Promise<Database> {
 	`);
 	ensurePendingContinuationClaimColumns(db);
 	migrateLegacyPendingOperations(db);
+	consolidateEquivalentDuplicateLeases(db);
 	createExclusiveLeaseIndexes(db);
 	return db;
 }

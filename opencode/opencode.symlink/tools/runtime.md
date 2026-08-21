@@ -21,12 +21,17 @@ instead of changing runtimes or inventing another tool surface.
 
 - The only mutation-authorizing workspace route is `worktree_create`, backed by
   the `ocx-git-worktree` native adapter and an exclusive persisted lease.
+  `worktree_list` and `worktree_inspect` expose managed lease state without
+  mutation; approval-gated `worktree_delete` removes only a clean current lease
+  or an explicitly named lease whose owning session is idle.
 - OpenCode may expose its built-in `worktree` adapter. It is unmanaged by this
   configuration and never authorizes coder or scribe mutation.
 - A write-capable child must inherit a valid managed lease from its root build
   session and must run in a linked, non-default Git worktree.
 - Direct write targets are confined to that worktree lexically and through
-  existing symlinks. Only build may launch the coder and scribe write leaves.
+  existing symlinks. The sole exception is a scribe-authored documentation
+  handoff whose filename contains `handoff` under the trusted OS temporary
+  directory. Only build may launch the coder and scribe write leaves.
 - Missing, stale, conflicting, or orphaned lease state fails closed. Do not
   adopt, delete, or recreate ambiguous workspaces automatically.
 - Repository worktree configuration is data-only. Executable lifecycle hooks

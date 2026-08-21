@@ -23,7 +23,7 @@ import {
 import { getProjectId } from "../kdco-primitives/get-project-id";
 import { assertSafeStorageSegment } from "../kdco-primitives/storage-id";
 import type { OpencodeClient } from "../kdco-primitives/types";
-import { getSession, initStateDb } from "../worktree/state";
+import { getAllSessions, getSession, initStateDb } from "../worktree/state";
 
 // ==========================================
 // READABLE ID GENERATION
@@ -650,6 +650,18 @@ async function mutationTargetViolation(
 	const realAncestor = await fs.realpath(existingAncestor).catch(() => null);
 	if (!realAncestor || !isPathWithinRoot(realRoot, realAncestor)) {
 		return `target path escapes the managed worktree through a symlink: ${targetPath}`;
+	}
+	return null;
+}
+
+async function trustedTemporaryHandoffRoot(
+	targetPath: string,
+): Promise<string | null> {
+	if (!path.isAbsolute(targetPath) || !/handoff/i.test(path.basename(targetPath)))
+		return null;
+
+	for (const root of new Set([os.tmpdir(), "/tmp", "/private/tmp"])) {
+		if (!(await mutationTargetViolation(root, targetPath))) return root;
 	}
 	return null;
 }
@@ -2349,7 +2361,7 @@ interface SystemTransformInput {
 }
 
 const BackgroundAgentsPlugin: Plugin = async (ctx) => {
-	const { client, directory } = ctx;
+	const { client, directory, project } = ctx;
 
 	// Create logger early for all components
 	const log = createLogger(client as OpencodeClient);
@@ -2365,8 +2377,14 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 		"delegations",
 		projectId,
 	);
-	const worktreeDatabase = await initStateDb(directory);
+	const worktreeDatabase = await initStateDb(directory, project?.id);
 	const isNonDefaultWorktree = await isLinkedWorktree(directory, log);
+	const isManagedWorktreePath = (candidate: string): boolean => {
+		const resolvedCandidate = path.resolve(candidate);
+		return getAllSessions(worktreeDatabase).some((session) =>
+			isPathWithinRoot(path.resolve(session.path), resolvedCandidate),
+		);
+	};
 	const isManagedNonDefaultWorktreeSession = async (
 		sessionID: string | undefined,
 	): Promise<boolean> => {
@@ -2468,6 +2486,12 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 						);
 					}
 				}
+				const handoffRoot =
+					callerAgent === "scribe"
+						? await trustedTemporaryHandoffRoot(
+								output.args?.filePath ?? output.args?.path ?? "",
+							)
+						: null;
 				if (!(await isManagedNonDefaultWorktreeSession(input.sessionID))) {
 					throw new Error(
 						`❌ Agent '${callerAgent}' can only use ${input.tool} inside a managed, non-default worktree session.`,
@@ -2485,7 +2509,7 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 				}
 				for (const targetPath of targetPaths) {
 					const violation = await mutationTargetViolation(
-						directory,
+						handoffRoot ?? directory,
 						targetPath,
 					);
 					if (violation) {
@@ -2512,6 +2536,7 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					);
 				}
 
+				const command = output.args?.command ?? "";
 				for (const workingDirectory of [
 					output.args?.cwd,
 					output.args?.workdir,
@@ -2521,14 +2546,17 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 						directory,
 						workingDirectory,
 					);
-					if (violation) {
+					const isManagedReadOnlyInspection =
+						callerAgent === "build" &&
+						!isBuildShellMutation(command) &&
+						isManagedWorktreePath(workingDirectory);
+					if (violation && !isManagedReadOnlyInspection) {
 						throw new Error(
 							`❌ Cannot authorize shell working directory: ${violation}.`,
 						);
 					}
 				}
 
-				const command = output.args?.command ?? "";
 				if (isForcePushCommand(command)) {
 					throw new Error(
 						"❌ Force-push is forbidden by the orchestration runtime.",

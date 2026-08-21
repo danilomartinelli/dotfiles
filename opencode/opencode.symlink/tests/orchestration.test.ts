@@ -20,6 +20,7 @@ import worktreePlugin from "../plugins/ocx/worktree";
 import {
 	claimSession,
 	clearPendingDelete,
+	getAllSessions,
 	getAllPendingDeletes,
 	getPendingContinuation,
 	getPendingDelete,
@@ -314,6 +315,25 @@ describe("permission and delegation enforcement", () => {
 		expect(config.agent?.coder?.permission?.delegate).toBeUndefined();
 		expect(config.agent?.coder?.permission?.apply_patch).toBe("allow");
 		expect(config.agent?.scribe?.permission?.write).toBeInstanceOf(Object);
+		expect(config.agent?.scribe?.permission?.external_directory).toMatchObject({
+			"*": "deny",
+			"/tmp/**": "allow",
+			"/private/tmp/**": "allow",
+		});
+		expect(config.agent?.build?.permission?.external_directory).toMatchObject({
+			"*": "deny",
+			"~/.local/share/opencode/worktree/**": "allow",
+			"/tmp/**": "allow",
+			"/private/tmp/**": "allow",
+		});
+		expect(config.agent?.build?.permission?.bash).toMatchObject({
+			"*": "deny",
+			"git worktree list*": "allow",
+			"git show*": "allow",
+			"git remote -v*": "allow",
+			"git add*": "ask",
+			"git push*--force*": "deny",
+		});
 		expect(config.agent?.plan?.permission?.compress).toBe("allow");
 		expect(config.agent?.build?.permission?.compress).toBe("allow");
 		expect(config.agent?.reviewer?.permission?.compress).toBeUndefined();
@@ -549,6 +569,120 @@ describe("permission and delegation enforcement", () => {
 			await rm(repository, { recursive: true, force: true });
 			await rm(home, { recursive: true, force: true });
 			await rm(outside, { recursive: true, force: true });
+		}
+	});
+
+	test("allows build to inspect another managed worktree but not mutate it", async () => {
+		const home = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-managed-inspection-home-"),
+		);
+		const otherWorktree = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-managed-inspection-other-"),
+		);
+		const { repository, worktree } = await createGitRepository(
+			"opencode-managed-inspection",
+		);
+		const previousHome = process.env.HOME;
+		process.env.HOME = home;
+		try {
+			const state = await initStateDb(worktree);
+			claimSession(state, {
+				id: "build-session",
+				branch: "feature/test",
+				path: worktree,
+				workspaceId: "workspace-current",
+				createdAt: new Date().toISOString(),
+			});
+			claimSession(state, {
+				id: "other-session",
+				branch: "feature/other",
+				path: otherWorktree,
+				workspaceId: "workspace-other",
+				createdAt: new Date().toISOString(),
+			});
+			state.close();
+
+			const plugin = await backgroundAgentsPlugin({
+				directory: worktree,
+				client: createAgentClient(await readConfig(), "build"),
+			} as never);
+			const hook = plugin["tool.execute.before"];
+			if (!hook) throw new Error("permission hook is missing");
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{ args: { command: "git status --short", cwd: otherWorktree } },
+				),
+			).resolves.toBeUndefined();
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{ args: { command: "git add README.md", cwd: otherWorktree } },
+				),
+			).rejects.toThrow("shell working directory");
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			await runCommand(
+				["git", "worktree", "remove", "--force", worktree],
+				repository,
+			).catch(() => undefined);
+			await rm(repository, { recursive: true, force: true });
+			await rm(otherWorktree, { recursive: true, force: true });
+			await rm(home, { recursive: true, force: true });
+		}
+	});
+
+	test("allows scribe handoff documents only in trusted temporary storage", async () => {
+		const home = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-scribe-handoff-home-"),
+		);
+		const { repository, worktree } = await createGitRepository(
+			"opencode-scribe-handoff",
+		);
+		const previousHome = process.env.HOME;
+		process.env.HOME = home;
+		try {
+			const state = await initStateDb(worktree);
+			claimSession(state, {
+				id: "build-session",
+				branch: "feature/test",
+				path: worktree,
+				workspaceId: "workspace-handoff",
+				createdAt: new Date().toISOString(),
+			});
+			state.close();
+			const plugin = await backgroundAgentsPlugin({
+				directory: worktree,
+				client: createAgentClient(await readConfig(), "scribe", {
+					parentID: "build-session",
+				}),
+			} as never);
+			const hook = plugin["tool.execute.before"];
+			if (!hook) throw new Error("permission hook is missing");
+			await expect(
+				hook(
+					{ tool: "write", sessionID: "scribe-session" },
+					{
+						args: { filePath: path.join(os.tmpdir(), "opencode-handoff.md") },
+					},
+				),
+			).resolves.toBeUndefined();
+			await expect(
+				hook(
+					{ tool: "write", sessionID: "scribe-session" },
+					{ args: { filePath: path.join(os.tmpdir(), "notes.md") } },
+				),
+			).rejects.toThrow("escapes the managed worktree");
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			await runCommand(
+				["git", "worktree", "remove", "--force", worktree],
+				repository,
+			).catch(() => undefined);
+			await rm(repository, { recursive: true, force: true });
+			await rm(home, { recursive: true, force: true });
 		}
 	});
 });
@@ -989,6 +1123,22 @@ describe("exclusive and durable workspace lifecycle", () => {
 		await expect(
 			getWorktreePath(repository, "../../escape", os.tmpdir()),
 		).rejects.toThrow("escapes");
+		expect(
+			await getWorktreePath(
+				repository,
+				"feature/test",
+				os.tmpdir(),
+				"native-project",
+			),
+		).toBe(path.join(os.tmpdir(), "native-project", "feature/test"));
+		await expect(
+			getWorktreePath(
+				repository,
+				"feature/test",
+				os.tmpdir(),
+				"../invalid-project",
+			),
+		).rejects.toThrow("invalid native project ID");
 		await rm(repository, { recursive: true, force: true });
 	});
 
@@ -1050,6 +1200,69 @@ describe("exclusive and durable workspace lifecycle", () => {
 		}
 	});
 
+	test("consolidates only equivalent duplicate legacy worktree leases", async () => {
+		const home = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-duplicate-state-home-"),
+		);
+		const project = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-duplicate-state-project-"),
+		);
+		const previousHome = process.env.HOME;
+		process.env.HOME = home;
+		try {
+			const projectId = await getProjectId(project);
+			const databaseDirectory = path.join(
+				home,
+				".local",
+				"share",
+				"opencode",
+				"plugins",
+				"worktree",
+			);
+			await mkdir(databaseDirectory, { recursive: true });
+			const legacy = new Database(
+				path.join(databaseDirectory, `${projectId}.sqlite`),
+			);
+			legacy.exec(`
+				CREATE TABLE sessions (
+					id TEXT PRIMARY KEY,
+					branch TEXT NOT NULL,
+					path TEXT NOT NULL,
+					created_at TEXT NOT NULL,
+					workspace_id TEXT
+				);
+				INSERT INTO sessions (id, branch, path, created_at, workspace_id)
+				VALUES
+					('legacy-session', 'feature/test', '/tmp/feature-test', '2026-08-20T00:00:00.000Z', NULL),
+					('workspace-session', 'feature/test', '/tmp/feature-test', '2026-08-21T00:00:00.000Z', 'workspace-test');
+			`);
+			legacy.close();
+
+			const migrated = await initStateDb(project);
+			expect(getAllSessions(migrated)).toEqual([
+				expect.objectContaining({
+					id: "workspace-session",
+					branch: "feature/test",
+					workspaceId: "workspace-test",
+				}),
+			]);
+			expect(() =>
+				migrated
+					.prepare(`
+						INSERT INTO sessions (id, branch, path, created_at, workspace_id)
+						VALUES ('conflict', 'feature/test', '/tmp/other', '2026-08-22T00:00:00.000Z', NULL)
+					`)
+					.run(),
+			).toThrow();
+			migrated.close();
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			await rm(home, { recursive: true, force: true });
+			await rm(project, { recursive: true, force: true });
+		}
+	});
+
 	test("never replaces a non-empty worktree directory with a symlink", async () => {
 		const source = await mkdtemp(
 			path.join(os.tmpdir(), "opencode-symlink-source-"),
@@ -1077,6 +1290,35 @@ describe("exclusive and durable workspace lifecycle", () => {
 		).toBe("keep");
 		await rm(source, { recursive: true, force: true });
 		await rm(target, { recursive: true, force: true });
+	});
+
+	test("removes a missing worktree's targeted Git registration", async () => {
+		const { repository, worktree } = await createGitRepository(
+			"opencode-missing-worktree",
+		);
+		try {
+			await rm(worktree, { recursive: true, force: true });
+			const adapter = worktreePlugin.testInternals.createWorkspaceAdapter(
+				repository,
+				{ debug() {}, info() {}, warn() {}, error() {} },
+			);
+			await adapter.remove({
+				id: "workspace-missing",
+				type: "ocx-git-worktree",
+				name: "feature/test",
+				branch: "feature/test",
+				directory: worktree,
+				extra: null,
+				projectID: "native-project",
+			});
+			const listed = Bun.spawnSync(
+				["git", "worktree", "list", "--porcelain"],
+				{ cwd: repository },
+			).stdout.toString();
+			expect(listed).not.toContain(worktree);
+		} finally {
+			await rm(repository, { recursive: true, force: true });
+		}
 	});
 });
 
@@ -1347,6 +1589,8 @@ describe("deterministic plugin and dependency topology", () => {
 		]) {
 			expect(protectedTools).toContain("delegation_read");
 			expect(protectedTools).toContain("plan_save");
+			expect(protectedTools).toContain("worktree_list");
+			expect(protectedTools).toContain("worktree_inspect");
 			expect(protectedTools).toContain("worktree_create");
 		}
 	});

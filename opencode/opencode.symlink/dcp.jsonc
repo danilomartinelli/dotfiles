@@ -12,6 +12,8 @@
 			"delegation_list",
 			"plan_save",
 			"plan_read",
+			"worktree_list",
+			"worktree_inspect",
 			"worktree_create",
 			"worktree_delete"
 		]
@@ -40,6 +42,8 @@
 			"delegation_list",
 			"plan_save",
 			"plan_read",
+			"worktree_list",
+			"worktree_inspect",
 			"worktree_create",
 			"worktree_delete"
 		],
@@ -54,6 +58,8 @@
 				"delegation_list",
 				"plan_save",
 				"plan_read",
+				"worktree_list",
+				"worktree_inspect",
 				"worktree_create",
 				"worktree_delete"
 			]
@@ -67,6 +73,8 @@
 				"delegation_list",
 				"plan_save",
 				"plan_read",
+				"worktree_list",
+				"worktree_inspect",
 				"worktree_create",
 				"worktree_delete"
 			]

@@ -229,12 +229,16 @@ function registerCleanupHandlers(database: Database): void {
  * @returns Database instance
  * @throws {Error} if initialization fails after all retries
  */
-async function initDb(root: string, log: Logger): Promise<Database> {
+async function initDb(
+	root: string,
+	log: Logger,
+	projectId?: string,
+): Promise<Database> {
 	let lastError: Error | null = null;
 
 	for (let attempt = 1; attempt <= DB_MAX_RETRIES; attempt++) {
 		try {
-			const database = await initStateDb(root);
+			const database = await initStateDb(root, projectId);
 			registerCleanupHandlers(database);
 			return database;
 		} catch (error) {
@@ -347,13 +351,35 @@ async function pathExists(candidate: string): Promise<boolean> {
 	return (await lstat(candidate).catch(() => null)) !== null;
 }
 
+async function canonicalPotentialPath(candidate: string): Promise<string> {
+	const lexical = path.resolve(candidate);
+	let ancestor = lexical;
+	while (!(await pathExists(ancestor))) {
+		const parent = path.dirname(ancestor);
+		if (parent === ancestor) return lexical;
+		ancestor = parent;
+	}
+	const canonicalAncestor = await realpath(ancestor).catch(() => ancestor);
+	return path.resolve(canonicalAncestor, path.relative(ancestor, lexical));
+}
+
+async function samePotentialPath(left: string, right: string): Promise<boolean> {
+	return (await canonicalPotentialPath(left)) === (await canonicalPotentialPath(right));
+}
+
 async function createWorktree(
 	repoRoot: string,
 	branch: string,
 	baseBranch?: string,
 	basePath?: string,
+	projectId?: string,
 ): Promise<Result<{ path: string; reused: boolean }, string>> {
-	const worktreePath = await getWorktreePath(repoRoot, branch, basePath);
+	const worktreePath = await getWorktreePath(
+		repoRoot,
+		branch,
+		basePath,
+		projectId,
+	);
 	const existingResult = await existingWorktreeForBranch(repoRoot, branch);
 	if (!existingResult.ok) return existingResult;
 	const existing = existingResult.value;
@@ -1110,9 +1136,57 @@ async function processPendingDelete(
 	}
 }
 
+async function describeManagedWorktree(
+	database: Database,
+	session: ReturnType<typeof getAllSessions>[number],
+	currentSessionId: string | undefined,
+): Promise<Record<string, unknown>> {
+	const exists = await directoryExists(session.path);
+	const statusResult = exists
+		? await git(["status", "--porcelain"], session.path)
+		: Result.err<string>("worktree directory is missing");
+	return {
+		branch: session.branch,
+		path: session.path,
+		sessionId: session.id,
+		workspaceId: session.workspaceId,
+		current: session.id === currentSessionId,
+		exists,
+		clean: statusResult.ok ? statusResult.value.length === 0 : null,
+		statusError: statusResult.ok ? null : statusResult.error,
+		pendingContinuation: !!getPendingContinuation(database, session.id),
+		pendingDelete: !!getPendingDelete(database, session.id),
+		createdAt: session.createdAt,
+	};
+}
+
+async function describeNativeWorkspace(
+	workspace: WorkspaceInfo,
+	managedWorkspaceIds: Set<string>,
+): Promise<Record<string, unknown>> {
+	const exists = workspace.directory
+		? await directoryExists(workspace.directory)
+		: false;
+	const statusResult =
+		exists && workspace.directory
+			? await git(["status", "--porcelain"], workspace.directory)
+			: Result.err<string>("workspace directory is missing");
+	return {
+		branch: workspace.branch,
+		path: workspace.directory,
+		workspaceId: workspace.id,
+		type: workspace.type,
+		managedLease: managedWorkspaceIds.has(workspace.id),
+		exists,
+		clean: statusResult.ok ? statusResult.value.length === 0 : null,
+		statusError: statusResult.ok ? null : statusResult.error,
+	};
+}
+
 function createWorkspaceAdapter(
 	mainRoot: string,
 	log: Logger,
+	projectId?: string,
 ): WorkspaceAdapter {
 	return {
 		name: "OCX Git worktree",
@@ -1130,7 +1204,12 @@ function createWorkspaceAdapter(
 			if (!existingResult.ok) throw new Error(existingResult.error);
 			const directory =
 				existingResult.value?.path ??
-				(await getWorktreePath(mainRoot, branch, worktreeConfig.worktreePath));
+				(await getWorktreePath(
+					mainRoot,
+					branch,
+					worktreeConfig.worktreePath,
+					projectId,
+				));
 			return { ...config, branch, name: branch, directory };
 		},
 		async create(config) {
@@ -1150,6 +1229,7 @@ function createWorkspaceAdapter(
 				branch,
 				baseBranch,
 				worktreeConfig.worktreePath,
+				projectId,
 			);
 			if (!result.ok) throw new Error(result.error);
 			if (path.resolve(result.value.path) !== path.resolve(config.directory)) {
@@ -1184,6 +1264,47 @@ function createWorkspaceAdapter(
 		async remove(config) {
 			if (!config.directory)
 				throw new Error("Workspace configuration is missing its directory");
+			if (!(await directoryExists(config.directory))) {
+				const linkedWorktrees = await listLinkedWorktrees(mainRoot);
+				if (!linkedWorktrees.ok) throw new Error(linkedWorktrees.error);
+				let linked: LinkedWorktree | undefined;
+				for (const worktree of linkedWorktrees.value) {
+					if (await samePotentialPath(worktree.path, config.directory)) {
+						linked = worktree;
+						break;
+					}
+				}
+				if (linked) {
+					const removeResult = await removeWorktree(mainRoot, config.directory);
+					if (!removeResult.ok) throw new Error(removeResult.error);
+					const remaining = await listLinkedWorktrees(mainRoot);
+					if (!remaining.ok) throw new Error(remaining.error);
+					let targetRemains = false;
+					let otherPrunable: LinkedWorktree | undefined;
+					for (const worktree of remaining.value) {
+						if (await samePotentialPath(worktree.path, config.directory)) {
+							targetRemains = true;
+						} else if (worktree.prunable) {
+							otherPrunable = worktree;
+						}
+					}
+					if (targetRemains) {
+						if (!linked.prunable || otherPrunable) {
+							throw new Error(
+								otherPrunable
+									? `Refusing broad Git worktree pruning while another stale registration exists at ${otherPrunable.path}`
+									: "Missing worktree registration is not marked prunable by Git",
+							);
+						}
+						const pruneResult = await git(
+							["worktree", "prune", "--expire", "now"],
+							mainRoot,
+						);
+						if (!pruneResult.ok) throw new Error(pruneResult.error);
+					}
+				}
+				return;
+			}
 			const statusResult = await git(
 				["status", "--porcelain"],
 				config.directory,
@@ -1210,7 +1331,7 @@ function createWorkspaceAdapter(
 // =============================================================================
 
 const WorktreePlugin: Plugin = async (ctx) => {
-	const { directory, client, experimental_workspace, serverUrl } = ctx;
+	const { directory, client, experimental_workspace, project, serverUrl } = ctx;
 	const mainRoot = ctx.worktree || directory;
 
 	const log = {
@@ -1234,7 +1355,7 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 	experimental_workspace.register(
 		WORKSPACE_ADAPTER_TYPE,
-		createWorkspaceAdapter(mainRoot, log),
+		createWorkspaceAdapter(mainRoot, log, project.id),
 	);
 	const inProcessFetch = getInProcessFetch(client);
 	if (!inProcessFetch) {
@@ -1322,7 +1443,7 @@ const WorktreePlugin: Plugin = async (ctx) => {
 	};
 
 	// Shared by the main checkout and all worktrees belonging to the repository.
-	const database = await initDb(mainRoot, log);
+	const database = await initDb(mainRoot, log, project.id);
 	const startupRecovery = createRetryableStartupRecovery(async () => {
 		const initialWorkspaceList = await nativeClient.experimental.workspace.list(
 			{ directory: mainRoot },
@@ -1361,6 +1482,97 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 	return {
 		tool: {
+			worktree_list: tool({
+				description:
+					"List every OCX-managed worktree lease with its path, owning session, native workspace, cleanliness, and pending lifecycle state.",
+				args: {},
+				async execute(_args, toolCtx) {
+					if (!(await startupRecovery.ensure())) {
+						return "❌ Workspace lifecycle recovery is not ready. Retry after OpenCode finishes startup.";
+					}
+					const nativeResponse =
+						await nativeClient.experimental.workspace.list({
+							directory: mainRoot,
+						});
+					if (nativeResponse.error) {
+						return `❌ Native workspace listing failed: ${errorMessage(nativeResponse.error)}`;
+					}
+					const sessions = getAllSessions(database);
+					const summaries = await Promise.all(
+						sessions.map((session) =>
+							describeManagedWorktree(database, session, toolCtx?.sessionID),
+						),
+					);
+					const managedWorkspaceIds = new Set(
+						sessions
+							.map((session) => session.workspaceId)
+							.filter((workspaceId): workspaceId is string => !!workspaceId),
+					);
+					const nativeSummaries = await Promise.all(
+						(nativeResponse.data ?? [])
+							.map((workspace) => toWorkspaceInfo(workspace))
+							.filter((workspace) => !managedWorkspaceIds.has(workspace.id))
+							.map((workspace) =>
+								describeNativeWorkspace(workspace, managedWorkspaceIds),
+							),
+					);
+					if (summaries.length === 0 && nativeSummaries.length === 0) {
+						return "No managed or native worktrees.";
+					}
+					return JSON.stringify(
+						{ managed: summaries, nativeWithoutLease: nativeSummaries },
+						null,
+						2,
+					);
+				},
+			}),
+
+			worktree_inspect: tool({
+				description:
+					"Inspect one OCX-managed worktree by branch without mutating Git or workspace state.",
+				args: {
+					branch: tool.schema.string().describe("Managed branch to inspect"),
+				},
+				async execute(args, toolCtx) {
+					if (!(await startupRecovery.ensure())) {
+						return "❌ Workspace lifecycle recovery is not ready. Retry after OpenCode finishes startup.";
+					}
+					const branchResult = branchNameSchema.safeParse(args.branch);
+					if (!branchResult.success) {
+						return `❌ Invalid branch name: ${branchResult.error.issues[0]?.message}`;
+					}
+					const session = getSessionByBranch(database, branchResult.data);
+					if (session) {
+						return JSON.stringify(
+							await describeManagedWorktree(
+								database,
+								session,
+								toolCtx?.sessionID,
+							),
+							null,
+							2,
+						);
+					}
+					const nativeResponse =
+						await nativeClient.experimental.workspace.list({
+							directory: mainRoot,
+						});
+					if (nativeResponse.error) {
+						return `❌ Native workspace listing failed: ${errorMessage(nativeResponse.error)}`;
+					}
+					const nativeWorkspace = (nativeResponse.data ?? [])
+						.map((workspace) => toWorkspaceInfo(workspace))
+						.find((workspace) => workspace.branch === branchResult.data);
+					return nativeWorkspace
+						? JSON.stringify(
+								await describeNativeWorkspace(nativeWorkspace, new Set()),
+								null,
+								2,
+							)
+						: `No managed or native worktree for branch ${branchResult.data}.`;
+				},
+			}),
+
 			worktree_create: tool({
 				description:
 					"Create or safely reuse an isolated git worktree workspace and continue in it with the current session. Ambiguous stale or mismatched paths are reported without mutation.",
@@ -1425,20 +1637,57 @@ const WorktreePlugin: Plugin = async (ctx) => {
 
 			worktree_delete: tool({
 				description:
-					"Delete the current worktree and clean up. The working tree must already be clean.",
+					"Delete the current worktree or an explicitly named idle managed branch. The working tree must already be clean.",
 				args: {
 					reason: tool.schema
 						.string()
 						.describe("Brief explanation of why you are calling this tool"),
+					branch: tool.schema
+						.string()
+						.optional()
+						.describe(
+							"Managed branch to remove (defaults to the current session's lease)",
+						),
 				},
-				async execute(_args, toolCtx) {
+				async execute(args, toolCtx) {
 					if (!(await startupRecovery.ensure())) {
 						return "❌ Workspace lifecycle recovery is not ready. Retry after OpenCode finishes startup.";
 					}
-					// Find current session's worktree
-					const session = getSession(database, toolCtx?.sessionID ?? "");
+					let session = getSession(database, toolCtx?.sessionID ?? "");
+					if (args.branch) {
+						const branchResult = branchNameSchema.safeParse(args.branch);
+						if (!branchResult.success) {
+							return `❌ Invalid branch name: ${branchResult.error.issues[0]?.message}`;
+						}
+						session = getSessionByBranch(database, branchResult.data);
+					}
+					if (!session && args.branch) {
+						const nativeResponse =
+							await nativeClient.experimental.workspace.list({
+								directory: mainRoot,
+							});
+						if (nativeResponse.error) {
+							return `❌ Native workspace listing failed: ${errorMessage(nativeResponse.error)}`;
+						}
+						const orphan = (nativeResponse.data ?? [])
+							.map((workspace) => toWorkspaceInfo(workspace))
+							.find(
+								(workspace) =>
+									workspace.type === WORKSPACE_ADAPTER_TYPE &&
+									workspace.branch === args.branch,
+							);
+						if (!orphan) {
+							return `No OCX-managed worktree or orphaned OCX workspace for branch ${args.branch}.`;
+						}
+						try {
+							await removeNativeWorkspace(orphan.id);
+							return `Removed orphaned OCX workspace registration for branch ${args.branch}.`;
+						} catch (error) {
+							return `❌ Failed to remove orphaned OCX workspace: ${errorMessage(error)}`;
+						}
+					}
 					if (!session) {
-						return `No worktree associated with this session`;
+						return "No worktree associated with this session";
 					}
 
 					const statusResult = await git(
@@ -1462,7 +1711,34 @@ const WorktreePlugin: Plugin = async (ctx) => {
 						sessionId: session.id,
 					});
 
-					return `Worktree marked for cleanup. It will be removed when this session ends.`;
+					if (session.id === toolCtx?.sessionID) {
+						return "Worktree marked for cleanup. It will be removed when this session becomes idle.";
+					}
+
+					const sessionStatuses = await nativeClient.session.status({
+						directory: mainRoot,
+					});
+					if (sessionStatuses.error) {
+						clearPendingDelete(database, session.id);
+						return `❌ Cannot verify whether session ${session.id} is idle: ${errorMessage(sessionStatuses.error)}`;
+					}
+					const targetStatus = sessionStatuses.data?.[session.id];
+					if (targetStatus && targetStatus.type !== "idle") {
+						clearPendingDelete(database, session.id);
+						return `❌ Cannot remove branch ${session.branch}: its owning session is ${targetStatus.type}.`;
+					}
+
+					const deleteResult = await processPendingDelete({
+						database,
+						sessionId: session.id,
+						mainRoot,
+						warpSession,
+						removeNativeWorkspace,
+						log,
+					});
+					return deleteResult === "completed"
+						? `Removed managed worktree for branch ${session.branch}.`
+						: `❌ Cleanup for branch ${session.branch} did not complete (${deleteResult}); the lease was preserved for a safe retry.`;
 				},
 			}),
 		},
