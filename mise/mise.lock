@@ -382,6 +382,10 @@ backend = "npm:@rama_nigg/open-cursor"
 version = "16.28.0"
 backend = "npm:eas-cli"
 
+[[tools."npm:neonctl"]]
+version = "3.6.0"
+backend = "npm:neonctl"
+
 [[tools."npm:ocx"]]
 version = "2.0.14"
 backend = "npm:ocx"

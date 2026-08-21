@@ -12,7 +12,7 @@ BREW_BIN=
 BREWFILE=$DOTFILES_ROOT/Brewfile
 
 # Third-party taps that Homebrew must explicitly trust (not expressible in Brewfile).
-TRUSTED_TAPS='nikitabobko/tap vultr/vultr-cli'
+TRUSTED_TAPS='nikitabobko/tap psviderski/tap vultr/vultr-cli'
 
 usage() {
   cat >&2 <<'EOF'
