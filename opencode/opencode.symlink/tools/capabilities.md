@@ -54,8 +54,9 @@ inspection includes status, diffs, logs, object/ref inspection, remotes, tags,
 stashes, submodule status, `git worktree list`, and exact non-mutating branch
 listing variants such as `git branch -a --no-color`.
 
-Staging, commit, fetch, fast-forward-only pull, push, and PR/MR creation remain
-approval-gated and require explicit user authorization. Force push is denied.
+Staging, commit, fetch, fast-forward-only pull, rebase, push, and PR/MR creation
+remain approval-gated and require explicit user authorization. Rebase is
+available only when the user requests it; force push is denied.
 `coder` may run project verification commands but cannot mutate Git state,
 branches, remotes, worktrees, commits, or delivery.
 

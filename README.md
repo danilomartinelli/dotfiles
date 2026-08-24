@@ -277,7 +277,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:eas-cli`                               | `16.28.0`    |
 | `npm:neonctl`                               | `3.6.0`      |
 | `npm:ocx`                                   | `2.0.15`     |
-| `npm:opencode-ai`                           | `1.18.21`    |
+| `npm:opencode-ai`                           | `1.18.22`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
 | `pipx:aider-chat`                           | `0.86.2`     |
@@ -517,6 +517,12 @@ interpolation. Zed treats `$VARIABLE` and `${VARIABLE}` as literal strings in
 extension settings, LSP/MCP environment maps, and remote-MCP headers; a value
 such as `$BRAVE_API_KEY` can overwrite an inherited value with that literal
 text. Generic keychain interpolation is unsupported as well.
+
+Zed starts OpenCode as a custom ACP agent through `mise exec`, so Zed, the CLI,
+and the local plugin/SDK packages advance as one tested unit instead of letting
+the ACP registry retain a different per-project binary. Restart Zed after
+changing the OpenCode pin or plugin payload; restarting OpenCode Desktop does
+not replace an ACP process owned by Zed.
 
 The installer links the tracked file to `~/.config/zed/settings.json`. For
 literal-JSON-only extension or LSP settings, including static-header

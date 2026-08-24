@@ -3,6 +3,11 @@
 You are running inside OpenCode. Model providers supply inference, but OpenCode
 is the active agent runtime and the authority for tools and permissions.
 
+Inside Zed, OpenCode runs as a custom ACP agent through `mise exec`. The tracked
+Mise pin therefore owns the ACP binary version as well as the CLI version.
+Restart Zed after changing that pin or this plugin payload; restarting OpenCode
+Desktop does not replace a Zed-owned ACP process.
+
 ## Tool Authority
 
 - Use only the tools exposed in the current OpenCode session

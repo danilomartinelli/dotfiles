@@ -75,6 +75,8 @@ test_config_resolves_managed_instructions_through_config_dir() {
     'instead of changing runtimes or inventing another tool surface.'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
     'A dirty default checkout is not a creation blocker.'
+  # Markdown code spans are intentionally literal assertions.
+  # shellcheck disable=SC2016
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
     '`list_mcp_resources` and `list_mcp_resource_templates` enumerate MCP'
 }
@@ -200,6 +202,27 @@ test_plugin_dependency_matches_pinned_opencode_version() {
     'bun.lock'
 }
 
+test_zed_uses_the_mise_pinned_opencode_acp_runtime() {
+  local zed_settings
+
+  zed_settings=$REPOSITORY_ROOT/zed/settings.json
+  if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
+    import { parse } from "jsonc-parser";
+    const errors = [];
+    const settings = parse(await Bun.file(process.argv[1]).text(), errors, {
+      allowTrailingComma: true,
+      disallowComments: false,
+    });
+    if (errors.length > 0) process.exit(1);
+    const server = settings.agent_servers?.opencode;
+    if (server?.type !== "custom") process.exit(1);
+    if (server?.command !== "mise") process.exit(1);
+    if (JSON.stringify(server?.args) !== JSON.stringify(["exec", "--", "opencode", "acp"])) process.exit(1);
+  ' "$zed_settings"; then
+    scenario_fail 'Zed OpenCode agent does not use the Mise-pinned ACP runtime'
+  fi
+}
+
 test_unsafe_cursor_provider_is_quarantined() {
   local config package
 
@@ -239,9 +262,10 @@ test_dcp_uses_one_pinned_managed_adapter() {
 
   assert_contains "$package" \
     "\"@tarquinen/opencode-dcp\": \"$dcp_version\""
+  assert_contains "$package" '"@opencode-ai/sdk": "1.18.22"'
   assert_contains "$package" '"solid-js": "1.9.12"'
   assert_not_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/bun.lock" \
-    '@opencode-ai/sdk@1.18.18'
+    '@tarquinen/opencode-dcp/@opencode-ai/sdk'
   assert_not_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/bun.lock" \
     'solid-js@1.9.15'
   assert_contains "$config" '"./plugins/ocx/dcp.ts"'
@@ -336,6 +360,8 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$researcher" '`exa_web_search_exa` and `exa_web_fetch_exa`'
 
   assert_contains "$explore" '## Prime Directive: CodeGraph First'
+  # Markdown code spans are intentionally literal assertions.
+  # shellcheck disable=SC2016
   assert_contains "$explore" '`codegraph_codegraph_explore` MCP tool'
   assert_contains "$explore" 'never to this read-only agent'
   assert_contains "$explore" '**NEVER** use Context7, Exa, grep.app'
@@ -367,9 +393,12 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'coder never commits or pushes'
   assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
   assert_contains "$config" 'Push only when explicitly requested; never force-push.'
-  assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, push, or PR/MR creation command'
+  assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, rebase, push, or PR/MR creation command'
   assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
+  # Markdown code spans are intentionally literal assertions.
+  # shellcheck disable=SC2016
   assert_contains "$config" 'A dirty default checkout does not block `worktree_create`'
+  # shellcheck disable=SC2016
   assert_contains "$config" 'Do not use `git -C`, shell `cd`, or a shell working-directory override'
   assert_contains "$config" '"git branch -a --no-color": "allow"'
   assert_contains "$config" '"mcp:*": "deny"'
@@ -733,6 +762,8 @@ scenario_run 'OpenCode enables the native workspace runtime' \
   test_experimental_workspace_runtime_is_enabled
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
+scenario_run 'Zed OpenCode ACP follows the Mise-pinned runtime' \
+  test_zed_uses_the_mise_pinned_opencode_acp_runtime
 scenario_run 'Unsafe Cursor provider stays quarantined' \
   test_unsafe_cursor_provider_is_quarantined
 scenario_run 'DCP has one pinned managed adapter' \

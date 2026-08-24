@@ -28,7 +28,9 @@
   },
   "agent_servers": {
     "opencode": {
-      "type": "registry"
+      "type": "custom",
+      "command": "mise",
+      "args": ["exec", "--", "opencode", "acp"]
     },
     "cursor": {
       "type": "registry"

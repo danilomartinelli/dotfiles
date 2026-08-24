@@ -335,8 +335,12 @@ describe("permission and delegation enforcement", () => {
 			"git show*": "allow",
 			"git remote -v*": "allow",
 			"git add*": "ask",
+			"git rebase*": "ask",
 			"git push*--force*": "deny",
 		});
+		expect(config.agent?.build?.prompt).toContain(
+			"Rebase only when the user explicitly requests it",
+		);
 		expect(config.agent?.plan?.permission?.compress).toBe("allow");
 		expect(config.agent?.build?.permission?.compress).toBe("allow");
 		for (const name of [
