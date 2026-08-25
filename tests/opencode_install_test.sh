@@ -199,6 +199,8 @@ test_desktop_uses_managed_loopback_runtime() {
   assert_contains "$launcher" '--hostname 127.0.0.1'
   assert_contains "$launcher" 'OPENCODE_DESKTOP_SERVER_PORT:-4097'
   assert_contains "$launcher" 'mise exec -- opencode serve'
+  # shellcheck disable=SC2016 # The launcher variable is asserted literally.
+  assert_contains "$launcher" 'cd "$SCRIPT_DIR/.."'
   assert_contains "$plist" '<string>com.danilomartinelli.opencode-desktop-server</string>'
   assert_contains "$plist" '<key>KeepAlive</key>'
   assert_contains "$install" 'SERVER_URL=http://127.0.0.1:4097'

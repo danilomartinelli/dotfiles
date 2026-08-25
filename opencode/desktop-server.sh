@@ -18,6 +18,10 @@ if ! command -v mise >/dev/null 2>&1; then
 	exit 127
 fi
 
+# launchd otherwise starts the process at `/`, which is not a project and
+# creates a noisy anonymous project record before the first Desktop request.
+cd "$SCRIPT_DIR/.."
+
 exec mise exec -- opencode serve \
 	--hostname 127.0.0.1 \
 	--port "${OPENCODE_DESKTOP_SERVER_PORT:-4097}"
