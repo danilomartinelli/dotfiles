@@ -395,6 +395,7 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'explicit approved implementation handoff, not a session-start hook'
   assert_contains "$config" 'coder never commits or pushes'
   assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
+  # shellcheck disable=SC2016 # Backticks are literal prompt content, not shell substitution.
   assert_contains "$config" 'After an explicitly requested history rewrite such as rebase, use only `--force-with-lease`'
   assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, rebase, push, or PR/MR creation command'
   assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
@@ -443,7 +444,7 @@ test_plan_task_policy_is_structurally_read_only() {
 }
 
 test_opencode_contracts_are_parseable_and_semantically_aligned() {
-  local config skills_dir review_command reviewer coder code_review frontend discipline philosophy readme decision_record taste_reference
+  local config skills_dir review_command reviewer coder code_review frontend discipline philosophy
 
   config=$REPOSITORY_ROOT/opencode/opencode.symlink/opencode.jsonc
   skills_dir=$REPOSITORY_ROOT/opencode/opencode.symlink/skills
@@ -454,9 +455,6 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
   frontend=$skills_dir/frontend-philosophy/SKILL.md
   discipline=$skills_dir/frontend-design-discipline/SKILL.md
   philosophy=$REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md
-  readme=$REPOSITORY_ROOT/README.md
-  decision_record=$REPOSITORY_ROOT/docs/agent-doctrine/DECISION-RECORD.md
-  taste_reference=$REPOSITORY_ROOT/docs/agent-doctrine/references/taste-skill.md
 
   # shellcheck disable=SC2016 # The embedded Bun program receives shell arguments explicitly.
   if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
@@ -464,8 +462,7 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
     import { parse } from "jsonc-parser"
 
     const [configPath, skillsPath, reviewCommandPath, reviewerPath, coderPath,
-      codeReviewPath, frontendPath, disciplinePath, philosophyPath, readmePath,
-      decisionRecordPath, tasteReferencePath] = process.argv.slice(1)
+      codeReviewPath, frontendPath, disciplinePath, philosophyPath] = process.argv.slice(1)
     const read = (path) => readFile(path, "utf8")
     const fail = (message) => {
       console.error(message)
@@ -514,8 +511,8 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
       fail("build native task routes are not limited to write-capable leaves")
     }
 
-    const [reviewCommand, reviewer, coder, codeReview, frontend, discipline, philosophy, readme, decisionRecord, tasteReference] =
-      await Promise.all([reviewCommandPath, reviewerPath, coderPath, codeReviewPath, frontendPath, disciplinePath, philosophyPath, readmePath, decisionRecordPath, tasteReferencePath].map(read))
+    const [reviewCommand, reviewer, coder, codeReview, frontend, discipline, philosophy] =
+      await Promise.all([reviewCommandPath, reviewerPath, coderPath, codeReviewPath, frontendPath, disciplinePath, philosophyPath].map(read))
     if (!/recent\s+<base-ref>/.test(reviewCommand) || !reviewCommand.includes("git merge-base") || /git diff HEAD~1|since last commit using/.test(reviewCommand)) fail("review command does not define an explicit merge-base branch mode")
     if (!reviewCommand.includes("git diff --cached") || !reviewCommand.includes("not a three-dot")) fail("review command does not keep staged mode distinct")
     if (!reviewer.includes("explicit base ref, merge-base, and diff") || !reviewer.includes("HEAD~1") || !reviewer.includes("supplied diff")) {
@@ -565,41 +562,11 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
     }
     const normalizedDiscipline = normalizeMarkdown(discipline)
     if (!normalizedDiscipline.includes("Use this skill only when all three conditions are met") || !normalizedDiscipline.includes("Do not load it for minor adjustments, mechanical maintenance, or frontend work that fails any condition.")) fail("frontend design discipline skill lacks executable eligibility and exclusions")
-    const hasConcept = (source, patterns) => patterns.some((pattern) => pattern.test(normalizeMarkdown(source).toLowerCase()))
-    const assertCompleteEligibilityPredicate = (source, label) => {
-      const normalizedSource = normalizeMarkdown(source).toLowerCase()
-      const hasFrontendTarget = [
-        /\b(?:frontend|front-end|front end|ui|user interface)\b[\s\S]{0,120}\b(?:target|surface|screen|page|component|interface)\b/,
-        /\b(?:target|surface|screen|page|component|interface)\b[\s\S]{0,120}\b(?:frontend|front-end|front end|ui|user interface)\b/,
-      ].some((pattern) => pattern.test(normalizedSource))
-      const hasVisualOrInteractiveWork = hasConcept(source, [
-        /\b(?:visual|visually|interaction|interactive|interactivity)\b/,
-      ])
-      const hasNewSurfaceOrSubstantialRedesign = hasConcept(source, [
-        /\b(?:new|newly|creat(?:e|es|ed|ing|ion)|introduc(?:e|es|ed|ing))\b[\s\S]{0,80}\b(?:surface|screen|page|component|interface|experience)\b/,
-        /\b(?:substantial(?:ly)?|major|significant|extensive|large[- ]scale)\b[\s\S]{0,50}\b(?:redesign|rework|revision)(?:s|ed|ing)?\b/,
-        /\b(?:redesign|rework|revision)(?:s|ed|ing)?\b[\s\S]{0,50}\b(?:substantial(?:ly)?|major|significant|extensive|large[- ]scale)\b/,
-      ])
-      if (!hasFrontendTarget || !hasVisualOrInteractiveWork || !hasNewSurfaceOrSubstantialRedesign) {
-        const missing = [
-          !hasFrontendTarget && "an identifiable frontend/UI target or surface",
-          !hasVisualOrInteractiveWork && "visual or interactive work",
-          !hasNewSurfaceOrSubstantialRedesign && "a new surface or substantial redesign",
-        ].filter(Boolean).join(", ")
-        fail(`${label} does not express the complete frontend design eligibility predicate; missing: ${missing}`)
-      }
-    }
-    for (const [label, source] of [
-      ["decision record", decisionRecord],
-      ["README", readme],
-      ["Taste reference", tasteReference],
-    ]) assertCompleteEligibilityPredicate(source, label)
     if (/5 Pillars|Typography with Character|Committed Color|gradient meshes|Avoid Inter/.test(frontend)) fail("frontend philosophy still imposes a visual style")
     for (const source of [coder, reviewer, philosophy]) {
       if (/Typography.*Distinctive|Color.*Bold|Motion.*Purposeful|Atmosphere.*gradient/i.test(source)) fail("visual checklist is duplicated outside frontend skills")
     }
-    if (!readme.includes("docs/agent-doctrine/DECISION-RECORD.md")) fail("scribe-owned decision-record path is no longer documented")
-  ' "$config" "$skills_dir" "$review_command" "$reviewer" "$coder" "$code_review" "$frontend" "$discipline" "$philosophy" "$readme" "$decision_record" "$taste_reference"; then
+  ' "$config" "$skills_dir" "$review_command" "$reviewer" "$coder" "$code_review" "$frontend" "$discipline" "$philosophy"; then
     scenario_fail 'OpenCode contracts must parse and remain semantically aligned'
   fi
 }

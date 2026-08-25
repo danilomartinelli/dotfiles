@@ -316,11 +316,7 @@ accessible, distinctive interfaces; the frontend design discipline is
 conditional and eligible only when all three conditions hold: (1) an
 identifiable frontend or UI target/surface; (2) visual or interactive work;
 and (3) creation of a new surface or a substantial redesign of an existing
-surface. Neither layer is a universal aesthetic policy. See
-[`docs/agent-doctrine/DECISION-RECORD.md`](docs/agent-doctrine/DECISION-RECORD.md)
-for authority, provenance, routing, and rollback boundaries, and the
-[taste-skill reference](docs/agent-doctrine/references/taste-skill.md)
-for the bounded adaptation.
+surface. Neither layer is a universal aesthetic policy.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
