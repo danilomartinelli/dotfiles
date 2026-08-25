@@ -2160,12 +2160,16 @@ interface DelegateArgs {
 
 function createDelegate(manager: DelegationManager): ReturnType<typeof tool> {
 	return tool({
-		description: `Delegate a task to an agent. Returns immediately with a readable ID.
+		description: `Delegate a task to a strict read-only agent. Returns immediately with a readable ID.
 
 Use this for:
-- Research tasks (will be auto-saved)
+- Codebase exploration with "explore"
+- External research with "researcher"
+- Independent review with "reviewer"
 - Parallel work that can run in background
 - Any task where you want persistent, retrievable output
+
+Use native "task" only for write-capable "coder" and "scribe" agents. Never use "task" for "reviewer".
 
 On completion, a notification will arrive with the ID and terminal summary.
 Use \`delegation_read\` with the ID to retrieve full persisted output (including after compaction).`,
@@ -2178,7 +2182,7 @@ Use \`delegation_read\` with the ID to retrieve full persisted output (including
 			agent: tool.schema
 				.string()
 				.describe(
-					'Agent to delegate to. Must deny every direct and indirect mutation tool, such as "researcher" or "explore".',
+					'Strict read-only agent. Use "explore", "researcher", or "reviewer". Never use native "task" for these agents.',
 				),
 		},
 		async execute(args: DelegateArgs, toolCtx: ToolContext): Promise<string> {
@@ -2294,16 +2298,16 @@ Agents route based on their permissions:
 
 | Agent Type | Tool | Why |
 |------------|------|-----|
-| Strict read-only sub-agents | \`delegate\` | Background session, async |
-| Write-capable sub-agents | \`task\` | Native task inside a managed worktree |
+| \`explore\`, \`researcher\`, \`reviewer\` | \`delegate\` | Strict read-only background session |
+| \`coder\`, \`scribe\` | \`task\` | Write-capable native task inside a managed worktree |
 
 **Strict read-only sub-agents** deny edit, write, bash, task, delegate, plan writes, and worktree mutation without allow/ask exceptions.
 **Write-capable sub-agents** have at least one direct or indirect mutation route.
 
 ## How It Works
 
-1. For read-only sub-agents: Call \`delegate\` with detailed prompt
-2. For write-capable sub-agents: Call \`task\` with detailed prompt
+1. For \`explore\`, \`researcher\`, or \`reviewer\`: Call \`delegate\` with detailed prompt
+2. For \`coder\` or \`scribe\`: Call \`task\` with detailed prompt
 3. Continue productive work while it runs
 4. Receive notification when complete
 5. Call \`delegation_read(id)\` to retrieve results
@@ -2728,7 +2732,7 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 			throw new Error(
 				`❌ Agent '${agentName}' is read-only and should use the delegate tool for async background execution.\n\n` +
 					`Read-only agents deny all direct and indirect mutation tools without exceptions.\n` +
-					`Use delegate for read-only sub-agents.\n` +
+					`Call delegate with agent: "${agentName}" for this read-only sub-agent.\n` +
 					`Use task for write-capable sub-agents.`,
 			);
 		},

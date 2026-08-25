@@ -402,6 +402,15 @@ describe("permission and delegation enforcement", () => {
 		expect(config.agent?.build?.prompt).toContain(
 			"Rebase only when the user explicitly requests it",
 		);
+		expect(config.agent?.build?.prompt).toContain(
+			"call `delegate` for the read-only `explore`, `researcher`, and `reviewer` agents",
+		);
+		expect(config.agent?.build?.prompt).toContain(
+			"Never call `task` for `reviewer`",
+		);
+		expect(config.agent?.build?.prompt).toContain(
+			'call `delegate` with `agent: "reviewer"`',
+		);
 		expect(config.agent?.plan?.permission?.compress).toBe("allow");
 		expect(config.agent?.build?.permission?.compress).toBe("allow");
 		for (const name of [
@@ -752,6 +761,29 @@ describe("permission and delegation enforcement", () => {
 					{ args: { subagent_type: "explore" } },
 				),
 			).rejects.toThrow("Cannot authorize native task");
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
+	test("redirects reviewer task calls to the read-only delegate route", async () => {
+		const directory = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-reviewer-task-route-"),
+		);
+		try {
+			const config = await readConfig();
+			const plugin = await backgroundAgentsPlugin({
+				directory,
+				client: createAgentClient(config, "build"),
+			} as never);
+			const hook = plugin["tool.execute.before"];
+			if (!hook) throw new Error("permission hook is missing");
+			await expect(
+				hook(
+					{ tool: "task", sessionID: "build-session" },
+					{ args: { subagent_type: "reviewer" } },
+				),
+			).rejects.toThrow('Call delegate with agent: "reviewer"');
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
@@ -1733,6 +1765,29 @@ describe("plan protocol and review coordination", () => {
 			const output = { system: [] as string[] };
 			await hook({ sessionID: "session" } as never, output);
 			expect(output.system[0]).toContain("<date-awareness>");
+		} finally {
+			await rm(directory, { recursive: true, force: true });
+		}
+	});
+
+	test("injects literal read-only reviewer routing", async () => {
+		const directory = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-reviewer-routing-"),
+		);
+		try {
+			const plugin = await backgroundAgentsPlugin({
+				directory,
+				client: createMinimalClient(),
+			} as never);
+			const hook = plugin["experimental.chat.system.transform"];
+			if (!hook) throw new Error("delegation system transform is missing");
+			const output = { system: [] as string[] };
+			await hook({ sessionID: "build-session" } as never, output);
+			const rules = output.system.join("\n");
+			expect(rules).toContain(
+				"| `explore`, `researcher`, `reviewer` | `delegate` |",
+			);
+			expect(rules).toContain("| `coder`, `scribe` | `task` |");
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
