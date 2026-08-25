@@ -15,6 +15,7 @@ import {
 	assertControlledDiscoveryEnvironment,
 	loadProjectInstructions,
 } from "../plugins/ocx/internal/project-instructions";
+import runtimeGuardPlugin from "../plugins/ocx/runtime-guard";
 import workspacePlugin from "../plugins/ocx/workspace-plugin";
 import worktreePlugin from "../plugins/ocx/worktree";
 import {
@@ -398,6 +399,13 @@ describe("permission and delegation enforcement", () => {
 			"worktree_*": "allow",
 			worktree_delete: "ask",
 		});
+		const runtimeContract = await Bun.file(
+			new URL("../tools/runtime.md", import.meta.url),
+		).text();
+		expect(runtimeContract).toContain("## Build Runtime Tools");
+		expect(runtimeContract).toContain(
+			"Generic MCP resource list/read tools are deliberately hidden",
+		);
 		for (const name of [
 			"plan",
 			"explore",
@@ -414,6 +422,7 @@ describe("permission and delegation enforcement", () => {
 		expect(config.instructions).toContain(
 			"{env:OPENCODE_CONFIG_DIR}/tools/capabilities.md",
 		);
+		expect(config.plugin).toContain("./plugins/ocx/runtime-guard.ts");
 		const capabilityMatrix = await Bun.file(
 			new URL("../tools/capabilities.md", import.meta.url),
 		).text();
@@ -427,6 +436,38 @@ describe("permission and delegation enforcement", () => {
 			new URL("../commands/review.md", import.meta.url),
 		).text();
 		expect(reviewCommand).toMatch(/^---\ndescription:.*\nagent: build\n---/);
+	});
+
+	test("hides generic MCP resource probes from every managed message", async () => {
+		const plugin = await runtimeGuardPlugin({} as never);
+		const hook = plugin["chat.message"];
+		if (!hook) throw new Error("runtime guard chat.message hook is missing");
+		for (const agent of [
+			"plan",
+			"build",
+			"explore",
+			"researcher",
+			"coder",
+			"reviewer",
+			"scribe",
+		]) {
+			const output = {
+				message: {
+					agent,
+					tools: { worktree_create: true },
+				},
+				parts: [],
+			};
+
+			await hook({ sessionID: "session", agent }, output as never);
+
+			expect(output.message.tools, agent).toEqual({
+				worktree_create: true,
+				list_mcp_resources: false,
+				list_mcp_resource_templates: false,
+				read_mcp_resource: false,
+			});
+		}
 	});
 
 	test("blocks shell for a read-only agent even if a future config regresses", async () => {
@@ -1646,8 +1687,9 @@ describe("deterministic plugin and dependency topology", () => {
 	test("loads local entrypoints explicitly before pinned external plugins", async () => {
 		const config = await readConfig();
 		expect(config.autoupdate).toBe("notify");
-		expect(config.plugin?.slice(0, 6)).toEqual([
+		expect(config.plugin?.slice(0, 7)).toEqual([
 			"./plugins/ocx/project-instructions.ts",
+			"./plugins/ocx/runtime-guard.ts",
 			"./plugins/ocx/background-agents.ts",
 			"./plugins/ocx/worktree.ts",
 			"./plugins/ocx/workspace-plugin.ts",

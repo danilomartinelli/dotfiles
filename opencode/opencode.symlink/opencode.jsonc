@@ -389,6 +389,7 @@
 	],
 	"plugin": [
 		"./plugins/ocx/project-instructions.ts",
+		"./plugins/ocx/runtime-guard.ts",
 		"./plugins/ocx/background-agents.ts",
 		"./plugins/ocx/worktree.ts",
 		"./plugins/ocx/workspace-plugin.ts",

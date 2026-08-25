@@ -31,9 +31,10 @@ not user-selectable delegation targets.
   `worktree_delete` are registered only for `build`.
 - Before claiming one of these tools is unavailable, `build` must call its exact
   exposed name once and report the returned error verbatim.
-- `list_mcp_resources` and `list_mcp_resource_templates` enumerate MCP
-  resources. They do not enumerate OpenCode tools and cannot establish whether
-  a worktree tool is available.
+- `list_mcp_resources`, `list_mcp_resource_templates`, and `read_mcp_resource`
+  enumerate or read MCP resources. They do not enumerate OpenCode tools, cannot
+  establish whether a worktree tool is available, and are hidden from every
+  managed agent. Agents use only the exact structured MCP tools assigned below.
 - A dirty default checkout is not a creation blocker. `worktree_create` creates
   or adopts an isolated workspace from committed Git state and leaves those
   default-checkout changes untouched.
@@ -72,9 +73,9 @@ The managed global MCP set is deliberately small:
 | `gh_grep` | `gh_grep_searchGitHub` | `researcher` |
 
 Local-code agents do not use external-research MCPs. The researcher does not
-read the local filesystem. Generic MCP resource listing is denied to agents
-whose `read` permission exists for local files; they must use the structured
-MCP tools explicitly assigned to their role.
+read the local filesystem. Generic MCP resource listing and reading are
+globally hidden. Agents must use the structured MCP tools explicitly assigned
+to their role.
 
 Native project config and plugin discovery is disabled. Consequently,
 repository-local MCP declarations are intentionally not merged into this

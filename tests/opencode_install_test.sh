@@ -73,12 +73,14 @@ test_config_resolves_managed_instructions_through_config_dir() {
     'If a search or tool call fails because of output, glob, or buffer limits'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
     'instead of changing runtimes or inventing another tool surface.'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md" \
+    'Generic MCP resource list/read tools are deliberately hidden'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
     'A dirty default checkout is not a creation blocker.'
   # Markdown code spans are intentionally literal assertions.
   # shellcheck disable=SC2016
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/tools/capabilities.md" \
-    '`list_mcp_resources` and `list_mcp_resource_templates` enumerate MCP'
+    '`list_mcp_resources`, `list_mcp_resource_templates`, and `read_mcp_resource`'
 }
 
 test_selective_skill_payloads_are_present_discoverable_and_scoped() {
@@ -402,6 +404,7 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'Do not use `git -C`, shell `cd`, or a shell working-directory override'
   assert_contains "$config" '"git branch -a --no-color": "allow"'
   assert_contains "$config" '"mcp:*": "deny"'
+  assert_contains "$config" '"./plugins/ocx/runtime-guard.ts"'
   assert_contains "$config" '"apply_patch": "allow"'
   assert_not_contains "$config" 'delivery policy'
 

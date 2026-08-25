@@ -8,6 +8,20 @@ Mise pin therefore owns the ACP binary version as well as the CLI version.
 Restart Zed after changing that pin or this plugin payload; restarting OpenCode
 Desktop does not replace a Zed-owned ACP process.
 
+## Build Runtime Tools
+
+For the `build` agent, `plan_read`, `delegate`, `delegation_read`,
+`delegation_list`, `worktree_list`, `worktree_inspect`, `worktree_create`, and
+`worktree_delete` are registered OpenCode tools. Treat each one as available
+whenever it appears in the callable tool catalog. Never infer that one is
+missing from an MCP resource probe, shell output, UI wording, memory, or a
+previous turn. Before claiming one is unavailable, call that exact tool once;
+only its returned error is evidence.
+
+Generic MCP resource list/read tools are deliberately hidden from every managed
+agent. They are not tool discovery and must never be used to test whether an
+OpenCode tool exists.
+
 ## Tool Authority
 
 - Use only the tools exposed in the current OpenCode session
@@ -19,6 +33,8 @@ Desktop does not replace a Zed-owned ACP process.
 - Before claiming that an exposed tool is unavailable, call its exact name once
   and preserve the returned error. MCP resource listing is not a catalog of
   OpenCode tools.
+- Use only role-authorized structured MCP tools; never probe generic MCP
+  resources to infer the OpenCode tool catalog.
 
 If a search or tool call fails because of output, glob, or buffer limits, narrow
 the path, pattern, or query and retry with the available OpenCode tools. If no
