@@ -1,7 +1,0 @@
-{
-	"$schema": "https://ocx.kdco.dev/schemas/ocx.json",
-	// This customized payload is owned by dotfiles; OCX must not update it.
-	"registries": {},
-	"lockRegistries": false,
-	"skipCompatCheck": false
-}

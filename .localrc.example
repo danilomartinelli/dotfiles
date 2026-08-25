@@ -50,17 +50,7 @@
 # Exa API/local MCP clients (the hosted remote MCP also works keyless)
 # export EXA_API_KEY="<CHANGE_ME>"
 
-# OpenCode providers (loaded via {env:...} in ~/.opencode/opencode.jsonc)
-# Kimi / Moonshot AI
-# export KIMI_API_KEY="<CHANGE_ME>"
-#
-# MiniMax (minimax.io Token Plan or API Console)
-# export MINIMAX_API_KEY="<CHANGE_ME>"
-#
-# Z.AI / GLM Coding Plan (models.dev provider id: zai / zai-coding-plan)
-# export ZHIPU_API_KEY="<CHANGE_ME>"
-#
-# OpenCode Zen + OpenCode Go (same key space)
+# OpenCode/OCX providers (inherited from the shell environment)
 # export OPENCODE_API_KEY="<CHANGE_ME>"
 #
 # Optional extras used by other agents/tools (Aider, Hermes, skills CLI, …)

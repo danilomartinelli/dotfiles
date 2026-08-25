@@ -129,7 +129,7 @@ needed, then runs `brew bundle` against that file.
 | `git-delta`               | Syntax-highlighting pager for Git diffs           |
 | `git-lfs`                 | Git Large File Storage                            |
 | `gitleaks`                | Scan repositories for leaked secrets              |
-| `go-task`                 | Task runner for project automation                 |
+| `go-task`                 | Task runner for project automation                |
 | `glab`                    | GitLab CLI                                        |
 | `gnu-sed`                 | GNU `sed` (`gsed`, portable `sed -i`)             |
 | `grc`                     | Colourise output of common Unix tools             |
@@ -219,16 +219,16 @@ the target before applying, deleting, or changing cluster resources.
 
 ### Applications and fonts
 
-| Group                     | Homebrew casks                                                                                              |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `orbstack`, `postman`, `tableplus`, `zed`          |
-| Terminal                  | `ghostty`, `session-manager-plugin`                                                                         |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
+| Group                     | Homebrew casks                                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `chatgpt`, `lens`, `orbstack`, `postman`, `tableplus`, `zed`                                        |
+| Terminal                  | `ghostty`, `session-manager-plugin`                                                                                   |
+| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                                    |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `linear`, `obsidian`, `paste`, `raycast`, `skim` |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                             |
-| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                             |
-| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                        |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                             |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                       |
+| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                                       |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                                  |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                       |
 
 The Mac App Store entry is `Xcode` (app id `497799835`). `archiver/install.sh`
 assigns Archiver's declared archive types with the Launch Services `viewer`
@@ -240,7 +240,7 @@ Topic installers link or apply machine config for Ghostty, Zed (settings +
 default text/source associations via `duti`), Neovim (`~/.config/nvim/init.vim`
 bridging to `~/.vimrc`), AeroSpace, OrbStack Docker engine
 defaults, Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode
-(`~/.opencode`), Hermes Agent (`~/.hermes`), SOPS age directories,
+(`~/.config/opencode`), Hermes Agent (`~/.hermes`), SOPS age directories,
 Workspace (`~/Workspace/github.com/<user>`), Mise, SSH, Archiver, and the Dock.
 The declared Dock layout is applied once and then left alone so manual Dock
 changes survive updates; run `DOTFILES_DOCK_RESET=1 dot` to reapply it.
@@ -277,7 +277,7 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `npm:eas-cli`                               | `16.28.0`    |
 | `npm:neonctl`                               | `3.6.0`      |
 | `npm:ocx`                                   | `2.0.15`     |
-| `npm:opencode-ai`                           | `1.18.22`    |
+| `npm:opencode-ai`                           | `1.18.23`    |
 | `npm:skills`                                | `1.5.21`     |
 | `npm:wrangler`                              | `4.119.0`    |
 | `pipx:aider-chat`                           | `0.86.2`     |
@@ -292,31 +292,8 @@ version and artifact checksums for every declaration (`lockfile = true` in
 | `yarn`                                      | `4.11.0`     |
 
 The `npm:@colbymchenry/codegraph` runtime exposes the `codegraph` binary
-globally through Mise. The managed OpenCode configuration connects its MCP
-server and gives the read-only `explore` agent a CodeGraph-first workflow. On
-the first structural exploration of a Git project, that agent initializes an
-index at the current worktree root when `codegraph` is available and the exact
-worktree has not been initialized yet. Each linked worktree receives its own
-local index so results always match the active branch.
-
-Generated `.codegraph/` directories are excluded by the global Git ignore and
-must never be committed. `codegraph init` builds the initial graph; the MCP
-server then watches source changes and keeps it synchronized. The agent never
-uses `--force` and does not initialize home, filesystem roots, non-Git
-directories, parent checkouts, or Git common directories. Run `codegraph init`
-manually when using the CLI outside OpenCode.
-
-### Agent doctrine
-
-OpenCode uses the local selective doctrine skills for deterministic diagnosis,
-public-seam TDD, grilling, writing for agents, and the augmented code-review
-workflow. These are guidance only: existing permissions and project
-instructions take precedence. The frontend philosophy emphasizes intentional,
-accessible, distinctive interfaces; the frontend design discipline is
-conditional and eligible only when all three conditions hold: (1) an
-identifiable frontend or UI target/surface; (2) visual or interactive work;
-and (3) creation of a new surface or a substantial redesign of an existing
-surface. Neither layer is a universal aesthetic policy.
+globally through Mise. Generated `.codegraph/` directories are excluded by the
+global Git ignore and must never be committed.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats
 Markdown; `shfmt` is installed through the Go backend on top of the managed Go
@@ -514,11 +491,9 @@ extension settings, LSP/MCP environment maps, and remote-MCP headers; a value
 such as `$BRAVE_API_KEY` can overwrite an inherited value with that literal
 text. Generic keychain interpolation is unsupported as well.
 
-Zed starts OpenCode as a custom ACP agent through `mise exec`, so Zed, the CLI,
-and the local plugin/SDK packages advance as one tested unit instead of letting
-the ACP registry retain a different per-project binary. Restart Zed after
-changing the OpenCode pin or plugin payload; restarting OpenCode Desktop does
-not replace an ACP process owned by Zed.
+Zed starts the Mise-managed OpenCode binary directly as a custom ACP agent.
+Restart Zed after changing the OpenCode pin; interactive terminal sessions use
+OCX separately through the shell aliases documented below.
 
 The installer links the tracked file to `~/.config/zed/settings.json`. For
 literal-JSON-only extension or LSP settings, including static-header
@@ -575,123 +550,26 @@ Never put environment interpolation or a static bearer secret in `headers`.
 If OAuth is unavailable for a literal-header integration, do not configure it.
 After changing inherited environment or local settings, restart Zed.
 
-`.localrc.example` includes commented templates for Git identity exports,
-OpenCode provider keys (`KIMI_API_KEY` / Kimi, `MINIMAX_API_KEY`,
-`ZHIPU_API_KEY` / GLM / Z.AI, `OPENCODE_API_KEY` for Zen/Go), and Hermes /
-shared agent keys (`OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`).
-OpenCode reads those environment variables automatically once they are exported
-from `~/.localrc`. The `opencode/opencode.symlink/` payload is linked as
-`~/.opencode` and contains the dotfiles-owned OpenCode config, agents,
-commands, plugins, skills, and tools. `opencode/env.zsh` points
-`OPENCODE_CONFIG_DIR` there while preserving an explicit machine-local override.
+`.localrc.example` includes commented templates for Git identity, provider,
+and tool credentials. OpenCode and OCX inherit the exported variables from
+`~/.localrc`; secrets remain machine-local and must never be committed.
 
-### OpenCode Desktop managed backend
+### OpenCode and OCX
 
-OpenCode Desktop must use the dotfiles-managed backend at
-`http://127.0.0.1:4097`. Its embedded sidecar currently discovers the local
-plugins but does not dispatch their lifecycle hooks, leaving managed
-permissions, orchestration, and worktree enforcement inactive. The loopback
-backend runs the same Mise-pinned OpenCode CLI and `~/.opencode` payload as the
-terminal and is available only from the local machine.
+OpenCode is installed as a Mise-managed CLI and launched through OCX. The
+`opencode` and `oc` aliases both run `ocx opencode` with the `regular` profile
+selected by `OCX_PROFILE`. Use `oc:boost`, `oc:regular`, or `oc:go` to select
+a profile explicitly.
 
-Install or refresh its macOS LaunchAgent once, then connect Desktop while the
-application is fully closed:
+The installer initializes OCX and links the repository-owned `agents`,
+`commands`, `skills`, `tools`, three managed profiles, `ocx.jsonc`, and
+`opencode.jsonc` entries into `~/.config/opencode`. OCX keeps ownership of
+generated runtime state such as `.ocx`, `plugins`, `package.json`, and
+`.gitignore`.
 
-```bash
-opencode/desktop-server-install.sh install
-# Fully quit OpenCode Desktop before the next command.
-opencode/desktop-server-install.sh connect
-opencode/desktop-server-install.sh status
-```
+See [`opencode/README.md`](opencode/README.md) for installation, ownership,
+profile maintenance, verification, and troubleshooting.
 
-Reopen Desktop after `connect` and start a new session. Sessions that were
-already open can remain attached to the embedded sidecar. The `connect` command
-sets Desktop's machine-local `defaultServerUrl`; it does not modify the tracked
-OpenCode configuration. If Desktop requires the server to be named or a project
-to be associated with it, register `http://127.0.0.1:4097` as `Dotfiles
-Managed` in the Desktop UI. Those labels and project mappings live in
-`opencode.global.dat`, which is application state rather than versioned
-configuration.
-
-Use `status` to confirm both that the LaunchAgent is loaded and that Desktop's
-default server is the managed URL. Runtime logs are written to
-`~/Library/Logs/OpenCode/desktop-server.log` and
-`~/Library/Logs/OpenCode/desktop-server.error.log`. Re-run `install` after
-changing the launcher, OpenCode pin, or plugin payload; the command is
-idempotent. Use `opencode/desktop-server-install.sh uninstall` only to remove
-the managed LaunchAgent. The detailed agent/tool/worktree contract remains in
-`opencode/opencode.symlink/tools/runtime.md`.
-
-[OCX](https://github.com/kdcokenny/ocx) is available as a CLI, but it does
-not own this customized payload: `ocx.jsonc` has no registry, and no OCX receipt
-may claim paths below `~/.opencode`. The installer rejects both overlapping OCX
-ownership and policy-bearing content in legacy `~/.config/opencode`, because
-either can silently overwrite or merge into the managed runtime. OpenCode may
-retain its generated dependency cache there; the installer accepts only that
-known cache shape, empty plugin/skill directories, and DCP's schema-only
-bootstrap file.
-
-Local plugin entrypoints are listed explicitly and in order under
-`plugins/ocx/`; the conventional direct `plugins/*.ts` scan root is kept empty
-to prevent duplicate loading. External plugins are pinned, OpenCode update is
-notify-only, and `bun.lock` is versioned. Provider bridge aliases that bypass
-canonical tool names are denied declaratively and rejected by the runtime hook.
-The `cursor-acp` provider is explicitly disabled and its former model catalog is
-kept only in a quarantined JSONC comment. `open-cursor` is not a plugin or local
-dependency: its documented `cursor-agent` subprocess can perform native side
-effects before OpenCode receives a tool call, so neither OpenCode permissions
-nor the managed-worktree lease can authorize or stop those effects. Re-enable
-it only after the backend becomes model-only and every effect crosses the
-OpenCode tool boundary first.
-The pinned DCP server plugin is configured by the versioned `dcp.jsonc`, and its
-pinned TUI plugin exposes `/dcp`; automatic DCP updates are disabled. Only
-`plan` and `build` may call `compress`, subagent compression is disabled, and
-native task, delegation, plan, and worktree artifacts are protected from
-pruning. Write-capable `coder` and `scribe` tasks are forced to foreground so
-OpenCode Desktop keeps their live task card and progress visible until they
-finish. Its local adapter rejects repository-level DCP overrides.
-`tools/capabilities.md` is the canonical agent, tool, MCP, skill, command, and
-worktree route matrix.
-Authenticated GitHub inspection is intentionally centralized in `build`: safe
-`gh` reads cover PRs, issues, checks, Actions, and REST GET retrieval of review
-and inline-comment evidence. `reviewer` and `researcher` remain shell-less and
-credentialless; build passes the authoritative evidence into their prompts.
-Mutating `gh api` requests remain blocked, while PR creation keeps its explicit
-approval gate.
-Native project-config/plugin discovery and shared external skill scans are
-disabled. A dotfiles-owned read-only loader preserves hierarchical
-`AGENTS.md` instructions from the Git root to the active directory; project
-`.opencode/worktree.jsonc` remains the sole supported repository-local runtime
-configuration and is parsed as strict data.
-The native workspace API may still
-advertise OpenCode's built-in `worktree` adapter, but it is unmanaged and never
-authorizes mutation. Implementation must enter through `worktree_create`, the
-`ocx-git-worktree` adapter, and its exclusive session/branch/path/workspace
-lease. Repository `.opencode/worktree.jsonc` files may configure only worktree
-paths and safe explicit copy/symlink inputs; executable lifecycle hooks and
-unknown keys are rejected. Direct write targets are checked against the leased
-worktree, including symlink ancestry, and lifecycle recovery remains retryable
-after a transient native workspace API failure.
-
-There is no managed `.worktreeinclude` convention. To seed ignored local files
-when a new worktree is created, commit only this data-only repository config:
-
-```jsonc
-{
-  "sync": {
-    "copyFiles": [".env", ".envrc"],
-    "symlinkDirs": ["node_modules"]
-  }
-}
-```
-
-The listed source files remain ignored and are copied from the default checkout
-only when present; their contents are never placed in the config. Missing files
-are skipped. Existing/adopted worktrees are not overwritten during reuse.
-
-Existing manually installed `open-cursor` or `cursor-agent` CLIs are outside the
-managed runtime and are not invoked by bootstrap. Do not run `open-cursor
-install` or `open-cursor sync-models` against the managed `opencode.jsonc`.
 Hermes stores machine-local state under `~/.hermes` (`HERMES_HOME`).
 
 `.context/` is local Conductor/agent workspace state and is intentionally
@@ -716,7 +594,6 @@ tests/topic_catalog_test.sh
 tests/link_dotfiles_test.sh
 tests/opencode_install_test.sh
 _scripts/test-checkout-root
-cd opencode/opencode.symlink && bun test
 ```
 
 The behavioral suites source `tests/_support/shell-scenario.sh` for temporary
@@ -731,9 +608,6 @@ shell alias, public function, Brewfile package, and Mise tool declaration.
 setup, and Zsh startup to resolve the same Homebrew executable and prefix rules.
 
 After changing shell configuration, run the relevant tests and then `reload!`.
-The OpenCode plugin suite is run from `opencode/opencode.symlink` with
-`bun test`; `bun run test:orchestration` runs the focused permission, workspace,
-plan, plugin-topology, and notification boundary suite.
 
 ## Adding a topic or dependency
 

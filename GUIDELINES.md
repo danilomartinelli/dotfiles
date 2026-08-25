@@ -114,32 +114,20 @@ or reset Keychain credentials; it must not be used to recover credentials.
 
 macOS system preferences live in `_macos/defaults.tsv` and are applied by `_macos/set-defaults.sh` (catalog critical; Library/restart advisory). The apply never mutates DNS — resolver state belongs to the OS, Tailscale, or the active VPN. App-specific `defaults write` calls stay in topic installers.
 
-OpenCode's managed agents, commands, plugins, skills, and tools live in
-`opencode/opencode.symlink/`, which bootstrap links to `~/.opencode`. Use the
-`add-topic` skill when scaffolding a new topic folder. Keep npm plugins pinned
-in `opencode.jsonc`; do not also commit an installer-generated copy under
-`plugins/`, because OpenCode auto-discovers local plugins and would load both.
-OpenCode Desktop must run through the loopback backend managed by
-`opencode/desktop-server-install.sh`, not its embedded sidecar, until the
-sidecar dispatches local plugin lifecycle hooks. Keep the backend bound to
-`127.0.0.1`, using the repository's Mise-pinned CLI and the dotfiles-owned
-`~/.opencode` payload. `install` owns the LaunchAgent, `connect` owns only the
-machine-local `defaultServerUrl`, and both must remain idempotent. Desktop
-server labels and per-project associations in `opencode.global.dat` are mutable
-UI state: never generate, link, or commit that file as repository
-configuration. Existing sidecar sessions are not migrated in place; validation
-must use a new Desktop session after reconnecting. Preserve the diagnostic
-contract in `opencode/opencode.symlink/tools/runtime.md` and verify launcher
-changes with `tests/opencode_install_test.sh`.
-Native `coder` and `scribe` tasks must remain foreground operations enforced by
-the orchestration hook; never allow `background: true` to hide a running write
-leaf from the Desktop task card. Keep `task` in every DCP protected-tool list so
-its launch and terminal result survive context pruning. Verify both invariants
-with `opencode/opencode.symlink/tests/orchestration.test.ts`.
-The `open-cursor` 2.5.6 CLI accepts strict JSON only, so its install and model
-sync commands must not rewrite the managed JSONC configuration. The OpenCode
-topic installs Cursor Agent from Cursor's official installer when absent, but
-only the user performs the interactive `cursor-agent login` step.
+OpenCode is a terminal-only, Mise-managed CLI launched through OCX. The topic
+installer initializes the `kdco` registry, installs its workspace only when the
+workspace receipt is absent, then links only the repository-owned editable
+entries into `~/.config/opencode`: `agents`,
+`commands`, `skills`, `tools`, the `boost`, `regular`, and `go` profiles,
+`ocx.jsonc`, and `opencode.jsonc`. Keep `.ocx`, `plugins`, `package.json`,
+`.gitignore`, and OCX's generated `profiles/default` outside version control.
+
+`opencode/env.zsh` selects `regular` through `OCX_PROFILE`. Shell entrypoints
+must go through `ocx opencode`; explicit profile aliases may pass `-p`. When
+adding a managed profile or config entry, update `opencode/install.sh`,
+`opencode/README.md`, and `tests/opencode_install_test.sh` together. The test
+must verify first install, reinstall idempotence, link targets, and preservation
+of OCX-owned runtime state.
 
 ## Checkout-root contract
 

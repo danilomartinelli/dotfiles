@@ -16,7 +16,7 @@ node = "lts"
 "npm:eas-cli" = "16.28.0"
 "npm:neonctl" = "3.6.0"
 "npm:ocx" = "2.0.15"
-"npm:opencode-ai" = "1.18.22"
+"npm:opencode-ai" = { version = "1.18.23", npm_args = "--ignore-scripts=false" }
 "npm:skills" = "1.5.21"
 "npm:wrangler" = "4.119.0"
 "pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" }

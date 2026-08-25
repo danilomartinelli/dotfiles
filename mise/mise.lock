@@ -387,8 +387,11 @@ version = "2.0.15"
 backend = "npm:ocx"
 
 [[tools."npm:opencode-ai"]]
-version = "1.18.22"
+version = "1.18.23"
 backend = "npm:opencode-ai"
+
+[tools."npm:opencode-ai".options]
+npm_args = "--ignore-scripts=false"
 
 [[tools."npm:skills"]]
 version = "1.5.21"
