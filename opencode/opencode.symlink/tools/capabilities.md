@@ -19,8 +19,10 @@ authorize its use. When multiple permission rules match, the last match wins.
 | `scribe` | documentation write leaf | local documentation `read`/`glob`/`grep` plus `apply_patch` for approved prose extensions | none; shell is denied | `writing-for-agents` |
 
 Only `plan` and `build` orchestrate. Read-only leaves use the asynchronous
-`delegate` route. Write-capable leaves use native `task`, and only `build` may
-launch them after its session owns a managed, non-default worktree.
+`delegate` route. Write-capable leaves use a foreground native `task`, and only
+`build` may launch them after its session owns a managed, non-default worktree.
+The runtime overrides `background: true` to `false` for `coder` and `scribe` so
+Desktop retains the live task card and progress until the child finishes.
 The ungoverned built-in `general` subagent is disabled. Hidden host agents such
 as `compaction`, `summary`, and `title` remain internal lifecycle components,
 not user-selectable delegation targets.

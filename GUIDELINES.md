@@ -131,6 +131,11 @@ configuration. Existing sidecar sessions are not migrated in place; validation
 must use a new Desktop session after reconnecting. Preserve the diagnostic
 contract in `opencode/opencode.symlink/tools/runtime.md` and verify launcher
 changes with `tests/opencode_install_test.sh`.
+Native `coder` and `scribe` tasks must remain foreground operations enforced by
+the orchestration hook; never allow `background: true` to hide a running write
+leaf from the Desktop task card. Keep `task` in every DCP protected-tool list so
+its launch and terminal result survive context pruning. Verify both invariants
+with `opencode/opencode.symlink/tests/orchestration.test.ts`.
 The `open-cursor` 2.5.6 CLI accepts strict JSON only, so its install and model
 sync commands must not rewrite the managed JSONC configuration. The OpenCode
 topic installs Cursor Agent from Cursor's official installer when absent, but

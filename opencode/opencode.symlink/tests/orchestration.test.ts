@@ -800,6 +800,56 @@ describe("permission and delegation enforcement", () => {
 		}
 	});
 
+	test("forces write-capable native tasks to remain visible in foreground", async () => {
+		const home = await mkdtemp(
+			path.join(os.tmpdir(), "opencode-task-foreground-home-"),
+		);
+		const { repository, worktree } = await createGitRepository(
+			"opencode-task-foreground",
+		);
+		const previousHome = process.env.HOME;
+		process.env.HOME = home;
+		try {
+			const state = await initStateDb(worktree);
+			claimSession(state, {
+				id: "build-session",
+				branch: "feature/test",
+				path: worktree,
+				workspaceId: "workspace-task-foreground",
+				createdAt: new Date().toISOString(),
+			});
+			state.close();
+
+			const config = await readConfig();
+			const plugin = await backgroundAgentsPlugin({
+				directory: worktree,
+				client: createAgentClient(config, "build"),
+			} as never);
+			const hook = plugin["tool.execute.before"];
+			if (!hook) throw new Error("permission hook is missing");
+
+			for (const subagentType of ["coder", "scribe"]) {
+				const args = { subagent_type: subagentType, background: true };
+				await expect(
+					hook(
+						{ tool: "task", sessionID: "build-session" },
+						{ args },
+					),
+				).resolves.toBeUndefined();
+				expect(args.background, subagentType).toBe(false);
+			}
+		} finally {
+			if (previousHome === undefined) delete process.env.HOME;
+			else process.env.HOME = previousHome;
+			await runCommand(
+				["git", "worktree", "remove", "--force", worktree],
+				repository,
+			).catch(() => undefined);
+			await rm(repository, { recursive: true, force: true });
+			await rm(home, { recursive: true, force: true });
+		}
+	});
+
 	test("redirects reviewer task calls to the read-only delegate route", async () => {
 		const directory = await mkdtemp(
 			path.join(os.tmpdir(), "opencode-reviewer-task-route-"),
@@ -1876,7 +1926,10 @@ describe("plan protocol and review coordination", () => {
 			expect(rules).toContain(
 				"| `explore`, `researcher`, `reviewer` | `delegate` |",
 			);
-			expect(rules).toContain("| `coder`, `scribe` | `task` |");
+			expect(rules).toContain(
+				"| `coder`, `scribe` | foreground `task` |",
+			);
+			expect(rules).toContain("NEVER set `background: true`");
 		} finally {
 			await rm(directory, { recursive: true, force: true });
 		}
@@ -2008,6 +2061,7 @@ describe("deterministic plugin and dependency topology", () => {
 		) as {
 			autoUpdate?: boolean;
 			experimental?: { allowSubAgents?: boolean; customPrompts?: boolean };
+			commands?: { protectedTools?: string[] };
 			compress?: { permission?: string; protectedTools?: string[] };
 			strategies?: {
 				deduplication?: { protectedTools?: string[] };
@@ -2034,10 +2088,12 @@ describe("deterministic plugin and dependency topology", () => {
 		});
 		expect(dcp.compress?.permission).toBe("allow");
 		for (const protectedTools of [
+			dcp.commands?.protectedTools,
 			dcp.compress?.protectedTools,
 			dcp.strategies?.deduplication?.protectedTools,
 			dcp.strategies?.purgeErrors?.protectedTools,
 		]) {
+			expect(protectedTools).toContain("task");
 			expect(protectedTools).toContain("delegation_read");
 			expect(protectedTools).toContain("plan_save");
 			expect(protectedTools).toContain("worktree_list");

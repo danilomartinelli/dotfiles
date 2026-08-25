@@ -2319,7 +2319,7 @@ Agents route based on their permissions:
 | Agent Type | Tool | Why |
 |------------|------|-----|
 | \`explore\`, \`researcher\`, \`reviewer\` | \`delegate\` | Strict read-only background session |
-| \`coder\`, \`scribe\` | \`task\` | Write-capable native task inside a managed worktree |
+| \`coder\`, \`scribe\` | foreground \`task\` | Write-capable native task inside a managed worktree with visible progress |
 
 **Strict read-only sub-agents** deny edit, write, bash, task, delegate, plan writes, and worktree mutation without allow/ask exceptions.
 **Write-capable sub-agents** have at least one direct or indirect mutation route.
@@ -2327,17 +2327,24 @@ Agents route based on their permissions:
 ## How It Works
 
 1. For \`explore\`, \`researcher\`, or \`reviewer\`: Call \`delegate\` with detailed prompt
-2. For \`coder\` or \`scribe\`: Call \`task\` with detailed prompt
-3. Continue productive work while it runs
-4. Receive notification when complete
-5. Call \`delegation_read(id)\` to retrieve results
+2. For \`coder\` or \`scribe\`: Call \`task\` with a detailed prompt and keep it in the foreground
+3. Continue productive, non-overlapping work while read-only delegations run
+4. Keep a foreground write task attached to the parent turn until it returns
+5. Receive notification when a read-only delegation completes
+6. Call \`delegation_read(id)\` to retrieve its result
 
 ## Critical Constraints
 
 **NEVER poll \`delegation_list\` to check completion.**
 You WILL be notified via \`<task-notification>\`. Polling wastes tokens.
 
-**NEVER wait idle.** Always have productive work while delegations run.
+**NEVER set \`background: true\` for a \`coder\` or \`scribe\` task.**
+The runtime forces these write-capable tasks to foreground so Desktop retains
+their live task card and progress until completion.
+
+**NEVER wait idle for asynchronous read-only delegations.** Continue productive,
+non-overlapping work while they run. Foreground write tasks remain attached and
+need no polling or parallel parent mutation.
 
 **Using wrong tool will fail fast with guidance.**
 
@@ -2552,6 +2559,7 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 			output: {
 				args?: {
 					subagent_type?: string;
+					background?: boolean;
 					command?: string;
 					filePath?: string;
 					path?: string;
@@ -2779,6 +2787,10 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					);
 				}
 
+				// Keep the native task attached to the parent turn. A background task
+				// completes its tool card immediately, which lets DCP compact the launch
+				// while the child is still running and makes Desktop lose live progress.
+				output.args.background = false;
 				return;
 			}
 

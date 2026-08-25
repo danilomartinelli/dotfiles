@@ -79,6 +79,9 @@ instead of changing runtimes or inventing another tool surface.
   configuration and never authorizes coder or scribe mutation.
 - A write-capable child must inherit a valid managed lease from its root build
   session and must run in a linked, non-default Git worktree.
+- Native `coder` and `scribe` tasks always run in the foreground. The runtime
+  overrides `background: true` to `false`, keeping the Desktop task card and
+  live progress attached to the parent turn until completion.
 - Direct write targets are confined to that worktree lexically and through
   existing symlinks. The sole exception is a scribe-authored documentation
   handoff whose filename contains `handoff` under the trusted OS temporary
@@ -114,5 +117,5 @@ instead of changing runtimes or inventing another tool surface.
   capability matrix.
 - DCP context compression is available only to the `plan` and `build` primary
   orchestrators. Its managed adapter rejects repository overrides, disables
-  subagent compression, and protects delegation, plan, and worktree artifacts
-  from pruning.
+  subagent compression, and protects native task, delegation, plan, and
+  worktree artifacts from pruning.

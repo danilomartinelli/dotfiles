@@ -646,9 +646,12 @@ OpenCode tool boundary first.
 The pinned DCP server plugin is configured by the versioned `dcp.jsonc`, and its
 pinned TUI plugin exposes `/dcp`; automatic DCP updates are disabled. Only
 `plan` and `build` may call `compress`, subagent compression is disabled, and
-delegation, plan, and worktree artifacts are protected from pruning. Its local
-adapter rejects repository-level DCP overrides. `tools/capabilities.md` is the
-canonical agent, tool, MCP, skill, command, and worktree route matrix.
+native task, delegation, plan, and worktree artifacts are protected from
+pruning. Write-capable `coder` and `scribe` tasks are forced to foreground so
+OpenCode Desktop keeps their live task card and progress visible until they
+finish. Its local adapter rejects repository-level DCP overrides.
+`tools/capabilities.md` is the canonical agent, tool, MCP, skill, command, and
+worktree route matrix.
 Native project-config/plugin discovery and shared external skill scans are
 disabled. A dotfiles-owned read-only loader preserves hierarchical
 `AGENTS.md` instructions from the Git root to the active directory; project
