@@ -333,6 +333,34 @@ describe("permission and delegation enforcement", () => {
 		expect(internals.isBuildShellMutation("git rebase main")).toBe(true);
 	});
 
+	test("allows only read-only REST access through the build GitHub CLI route", () => {
+		const githubViolation =
+			backgroundAgentsPlugin.testInternals.buildGithubCliPolicyViolation;
+		for (const command of [
+			"gh pr view 4 --comments",
+			"gh issue view 12 --comments",
+			"gh api repos/{owner}/{repo}/pulls/4/comments --paginate",
+			"gh api --method GET repos/{owner}/{repo}/issues/4/comments",
+			"gh api repos/{owner}/{repo}/pulls/4/reviews --jq '.[] | .state'",
+		]) {
+			expect(githubViolation(command), command).toBeNull();
+		}
+		for (const command of [
+			"gh pr merge 4",
+			"gh issue close 12",
+			"gh pr view 4 && gh pr merge 4",
+			"gh api --method POST repos/{owner}/{repo}/issues/4/comments",
+			"gh api -XDELETE repos/{owner}/{repo}/issues/comments/1",
+			"gh api repos/{owner}/{repo}/issues/4/comments -f body=test",
+			"gh api --verbose repos/{owner}/{repo}/pulls/4/comments",
+			"gh api graphql -f query='{ viewer { login } }'",
+			"gh api repos/{owner}/{repo}/pulls/4/comments && git status --short",
+			"gh api \"repos/$(whoami)/repo/pulls/4/comments\"",
+		]) {
+			expect(githubViolation(command), command).not.toBeNull();
+		}
+	});
+
 	test("uses runtime default-deny and explicit role capabilities", async () => {
 		const config = await readConfig();
 		expect(config.permission).toMatchObject({
@@ -415,6 +443,10 @@ describe("permission and delegation enforcement", () => {
 			"git remote -v*": "allow",
 			"git add*": "ask",
 			"git rebase*": "ask",
+			"gh pr list*": "allow",
+			"gh issue view*": "allow",
+			"gh run view*": "allow",
+			"gh api*": "allow",
 			"git push*--force*": "deny",
 			"git push*--force-with-lease*": "ask",
 		});
@@ -1043,6 +1075,28 @@ describe("permission and delegation enforcement", () => {
 					{ args: { command: "git add README.md", cwd: otherWorktree } },
 				),
 			).rejects.toThrow("shell working directory");
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{
+						args: {
+							command:
+								"gh api repos/{owner}/{repo}/pulls/4/comments --paginate",
+						},
+					},
+				),
+			).resolves.toBeUndefined();
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{
+						args: {
+							command:
+								"gh api --method POST repos/{owner}/{repo}/issues/4/comments",
+						},
+					},
+				),
+			).rejects.toThrow("GitHub CLI command rejected");
 			await expect(
 				hook(
 					{ tool: "bash", sessionID: "build-session" },

@@ -82,8 +82,13 @@ If uncertain about an issue:
    criteria, compatibility, and user-visible contract.
 6. **Context Evaluation** - Consider surrounding code, project patterns, and
    existing conventions.
-7. **Philosophy Check** - Verify against code-philosophy (5 Laws) if applicable
-8. **Synthesize Findings** - Group by severity, deduplicate, prioritize, and
+7. **Remote review evidence** - When build supplies PR metadata, review
+   submissions, issue comments, or inline comments, map every requested change
+   to the current diff before accepting it as actionable. The reviewer never
+   fetches private GitHub state or credentials itself; missing authoritative
+   evidence is a reported gap, not permission to invent a fix.
+8. **Philosophy Check** - Verify against code-philosophy (5 Laws) if applicable
+9. **Synthesize Findings** - Group by severity, deduplicate, prioritize, and
    label each finding as Standards, Spec, or both.
 
 ## Output Format

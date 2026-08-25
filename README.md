@@ -652,6 +652,12 @@ OpenCode Desktop keeps their live task card and progress visible until they
 finish. Its local adapter rejects repository-level DCP overrides.
 `tools/capabilities.md` is the canonical agent, tool, MCP, skill, command, and
 worktree route matrix.
+Authenticated GitHub inspection is intentionally centralized in `build`: safe
+`gh` reads cover PRs, issues, checks, Actions, and REST GET retrieval of review
+and inline-comment evidence. `reviewer` and `researcher` remain shell-less and
+credentialless; build passes the authoritative evidence into their prompts.
+Mutating `gh api` requests remain blocked, while PR creation keeps its explicit
+approval gate.
 Native project-config/plugin discovery and shared external skill scans are
 disabled. A dotfiles-owned read-only loader preserves hierarchical
 `AGENTS.md` instructions from the Git root to the active directory; project
@@ -666,6 +672,22 @@ paths and safe explicit copy/symlink inputs; executable lifecycle hooks and
 unknown keys are rejected. Direct write targets are checked against the leased
 worktree, including symlink ancestry, and lifecycle recovery remains retryable
 after a transient native workspace API failure.
+
+There is no managed `.worktreeinclude` convention. To seed ignored local files
+when a new worktree is created, commit only this data-only repository config:
+
+```jsonc
+{
+  "sync": {
+    "copyFiles": [".env", ".envrc"],
+    "symlinkDirs": ["node_modules"]
+  }
+}
+```
+
+The listed source files remain ignored and are copied from the default checkout
+only when present; their contents are never placed in the config. Missing files
+are skipped. Existing/adopted worktrees are not overwritten during reuse.
 
 Existing manually installed `open-cursor` or `cursor-agent` CLIs are outside the
 managed runtime and are not invoked by bootstrap. Do not run `open-cursor

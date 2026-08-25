@@ -39,6 +39,15 @@ Generic MCP resource list/read tools are deliberately hidden from every managed
 agent. They are not tool discovery and must never be used to test whether an
 OpenCode tool exists.
 
+Build is the credential boundary for private GitHub inspection. Use only its
+allowlisted read-only `gh` commands to inspect PRs, issues, checks, Actions, and
+authoritative review/comment threads. REST access through `gh api` is GET-only
+and must be one direct invocation; request fields, input bodies, GraphQL, shell
+control syntax, substitutions, and redirections are rejected by the runtime.
+Pass the resulting evidence to reviewer or coder in their task prompt. Never
+send local GitHub credentials to a leaf agent or ask researcher to retrieve a
+private repository through unauthenticated web tools.
+
 ## Tool Authority
 
 - Use only the tools exposed in the current OpenCode session
@@ -92,6 +101,11 @@ instead of changing runtimes or inventing another tool surface.
   and unsupported keys are rejected rather than ignored or run. Only an
   absolute (or `~/`) base path and safe explicit copy/symlink inputs are
   supported.
+- `.worktreeinclude` is not a managed input. Repositories that need ignored
+  local files in newly created worktrees use `.opencode/worktree.jsonc` with
+  `sync.copyFiles` (for files such as `.env` and `.envrc`) and
+  `sync.symlinkDirs` (for explicitly shared directories). Missing sources are
+  skipped, and reuse/adoption never overwrites an existing worktree.
 
 ## Plugin and Skill Authority
 

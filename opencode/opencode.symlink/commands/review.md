@@ -18,6 +18,20 @@ Select exactly one review mode:
   range `git diff "$merge_base" HEAD` (equivalent to `<base-ref>...HEAD`), then
   supply the base ref, merge-base, and complete diff to the shell-less
   reviewer. Never substitute `HEAD~1` or an inferred moving base.
+- `pr <number-or-url>`: **pull-request mode**. Resolve the PR with authenticated
+  read-only `gh` commands. Retrieve its metadata, checks, issue comments,
+  review submissions, and inline review comments. When the request starts from
+  a commit or pasted comment, first map the commit to its owning PR with the
+  REST commit-pulls endpoint instead of trusting a stale PR number. Calculate
+  the local merge-base from the PR's explicit base ref, collect the complete
+  diff, and supply both local and remote evidence to the reviewer. `gh api` is
+  GET-only; never add fields or an input body, use GraphQL, or chain it with
+  another shell command. Use the REST routes
+  `repos/{owner}/{repo}/commits/<sha>/pulls`,
+  `repos/{owner}/{repo}/issues/<number>/comments`,
+  `repos/{owner}/{repo}/pulls/<number>/reviews`, and
+  `repos/{owner}/{repo}/pulls/<number>/comments` as applicable, with
+  `--paginate` for collection endpoints.
 - Any other argument: **path mode**. Review the specified file(s) or directory
   without describing the result as a three-dot branch/PR review.
 
@@ -27,7 +41,8 @@ diff from the build orchestrator rather than asking the reviewer to calculate
 it. Pass the selected mode, exact base and merge-base when present, diff, and
 file paths to the reviewer.
 
-The reviewer agent will:
+The reviewer agent receives all local and remote evidence from build; it never
+uses credentials or fetches a private repository itself. It will:
 - Load the code-review skill
 - Apply the 4 Review Layers (Correctness, Security, Performance, Style)
 - In branch mode, review the supplied fixed-point three-dot diff from the calculated merge-base.

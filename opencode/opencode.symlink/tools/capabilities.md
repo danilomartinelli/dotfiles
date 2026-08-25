@@ -11,7 +11,7 @@ authorize its use. When multiple permission rules match, the last match wins.
 | Agent | Mode | Direct capabilities | Delegation | Skills |
 |---|---|---|---|---|
 | `plan` | primary, read-only | `question`, `plan_save`, `plan_read`, `compress`, delegation status | `delegate` to read-only `explore`, `researcher`, or `reviewer` | `plan-protocol`, `grilling` |
-| `build` | primary orchestrator | local `read`/`glob`/`grep`, allowlisted read-only Git inspection, approved delivery Git operations, managed worktree tools, `plan_read`, `compress` | `delegate` to read-only agents; native `task` only to `coder` and `scribe` from a managed worktree | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline` |
+| `build` | primary orchestrator | local `read`/`glob`/`grep`, allowlisted read-only Git and authenticated GitHub inspection, approved delivery Git operations, managed worktree tools, `plan_read`, `compress` | `delegate` to read-only agents; native `task` only to `coder` and `scribe` from a managed worktree | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline` |
 | `explore` | read-only leaf | `codegraph_codegraph_explore`, local `read`/`glob`/`grep` | none | none |
 | `researcher` | read-only leaf | Context7, Exa, grep.app, and `webfetch`; no local filesystem or shell | none | none |
 | `coder` | write leaf | CodeGraph, local file mutation, read-only Git inspection, project-local shell verification | none; no worktree or delivery Git lifecycle | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline`, `deterministic-diagnosis`, `public-seam-tdd` |
@@ -68,6 +68,19 @@ used by `build` and may run project verification commands. It cannot mutate Git
 state, branches, remotes, worktrees, commits, or delivery. Structured managed
 worktree lifecycle remains exclusive to `build`.
 
+Authenticated GitHub evidence collection also belongs to `build`. Its
+allowlisted `gh` surface covers repository metadata; PR list/view/status/checks
+and diffs; issue list/view/status; Actions run and workflow list/view; issue/PR
+search; and REST reads through `gh api`. The runtime accepts only a single
+direct `gh api` invocation using GET, without request fields, input bodies,
+GraphQL, shell chaining, substitution, or redirection. Remote mutations remain
+denied except for the separately approval-gated `gh pr create` delivery route.
+For review work, build maps the reviewed commit to its owning PR and retrieves
+the authoritative issue comments, review submissions, and inline review
+comments before delegating the supplied evidence to the shell-less reviewer.
+Private-repository retrieval must not be delegated to `researcher` or
+`reviewer`; neither role receives local credentials.
+
 ## MCP Routing
 
 The managed global MCP set is deliberately small:
@@ -103,8 +116,9 @@ behavior boundaries; `writing-for-agents` is only for agent-facing prose.
 ## Commands
 
 - `/review` always selects `build`. Build establishes staged, path, or explicit
-  merge-base branch evidence and delegates the shell-less analysis to
-  `reviewer`.
+  merge-base branch evidence. For `pr <number-or-url>`, it also retrieves the
+  authoritative authenticated PR metadata and comment/review threads before it
+  delegates all supplied evidence to `reviewer`.
 - `/dcp` opens the managed DCP TUI panel. `/dcp-compress [focus]` requests one
   model-driven compression pass. Compression capability is available only to
   the `plan` and `build` primary orchestrators; protected delegation, plan, and

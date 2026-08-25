@@ -650,6 +650,146 @@ function isBuildShellMutation(command: string): boolean {
 	);
 }
 
+function shellHasActiveControlSyntax(command: string): boolean {
+	let quote: "single" | "double" | null = null;
+	let escaped = false;
+	for (let index = 0; index < command.length; index += 1) {
+		const character = command[index] ?? "";
+		const nextCharacter = command[index + 1] ?? "";
+		if (escaped) {
+			escaped = false;
+			continue;
+		}
+		if (character === "\\" && quote !== "single") {
+			escaped = true;
+			continue;
+		}
+		if (character === "'" && quote !== "double") {
+			quote = quote === "single" ? null : "single";
+			continue;
+		}
+		if (character === '"' && quote !== "single") {
+			quote = quote === "double" ? null : "double";
+			continue;
+		}
+		if (quote === "single") continue;
+		if (character === "`" || (character === "$" && nextCharacter === "(")) {
+			return true;
+		}
+		if (quote === null && /[;&|<>\n\r]/.test(character)) return true;
+	}
+	return quote !== null || escaped;
+}
+
+function shellWords(command: string): string[] | null {
+	const words: string[] = [];
+	let word = "";
+	let quote: "single" | "double" | null = null;
+	let escaped = false;
+	for (const character of command.trim()) {
+		if (escaped) {
+			word += character;
+			escaped = false;
+			continue;
+		}
+		if (character === "\\" && quote !== "single") {
+			escaped = true;
+			continue;
+		}
+		if (character === "'" && quote !== "double") {
+			quote = quote === "single" ? null : "single";
+			continue;
+		}
+		if (character === '"' && quote !== "single") {
+			quote = quote === "double" ? null : "double";
+			continue;
+		}
+		if (/\s/.test(character) && quote === null) {
+			if (word) words.push(word);
+			word = "";
+			continue;
+		}
+		word += character;
+	}
+	if (escaped || quote !== null) return null;
+	if (word) words.push(word);
+	return words;
+}
+
+function buildGithubCliPolicyViolation(command: string): string | null {
+	if (!/\bgh(?:\s|$)/i.test(command)) return null;
+	if (shellHasActiveControlSyntax(command)) {
+		return "gh must be a single direct invocation without shell control, substitution, or redirection";
+	}
+
+	const words = shellWords(command);
+	if (!words || words[0]?.toLowerCase() !== "gh") {
+		return "gh must be invoked directly by the build orchestrator";
+	}
+	const group = words[1]?.toLowerCase() ?? "";
+	const operation = words[2]?.toLowerCase() ?? "";
+	if (group !== "api") {
+		const route = `${group} ${operation}`;
+		const allowedRoutes = new Set([
+			"repo view",
+			"pr create",
+			"pr list",
+			"pr view",
+			"pr status",
+			"pr checks",
+			"pr diff",
+			"issue list",
+			"issue view",
+			"issue status",
+			"run list",
+			"run view",
+			"workflow list",
+			"workflow view",
+			"search issues",
+			"search prs",
+		]);
+		return allowedRoutes.has(route)
+			? null
+			: "this GitHub CLI operation is not on the managed build allowlist";
+	}
+
+	for (let index = 2; index < words.length; index += 1) {
+		const word = words[index] ?? "";
+		const normalized = word.toLowerCase();
+		if (normalized === "graphql") {
+			return "gh api graphql is not authorized because this route cannot prove the operation is query-only";
+		}
+		if (normalized === "--verbose") {
+			return "gh api verbose request logging is not authorized on the credential boundary";
+		}
+		if (
+			/^-[fF](?:$|.)/.test(word) ||
+			normalized === "--field" ||
+			normalized.startsWith("--field=") ||
+			normalized === "--raw-field" ||
+			normalized.startsWith("--raw-field=") ||
+			normalized === "--input" ||
+			normalized.startsWith("--input=")
+		) {
+			return "gh api request fields and input bodies are not authorized on the read-only route";
+		}
+
+		let method: string | undefined;
+		if (normalized === "-x" || normalized === "--method") {
+			method = words[index + 1];
+			index += 1;
+		} else if (/^-x.+/i.test(word)) {
+			method = word.slice(2);
+		} else if (normalized.startsWith("--method=")) {
+			method = word.slice("--method=".length);
+		}
+		if (method !== undefined && method.toUpperCase() !== "GET") {
+			return "gh api is restricted to HTTP GET";
+		}
+	}
+	return null;
+}
+
 async function isLinkedWorktree(
 	directory: string,
 	log: Logger,
@@ -2694,6 +2834,11 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					);
 					}
 					if (callerAgent === "build") {
+						const githubViolation = buildGithubCliPolicyViolation(command);
+						if (githubViolation)
+							throw new Error(
+								`❌ Build GitHub CLI command rejected: ${githubViolation}.`,
+							);
 						const violation = coderStatefulGitInspectionViolation(command);
 						if (violation)
 							throw new Error(
@@ -2928,6 +3073,7 @@ const BackgroundAgentsPluginWithInternals = Object.assign(
 	{
 		testInternals: {
 			DelegationManager,
+			buildGithubCliPolicyViolation,
 			coderShellPolicyViolation,
 			formatDelegationContext,
 			isAgentPermissionReadOnly,
