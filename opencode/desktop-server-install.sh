@@ -40,7 +40,16 @@ install_server() {
 	trap - EXIT HUP INT TERM
 
 	launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || true
-	launchctl bootstrap "gui/$(id -u)" "$PLIST"
+	bootstrap_attempt=0
+	while ! launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; do
+		bootstrap_attempt=$((bootstrap_attempt + 1))
+		if [ "$bootstrap_attempt" -ge 5 ]; then
+			printf '%s\n' "Unable to bootstrap $LABEL after $bootstrap_attempt attempts" >&2
+			exit 1
+		fi
+		# launchd may briefly retain the previous label after bootout returns.
+		sleep 1
+	done
 	launchctl kickstart -k "gui/$(id -u)/$LABEL"
 
 	printf '%s\n' "OpenCode managed Desktop backend installed at $SERVER_URL"

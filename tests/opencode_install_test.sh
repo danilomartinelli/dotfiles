@@ -206,6 +206,7 @@ test_desktop_uses_managed_loopback_runtime() {
   assert_contains "$install" 'SERVER_URL=http://127.0.0.1:4097'
   assert_contains "$install" 'defaultServerUrl'
   assert_contains "$install" 'OpenCode Desktop is running. Quit it completely'
+  assert_contains "$install" 'launchd may briefly retain the previous label'
   assert_contains "$runtime" 'embedded Desktop sidecar'
   assert_contains "$runtime" 'binds only to loopback'
   assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/notify.ts" \
@@ -257,6 +258,10 @@ test_desktop_backend_installer_renders_and_loads_launch_agent() {
   scenario_write_executable "$fake_bin/launchctl" <<'EOF'
 #!/bin/sh
 printf 'launchctl %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+if [ "$1" = bootstrap ]; then
+  attempts=$(grep -c '^launchctl bootstrap ' "$SCENARIO_EVENT_LOG")
+  [ "$attempts" -ge 2 ] || exit 5
+fi
 exit 0
 EOF
 
@@ -272,6 +277,7 @@ EOF
   assert_contains "$plist" "$logs/desktop-server.log"
   assert_contains "$home/events.log" 'launchctl bootstrap gui/'
   assert_contains "$home/events.log" 'launchctl kickstart -k gui/'
+  assert_count "$home/events.log" 'launchctl bootstrap gui/' 2
 }
 
 test_plugin_dependency_matches_pinned_opencode_version() {
