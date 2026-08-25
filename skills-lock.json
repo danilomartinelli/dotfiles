@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "skills/create-agentsmd/SKILL.md",
       "computedHash": "bfbdbb76b17cca970d1d624e36ce72b6847860d740581c8865da796c1fef8552"
+    },
+    "prompt-enhancer": {
+      "source": "sammcj/agentic-coding",
+      "sourceType": "github",
+      "skillPath": "skills/prompt-enhancer/SKILL.md",
+      "computedHash": "a079210a2420239cb5fc8f0af5594f051be3678b096c9afa146cf6121a14d1ed"
     }
   }
 }
