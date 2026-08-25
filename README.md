@@ -452,8 +452,10 @@ Catppuccin Macchiato theme and keeps audible notifications disabled. OCX retains
 `profiles/default`.
 
 The `regular` profile carries the active trusted-project model and MCP policy.
-The `go` and `boost` directories are managed profile slots and can specialize
-that baseline without changing the default shell profile.
+The installer creates it first, then clones that policy into `go` and `boost`.
+`go` routes every role through `opencode-go/*`; `boost` is the uncapped,
+quality-first route across Claude Opus, GPT-5.6 Sol, Codex, Kimi, Grok, MiniMax,
+and GLM. The shell default remains `regular`.
 
 See [`opencode/README.md`](opencode/README.md) for profile maintenance,
 ownership, verification, and troubleshooting.

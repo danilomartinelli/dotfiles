@@ -46,6 +46,7 @@ configure_managed_entry() {
 
 configure_profile() {
   profile_name=$1
+  clone_source=${2:-}
   profile_source="$TOPIC_DIR/profiles/$profile_name"
   profile_target="$CONFIG_DIR/profiles/$profile_name"
 
@@ -55,7 +56,11 @@ configure_profile() {
   fi
 
   ocx profile remove "$profile_name" --global
-  ocx profile add "$profile_name" --global
+  if [ -n "$clone_source" ]; then
+    ocx profile add "$profile_name" --clone "$clone_source" --global
+  else
+    ocx profile add "$profile_name" --global
+  fi
 
   # OCX creates a profile directory. Replace that generated directory with the
   # repository-owned profile so edits remain versioned in dotfiles.
@@ -73,8 +78,8 @@ configure_managed_entry ocx.jsonc
 configure_managed_entry opencode.jsonc
 configure_managed_entry tui.jsonc
 
-configure_profile boost
 configure_profile regular
-configure_profile go
+configure_profile go regular
+configure_profile boost regular
 
 installer_success "OpenCode configured"

@@ -136,6 +136,10 @@ managed profile or entry, update all of these together:
 - `opencode/README.md`
 - `tests/opencode_install_test.sh`
 
+Install `regular` first and clone `go` and `boost` from it. Keep shared profile
+instructions, OCX policy, permissions, MCPs, and researcher shell policy equal;
+specialize their model routing and model-specific options.
+
 Validate model IDs and variants against the live `opencode models <provider> --verbose --pure` catalog. A variant name is model-specific; do not invent a
 universal `fast`, `max`, or reasoning option.
 

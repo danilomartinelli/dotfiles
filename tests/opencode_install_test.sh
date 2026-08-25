@@ -54,6 +54,10 @@ case "$1 $2" in
     rm -rf "$config_dir/profiles/$3"
     ;;
   'profile add')
+    if [ "${4:-}" = '--clone' ] && [ ! -e "$config_dir/profiles/${5:-}" ]; then
+      printf 'clone source missing: %s\n' "${5:-}" >&2
+      exit 1
+    fi
     mkdir -p "$config_dir/profiles/$3"
     printf 'generated profile\n' >"$config_dir/profiles/$3/generated"
     ;;
@@ -70,6 +74,10 @@ assert_link_target() {
 
   [[ -L $link ]] || scenario_fail "$description is not a symbolic link"
   assert_equal "$expected" "$(readlink "$link")" "$description target"
+}
+
+jsonc_to_json() {
+  yq -p json -o json '.' "$1"
 }
 
 test_shell_uses_regular_ocx_profile_and_shortcuts() {
@@ -135,8 +143,8 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
   done
 
   while IFS= read -r jsonc_path; do
-    jq empty "$jsonc_path" \
-      || scenario_fail "OpenCode JSONC is not valid JSON: ${jsonc_path#"$REPOSITORY_ROOT/"}"
+    jsonc_to_json "$jsonc_path" >/dev/null \
+      || scenario_fail "OpenCode JSONC is invalid: ${jsonc_path#"$REPOSITORY_ROOT/"}"
   done < <(find "$REPOSITORY_ROOT/opencode" -type f -name '*.jsonc' -print | sort)
 
   for managed_path in plugins .ocx package.json .gitignore; do
@@ -150,7 +158,7 @@ test_tui_matches_terminal_theme_and_interaction_defaults() {
 
   tui_config=$REPOSITORY_ROOT/opencode/tui.jsonc
 
-  jq -e '
+  jsonc_to_json "$tui_config" | jq -e '
 		."$schema" == "https://opencode.ai/tui.json" and
 		.theme == "catppuccin-macchiato" and
 		.leader_timeout == 2000 and
@@ -169,7 +177,7 @@ test_tui_matches_terminal_theme_and_interaction_defaults() {
 			"sound": false
 		} and
 		(has("plugin") | not)
-	' "$tui_config" >/dev/null \
+	' >/dev/null \
     || scenario_fail 'OpenCode TUI theme or interaction defaults are incorrect'
 }
 
@@ -179,20 +187,21 @@ test_regular_profile_trusts_project_configuration() {
   ocx_config=$REPOSITORY_ROOT/opencode/profiles/regular/ocx.jsonc
   opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
 
-  jq -e '.exclude == ["**/CLAUDE.md"]' "$ocx_config" >/dev/null \
+  jsonc_to_json "$ocx_config" | jq -e \
+    '.exclude == ["**/CLAUDE.md"]' >/dev/null \
     || scenario_fail 'regular profile excludes more than CLAUDE.md'
 
-  jq -e '
+  jsonc_to_json "$opencode_config" | jq -e '
 		.permission["linear_*"] == "allow" and
 		.mcp.linear == {
 			"type": "remote",
 			"url": "https://mcp.linear.app/mcp",
 			"enabled": false
 		}
-	' "$opencode_config" >/dev/null \
+	' >/dev/null \
     || scenario_fail 'regular profile Linear MCP policy is incorrect'
 
-  jq -e '
+  jsonc_to_json "$opencode_config" | jq -e '
 		.agent.researcher.permission.bash == {
 			"glab repo view*": "allow",
 			"glab mr view*": "allow",
@@ -209,8 +218,103 @@ test_regular_profile_trusts_project_configuration() {
 			"glab search *": "allow",
 			"glab api *": "allow"
 		}
-	' "$opencode_config" >/dev/null \
+	' >/dev/null \
     || scenario_fail 'regular profile glab permissions are incorrect'
+}
+
+test_specialized_profiles_clone_regular_contract_and_route_models() {
+  local boost_config go_config profile regular_config regular_dir
+
+  regular_dir=$REPOSITORY_ROOT/opencode/profiles/regular
+  regular_config=$regular_dir/opencode.jsonc
+  go_config=$REPOSITORY_ROOT/opencode/profiles/go/opencode.jsonc
+  boost_config=$REPOSITORY_ROOT/opencode/profiles/boost/opencode.jsonc
+
+  for profile in go boost; do
+    cmp -s "$regular_dir/AGENTS.md" \
+      "$REPOSITORY_ROOT/opencode/profiles/$profile/AGENTS.md" \
+      || scenario_fail "$profile profile instructions diverge from regular"
+    cmp -s "$regular_dir/ocx.jsonc" \
+      "$REPOSITORY_ROOT/opencode/profiles/$profile/ocx.jsonc" \
+      || scenario_fail "$profile OCX policy diverges from regular"
+    jq -s -e '
+		.[0].permission == .[1].permission and
+		.[0].mcp == .[1].mcp and
+		.[0].agent.researcher.permission == .[1].agent.researcher.permission
+	' <(jsonc_to_json "$regular_config") \
+      <(jsonc_to_json \
+        "$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc") >/dev/null \
+      || scenario_fail "$profile OpenCode policy diverges from regular"
+  done
+
+  jsonc_to_json "$go_config" | jq -e '
+		[
+			.model,
+			.small_model,
+			(.agent | to_entries[] | .value.model)
+		] | all(startswith("opencode-go/"))
+	' >/dev/null \
+    || scenario_fail 'go profile uses a model outside OpenCode Go'
+
+  jsonc_to_json "$go_config" | jq -e '
+		.model == "opencode-go/grok-4.6" and
+		.small_model == "opencode-go/gpt-5.6-luna" and
+		.agent.plan == {
+			"model": "opencode-go/grok-4.6",
+			"variant": "xhigh",
+			"temperature": 0.3
+		} and
+		.agent.build == {
+			"model": "opencode-go/glm-5.3",
+			"variant": "max",
+			"temperature": 0.3
+		} and
+		.agent.coder == {
+			"model": "opencode-go/kimi-k3",
+			"variant": "max"
+		} and
+		.agent.explore == {
+			"model": "opencode-go/gpt-5.6-luna",
+			"variant": "max"
+		} and
+		.agent.researcher.model == "opencode-go/qwen3.8-max" and
+		(.agent.researcher | has("variant") | not) and
+		.agent.scribe.model == "opencode-go/minimax-m3" and
+		.agent.scribe.variant == "thinking" and
+		.agent.reviewer.model == "opencode-go/deepseek-v4-pro" and
+		.agent.reviewer.variant == "max" and
+		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)
+	' >/dev/null \
+    || scenario_fail 'go profile model routing is incorrect'
+
+  jsonc_to_json "$boost_config" | jq -e '
+		.model == "openai/gpt-5.6-sol" and
+		.small_model == "kimi-for-coding/k3" and
+		.agent.plan == {
+			"model": "anthropic/claude-opus-5",
+			"variant": "max"
+		} and
+		.agent.build == {
+			"model": "openai/gpt-5.6-sol",
+			"variant": "max"
+		} and
+		.agent.coder == {
+			"model": "openai/gpt-5.3-codex-spark",
+			"variant": "xhigh"
+		} and
+		.agent.explore == {
+			"model": "kimi-for-coding/k3",
+			"variant": "max"
+		} and
+		.agent.researcher.model == "opencode-go/grok-4.6" and
+		.agent.researcher.variant == "xhigh" and
+		.agent.scribe.model == "minimax-coding-plan/MiniMax-M3" and
+		(.agent.scribe | has("variant") | not) and
+		.agent.reviewer.model == "zai-coding-plan/glm-5.3" and
+		.agent.reviewer.variant == "max" and
+		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)
+	' >/dev/null \
+    || scenario_fail 'boost profile model routing is incorrect'
 }
 
 test_installer_links_only_dotfiles_owned_entries() {
@@ -233,6 +337,14 @@ test_installer_links_only_dotfiles_owned_entries() {
     assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
       "$config_dir/profiles/$profile" "OpenCode $profile profile"
   done
+
+  assert_contains "$home/events.log" 'ocx profile add regular --global'
+  assert_contains "$home/events.log" \
+    'ocx profile add go --clone regular --global'
+  assert_contains "$home/events.log" \
+    'ocx profile add boost --clone regular --global'
+  assert_before "$home/events.log" 'ocx profile add regular --global' \
+    'ocx profile add go --clone regular --global'
 
   for profile in plugins .ocx package.json .gitignore profiles/default; do
     [[ -e $config_dir/$profile ]] \
@@ -272,6 +384,8 @@ scenario_run 'OpenCode TUI matches terminal theme and interaction defaults' \
   test_tui_matches_terminal_theme_and_interaction_defaults
 scenario_run 'OpenCode regular profile trusts project configuration' \
   test_regular_profile_trusts_project_configuration
+scenario_run 'OpenCode specialized profiles clone regular and route models' \
+  test_specialized_profiles_clone_regular_contract_and_route_models
 scenario_run 'OpenCode installer links managed entries and preserves OCX runtime state' \
   test_installer_links_only_dotfiles_owned_entries
 scenario_finish

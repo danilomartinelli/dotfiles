@@ -260,6 +260,12 @@ explicitly added to the installer contract. OCX owns `.ocx`, `plugins`,
 `package.json`, `.gitignore`, and `profiles/default`; keep those generated paths
 out of Git.
 
+Create `regular` before specialized profiles. `go` and `boost` are installed
+with `--clone regular`; keep their profile instructions, OCX policy,
+permissions, MCP servers, and researcher shell policy aligned with that
+baseline. Specialize only model routing and model-specific options unless a
+profile contract is intentionally changed and documented.
+
 When adding or changing a managed profile or entry, update these together:
 
 - `opencode/install.sh`

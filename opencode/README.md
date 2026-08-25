@@ -39,8 +39,8 @@ Normal bootstrap and `dot` updates also run it. The installer:
 1. Installs the `kdco/workspace` component set when its receipt is absent.
 1. Links the dotfiles-owned global and TUI entries into
    `~/.config/opencode`.
-1. Recreates `boost`, `regular`, and `go`, then replaces each generated profile
-   directory with its repository link.
+1. Creates `regular`, clones `go` and `boost` from it with OCX, then replaces
+   each generated profile directory with its repository link.
 
 Re-running the installer is supported. Once the workspace receipt exists, it
 does not reinstall the component bundle, so local edits exposed through the
@@ -68,6 +68,33 @@ The managed TUI keeps OpenCode aligned with the terminal stack: Catppuccin
 Macchiato, `ctrl+x` as the leader, `ctrl+p` for the command list, accelerated
 mouse scrolling, a blinking block cursor, and notifications without sound.
 Plugins remain in `opencode.jsonc`, which is their single configuration owner.
+
+### Profile contract and model routing
+
+The installer materializes `regular` first and uses `ocx profile add --clone regular` for both specialized profiles. Their `AGENTS.md` instructions and
+`ocx.jsonc` policy stay identical to `regular`; permissions, MCP servers, and
+the researcher's read-oriented GitLab policy are also preserved. Only model
+routing and model-specific options differ.
+
+| Role       | `regular`                     | `go`                                  | `boost`                                |
+| ---------- | ----------------------------- | ------------------------------------- | -------------------------------------- |
+| Default    | `openai/gpt-5.6-terra`        | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                   |
+| Small      | `openai/gpt-5.6-luna`         | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`                   |
+| Plan       | `openai/gpt-5.6-terra` (high) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`)      |
+| Build      | `openai/gpt-5.6-terra` (high) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)           |
+| Coder      | `openai/gpt-5.6-luna` (high)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.3-codex-spark` (`xhigh`) |
+| Explore    | `openai/gpt-5.6-luna` (low)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)           |
+| Researcher | `openai/gpt-5.6-sol` (high)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)       |
+| Scribe     | `openai/gpt-5.6-luna` (low)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`       |
+| Reviewer   | `openai/gpt-5.6-sol` (high)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`)      |
+
+`go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
+has no cost ceiling: it combines direct Anthropic, OpenAI, Kimi, MiniMax, and
+Z.AI routes with OpenCode Go's Grok. Claude, Sol, Codex Spark, Kimi, Grok, and
+GLM use their highest valid configured reasoning variants; MiniMax uses its
+provider default for the writing-focused `scribe` role.
+
+### Trusted project integrations
 
 The `regular` profile is intended for trusted projects. OCX excludes only
 `CLAUDE.md`, so project-level OpenCode configuration, MCP servers, and
@@ -108,14 +135,19 @@ Each managed profile contains:
 
 To change an existing profile, edit its directory below `opencode/profiles/`.
 
-To add another managed profile:
+To add another profile derived from the trusted-project baseline:
 
-1. Run `ocx profile add <name> --global` to generate its initial files.
+1. Run `ocx profile add <name> --clone regular --global` to generate its
+   initial files.
 1. Add those three files under `opencode/profiles/<name>/`.
-1. Add `configure_profile <name>` to `opencode/install.sh`.
+1. Add `configure_profile <name> regular` after `regular` in
+   `opencode/install.sh`.
 1. Add the profile and its shell entrypoint to
    `tests/opencode_install_test.sh` and this document.
-1. Run the installer and verify the resulting link.
+1. Keep the shared instructions, OCX policy, permissions, and MCP configuration
+   aligned; specialize only the intended profile fields.
+1. Validate every model and variant against the live catalog, run the installer,
+   and verify the resulting link.
 
 ## Update OCX components
 
@@ -139,9 +171,10 @@ Run the focused suite:
 tests/opencode_install_test.sh
 ```
 
-It verifies the shell defaults and aliases, JSON configuration, payload
-ownership, exact link targets, repeat installation, preservation of runtime
-state, and receipt-aware workspace installation.
+It verifies the shell defaults and aliases, JSON and TUI configuration, cloned
+profile policy, exact model routing, payload ownership, exact link targets,
+repeat installation, preservation of runtime state, and receipt-aware workspace
+installation.
 
 Inspect the live links when diagnosing a machine-specific issue:
 
