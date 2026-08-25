@@ -490,9 +490,8 @@ function isPlanDelegatingToWriteCapable(
 const WRITE_LEAF_AGENTS = new Set(["coder", "scribe"]);
 const DELEGATION_ORCHESTRATORS = new Set(["plan", "build"]);
 const SCRIBE_EXTENSIONS = new Set([".md", ".mdx", ".txt", ".rst", ".adoc"]);
-const CODER_FORBIDDEN_GIT_VERBS = [
+const CODER_MUTATING_GIT_VERBS = [
 	"add",
-	"branch",
 	"checkout",
 	"cherry-pick",
 	"clean",
@@ -504,14 +503,10 @@ const CODER_FORBIDDEN_GIT_VERBS = [
 	"pull",
 	"push",
 	"rebase",
-	"remote",
 	"reset",
 	"restore",
 	"revert",
-	"stash",
 	"switch",
-	"tag",
-	"worktree",
 ] as const;
 const BUILD_MUTATING_GIT_VERBS = [
 	"add",
@@ -519,6 +514,7 @@ const BUILD_MUTATING_GIT_VERBS = [
 	"fetch",
 	"pull",
 	"push",
+	"rebase",
 ] as const;
 
 function shellContainsGitVerb(
@@ -539,11 +535,84 @@ function isForcePushCommand(command: string): boolean {
 	);
 }
 
+const CODER_READ_ONLY_STATEFUL_GIT_COMMANDS = [
+	/^git\s+branch$/i,
+	/^git\s+branch\s+--show-current$/i,
+	/^git\s+branch\s+--list(?:\s+.*)?$/i,
+	/^git\s+branch\s+(?:-a|--all|-r|--remotes|-v|-vv)(?:\s+--no-color)?$/i,
+	/^git\s+remote$/i,
+	/^git\s+remote\s+-v$/i,
+	/^git\s+remote\s+get-url(?:\s+.*)?$/i,
+	/^git\s+remote\s+show(?:\s+.*)?$/i,
+	/^git\s+stash\s+(?:list|show)(?:\s+.*)?$/i,
+	/^git\s+tag$/i,
+	/^git\s+tag\s+--list(?:\s+.*)?$/i,
+	/^git\s+worktree\s+list(?:\s+.*)?$/i,
+] as const;
+
+function coderStatefulGitInspectionViolation(command: string): string | null {
+	const gitSegments = command.match(/\bgit\b[^;&|\n]*/gi) ?? [];
+	for (const segment of gitSegments) {
+		const normalized = segment.trim().replace(/\s+/g, " ");
+		if (
+			/(?:^|\s)(?:-C(?:\s|$)|--git-dir(?:=|\s)|--work-tree(?:=|\s))/i.test(
+				normalized,
+			)
+		) {
+			return "Git path overrides may escape the managed worktree";
+		}
+
+		const tokens = normalized.split(" ");
+		let subcommandIndex = 1;
+		while (
+			["--no-pager", "--paginate", "-p", "--literal-pathspecs", "--no-optional-locks"].includes(
+				tokens[subcommandIndex] ?? "",
+			)
+		) {
+			subcommandIndex += 1;
+		}
+		const subcommand = tokens[subcommandIndex] ?? "";
+		if (subcommand.startsWith("-")) {
+			if (
+				tokens
+					.slice(subcommandIndex + 1)
+					.some((token) => /^(?:branch|remote|stash|tag|worktree)$/i.test(token))
+			) {
+				return "unsupported Git global options precede a repository-state command";
+			}
+			continue;
+		}
+		if (!/^(?:branch|remote|stash|tag|worktree)$/i.test(subcommand)) {
+			continue;
+		}
+		const canonicalCommand = `git ${tokens.slice(subcommandIndex).join(" ")}`;
+		if (
+			/^git\s+(?:branch\s+--list|tag\s+--list)\b/i.test(canonicalCommand) &&
+			/(?:^|\s)(?:-d|-D|-m|-M|-c|-C|--delete|--move|--copy|--edit-description|--set-upstream-to|--unset-upstream)(?:\s|=|$)/.test(
+				canonicalCommand,
+			)
+		) {
+			return "Git repository-state mutations belong to the build orchestrator";
+		}
+		if (
+			CODER_READ_ONLY_STATEFUL_GIT_COMMANDS.some((pattern) =>
+				pattern.test(canonicalCommand),
+			)
+		) {
+			continue;
+		}
+		return "Git repository-state mutations belong to the build orchestrator";
+	}
+	return null;
+}
+
 function coderShellPolicyViolation(command: string): string | null {
 	if (isForcePushCommand(command)) return "force-push is forbidden";
-	if (shellContainsGitVerb(command, CODER_FORBIDDEN_GIT_VERBS)) {
+	if (shellContainsGitVerb(command, CODER_MUTATING_GIT_VERBS)) {
 		return "Git delivery and repository-state mutations belong to the build orchestrator";
 	}
+	const statefulGitViolation = coderStatefulGitInspectionViolation(command);
+	if (statefulGitViolation) return statefulGitViolation;
 	if (
 		/\b(?:gh\s+pr\s+create|glab\s+mr\s+create|npm\s+publish|bun\s+publish|sudo)\b/i.test(
 			command,
@@ -2553,12 +2622,19 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					}
 				}
 
-				if (isForcePushCommand(command)) {
+					if (isForcePushCommand(command)) {
 					throw new Error(
 						"❌ Force-push is forbidden by the orchestration runtime.",
 					);
-				}
-				if (callerAgent === "coder") {
+					}
+					if (callerAgent === "build") {
+						const violation = coderStatefulGitInspectionViolation(command);
+						if (violation)
+							throw new Error(
+								`❌ Build shell command rejected: ${violation}.`,
+							);
+					}
+					if (callerAgent === "coder") {
 					const violation = coderShellPolicyViolation(command);
 					if (violation)
 						throw new Error(`❌ Coder shell command rejected: ${violation}.`);

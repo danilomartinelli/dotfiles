@@ -262,7 +262,7 @@ describe("permission and delegation enforcement", () => {
 		).toBe(false);
 	});
 
-	test("rejects force-push regardless of option position and coder Git mutations", () => {
+	test("allows coder Git inspection but rejects repository mutations", () => {
 		const internals = backgroundAgentsPlugin.testInternals;
 		expect(
 			internals.isForcePushCommand("git push --force origin feature/x"),
@@ -278,9 +278,41 @@ describe("permission and delegation enforcement", () => {
 		expect(
 			internals.coderShellPolicyViolation("git -C repo commit -m test"),
 		).toContain("build orchestrator");
+		for (const command of [
+			"git branch --show-current",
+			"git branch -a --no-color",
+			"git remote -v",
+			"git stash list",
+			"git tag --list",
+			"git worktree list --porcelain",
+			"git branch --show-current && git diff --stat main...HEAD",
+			"git --no-pager branch --show-current",
+			"git log --grep worktree --oneline",
+		]) {
+			expect(internals.coderShellPolicyViolation(command), command).toBeNull();
+		}
+		for (const command of [
+			"git branch -D old-branch",
+			"git remote add upstream https://example.invalid/repo.git",
+			"git remote -v add upstream https://example.invalid/repo.git",
+			"git stash push -m temporary",
+			"git tag v1.0.0",
+			"git tag --list --delete v1.0.0",
+			"git branch --list --delete old-branch",
+			"git worktree remove ../other",
+			"git -C ../other status --short",
+			"git --git-dir=../other/.git status --short",
+			"git --no-pager branch -D old-branch",
+		]) {
+			expect(
+				internals.coderShellPolicyViolation(command),
+				command,
+			).not.toBeNull();
+		}
 		expect(internals.coderShellPolicyViolation("bun test")).toBeNull();
 		expect(internals.isBuildShellMutation("git status --short")).toBe(false);
 		expect(internals.isBuildShellMutation("git add README.md")).toBe(true);
+		expect(internals.isBuildShellMutation("git rebase main")).toBe(true);
 	});
 
 	test("uses runtime default-deny and explicit role capabilities", async () => {
@@ -316,6 +348,34 @@ describe("permission and delegation enforcement", () => {
 		});
 		expect(config.agent?.coder?.permission?.delegate).toBeUndefined();
 		expect(config.agent?.coder?.permission?.apply_patch).toBe("allow");
+		const coderBash = config.agent?.coder?.permission?.bash as Record<
+			string,
+			string
+		>;
+		expect(coderBash).toMatchObject({
+			"*": "allow",
+			"git branch*": "deny",
+			"git branch --show-current*": "allow",
+			"git remote*": "deny",
+			"git remote -v*": "allow",
+			"git stash*": "deny",
+			"git stash list*": "allow",
+			"git tag*": "deny",
+			"git tag --list*": "allow",
+			"git worktree*": "deny",
+			"git worktree list*": "allow",
+		});
+		for (const [denyRule, allowRule] of [
+			["git branch*", "git branch --show-current*"],
+			["git remote*", "git remote -v*"],
+			["git stash*", "git stash list*"],
+			["git tag*", "git tag --list*"],
+			["git worktree*", "git worktree list*"],
+		] as const) {
+			expect(Object.keys(coderBash).indexOf(allowRule)).toBeGreaterThan(
+				Object.keys(coderBash).indexOf(denyRule),
+			);
+		}
 		expect(config.agent?.scribe?.permission?.apply_patch).toBe("allow");
 		expect(config.agent?.scribe?.permission?.write).toBeInstanceOf(Object);
 		expect(config.agent?.scribe?.permission?.external_directory).toMatchObject({
@@ -835,6 +895,17 @@ describe("permission and delegation enforcement", () => {
 					{ args: { command: "git add README.md", cwd: otherWorktree } },
 				),
 			).rejects.toThrow("shell working directory");
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{
+						args: {
+							command:
+								"git remote -v add upstream https://example.invalid/repo.git",
+						},
+					},
+				),
+			).rejects.toThrow("Build shell command rejected");
 		} finally {
 			if (previousHome === undefined) delete process.env.HOME;
 			else process.env.HOME = previousHome;

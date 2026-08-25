@@ -14,7 +14,7 @@ authorize its use. When multiple permission rules match, the last match wins.
 | `build` | primary orchestrator | local `read`/`glob`/`grep`, allowlisted read-only Git inspection, approved delivery Git operations, managed worktree tools, `plan_read`, `compress` | `delegate` to read-only agents; native `task` only to `coder` and `scribe` from a managed worktree | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline` |
 | `explore` | read-only leaf | `codegraph_codegraph_explore`, local `read`/`glob`/`grep` | none | none |
 | `researcher` | read-only leaf | Context7, Exa, grep.app, and `webfetch`; no local filesystem or shell | none | none |
-| `coder` | write leaf | CodeGraph, local file mutation, project-local shell verification | none; no worktree or delivery Git lifecycle | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline`, `deterministic-diagnosis`, `public-seam-tdd` |
+| `coder` | write leaf | CodeGraph, local file mutation, read-only Git inspection, project-local shell verification | none; no worktree or delivery Git lifecycle | `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline`, `deterministic-diagnosis`, `public-seam-tdd` |
 | `reviewer` | read-only leaf | local `read`/`glob`/`grep`, plan and delegation evidence | none | `code-review`, `plan-review`, `code-philosophy`, `frontend-philosophy`, `frontend-design-discipline` |
 | `scribe` | documentation write leaf | local documentation `read`/`glob`/`grep` plus `apply_patch` for approved prose extensions | none; shell is denied | `writing-for-agents` |
 
@@ -58,8 +58,10 @@ listing variants such as `git branch -a --no-color`.
 Staging, commit, fetch, fast-forward-only pull, rebase, push, and PR/MR creation
 remain approval-gated and require explicit user authorization. Rebase is
 available only when the user requests it; force push is denied.
-`coder` may run project verification commands but cannot mutate Git state,
-branches, remotes, worktrees, commits, or delivery.
+`coder` may inspect the current worktree with the same non-mutating Git surface
+used by `build` and may run project verification commands. It cannot mutate Git
+state, branches, remotes, worktrees, commits, or delivery. Structured managed
+worktree lifecycle remains exclusive to `build`.
 
 ## MCP Routing
 

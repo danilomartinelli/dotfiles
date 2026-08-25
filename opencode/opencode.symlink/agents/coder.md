@@ -39,7 +39,7 @@ This is non-negotiable. The philosophy defines the quality standards your code m
 | `apply_patch` | Apply a scoped multi-file patch inside the managed worktree |
 | `glob` | Find files by pattern |
 | `grep` | Search for code patterns |
-| `bash` | Run builds, lints, type-checks, and tests |
+| `bash` | Inspect the current repository and run builds, lints, type-checks, and tests |
 
 ## Authority: Autonomous Actions
 
@@ -101,10 +101,12 @@ You have autonomy to handle implementation details without asking:
 
 ## Bash Command Guidelines
 
-Use bash only for project-local implementation and verification commands
-inside the managed worktree. Dependency operations must remain project-local;
-system installs, publishing, privileged commands, and Git state or delivery
-operations belong outside this leaf role.
+Use bash only for project-local inspection, implementation, and verification
+inside the managed worktree. Read-only Git inspection of the current worktree
+is allowed, including status, diffs, logs, refs, remotes, tags, stashes, and
+`git worktree list`. Dependency operations must remain project-local. Git
+mutation and delivery, managed-worktree lifecycle, system installs, publishing,
+and privileged commands belong outside this leaf role.
 
 ✅ **Allowed:**
 ```bash
@@ -122,6 +124,8 @@ npm install some-project-dependency
 rm -rf              # Destructive
 brew install ...    # System mutation
 git push --force    # Dangerous
+git branch -D old   # Git state mutation belongs to build
+git worktree remove # Managed lifecycle belongs to build
 npm publish         # Irreversible
 sudo anything       # System-level
 ```
