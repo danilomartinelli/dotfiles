@@ -584,6 +584,44 @@ from `~/.localrc`. The `opencode/opencode.symlink/` payload is linked as
 `~/.opencode` and contains the dotfiles-owned OpenCode config, agents,
 commands, plugins, skills, and tools. `opencode/env.zsh` points
 `OPENCODE_CONFIG_DIR` there while preserving an explicit machine-local override.
+
+### OpenCode Desktop managed backend
+
+OpenCode Desktop must use the dotfiles-managed backend at
+`http://127.0.0.1:4097`. Its embedded sidecar currently discovers the local
+plugins but does not dispatch their lifecycle hooks, leaving managed
+permissions, orchestration, and worktree enforcement inactive. The loopback
+backend runs the same Mise-pinned OpenCode CLI and `~/.opencode` payload as the
+terminal and is available only from the local machine.
+
+Install or refresh its macOS LaunchAgent once, then connect Desktop while the
+application is fully closed:
+
+```bash
+opencode/desktop-server-install.sh install
+# Fully quit OpenCode Desktop before the next command.
+opencode/desktop-server-install.sh connect
+opencode/desktop-server-install.sh status
+```
+
+Reopen Desktop after `connect` and start a new session. Sessions that were
+already open can remain attached to the embedded sidecar. The `connect` command
+sets Desktop's machine-local `defaultServerUrl`; it does not modify the tracked
+OpenCode configuration. If Desktop requires the server to be named or a project
+to be associated with it, register `http://127.0.0.1:4097` as `Dotfiles
+Managed` in the Desktop UI. Those labels and project mappings live in
+`opencode.global.dat`, which is application state rather than versioned
+configuration.
+
+Use `status` to confirm both that the LaunchAgent is loaded and that Desktop's
+default server is the managed URL. Runtime logs are written to
+`~/Library/Logs/OpenCode/desktop-server.log` and
+`~/Library/Logs/OpenCode/desktop-server.error.log`. Re-run `install` after
+changing the launcher, OpenCode pin, or plugin payload; the command is
+idempotent. Use `opencode/desktop-server-install.sh uninstall` only to remove
+the managed LaunchAgent. The detailed agent/tool/worktree contract remains in
+`opencode/opencode.symlink/tools/runtime.md`.
+
 [OCX](https://github.com/kdcokenny/ocx) is available as a CLI, but it does
 not own this customized payload: `ocx.jsonc` has no registry, and no OCX receipt
 may claim paths below `~/.opencode`. The installer rejects both overlapping OCX

@@ -119,6 +119,18 @@ OpenCode's managed agents, commands, plugins, skills, and tools live in
 `add-topic` skill when scaffolding a new topic folder. Keep npm plugins pinned
 in `opencode.jsonc`; do not also commit an installer-generated copy under
 `plugins/`, because OpenCode auto-discovers local plugins and would load both.
+OpenCode Desktop must run through the loopback backend managed by
+`opencode/desktop-server-install.sh`, not its embedded sidecar, until the
+sidecar dispatches local plugin lifecycle hooks. Keep the backend bound to
+`127.0.0.1`, using the repository's Mise-pinned CLI and the dotfiles-owned
+`~/.opencode` payload. `install` owns the LaunchAgent, `connect` owns only the
+machine-local `defaultServerUrl`, and both must remain idempotent. Desktop
+server labels and per-project associations in `opencode.global.dat` are mutable
+UI state: never generate, link, or commit that file as repository
+configuration. Existing sidecar sessions are not migrated in place; validation
+must use a new Desktop session after reconnecting. Preserve the diagnostic
+contract in `opencode/opencode.symlink/tools/runtime.md` and verify launcher
+changes with `tests/opencode_install_test.sh`.
 The `open-cursor` 2.5.6 CLI accepts strict JSON only, so its install and model
 sync commands must not rewrite the managed JSONC configuration. The OpenCode
 topic installs Cursor Agent from Cursor's official installer when absent, but
