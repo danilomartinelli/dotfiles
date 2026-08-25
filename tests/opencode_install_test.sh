@@ -398,7 +398,8 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   # shellcheck disable=SC2016 # Backticks are literal prompt content, not shell substitution.
   assert_contains "$config" 'After an explicitly requested history rewrite such as rebase, use only `--force-with-lease`'
   assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, rebase, push, or PR/MR creation command'
-  assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
+  assert_contains "$config" 'bootstrap in this exact order before reporting a blocker'
+  assert_contains "$config" 'Report a managed-tool blocker only after attempting the exact tool call'
   # Markdown code spans are intentionally literal assertions.
   # shellcheck disable=SC2016
   assert_contains "$config" 'A dirty default checkout does not block `worktree_create`'

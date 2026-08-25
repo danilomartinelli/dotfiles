@@ -431,6 +431,12 @@ describe("permission and delegation enforcement", () => {
 			"Rebase only when the user explicitly requests it",
 		);
 		expect(config.agent?.build?.prompt).toContain(
+			"bootstrap in this exact order before reporting a blocker",
+		);
+		expect(config.agent?.build?.prompt).toContain(
+			"Report a managed-tool blocker only after attempting the exact tool call",
+		);
+		expect(config.agent?.build?.prompt).toContain(
 			"call `delegate` for the read-only `explore`, `researcher`, and `reviewer` agents",
 		);
 		expect(config.agent?.build?.prompt).toContain(
@@ -943,6 +949,38 @@ describe("permission and delegation enforcement", () => {
 			} as never);
 			const hook = plugin["tool.execute.before"];
 			if (!hook) throw new Error("permission hook is missing");
+			const afterHook = plugin["tool.execute.after"];
+			if (!afterHook) throw new Error("completion hook is missing");
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{ args: { command: "git status --short", cwd: otherWorktree } },
+				),
+			).rejects.toThrow("Build bootstrap incomplete");
+			await afterHook(
+				{
+					tool: "plan_read",
+					sessionID: "build-session",
+					callID: "plan-read-call",
+					args: {},
+				},
+				{ title: "", output: "No plan found.", metadata: {} },
+			);
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{ args: { command: "git status --short", cwd: otherWorktree } },
+				),
+			).rejects.toThrow("delegation_list");
+			await afterHook(
+				{
+					tool: "delegation_list",
+					sessionID: "build-session",
+					callID: "delegation-list-call",
+					args: {},
+				},
+				{ title: "", output: "No delegations found.", metadata: {} },
+			);
 			await expect(
 				hook(
 					{ tool: "bash", sessionID: "build-session" },

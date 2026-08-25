@@ -2514,6 +2514,26 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 	await fs.mkdir(baseDir, { recursive: true });
 
 	const manager = new DelegationManager(client as OpencodeClient, baseDir, log);
+	const buildBootstrap = new Map<
+		string,
+		{ planRead: boolean; delegationList: boolean }
+	>();
+	const assertBuildBootstrapComplete = (sessionID: string | undefined): void => {
+		if (!sessionID) {
+			throw new Error(
+				"❌ Build bootstrap cannot be verified without a session ID.",
+			);
+		}
+		const progress = buildBootstrap.get(sessionID);
+		const missing = [
+			!progress?.planRead && "plan_read",
+			!progress?.delegationList && "delegation_list",
+		].filter((tool): tool is string => Boolean(tool));
+		if (missing.length === 0) return;
+		throw new Error(
+			`❌ Build bootstrap incomplete. Call ${missing.map((tool) => `\`${tool}\``).join(" then ")} before shell inspection or managed worktree adoption.`,
+		);
+	};
 
 	await manager.debugLog(
 		"BackgroundAgentsPlugin initialized with delegation system",
@@ -2548,6 +2568,17 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 				throw new Error(
 					`❌ Provider tool alias '${input.tool}' is disabled. Use the permission-controlled OpenCode tool instead.`,
 				);
+			}
+
+			if (input.tool === "worktree_create") {
+				const callerAgent = await parseSessionAgent(
+					client as OpencodeClient,
+					input.sessionID ?? "",
+					log,
+				);
+				if (callerAgent === "build") {
+					assertBuildBootstrapComplete(input.sessionID);
+				}
 			}
 
 			if (
@@ -2623,6 +2654,9 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					throw new Error(
 						`❌ Agent '${callerAgent}' is not allowed to execute shell commands.`,
 					);
+				}
+				if (callerAgent === "build") {
+					assertBuildBootstrapComplete(input.sessionID);
 				}
 
 				const command = output.args?.command ?? "";
@@ -2755,6 +2789,31 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					`Call delegate with agent: "${agentName}" for this read-only sub-agent.\n` +
 					`Use task for write-capable sub-agents.`,
 			);
+		},
+
+		"tool.execute.after": async (input: {
+			tool: string;
+			sessionID?: string;
+		}) => {
+			if (
+				!input.sessionID ||
+				(input.tool !== "plan_read" && input.tool !== "delegation_list")
+			) {
+				return;
+			}
+			const callerAgent = await parseSessionAgent(
+				client as OpencodeClient,
+				input.sessionID,
+				log,
+			);
+			if (callerAgent !== "build") return;
+			const progress = buildBootstrap.get(input.sessionID) ?? {
+				planRead: false,
+				delegationList: false,
+			};
+			if (input.tool === "plan_read") progress.planRead = true;
+			if (input.tool === "delegation_list") progress.delegationList = true;
+			buildBootstrap.set(input.sessionID, progress);
 		},
 
 		// Inject delegation rules into system prompt

@@ -18,6 +18,13 @@ missing from an MCP resource probe, shell output, UI wording, memory, or a
 previous turn. Before claiming one is unavailable, call that exact tool once;
 only its returned error is evidence.
 
+For every approved implementation or resume handoff, `build` bootstraps in a
+fixed order: call `plan_read`, call `delegation_list` once and retrieve relevant
+results, perform only the minimum safe Git inspection needed to preserve dirty
+default-checkout work, then call `worktree_create` when the session is not
+already in the requested managed branch. A shell result or a model's visible
+catalog is never evidence that a managed tool is absent.
+
 Generic MCP resource list/read tools are deliberately hidden from every managed
 agent. They are not tool discovery and must never be used to test whether an
 OpenCode tool exists.
