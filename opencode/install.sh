@@ -130,6 +130,13 @@ else
   installer_note "Install OpenCode with: mise install"
 fi
 
+if [ "$(uname -s)" = Darwin ] \
+  && [ -d "$HOME/Library/Application Support/ai.opencode.desktop" ]; then
+  installer_note "OpenCode Desktop requires the managed loopback backend while its embedded sidecar does not dispatch plugin hooks"
+  installer_note "Install it with: $TOPIC_DIR/desktop-server-install.sh install"
+  installer_note "Then quit Desktop and run: $TOPIC_DIR/desktop-server-install.sh connect"
+fi
+
 installer_note "cursor-acp is quarantined: provider-native effects cannot be gated by OpenCode permissions or managed worktrees"
 
 installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"

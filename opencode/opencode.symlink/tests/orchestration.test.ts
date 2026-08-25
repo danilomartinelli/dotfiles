@@ -2071,4 +2071,20 @@ describe("deterministic plugin and dependency topology", () => {
 			["/usr/bin/notify-send", "OpenCode — Ready", "Needs attention"],
 		]);
 	});
+
+	test("lets Desktop own notifications on the managed external backend", async () => {
+		const previousClient = process.env.OPENCODE_CLIENT;
+		process.env.OPENCODE_CLIENT = "desktop-external";
+
+		try {
+			const { default: notifyPlugin } = await import(
+				"../plugins/ocx/notify.ts"
+			);
+			const hooks = await notifyPlugin({} as never);
+			expect(hooks).toEqual({});
+		} finally {
+			if (previousClient === undefined) delete process.env.OPENCODE_CLIENT;
+			else process.env.OPENCODE_CLIENT = previousClient;
+		}
+	});
 });

@@ -574,6 +574,11 @@ async function handleQuestionAsked(
 // ==========================================
 
 const NotifyPlugin: Plugin = async (ctx) => {
+	// The OpenCode Desktop client owns user-facing notifications when it is
+	// connected to our external managed backend. Returning no hooks here avoids
+	// duplicate sounds for session, question, permission, and error events.
+	if (process.env.OPENCODE_CLIENT === "desktop-external") return {};
+
 	const { client } = ctx;
 
 	// Load config once at startup

@@ -185,6 +185,93 @@ test_experimental_workspace_runtime_is_enabled() {
   assert_equal 'true' "$output" 'native workspace runtime flag'
 }
 
+test_desktop_uses_managed_loopback_runtime() {
+  local install launcher plist runtime
+
+  install=$REPOSITORY_ROOT/opencode/desktop-server-install.sh
+  launcher=$REPOSITORY_ROOT/opencode/desktop-server.sh
+  plist=$REPOSITORY_ROOT/opencode/com.danilomartinelli.opencode-desktop-server.plist.template
+  runtime=$REPOSITORY_ROOT/opencode/opencode.symlink/tools/runtime.md
+
+  [[ -x $install ]] || scenario_fail 'Desktop backend installer is not executable'
+  [[ -x $launcher ]] || scenario_fail 'Desktop backend launcher is not executable'
+  assert_contains "$launcher" 'OPENCODE_CLIENT=desktop-external'
+  assert_contains "$launcher" '--hostname 127.0.0.1'
+  assert_contains "$launcher" 'OPENCODE_DESKTOP_SERVER_PORT:-4097'
+  assert_contains "$launcher" 'mise exec -- opencode serve'
+  assert_contains "$plist" '<string>com.danilomartinelli.opencode-desktop-server</string>'
+  assert_contains "$plist" '<key>KeepAlive</key>'
+  assert_contains "$install" 'SERVER_URL=http://127.0.0.1:4097'
+  assert_contains "$install" 'defaultServerUrl'
+  assert_contains "$install" 'OpenCode Desktop is running. Quit it completely'
+  assert_contains "$runtime" 'embedded Desktop sidecar'
+  assert_contains "$runtime" 'binds only to loopback'
+  assert_contains "$REPOSITORY_ROOT/opencode/opencode.symlink/plugins/ocx/notify.ts" \
+    'process.env.OPENCODE_CLIENT === "desktop-external"'
+}
+
+test_desktop_connection_updates_only_the_managed_server_preference() {
+  local fake_bin home settings
+
+  home=$(scenario_tmpdir desktop-connect)
+  fake_bin=$home/fake-bin
+  settings=$home/opencode.settings
+  mkdir -p "$fake_bin"
+  scenario_write_executable "$fake_bin/pgrep" <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+  scenario_write_file "$settings" <<'EOF'
+{
+  "firstLaunchOnboardingComplete": true,
+  "unrelatedPreference": "preserved"
+}
+EOF
+
+  scenario_capture "$home" env HOME="$home" \
+    OPENCODE_DESKTOP_SETTINGS="$settings" \
+    PATH="$fake_bin:/usr/bin:/bin" \
+    "$REPOSITORY_ROOT/opencode/desktop-server-install.sh" connect
+
+  assert_contains "$home/stdout.log" \
+    'OpenCode Desktop will use the managed backend at http://127.0.0.1:4097 on next launch'
+  assert_equal 'http://127.0.0.1:4097' \
+    "$(plutil -extract defaultServerUrl raw "$settings")" \
+    'Desktop managed backend preference'
+  assert_equal 'preserved' \
+    "$(plutil -extract unrelatedPreference raw "$settings")" \
+    'unrelated Desktop preference'
+}
+
+test_desktop_backend_installer_renders_and_loads_launch_agent() {
+  local fake_bin home launch_agents logs plist
+
+  home=$(scenario_tmpdir desktop-install)
+  fake_bin=$home/fake-bin
+  launch_agents=$home/LaunchAgents
+  logs=$home/'OpenCode Logs'
+  plist=$launch_agents/com.danilomartinelli.opencode-desktop-server.plist
+  mkdir -p "$fake_bin"
+  scenario_write_executable "$fake_bin/launchctl" <<'EOF'
+#!/bin/sh
+printf 'launchctl %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+exit 0
+EOF
+
+  scenario_capture "$home" env HOME="$home" \
+    OPENCODE_DESKTOP_LAUNCH_AGENTS_DIR="$launch_agents" \
+    OPENCODE_DESKTOP_LOG_DIRECTORY="$logs" \
+    PATH="$fake_bin:/usr/bin:/bin" \
+    "$REPOSITORY_ROOT/opencode/desktop-server-install.sh" install
+
+  plutil -lint "$plist" >/dev/null \
+    || scenario_fail 'rendered Desktop LaunchAgent is invalid'
+  assert_contains "$plist" "$REPOSITORY_ROOT/opencode/desktop-server.sh"
+  assert_contains "$plist" "$logs/desktop-server.log"
+  assert_contains "$home/events.log" 'launchctl bootstrap gui/'
+  assert_contains "$home/events.log" 'launchctl kickstart -k gui/'
+}
+
 test_plugin_dependency_matches_pinned_opencode_version() {
   local opencode_version
 
@@ -732,6 +819,12 @@ scenario_run 'OpenCode disables unmanaged runtime discovery' \
   test_unmanaged_runtime_discovery_is_disabled
 scenario_run 'OpenCode enables the native workspace runtime' \
   test_experimental_workspace_runtime_is_enabled
+scenario_run 'OpenCode Desktop uses the managed loopback runtime' \
+  test_desktop_uses_managed_loopback_runtime
+scenario_run 'OpenCode Desktop connection preserves unrelated preferences' \
+  test_desktop_connection_updates_only_the_managed_server_preference
+scenario_run 'OpenCode Desktop backend renders and loads its LaunchAgent' \
+  test_desktop_backend_installer_renders_and_loads_launch_agent
 scenario_run 'OpenCode plugin dependency follows the pinned CLI version' \
   test_plugin_dependency_matches_pinned_opencode_version
 scenario_run 'Zed OpenCode ACP follows the Mise-pinned runtime' \

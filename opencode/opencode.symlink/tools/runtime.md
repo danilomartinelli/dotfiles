@@ -8,6 +8,16 @@ Mise pin therefore owns the ACP binary version as well as the CLI version.
 Restart Zed after changing that pin or this plugin payload; restarting OpenCode
 Desktop does not replace a Zed-owned ACP process.
 
+OpenCode Desktop must use the dotfiles-managed loopback backend at
+`http://127.0.0.1:4097`. The embedded Desktop sidecar can discover local plugin
+definitions but currently does not dispatch their lifecycle hooks, which makes
+permission bootstrap and workspace enforcement inert. Run
+`opencode/desktop-server-install.sh install`, fully quit Desktop, run
+`opencode/desktop-server-install.sh connect`, and reopen it. The external
+backend uses the same Mise-pinned CLI and `~/.opencode` payload as the terminal,
+binds only to loopback, and suppresses plugin-generated desktop notifications
+because the Desktop client already owns them.
+
 ## Build Runtime Tools
 
 For the `build` agent, `plan_read`, `delegate`, `delegation_read`,
