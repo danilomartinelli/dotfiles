@@ -272,6 +272,24 @@ describe("permission and delegation enforcement", () => {
 				"git push origin feature/x --force-with-lease",
 			),
 		).toBe(true);
+		expect(
+			internals.isLeaseProtectedForcePushCommand(
+				"git push origin feature/x --force-with-lease",
+			),
+		).toBe(true);
+		expect(
+			internals.isUnsafeForcePushCommand(
+				"git push origin feature/x --force-with-lease",
+			),
+		).toBe(false);
+		for (const command of [
+			"git push --force origin feature/x",
+			"git push -f origin feature/x",
+			"git push --mirror origin",
+			"git push --force --force-with-lease origin feature/x",
+		]) {
+			expect(internals.isUnsafeForcePushCommand(command), command).toBe(true);
+		}
 		expect(internals.isForcePushCommand("git push origin feature/x")).toBe(
 			false,
 		);
@@ -398,7 +416,17 @@ describe("permission and delegation enforcement", () => {
 			"git add*": "ask",
 			"git rebase*": "ask",
 			"git push*--force*": "deny",
+			"git push*--force-with-lease*": "ask",
 		});
+		const buildBash = config.agent?.build?.permission?.bash as Record<
+			string,
+			string
+		>;
+		expect(
+			Object.keys(buildBash).indexOf("git push*--force-with-lease*"),
+		).toBeGreaterThan(
+			Object.keys(buildBash).indexOf("git push*--force*"),
+		);
 		expect(config.agent?.build?.prompt).toContain(
 			"Rebase only when the user explicitly requests it",
 		);
@@ -938,6 +966,29 @@ describe("permission and delegation enforcement", () => {
 					},
 				),
 			).rejects.toThrow("Build shell command rejected");
+			await expect(
+				hook(
+					{ tool: "bash", sessionID: "build-session" },
+					{
+						args: {
+							command:
+								"git push --force-with-lease origin feature/test",
+						},
+					},
+				),
+			).resolves.toBeUndefined();
+			for (const command of [
+				"git push --force origin feature/test",
+				"git push -f origin feature/test",
+				"git push --mirror origin",
+			]) {
+				await expect(
+					hook(
+						{ tool: "bash", sessionID: "build-session" },
+						{ args: { command } },
+					),
+				).rejects.toThrow("Unsafe force-push");
+			}
 		} finally {
 			if (previousHome === undefined) delete process.env.HOME;
 			else process.env.HOME = previousHome;

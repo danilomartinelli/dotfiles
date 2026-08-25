@@ -378,6 +378,7 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" '"git push*": "ask"'
   assert_contains "$config" '"git push*--force*": "deny"'
   assert_contains "$config" '"git push*-f*": "deny"'
+  assert_contains "$config" '"git push*--force-with-lease*": "ask"'
   assert_contains "$config" '"worktree_delete": "deny"'
   assert_contains "$config" '"worktree_delete": "ask"'
   assert_contains "$config" '"./plugins/ocx/workspace-plugin.ts"'
@@ -394,7 +395,7 @@ test_agent_delivery_and_provider_permissions_are_explicit() {
   assert_contains "$config" 'explicit approved implementation handoff, not a session-start hook'
   assert_contains "$config" 'coder never commits or pushes'
   assert_contains "$config" 'Commit only when the user explicitly requests a commit.'
-  assert_contains "$config" 'Push only when explicitly requested; never force-push.'
+  assert_contains "$config" 'After an explicitly requested history rewrite such as rebase, use only `--force-with-lease`'
   assert_contains "$config" 'The permission layer asks the user before every staging, commit, fetch, pull, rebase, push, or PR/MR creation command'
   assert_contains "$config" 'Before claiming that a managed worktree tool is unavailable'
   # Markdown code spans are intentionally literal assertions.

@@ -57,7 +57,10 @@ listing variants such as `git branch -a --no-color`.
 
 Staging, commit, fetch, fast-forward-only pull, rebase, push, and PR/MR creation
 remain approval-gated and require explicit user authorization. Rebase is
-available only when the user requests it; force push is denied.
+available only when the user requests it. After an explicitly authorized
+history rewrite, `git push --force-with-lease` remains approval-gated and is
+available only from the leased worktree. Bare `--force`, `-f`, and `--mirror`
+remain denied.
 `coder` may inspect the current worktree with the same non-mutating Git surface
 used by `build` and may run project verification commands. It cannot mutate Git
 state, branches, remotes, worktrees, commits, or delivery. Structured managed

@@ -529,9 +529,29 @@ function shellContainsGitVerb(
 	);
 }
 
+function gitPushSegments(command: string): string[] {
+	return command.match(/\bgit\b[^;&|\n]*\bpush\b[^;&|\n]*/gi) ?? [];
+}
+
+function isLeaseProtectedForcePushCommand(command: string): boolean {
+	return gitPushSegments(command).some((segment) =>
+		/(?:^|\s)--force-with-lease(?:=[^\s;&|]+)?(?:\s|$)/i.test(segment),
+	);
+}
+
+function isUnsafeForcePushCommand(command: string): boolean {
+	return gitPushSegments(command).some(
+		(segment) =>
+			/(?:^|\s)--force(?:\s|$)/i.test(segment) ||
+			/(?:^|\s)--mirror(?:\s|$)/i.test(segment) ||
+			/(?:^|\s)-[A-Za-z]*f[A-Za-z]*(?:\s|$)/.test(segment),
+	);
+}
+
 function isForcePushCommand(command: string): boolean {
-	return /\bgit\b[^;&|\n]*\bpush\b[^;&|\n]*(?:--force(?:-with-lease|-if-includes)?\b|(?:^|\s)-f(?:\s|$))/im.test(
-		command,
+	return (
+		isLeaseProtectedForcePushCommand(command) ||
+		isUnsafeForcePushCommand(command)
 	);
 }
 
@@ -2626,9 +2646,9 @@ const BackgroundAgentsPlugin: Plugin = async (ctx) => {
 					}
 				}
 
-					if (isForcePushCommand(command)) {
+					if (isUnsafeForcePushCommand(command)) {
 					throw new Error(
-						"❌ Force-push is forbidden by the orchestration runtime.",
+						"❌ Unsafe force-push is forbidden by the orchestration runtime; use --force-with-lease after an explicitly authorized history rewrite.",
 					);
 					}
 					if (callerAgent === "build") {
@@ -2842,8 +2862,10 @@ const BackgroundAgentsPluginWithInternals = Object.assign(
 			isAgentPermissionReadOnly,
 			isBuildShellMutation,
 			isForcePushCommand,
+			isLeaseProtectedForcePushCommand,
 			isPermissionCompletelyDenied,
 			isPlanDelegatingToWriteCapable,
+			isUnsafeForcePushCommand,
 			permissionKeyMatchesTool,
 			resolveToolPermission,
 		},
