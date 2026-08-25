@@ -255,9 +255,10 @@ when the receipt is absent, and links dotfiles-owned editable entries into
 `~/.config/opencode`.
 
 Dotfiles may own `agents`, `commands`, `skills`, `tools`, managed profile
-directories, `ocx.jsonc`, `opencode.jsonc`, and other entries explicitly added
-to the installer contract. OCX owns `.ocx`, `plugins`, `package.json`,
-`.gitignore`, and `profiles/default`; keep those generated paths out of Git.
+directories, `ocx.jsonc`, `opencode.jsonc`, `tui.jsonc`, and other entries
+explicitly added to the installer contract. OCX owns `.ocx`, `plugins`,
+`package.json`, `.gitignore`, and `profiles/default`; keep those generated paths
+out of Git.
 
 When adding or changing a managed profile or entry, update these together:
 

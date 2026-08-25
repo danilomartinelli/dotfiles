@@ -126,8 +126,7 @@ topic/
 
 `opencode/install.sh` initializes OCX and links only dotfiles-owned entries
 into `~/.config/opencode`. Dotfiles owns `agents/`, `commands/`, `skills/`,
-`tools/`, managed profiles, `ocx.jsonc`, `opencode.jsonc`, and any explicitly
-managed TUI configuration.
+`tools/`, managed profiles, `ocx.jsonc`, `opencode.jsonc`, and `tui.jsonc`.
 
 OCX owns `.ocx/`, `plugins/`, `package.json`, `.gitignore`, and
 `profiles/default/`. Never copy or version those runtime paths. When adding a

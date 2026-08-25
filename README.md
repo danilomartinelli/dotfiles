@@ -445,9 +445,11 @@ kubeconfigs, auth receipts, and account-specific state outside this repository.
 
 OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
 the `kdco` registry and links the dotfiles-owned `agents`, `commands`, `skills`,
-`tools`, `ocx.jsonc`, `opencode.jsonc`, and the `regular`, `go`, and `boost`
-profile directories. OCX retains `.ocx`, generated `plugins`, `package.json`,
-`.gitignore`, and `profiles/default`.
+`tools`, `ocx.jsonc`, `opencode.jsonc`, `tui.jsonc`, and the `regular`, `go`,
+and `boost` profile directories. The managed TUI follows the terminal's
+Catppuccin Macchiato theme and keeps audible notifications disabled. OCX retains
+`.ocx`, generated `plugins`, `package.json`, `.gitignore`, and
+`profiles/default`.
 
 The `regular` profile carries the active trusted-project model and MCP policy.
 The `go` and `boost` directories are managed profile slots and can specialize

@@ -10,22 +10,22 @@ source "$TEST_DIR/_support/shell-scenario.sh"
 scenario_init dotfiles-opencode-install-tests
 
 make_fake_clis() {
-	local home=$1
-	local fake_bin=$home/fake-bin
+  local home=$1
+  local fake_bin=$home/fake-bin
 
-	mkdir -p "$fake_bin"
+  mkdir -p "$fake_bin"
 
-	scenario_write_executable "$fake_bin/uname" <<'EOF'
+  scenario_write_executable "$fake_bin/uname" <<'EOF'
 #!/bin/sh
 printf 'Darwin\n'
 EOF
 
-	scenario_write_executable "$fake_bin/opencode" <<'EOF'
+  scenario_write_executable "$fake_bin/opencode" <<'EOF'
 #!/bin/sh
 printf 'native opencode %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
 EOF
 
-	scenario_write_executable "$fake_bin/ocx" <<'EOF'
+  scenario_write_executable "$fake_bin/ocx" <<'EOF'
 #!/bin/sh
 
 config_dir=$HOME/.config/opencode
@@ -60,110 +60,139 @@ case "$1 $2" in
 esac
 EOF
 
-	printf '%s\n' "$fake_bin"
+  printf '%s\n' "$fake_bin"
 }
 
 assert_link_target() {
-	local expected=$1
-	local link=$2
-	local description=$3
+  local expected=$1
+  local link=$2
+  local description=$3
 
-	[[ -L $link ]] || scenario_fail "$description is not a symbolic link"
-	assert_equal "$expected" "$(readlink "$link")" "$description target"
+  [[ -L $link ]] || scenario_fail "$description is not a symbolic link"
+  assert_equal "$expected" "$(readlink "$link")" "$description target"
 }
 
 test_shell_uses_regular_ocx_profile_and_shortcuts() {
-	local fake_bin home output
+  local fake_bin home output
 
-	home=$(scenario_tmpdir shell)
-	fake_bin=$(make_fake_clis "$home")
+  home=$(scenario_tmpdir shell)
+  fake_bin=$(make_fake_clis "$home")
 
-	# shellcheck disable=SC2016 # Expanded by the nested Zsh.
-	output=$(env HOME="$home" /bin/zsh -f -c \
-		'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS"' \
-		zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh.
+  output=$(env HOME="$home" /bin/zsh -f -c \
+    'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS"' \
+    zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
 
-	assert_equal 'regular|true|true|true|true|true' "$output" \
-		'OpenCode shell environment'
+  assert_equal 'regular|true|true|true|true|true' "$output" \
+    'OpenCode shell environment'
 
-	# shellcheck disable=SC2016 # Expanded by the nested Zsh.
-	scenario_capture "$home" env HOME="$home" \
-		PATH="$fake_bin:/usr/bin:/bin" /bin/zsh -f -c \
-		'source "$1"; for shortcut in opencode oc oc:boost oc:regular oc:go; do eval "$shortcut"; done' \
-		zsh "$REPOSITORY_ROOT/opencode/aliases.zsh"
+  # shellcheck disable=SC2016 # Expanded by the nested Zsh.
+  scenario_capture "$home" env HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" /bin/zsh -f -c \
+    'source "$1"; for shortcut in opencode oc oc:boost oc:regular oc:go; do eval "$shortcut"; done' \
+    zsh "$REPOSITORY_ROOT/opencode/aliases.zsh"
 
-	assert_count "$home/events.log" 'ocx opencode' 5
-	assert_contains "$home/events.log" 'ocx opencode -p boost'
-	assert_contains "$home/events.log" 'ocx opencode -p regular'
-	assert_contains "$home/events.log" 'ocx opencode -p go'
-	assert_not_contains "$home/events.log" 'native opencode'
+  assert_count "$home/events.log" 'ocx opencode' 5
+  assert_contains "$home/events.log" 'ocx opencode -p boost'
+  assert_contains "$home/events.log" 'ocx opencode -p regular'
+  assert_contains "$home/events.log" 'ocx opencode -p go'
+  assert_not_contains "$home/events.log" 'native opencode'
 }
 
 test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
-	local jsonc_path managed_path
-	local -a managed_paths
+  local jsonc_path managed_path
+  local -a managed_paths
 
-	managed_paths=(
-		agents/coder.md
-		agents/researcher.md
-		agents/reviewer.md
-		agents/scribe.md
-		commands/review.md
-		skills/code-philosophy/SKILL.md
-		skills/code-review/SKILL.md
-		skills/frontend-philosophy/SKILL.md
-		skills/plan-protocol/SKILL.md
-		skills/plan-review/SKILL.md
-		tools/philosophy.md
-		ocx.jsonc
-		opencode.jsonc
-		profiles/boost/AGENTS.md
-		profiles/boost/ocx.jsonc
-		profiles/boost/opencode.jsonc
-		profiles/regular/AGENTS.md
-		profiles/regular/ocx.jsonc
-		profiles/regular/opencode.jsonc
-		profiles/go/AGENTS.md
-		profiles/go/ocx.jsonc
-		profiles/go/opencode.jsonc
-	)
+  managed_paths=(
+    agents/coder.md
+    agents/researcher.md
+    agents/reviewer.md
+    agents/scribe.md
+    commands/review.md
+    skills/code-philosophy/SKILL.md
+    skills/code-review/SKILL.md
+    skills/frontend-philosophy/SKILL.md
+    skills/plan-protocol/SKILL.md
+    skills/plan-review/SKILL.md
+    tools/philosophy.md
+    ocx.jsonc
+    opencode.jsonc
+    tui.jsonc
+    profiles/boost/AGENTS.md
+    profiles/boost/ocx.jsonc
+    profiles/boost/opencode.jsonc
+    profiles/regular/AGENTS.md
+    profiles/regular/ocx.jsonc
+    profiles/regular/opencode.jsonc
+    profiles/go/AGENTS.md
+    profiles/go/ocx.jsonc
+    profiles/go/opencode.jsonc
+  )
 
-	for managed_path in "${managed_paths[@]}"; do
-		[[ -f $REPOSITORY_ROOT/opencode/$managed_path ]] ||
-			scenario_fail "managed OpenCode payload is missing: $managed_path"
-	done
+  for managed_path in "${managed_paths[@]}"; do
+    [[ -f $REPOSITORY_ROOT/opencode/$managed_path ]] \
+      || scenario_fail "managed OpenCode payload is missing: $managed_path"
+  done
 
-	while IFS= read -r jsonc_path; do
-		jq empty "$jsonc_path" ||
-			scenario_fail "OpenCode JSONC is not valid JSON: ${jsonc_path#"$REPOSITORY_ROOT/"}"
-	done < <(find "$REPOSITORY_ROOT/opencode" -type f -name '*.jsonc' -print | sort)
+  while IFS= read -r jsonc_path; do
+    jq empty "$jsonc_path" \
+      || scenario_fail "OpenCode JSONC is not valid JSON: ${jsonc_path#"$REPOSITORY_ROOT/"}"
+  done < <(find "$REPOSITORY_ROOT/opencode" -type f -name '*.jsonc' -print | sort)
 
-	for managed_path in plugins .ocx package.json .gitignore; do
-		[[ ! -e $REPOSITORY_ROOT/opencode/$managed_path ]] ||
-			scenario_fail "runtime or legacy OpenCode payload is versioned: $managed_path"
-	done
+  for managed_path in plugins .ocx package.json .gitignore; do
+    [[ ! -e $REPOSITORY_ROOT/opencode/$managed_path ]] \
+      || scenario_fail "runtime or legacy OpenCode payload is versioned: $managed_path"
+  done
+}
+
+test_tui_matches_terminal_theme_and_interaction_defaults() {
+  local tui_config
+
+  tui_config=$REPOSITORY_ROOT/opencode/tui.jsonc
+
+  jq -e '
+		."$schema" == "https://opencode.ai/tui.json" and
+		.theme == "catppuccin-macchiato" and
+		.leader_timeout == 2000 and
+		.keybinds == {
+			"leader": "ctrl+x",
+			"command_list": "ctrl+p"
+		} and
+		.scroll_speed == 3 and
+		.scroll_acceleration == {"enabled": true} and
+		.diff_style == "auto" and
+		.cursor == {"style": "block", "blinking": true} and
+		.mouse == true and
+		.attention == {
+			"enabled": true,
+			"notifications": true,
+			"sound": false
+		} and
+		(has("plugin") | not)
+	' "$tui_config" >/dev/null \
+    || scenario_fail 'OpenCode TUI theme or interaction defaults are incorrect'
 }
 
 test_regular_profile_trusts_project_configuration() {
-	local ocx_config opencode_config
+  local ocx_config opencode_config
 
-	ocx_config=$REPOSITORY_ROOT/opencode/profiles/regular/ocx.jsonc
-	opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
+  ocx_config=$REPOSITORY_ROOT/opencode/profiles/regular/ocx.jsonc
+  opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
 
-	jq -e '.exclude == ["**/CLAUDE.md"]' "$ocx_config" >/dev/null ||
-		scenario_fail 'regular profile excludes more than CLAUDE.md'
+  jq -e '.exclude == ["**/CLAUDE.md"]' "$ocx_config" >/dev/null \
+    || scenario_fail 'regular profile excludes more than CLAUDE.md'
 
-	jq -e '
+  jq -e '
 		.permission["linear_*"] == "allow" and
 		.mcp.linear == {
 			"type": "remote",
 			"url": "https://mcp.linear.app/mcp",
 			"enabled": false
 		}
-	' "$opencode_config" >/dev/null ||
-		scenario_fail 'regular profile Linear MCP policy is incorrect'
+	' "$opencode_config" >/dev/null \
+    || scenario_fail 'regular profile Linear MCP policy is incorrect'
 
-	jq -e '
+  jq -e '
 		.agent.researcher.permission.bash == {
 			"glab repo view*": "allow",
 			"glab mr view*": "allow",
@@ -180,67 +209,69 @@ test_regular_profile_trusts_project_configuration() {
 			"glab search *": "allow",
 			"glab api *": "allow"
 		}
-	' "$opencode_config" >/dev/null ||
-		scenario_fail 'regular profile glab permissions are incorrect'
+	' "$opencode_config" >/dev/null \
+    || scenario_fail 'regular profile glab permissions are incorrect'
 }
 
 test_installer_links_only_dotfiles_owned_entries() {
-	local config_dir fake_bin home profile
+  local config_dir fake_bin home profile
 
-	home=$(scenario_tmpdir install)
-	fake_bin=$(make_fake_clis "$home")
-	config_dir=$home/.config/opencode
+  home=$(scenario_tmpdir install)
+  fake_bin=$(make_fake_clis "$home")
+  config_dir=$home/.config/opencode
 
-	scenario_capture "$home" env HOME="$home" \
-		PATH="$fake_bin:/usr/bin:/bin" \
-		"$REPOSITORY_ROOT/opencode/install.sh"
+  scenario_capture "$home" env HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" \
+    "$REPOSITORY_ROOT/opencode/install.sh"
 
-	for profile in agents commands skills tools ocx.jsonc opencode.jsonc; do
-		assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
-			"$config_dir/$profile" "OpenCode $profile"
-	done
+  for profile in agents commands skills tools ocx.jsonc opencode.jsonc tui.jsonc; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
+      "$config_dir/$profile" "OpenCode $profile"
+  done
 
-	for profile in boost regular go; do
-		assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
-			"$config_dir/profiles/$profile" "OpenCode $profile profile"
-	done
+  for profile in boost regular go; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
+      "$config_dir/profiles/$profile" "OpenCode $profile profile"
+  done
 
-	for profile in plugins .ocx package.json .gitignore profiles/default; do
-		[[ -e $config_dir/$profile ]] ||
-			scenario_fail "OCX runtime entry was removed: $profile"
-		[[ ! -L $config_dir/$profile ]] ||
-			scenario_fail "OCX runtime entry was linked: $profile"
-	done
+  for profile in plugins .ocx package.json .gitignore profiles/default; do
+    [[ -e $config_dir/$profile ]] \
+      || scenario_fail "OCX runtime entry was removed: $profile"
+    [[ ! -L $config_dir/$profile ]] \
+      || scenario_fail "OCX runtime entry was linked: $profile"
+  done
 
-	assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
-	assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
-	assert_contains "$home/events.log" 'ocx add kdco/workspace --global'
+  assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
+  assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
+  assert_contains "$home/events.log" 'ocx add kdco/workspace --global'
 
-	scenario_capture "$home" env HOME="$home" \
-		PATH="$fake_bin:/usr/bin:/bin" \
-		"$REPOSITORY_ROOT/opencode/install.sh"
+  scenario_capture "$home" env HOME="$home" \
+    PATH="$fake_bin:/usr/bin:/bin" \
+    "$REPOSITORY_ROOT/opencode/install.sh"
 
-	for profile in agents commands skills tools ocx.jsonc opencode.jsonc; do
-		assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
-			"$config_dir/$profile" "OpenCode $profile after reinstall"
-	done
+  for profile in agents commands skills tools ocx.jsonc opencode.jsonc tui.jsonc; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
+      "$config_dir/$profile" "OpenCode $profile after reinstall"
+  done
 
-	for profile in boost regular go; do
-		assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
-			"$config_dir/profiles/$profile" "OpenCode $profile profile after reinstall"
-	done
+  for profile in boost regular go; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
+      "$config_dir/profiles/$profile" "OpenCode $profile profile after reinstall"
+  done
 
-	assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
-	assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
-	assert_not_contains "$home/events.log" 'ocx add kdco/workspace'
+  assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
+  assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
+  assert_not_contains "$home/events.log" 'ocx add kdco/workspace'
 }
 
 scenario_run 'OpenCode shell defaults to the regular OCX profile' \
-	test_shell_uses_regular_ocx_profile_and_shortcuts
+  test_shell_uses_regular_ocx_profile_and_shortcuts
 scenario_run 'OpenCode versions only the intended editable payload' \
-	test_managed_payload_is_complete_and_runtime_payload_is_excluded
+  test_managed_payload_is_complete_and_runtime_payload_is_excluded
+scenario_run 'OpenCode TUI matches terminal theme and interaction defaults' \
+  test_tui_matches_terminal_theme_and_interaction_defaults
 scenario_run 'OpenCode regular profile trusts project configuration' \
-	test_regular_profile_trusts_project_configuration
+  test_regular_profile_trusts_project_configuration
 scenario_run 'OpenCode installer links managed entries and preserves OCX runtime state' \
-	test_installer_links_only_dotfiles_owned_entries
+  test_installer_links_only_dotfiles_owned_entries
 scenario_finish

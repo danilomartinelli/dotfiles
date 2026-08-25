@@ -15,6 +15,7 @@ reviewed and evolved in dotfiles while leaving generated OCX state local.
 | Dotfiles | `agents/`, `commands/`, `skills/`, `tools/`            | Editable workspace behavior installed by OCX            |
 | Dotfiles | `profiles/boost/`, `profiles/regular/`, `profiles/go/` | Versioned profile instructions and model configuration  |
 | Dotfiles | `ocx.jsonc`, `opencode.jsonc`                          | Global OCX registry and merged OpenCode configuration   |
+| Dotfiles | `tui.jsonc`                                            | TUI theme, interaction, and notification defaults       |
 | OCX      | `.ocx/`, `plugins/`                                    | Installation receipt and generated plugin code          |
 | OCX      | `package.json`, `.gitignore`                           | Generated runtime dependencies and ignore rules         |
 | OCX      | `profiles/default/`                                    | Initial generated profile; the shell does not select it |
@@ -36,7 +37,8 @@ Normal bootstrap and `dot` updates also run it. The installer:
 1. Initializes the global OCX configuration.
 1. Registers `https://registry.kdco.dev` as `kdco`.
 1. Installs the `kdco/workspace` component set when its receipt is absent.
-1. Links the dotfiles-owned global entries into `~/.config/opencode`.
+1. Links the dotfiles-owned global and TUI entries into
+   `~/.config/opencode`.
 1. Recreates `boost`, `regular`, and `go`, then replaces each generated profile
    directory with its repository link.
 
@@ -62,6 +64,11 @@ Open a new Zsh session or run `reload!` after changing the shell files.
 `regular` profile by default. Explicit profile aliases pass `-p` and do not
 change that default.
 
+The managed TUI keeps OpenCode aligned with the terminal stack: Catppuccin
+Macchiato, `ctrl+x` as the leader, `ctrl+p` for the command list, accelerated
+mouse scrolling, a blinking block cursor, and notifications without sound.
+Plugins remain in `opencode.jsonc`, which is their single configuration owner.
+
 The `regular` profile is intended for trusted projects. OCX excludes only
 `CLAUDE.md`, so project-level OpenCode configuration, MCP servers, and
 permissions remain available. Its researcher agent extends the global
@@ -86,6 +93,7 @@ Edit the repository source, not the link under `~/.config/opencode`:
 - Shared instructions: `opencode/tools/`
 - Global OCX registry: `opencode/ocx.jsonc`
 - Global OpenCode configuration: `opencode/opencode.jsonc`
+- Global TUI configuration: `opencode/tui.jsonc`
 
 Changes are immediately visible through the symbolic links. Review the Git diff
 before keeping changes produced by an OCX component update.
@@ -142,7 +150,7 @@ find "$HOME/.config/opencode" -maxdepth 2 -type l -print
 ocx profile list --global
 ```
 
-Expected managed links are the six global entries in the ownership table plus
+Expected managed links are the seven global entries in the ownership table plus
 the `boost`, `regular`, and `go` profile directories.
 
 ## Troubleshooting
