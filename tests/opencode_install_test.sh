@@ -278,6 +278,15 @@ EOF
   assert_contains "$home/events.log" 'launchctl bootstrap gui/'
   assert_contains "$home/events.log" 'launchctl kickstart -k gui/'
   assert_count "$home/events.log" 'launchctl bootstrap gui/' 2
+
+  scenario_capture "$home" env HOME="$home" \
+    OPENCODE_DESKTOP_LAUNCH_AGENTS_DIR="$launch_agents" \
+    OPENCODE_DESKTOP_LOG_DIRECTORY="$logs" \
+    PATH="$fake_bin:/usr/bin:/bin" \
+    "$REPOSITORY_ROOT/opencode/desktop-server-install.sh" install
+
+  assert_not_contains "$home/events.log" 'launchctl bootstrap gui/'
+  assert_contains "$home/events.log" 'launchctl kickstart -k gui/'
 }
 
 test_plugin_dependency_matches_pinned_opencode_version() {
