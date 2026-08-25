@@ -319,7 +319,7 @@ and (3) creation of a new surface or a substantial redesign of an existing
 surface. Neither layer is a universal aesthetic policy. See
 [`docs/agent-doctrine/DECISION-RECORD.md`](docs/agent-doctrine/DECISION-RECORD.md)
 for authority, provenance, routing, and rollback boundaries, and the
-[taste-skill reference](skills/frontend-design-discipline/references/taste-skill.md)
+[taste-skill reference](docs/agent-doctrine/references/taste-skill.md)
 for the bounded adaptation.
 
 Run `mise install` to reconcile only these runtimes. `pipx:mdformat` formats

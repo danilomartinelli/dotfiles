@@ -456,7 +456,7 @@ test_opencode_contracts_are_parseable_and_semantically_aligned() {
   philosophy=$REPOSITORY_ROOT/opencode/opencode.symlink/tools/philosophy.md
   readme=$REPOSITORY_ROOT/README.md
   decision_record=$REPOSITORY_ROOT/docs/agent-doctrine/DECISION-RECORD.md
-  taste_reference=$REPOSITORY_ROOT/skills/frontend-design-discipline/references/taste-skill.md
+  taste_reference=$REPOSITORY_ROOT/docs/agent-doctrine/references/taste-skill.md
 
   # shellcheck disable=SC2016 # The embedded Bun program receives shell arguments explicitly.
   if ! bun --cwd "$REPOSITORY_ROOT/opencode/opencode.symlink" -e '
