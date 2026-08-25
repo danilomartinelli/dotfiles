@@ -144,6 +144,46 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
 	done
 }
 
+test_regular_profile_trusts_project_configuration() {
+	local ocx_config opencode_config
+
+	ocx_config=$REPOSITORY_ROOT/opencode/profiles/regular/ocx.jsonc
+	opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
+
+	jq -e '.exclude == ["**/CLAUDE.md"]' "$ocx_config" >/dev/null ||
+		scenario_fail 'regular profile excludes more than CLAUDE.md'
+
+	jq -e '
+		.permission["linear_*"] == "allow" and
+		.mcp.linear == {
+			"type": "remote",
+			"url": "https://mcp.linear.app/mcp",
+			"enabled": false
+		}
+	' "$opencode_config" >/dev/null ||
+		scenario_fail 'regular profile Linear MCP policy is incorrect'
+
+	jq -e '
+		.agent.researcher.permission.bash == {
+			"glab repo view*": "allow",
+			"glab mr view*": "allow",
+			"glab mr list*": "allow",
+			"glab issue view*": "allow",
+			"glab issue list*": "allow",
+			"glab release view*": "allow",
+			"glab release list*": "allow",
+			"glab ci get*": "allow",
+			"glab ci list*": "allow",
+			"glab ci status*": "allow",
+			"glab ci trace*": "allow",
+			"glab ci config view*": "allow",
+			"glab search *": "allow",
+			"glab api *": "allow"
+		}
+	' "$opencode_config" >/dev/null ||
+		scenario_fail 'regular profile glab permissions are incorrect'
+}
+
 test_installer_links_only_dotfiles_owned_entries() {
 	local config_dir fake_bin home profile
 
@@ -199,6 +239,8 @@ scenario_run 'OpenCode shell defaults to the regular OCX profile' \
 	test_shell_uses_regular_ocx_profile_and_shortcuts
 scenario_run 'OpenCode versions only the intended editable payload' \
 	test_managed_payload_is_complete_and_runtime_payload_is_excluded
+scenario_run 'OpenCode regular profile trusts project configuration' \
+	test_regular_profile_trusts_project_configuration
 scenario_run 'OpenCode installer links managed entries and preserves OCX runtime state' \
 	test_installer_links_only_dotfiles_owned_entries
 scenario_finish

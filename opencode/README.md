@@ -62,6 +62,17 @@ Open a new Zsh session or run `reload!` after changing the shell files.
 `regular` profile by default. Explicit profile aliases pass `-p` and do not
 change that default.
 
+The `regular` profile is intended for trusted projects. OCX excludes only
+`CLAUDE.md`, so project-level OpenCode configuration, MCP servers, and
+permissions remain available. Its researcher agent extends the global
+read-oriented `gh` policy with equivalent `glab` routes for repositories, merge
+requests, issues, releases, CI, search, and the API.
+
+The profile also declares Linear's remote MCP with `linear_*` tools allowed,
+but keeps the server disabled. Set `mcp.linear.enabled` to `true` in
+`opencode/profiles/regular/opencode.jsonc` when it should become available; the
+first connection will require Linear authentication.
+
 Zed's ACP integration is separate from these interactive aliases and starts the
 Mise-managed OpenCode binary directly.
 
