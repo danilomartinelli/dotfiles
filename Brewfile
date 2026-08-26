@@ -3,6 +3,7 @@ cask_args appdir: '/Applications'
 # Third-party taps trusted by homebrew/_bundle.sh
 tap 'nikitabobko/tap'               # AeroSpace tiling window manager
 tap 'psviderski/tap'                # Uncloud CLI
+tap 'vjeantet/tap/alerter'          # Alerter CLI for macOS notifications
 tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
 
 # Command line tools
@@ -58,6 +59,7 @@ brew 'spaceman-diff'                # Diff images from the command line
 brew 'stern'                        # Tail logs from multiple Kubernetes pods
 brew 'tmux'                         # Terminal multiplexer
 brew 'psviderski/tap/uncloud'       # Deploy and manage containerised apps with Uncloud (uc)
+brew 'vjeantet/tap/alerter'         # Send macOS notifications from the command line
 brew 'usage'                        # Tool for working with usage-spec CLIs
 brew 'watch'                        # Execute a command periodically, showing output fullscreen
 brew 'watchexec'                    # Run commands when watched files change
