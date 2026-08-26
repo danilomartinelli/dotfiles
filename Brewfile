@@ -3,6 +3,7 @@ cask_args appdir: '/Applications'
 # Third-party taps trusted by homebrew/_bundle.sh
 tap 'nikitabobko/tap'               # AeroSpace tiling window manager
 tap 'psviderski/tap'                # Uncloud CLI
+tap 'vjeantet/tap'                  # Alerter CLI for macOS notifications
 tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
 
 # Command line tools

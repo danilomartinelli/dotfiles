@@ -188,6 +188,7 @@ macOS defaults.
 | `stern`                   | Multi-pod Kubernetes log tailing                 |
 | `tmux`                    | Terminal multiplexer                             |
 | `psviderski/tap/uncloud`  | Uncloud deployment CLI (`uc`)                    |
+| `vjeantet/tap/alerter`    | Send native macOS notifications from the CLI     |
 | `usage`                   | Usage-spec support for CLI completions           |
 | `watch`                   | Periodically rerun a command                     |
 | `watchexec`               | Rerun commands on file changes                   |
@@ -200,7 +201,7 @@ macOS defaults.
 | `zsh-syntax-highlighting` | Zsh command-line highlighting                    |
 
 Third-party taps are declared in `Brewfile`. `homebrew/_bundle.sh` maintains a
-narrow trust list for `nikitabobko/tap`, `psviderski/tap`, and
+narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 `vultr/vultr-cli` before running `brew bundle`.
 
 ### Applications and fonts
@@ -425,21 +426,24 @@ de-duplicated.
 
 ### Configuration ownership
 
-| Configuration         | Installed location            | Ownership rule                                           |
-| --------------------- | ----------------------------- | -------------------------------------------------------- |
-| Private environment   | `~/.localrc`                  | Generated locally, mode `600`, never committed           |
-| Shared shell defaults | `.commonrc`                   | Tracked and secret-free                                  |
-| Git identity          | `git/gitconfig.local.symlink` | Generated locally and gitignored                         |
-| Private SSH hosts     | `~/.ssh/config_local`         | Preserved by the tracked SSH config                      |
-| SOPS age identities   | `~/.config/sops/age/`         | Machine-private, mode `600`                              |
-| Zed settings          | `~/.config/zed/settings.json` | Tracked JSON, no plaintext credentials                   |
-| OpenCode workspace    | `~/.config/opencode`          | Split between dotfiles-owned links and OCX runtime state |
-| Hermes state          | `~/.hermes`                   | Machine-local runtime state                              |
+| Configuration         | Installed location            | Ownership rule                                            |
+| --------------------- | ----------------------------- | --------------------------------------------------------- |
+| Private environment   | `~/.localrc`                  | Generated locally, mode `600`, never committed            |
+| Shared shell defaults | `.commonrc`                   | Tracked and secret-free                                   |
+| Git identity          | `git/gitconfig.local.symlink` | Generated locally and gitignored                          |
+| Private SSH hosts     | `~/.ssh/config_local`         | Preserved by the tracked SSH config                       |
+| SOPS age identities   | `~/.config/sops/age/`         | Machine-private, mode `600`                               |
+| Zed settings          | `~/.config/zed/settings.json` | Tracked JSONC-compatible config, no plaintext credentials |
+| OpenCode workspace    | `~/.config/opencode`          | Split between dotfiles-owned links and OCX runtime state  |
+| Hermes state          | `~/.hermes`                   | Machine-local runtime state                               |
 
-Never place secrets in tracked JSON or simulate interpolation with
+Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth
-or a process-backed integration that reads inherited environment. Keep keys,
-kubeconfigs, auth receipts, and account-specific state outside this repository.
+or a process-backed integration that reads inherited environment. Zed formats
+JSON and JSONC on save with its managed Prettier; `.prettierrc.json` applies
+Zed's [documented JSONC parser workaround](https://zed.dev/docs/languages/json#jsonc-prettier-formatting)
+to prevent trailing commas. Keep keys, kubeconfigs, auth receipts, and
+account-specific state outside this repository.
 
 ### OpenCode and OCX
 
@@ -463,45 +467,47 @@ ownership, verification, and troubleshooting.
 ## Validation
 
 The test suites create isolated homes and fake external commands; they do not
-apply configuration to the real Mac.
+apply configuration to the real Mac. Run every safe suite without maintaining
+a duplicated filename list:
 
 ```bash
-tests/setup_test.sh
-tests/zsh_startup_test.sh
-tests/ssh_provisioning_test.sh
-tests/sops_provisioning_test.sh
-tests/git_branch_state_test.sh
-tests/homebrew_availability_test.sh
-tests/homebrew_bundle_test.sh
-tests/homebrew_maintenance_test.sh
-tests/archiver_install_test.sh
-tests/link_config_test.sh
-tests/link_dotfiles_test.sh
-tests/installer_preamble_test.sh
-tests/macos_defaults_test.sh
-tests/documentation_test.sh
-tests/topic_catalog_test.sh
-tests/opencode_install_test.sh
+for test_path in tests/*_test.sh; do
+  "$test_path"
+done
 _scripts/test-checkout-root
 ```
 
 `tests/documentation_test.sh` ensures that every public `bin/` command, Zsh
 function, alias, Homebrew declaration, Mise tool, and installer helper remains
-documented. Run the focused suite for a change first, then the complete suite
-for repository-wide work.
+documented. `tests/zed_settings_test.sh` validates the JSON/JSONC formatter
+contract. Run the focused suite first, then the complete suite for
+repository-wide work.
 
 Static checks used by this repository include:
 
 ```bash
-zsh -n path/to/file.zsh
-shellcheck path/to/script.sh
-shfmt -d -i 2 -ci -bn path/to/script.sh
-mdformat --check path/to/document.md
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+  | xargs -0 shellcheck
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+  | xargs -0 shfmt -d -i 2 -ci -bn
+git ls-files -z '*.zsh' | xargs -0 zsh -n
+while IFS= read -r -d '' markdown_path; do
+  [ ! -f "$markdown_path" ] || mdformat --check "$markdown_path"
+done < <(
+  git ls-files -z --cached --others --exclude-standard -- \
+    '*.md' \
+    ':(exclude)opencode/agents/**' \
+    ':(exclude)opencode/commands/**' \
+    ':(exclude)opencode/skills/**' \
+    ':(exclude)opencode/tools/**'
+)
 git diff --check
 ```
 
 The Mise-managed `mdformat` includes the GFM and frontmatter plugins required
-to preserve tables and skill metadata.
+to preserve tables and skill metadata. OCX registry-backed Markdown is excluded
+because byte changes invalidate its receipt; `ocx verify` checks that payload
+instead.
 
 ## Extend the setup
 
@@ -522,6 +528,6 @@ to preserve tables and skill metadata.
 - Update the software catalog above; documentation coverage will report any
   missing declaration.
 
-Engineering contracts, safe editing rules, and delivery checks live in
-[`GUIDELINES.md`](GUIDELINES.md). Agent-specific instructions live in
-[`AGENTS.md`](AGENTS.md).
+Implementation, testing, and delivery rules live in
+[`CODING_STANDARDS.md`](CODING_STANDARDS.md). Agent-specific instructions live
+in [`AGENTS.md`](AGENTS.md).

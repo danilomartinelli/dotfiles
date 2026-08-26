@@ -3,24 +3,24 @@
   "model": "openai/gpt-5.6-sol",
   "small_model": "kimi-for-coding/k3",
   "permission": {
-    "linear_*": "allow",
+    "linear_*": "allow"
   },
   "agent": {
     "plan": {
       "model": "anthropic/claude-opus-5",
-      "variant": "max",
+      "variant": "max"
     },
     "build": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "max",
+      "variant": "max"
     },
     "coder": {
       "model": "openai/gpt-5.3-codex-spark",
-      "variant": "xhigh",
+      "variant": "xhigh"
     },
     "explore": {
       "model": "kimi-for-coding/k3",
-      "variant": "max",
+      "variant": "max"
     },
     "researcher": {
       "model": "opencode-go/grok-4.6",
@@ -41,37 +41,37 @@
           "glab ci trace*": "allow",
           "glab ci config view*": "allow",
           "glab search *": "allow",
-          "glab api *": "allow",
-        },
-      },
+          "glab api *": "allow"
+        }
+      }
     },
     "scribe": {
       "model": "minimax-coding-plan/MiniMax-M3",
-      "temperature": 1,
+      "temperature": 1
     },
     "reviewer": {
       "model": "zai-coding-plan/glm-5.3",
       "variant": "max",
-      "temperature": 0.1,
-    },
+      "temperature": 0.1
+    }
   },
   "mcp": {
     "context7": {
       "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
+      "url": "https://mcp.context7.com/mcp"
     },
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
+      "url": "https://mcp.exa.ai/mcp"
     },
     "gh_grep": {
       "type": "remote",
-      "url": "https://mcp.grep.app",
+      "url": "https://mcp.grep.app"
     },
     "linear": {
       "type": "remote",
       "url": "https://mcp.linear.app/mcp",
-      "enabled": false,
-    },
-  },
+      "enabled": false
+    }
+  }
 }
