@@ -27,6 +27,20 @@ jq -e '
   and .tab_size == 2
   and .languages.JSON.prettier.allowed == true
   and .languages.JSONC.prettier.allowed == true
+  and .agent_servers.opencode == {
+    "type": "custom",
+    "command": "mise",
+    "args": [
+      "exec",
+      "--",
+      "ocx",
+      "opencode",
+      "-p",
+      "boost",
+      "--no-rename",
+      "acp"
+    ]
+  }
   and all(
     .agent.sandbox_permissions.write_paths[];
     (.requested | test("/npm-opencode-ai/[0-9]")) | not

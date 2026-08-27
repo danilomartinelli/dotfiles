@@ -6,14 +6,20 @@
       "settings": {}
     },
     "mcp-server-brave-search": {
+      "settings": {},
+
       "enabled": true,
       "remote": false
     },
     "mcp-server-context7": {
+      "settings": {},
+
       "enabled": true,
       "remote": false
     },
     "mcp-server-github": {
+      "settings": {},
+
       "enabled": true,
       "remote": false
     }
@@ -30,7 +36,16 @@
     "opencode": {
       "type": "custom",
       "command": "mise",
-      "args": ["exec", "--", "opencode", "acp"]
+      "args": [
+        "exec",
+        "--",
+        "ocx",
+        "opencode",
+        "-p",
+        "boost",
+        "--no-rename",
+        "acp"
+      ]
     },
     "cursor": {
       "type": "registry"
