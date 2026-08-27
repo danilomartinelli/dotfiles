@@ -102,6 +102,14 @@ permissions remain available. Its researcher agent extends the global
 read-oriented `gh` policy with equivalent `glab` routes for repositories, merge
 requests, issues, releases, CI, search, and the API.
 
+The profile `include` list stays empty because OCX already merges the trusted
+project's `AGENTS.md`, OpenCode configuration, and `.opencode/` payload. The
+shell keeps `OPENCODE_DISABLE_PROJECT_CONFIG=true` so the OpenCode child does
+not discover those sources a second time. It exports
+`OPENCODE_DISABLE_EXTERNAL_SKILLS=false` to retain compatible `.agents/skills`
+discovery, while `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` continues to omit
+`.claude/skills`.
+
 The profile also declares Linear's remote MCP with `linear_*` tools allowed,
 but keeps the server disabled. Set `mcp.linear.enabled` to `true` in
 `opencode/profiles/regular/opencode.jsonc` when it should become available; the

@@ -91,7 +91,7 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
     'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS"' \
     zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
 
-  assert_equal 'regular|true|true|true|true|true' "$output" \
+  assert_equal 'regular|true|true|true|false|true' "$output" \
     'OpenCode shell environment'
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
@@ -188,8 +188,8 @@ test_regular_profile_trusts_project_configuration() {
   opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
 
   jsonc_to_json "$ocx_config" | jq -e \
-    '.exclude == ["**/CLAUDE.md"]' >/dev/null \
-    || scenario_fail 'regular profile excludes more than CLAUDE.md'
+    '.exclude == ["**/CLAUDE.md"] and .include == []' >/dev/null \
+    || scenario_fail 'regular profile visibility policy is incorrect'
 
   jsonc_to_json "$opencode_config" | jq -e '
 		.permission["linear_*"] == "allow" and
