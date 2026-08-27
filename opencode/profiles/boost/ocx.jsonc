@@ -3,5 +3,11 @@
   "registries": {},
   "renameWindow": true,
   "exclude": ["**/CLAUDE.md"],
-  "include": []
+  "include": [
+    "**/AGENTS.md",
+    "**/opencode.jsonc",
+    "**/opencode.json",
+    "**/.agents/**",
+    "**/.opencode/**"
+  ]
 }
