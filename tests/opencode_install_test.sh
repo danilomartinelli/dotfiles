@@ -299,7 +299,7 @@ test_specialized_profiles_clone_regular_contract_and_route_models() {
 			"variant": "max"
 		} and
 		.agent.coder == {
-			"model": "openai/gpt-5.3-codex-spark",
+			"model": "openai/gpt-5.6-luna",
 			"variant": "xhigh"
 		} and
 		.agent.explore == {
@@ -328,7 +328,7 @@ test_installer_links_only_dotfiles_owned_entries() {
     PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
 
-  for profile in agents commands skills tools ocx.jsonc opencode.jsonc tui.jsonc; do
+  for profile in agents commands skills tools ocx.jsonc opencode.jsonc opencode-mem.jsonc tui.jsonc; do
     assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
       "$config_dir/$profile" "OpenCode $profile"
   done
@@ -361,7 +361,7 @@ test_installer_links_only_dotfiles_owned_entries() {
     PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
 
-  for profile in agents commands skills tools ocx.jsonc opencode.jsonc tui.jsonc; do
+  for profile in agents commands skills tools ocx.jsonc opencode.jsonc opencode-mem.jsonc tui.jsonc; do
     assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
       "$config_dir/$profile" "OpenCode $profile after reinstall"
   done

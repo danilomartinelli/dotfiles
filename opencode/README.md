@@ -14,7 +14,7 @@ reviewed and evolved in dotfiles while leaving generated OCX state local.
 | -------- | ------------------------------------------------------ | ------------------------------------------------------- |
 | Dotfiles | `agents/`, `commands/`, `skills/`, `tools/`            | Editable workspace behavior installed by OCX            |
 | Dotfiles | `profiles/boost/`, `profiles/regular/`, `profiles/go/` | Versioned profile instructions and model configuration  |
-| Dotfiles | `ocx.jsonc`, `opencode.jsonc`                          | Global OCX registry and merged OpenCode configuration   |
+| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`    | Global OCX, OpenCode, and memory plugin configuration   |
 | Dotfiles | `tui.jsonc`                                            | TUI theme, interaction, and notification defaults       |
 | OCX      | `.ocx/`, `plugins/`                                    | Installation receipt and generated plugin code          |
 | OCX      | `package.json`, `.gitignore`                           | Generated runtime dependencies and ignore rules         |
@@ -76,21 +76,21 @@ The installer materializes `regular` first and uses `ocx profile add --clone reg
 the researcher's read-oriented GitLab policy are also preserved. Only model
 routing and model-specific options differ.
 
-| Role       | `regular`                     | `go`                                  | `boost`                                |
-| ---------- | ----------------------------- | ------------------------------------- | -------------------------------------- |
-| Default    | `openai/gpt-5.6-terra`        | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                   |
-| Small      | `openai/gpt-5.6-luna`         | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`                   |
-| Plan       | `openai/gpt-5.6-terra` (high) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`)      |
-| Build      | `openai/gpt-5.6-terra` (high) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)           |
-| Coder      | `openai/gpt-5.6-luna` (high)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.3-codex-spark` (`xhigh`) |
-| Explore    | `openai/gpt-5.6-luna` (low)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)           |
-| Researcher | `openai/gpt-5.6-sol` (high)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)       |
-| Scribe     | `openai/gpt-5.6-luna` (low)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`       |
-| Reviewer   | `openai/gpt-5.6-sol` (high)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`)      |
+| Role       | `regular`                     | `go`                                  | `boost`                           |
+| ---------- | ----------------------------- | ------------------------------------- | --------------------------------- |
+| Default    | `openai/gpt-5.6-terra`        | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`              |
+| Small      | `openai/gpt-5.6-luna`         | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`              |
+| Plan       | `openai/gpt-5.6-terra` (high) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`) |
+| Build      | `openai/gpt-5.6-terra` (high) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)      |
+| Coder      | `openai/gpt-5.6-luna` (high)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.6-luna` (`xhigh`)   |
+| Explore    | `openai/gpt-5.6-luna` (low)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)      |
+| Researcher | `openai/gpt-5.6-sol` (high)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)  |
+| Scribe     | `openai/gpt-5.6-luna` (low)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`  |
+| Reviewer   | `openai/gpt-5.6-sol` (high)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`) |
 
 `go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
 has no cost ceiling: it combines direct Anthropic, OpenAI, Kimi, MiniMax, and
-Z.AI routes with OpenCode Go's Grok. Claude, Sol, Codex Spark, Kimi, Grok, and
+Z.AI routes with OpenCode Go's Grok. Claude, Sol, Luna, Kimi, Grok, and
 GLM use their highest valid configured reasoning variants; MiniMax uses its
 provider default for the writing-focused `scribe` role.
 
@@ -107,8 +107,8 @@ but keeps the server disabled. Set `mcp.linear.enabled` to `true` in
 `opencode/profiles/regular/opencode.jsonc` when it should become available; the
 first connection will require Linear authentication.
 
-Zed's ACP integration is separate from these interactive aliases and starts the
-Mise-managed OpenCode binary directly.
+Zed's ACP integration is separate from these interactive aliases and starts
+OpenCode through OCX with the `boost` profile explicitly.
 
 ## Edit the global workspace
 
@@ -120,6 +120,7 @@ Edit the repository source, not the link under `~/.config/opencode`:
 - Shared instructions: `opencode/tools/`
 - Global OCX registry: `opencode/ocx.jsonc`
 - Global OpenCode configuration: `opencode/opencode.jsonc`
+- OpenCode memory plugin configuration: `opencode/opencode-mem.jsonc`
 - Global TUI configuration: `opencode/tui.jsonc`
 
 Changes are immediately visible through the symbolic links. Review the Git diff
@@ -183,7 +184,7 @@ find "$HOME/.config/opencode" -maxdepth 2 -type l -print
 ocx profile list --global
 ```
 
-Expected managed links are the seven global entries in the ownership table plus
+Expected managed links are the eight global entries in the ownership table plus
 the `boost`, `regular`, and `go` profile directories.
 
 ## Troubleshooting

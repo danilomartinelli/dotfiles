@@ -76,6 +76,7 @@ configure_managed_entry skills
 configure_managed_entry tools
 configure_managed_entry ocx.jsonc
 configure_managed_entry opencode.jsonc
+configure_managed_entry opencode-mem.jsonc
 configure_managed_entry tui.jsonc
 
 configure_profile regular
