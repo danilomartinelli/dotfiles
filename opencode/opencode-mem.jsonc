@@ -1,0 +1,37 @@
+{
+  "storagePath": "~/.opencode-mem/data",
+  "userEmailOverride": "env://GIT_AUTHOR_EMAIL",
+  "userNameOverride": "env://GIT_AUTHOR_NAME",
+  "embeddingModel": "Xenova/nomic-embed-text-v1",
+  "memory": {
+    "defaultScope": "project"
+  },
+
+  "webServerEnabled": true,
+  "webServerPort": 4747,
+
+  "autoCaptureEnabled": true,
+  "autoCaptureLanguage": "auto",
+
+  "opencodeProvider": "openai",
+  "opencodeModel": "gpt-5.6-luna",
+
+  "showAutoCaptureToasts": true,
+  "showUserProfileToasts": true,
+  "showErrorToasts": true,
+
+  "userProfileAnalysisInterval": 10,
+  "userProfileMaxContextBytes": 32768,
+  "maxMemories": 10,
+
+  "compaction": {
+    "enabled": true,
+    "memoryLimit": 10
+  },
+  "chatMessage": {
+    "enabled": true,
+    "maxMemories": 3,
+    "excludeCurrentSession": true,
+    "injectOn": "first"
+  }
+}
