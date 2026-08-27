@@ -15,7 +15,7 @@
       "variant": "max"
     },
     "coder": {
-      "model": "openai/gpt-5.3-codex-spark",
+      "model": "openai/gpt-5.6-luna",
       "variant": "xhigh"
     },
     "explore": {
