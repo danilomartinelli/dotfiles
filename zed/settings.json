@@ -60,6 +60,11 @@
       "type": "registry"
     },
     "claude-acp": {
+      "default_config_options": {
+        "effort": "max",
+        "mode": "bypassPermissions",
+        "model": "opus[1m]"
+      },
       "type": "registry"
     }
   },
