@@ -38,8 +38,8 @@ configure_managed_entry() {
 
   # OCX owns installation and updates; dotfiles owns the editable result.
   # Runtime-only entries such as plugins, .ocx and package.json stay untouched.
-  rm -rf "$entry_target"
   installer_link_config \
+    --policy replace-generated \
     --label "OpenCode $entry_name" \
     "$entry_source" "$entry_target"
 }
@@ -64,8 +64,8 @@ configure_profile() {
 
   # OCX creates a profile directory. Replace that generated directory with the
   # repository-owned profile so edits remain versioned in dotfiles.
-  rm -rf "$profile_target"
   installer_link_config \
+    --policy replace-generated \
     --label "OpenCode $profile_name profile" \
     "$profile_source" "$profile_target"
 }

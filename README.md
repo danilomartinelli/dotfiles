@@ -65,7 +65,9 @@ Bootstrap performs the complete first-machine workflow:
 
 Existing destinations are never replaced silently. Interactive bootstrap lets
 you skip, overwrite, or back up a conflict. Topic installers remain
-non-interactive and use explicit preservation or backup policies.
+non-interactive and select an explicit conflict policy: keep the existing file,
+back it up, or, for a path its tool regenerates on every run, replace it and
+report the replacement.
 
 > [!IMPORTANT]
 > Bootstrap and normal updates do not open graphical applications, recover

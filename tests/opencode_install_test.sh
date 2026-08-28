@@ -324,9 +324,20 @@ test_installer_links_only_dotfiles_owned_entries() {
   fake_bin=$(make_fake_clis "$home")
   config_dir=$home/.config/opencode
 
+  # A real directory left by an earlier tool run must be discarded outright.
+  # The default replace-with-backup policy would instead park it in a sibling
+  # .backup, so this proves the installer selects replace-generated.
+  mkdir -p "$config_dir/agents"
+  printf 'stale generated agent\n' >"$config_dir/agents/stale.md"
+
   scenario_capture "$home" env HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
+
+  [[ -z $(find "$config_dir" -maxdepth 2 -name '*.backup' -print -quit) ]] \
+    || scenario_fail 'installer backed up a generated OpenCode entry or profile'
+  [[ ! -e $config_dir/agents/stale.md ]] \
+    || scenario_fail 'installer kept stale generated OpenCode content'
 
   for profile in agents commands skills tools ocx.jsonc opencode.jsonc opencode-mem.jsonc tui.jsonc; do
     assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
