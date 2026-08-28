@@ -22,9 +22,28 @@ reviewers, approvers, teams, or external stakeholders.
 - `opencode/README.md` owns detailed OCX/OpenCode procedures.
 - `opencode/profiles/*/AGENTS.md` files are versioned profile payloads. They
   configure OpenCode sessions and do not replace this root guide.
+- `docs/agents/*.md` record the issue tracker, triage labels, and domain
+  documentation conventions that the engineering skills read.
 
 Explicit user instructions take precedence. For a file below a nested
 `AGENTS.md`, also follow the closest applicable instructions.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues at `danilomartinelli/dotfiles`, driven by the `gh`
+CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles, each label string equal to its name. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `CONTEXT.md` plus `docs/adr/`. See
+`docs/agents/domain.md`.
 
 ## Repository map
 
@@ -33,6 +52,7 @@ dotfiles/
 ├── bin/                  # Public executables added to PATH
 ├── functions/            # Public Zsh autoload functions
 ├── tests/                # Isolated behavioral and contract tests
+├── docs/agents/          # Issue tracker, triage, and domain conventions
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
 ├── opencode/             # Dotfiles-owned OpenCode and OCX configuration
@@ -44,8 +64,8 @@ dotfiles/
 ```
 
 Visible top-level directories are topics unless `_scripts/topic-catalog`
-classifies them as reserved. `bin/`, `functions/`, and `tests/` are not topics;
-hidden and underscore-prefixed names are excluded from discovery.
+classifies them as reserved. `bin/`, `docs/`, `functions/`, and `tests/` are not
+topics; hidden and underscore-prefixed names are excluded from discovery.
 
 ## Start every task safely
 

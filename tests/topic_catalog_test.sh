@@ -22,6 +22,7 @@ make_fixture() {
     "$fixture/alpha/.dot" \
     "$fixture/alpha/nested" \
     "$fixture/bin" \
+    "$fixture/docs/agents" \
     "$fixture/empty" \
     "$fixture/functions" \
     "$fixture/homebrew" \
@@ -96,6 +97,18 @@ EOF
 reserved
 EOF
   scenario_write_file "$fixture/bin/bin.symlink" <<'EOF'
+reserved
+EOF
+  scenario_write_file "$fixture/docs/notes.zsh" <<'EOF'
+reserved
+EOF
+  scenario_write_file "$fixture/docs/install.sh" <<'EOF'
+reserved
+EOF
+  scenario_write_file "$fixture/docs/docs.symlink" <<'EOF'
+reserved
+EOF
+  scenario_write_file "$fixture/docs/agents/issue-tracker.md" <<'EOF'
 reserved
 EOF
   scenario_write_file "$fixture/functions/helper.zsh" <<'EOF'

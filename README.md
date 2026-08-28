@@ -392,8 +392,8 @@ setup, Zsh startup, and documentation coverage. It emits deterministic
 main Zsh files, the prompt, completions, and alias files.
 
 Names beginning with `_` or `.` are private and excluded from discovery.
-`bin/`, `functions/`, and `tests/` are visible but explicitly classified as
-non-topics.
+`bin/`, `docs/`, `functions/`, and `tests/` are visible but explicitly
+classified as non-topics.
 
 ### Setup lifecycle
 

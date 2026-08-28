@@ -22,7 +22,8 @@ Emit tab-separated kind/path records, sorted by kind and absolute path:
   aliases     visible topic aliases.zsh file (also emitted as main)
 
 Visibility excludes hidden and underscore-prefixed names at every level. The
-explicit non-topics bin, functions, and tests are never classified as topics.
+explicit non-topics bin, docs, functions, and tests are never classified as
+topics.
 EOF
 }
 
@@ -138,7 +139,7 @@ for entry in "$repository_root"/*; do
   [ -d "$entry" ] || continue
 
   case $entry_name in
-    bin | functions | tests) continue ;;
+    bin | docs | functions | tests) continue ;;
   esac
 
   record topic "$entry"
