@@ -28,6 +28,7 @@ jq -e '
   and .languages.JSON.prettier.allowed == true
   and .languages.JSONC.prettier.allowed == true
   and .agent_servers.opencode == {
+    "default_config_options": { "mode": "build" },
     "type": "custom",
     "command": "mise",
     "args": [
