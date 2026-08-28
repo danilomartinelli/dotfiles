@@ -34,6 +34,9 @@
   },
   "agent_servers": {
     "opencode": {
+      "default_config_options": {
+        "mode": "build"
+      },
       "type": "custom",
       "command": "mise",
       "args": [

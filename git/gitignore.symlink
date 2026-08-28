@@ -7,3 +7,5 @@
 .codegraph/
 .direnv/
 .idea/
+
+**/.claude/settings.local.json
