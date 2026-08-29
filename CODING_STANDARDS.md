@@ -32,17 +32,18 @@ catalogs, validation lists, or subsystem runbooks between files.
 
 ## Repository structure and naming
 
-| Concern                              | Authoritative source     |
-| ------------------------------------ | ------------------------ |
-| Homebrew software                    | `Brewfile`               |
-| Runtime and language-package tools   | `mise/config.toml`       |
-| Resolved Mise versions and checksums | `mise/mise.lock`         |
-| macOS preferences                    | `_macos/defaults.tsv`    |
-| Topic discovery and load classes     | `_scripts/topic-catalog` |
-| Setup orchestration                  | `_scripts/setup`         |
-| OpenCode and OCX configuration       | `opencode/`              |
-| Public commands and lifecycle        | `README.md`              |
-| Agent workflow                       | `AGENTS.md`              |
+| Concern                              | Authoritative source            |
+| ------------------------------------ | ------------------------------- |
+| Homebrew software                    | `Brewfile`                      |
+| Runtime and language-package tools   | `mise/config.toml`              |
+| Resolved Mise versions and checksums | `mise/mise.lock`                |
+| macOS preferences                    | `_macos/defaults.tsv`           |
+| Topic discovery and load classes     | `_scripts/topic-catalog`        |
+| Setup orchestration                  | `_scripts/setup`                |
+| OpenCode and OCX configuration       | `opencode/`                     |
+| Managed OpenCode entry catalog       | `opencode/_managed-entries.tsv` |
+| Public commands and lifecycle        | `README.md`                     |
+| Agent workflow                       | `AGENTS.md`                     |
 
 Naming follows the executable surface already present:
 

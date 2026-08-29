@@ -91,17 +91,18 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 
 ## Sources of truth
 
-| Concern                                         | Source                       |
-| ----------------------------------------------- | ---------------------------- |
-| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                   |
-| Runtimes and language-package CLIs              | `mise/config.toml`           |
-| Mise versions and checksums                     | `mise/mise.lock` (generated) |
-| macOS preferences                               | `_macos/defaults.tsv`        |
-| Topic discovery and load classes                | `_scripts/topic-catalog`     |
-| Setup orchestration                             | `_scripts/setup`             |
-| OpenCode and OCX workspace                      | `opencode/`                  |
-| Public lifecycle and commands                   | `README.md`                  |
-| Coding and validation rules                     | `CODING_STANDARDS.md`        |
+| Concern                                         | Source                          |
+| ----------------------------------------------- | ------------------------------- |
+| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                      |
+| Runtimes and language-package CLIs              | `mise/config.toml`              |
+| Mise versions and checksums                     | `mise/mise.lock` (generated)    |
+| macOS preferences                               | `_macos/defaults.tsv`           |
+| Topic discovery and load classes                | `_scripts/topic-catalog`        |
+| Setup orchestration                             | `_scripts/setup`                |
+| OpenCode and OCX workspace                      | `opencode/`                     |
+| Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv` |
+| Public lifecycle and commands                   | `README.md`                     |
+| Coding and validation rules                     | `CODING_STANDARDS.md`           |
 
 Never edit `mise/mise.lock` manually. Regenerate it through Mise from the
 repository root and review the generated diff narrowly.
@@ -135,13 +136,16 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 
 ### OpenCode and OCX
 
-`opencode/install.sh` initializes OCX and links only dotfiles-owned entries
-into `~/.config/opencode`.
+`opencode/_managed-entries.tsv` is the catalog of dotfiles-owned entries.
+`opencode/install.sh` links what it declares into `~/.config/opencode`, and both
+`tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
+expectations from it. No code carries a second copy of the list.
 
 Dotfiles owns `agents/`, `commands/`, `skills/`, `tools/`, `ocx.jsonc`,
-`opencode.jsonc`, `tui.jsonc`, and the managed `regular`, `go`, and `boost`
-profiles. OCX owns `.ocx/`, `plugins/`, `package.json`, `.gitignore`, and
-`profiles/default/`; never copy or version those runtime paths.
+`opencode.jsonc`, `opencode-mem.jsonc`, `tui.jsonc`, and the managed `regular`,
+`go`, and `boost` profiles. OCX owns `.ocx/`, `plugins/`, `package.json`,
+`.gitignore`, and `profiles/default/`; never copy or version those runtime
+paths.
 
 The versioned `agents/`, `commands/`, `skills/`, and `tools/` payloads retain
 OCX registry checksums. Update them through `ocx update`, do not reformat them
@@ -152,11 +156,16 @@ Install `regular` first and clone specialized profiles from it. Keep profile
 instructions, permissions, MCP policy, and researcher shell policy aligned;
 specialize model routing and model-specific options only.
 
-When a managed entry or profile changes, update these together:
+Adding or removing a managed entry starts in
+`opencode/_managed-entries.tsv`. Its documentation check then requires the same
+change in all three guides:
 
-- `opencode/install.sh`
 - `opencode/README.md`
-- `tests/opencode_install_test.sh`
+- `README.md`
+- `AGENTS.md`
+
+A new profile also needs its `oc:<name>` shortcut in `opencode/aliases.zsh`,
+which the same check enforces.
 
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose --pure` catalog. Variants are

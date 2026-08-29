@@ -23,6 +23,11 @@ reviewed and evolved in dotfiles while leaving generated OCX state local.
 Do not copy the OCX-owned paths into this repository. They change as OCX
 installs or updates components and are not intended for manual maintenance.
 
+`opencode/_managed-entries.tsv` is the catalog behind the dotfiles rows above.
+It declares every entry and profile the installer links, and both
+`tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
+expectations from it. Adding or removing a managed entry starts there.
+
 ## Install or refresh
 
 Run the topic installer directly:
@@ -37,8 +42,9 @@ Normal bootstrap and `dot` updates also run it. The installer:
 1. Initializes the global OCX configuration.
 1. Registers `https://registry.kdco.dev` as `kdco`.
 1. Installs the `kdco/workspace` component set when its receipt is absent.
-1. Links the dotfiles-owned global and TUI entries into
-   `~/.config/opencode`.
+1. Links every entry declared in `opencode/_managed-entries.tsv` into
+   `~/.config/opencode`, replacing each generated target instead of backing it
+   up.
 1. Creates `regular`, clones `go` and `boost` from it with OCX, then replaces
    each generated profile directory with its repository link.
 
@@ -149,14 +155,16 @@ To add another profile derived from the trusted-project baseline:
 1. Run `ocx profile add <name> --clone regular --global` to generate its
    initial files.
 1. Add those three files under `opencode/profiles/<name>/`.
-1. Add `configure_profile <name> regular` after `regular` in
-   `opencode/install.sh`.
-1. Add the profile and its shell entrypoint to
-   `tests/opencode_install_test.sh` and this document.
+1. Add a `profile` row to `opencode/_managed-entries.tsv` below the `regular`
+   row, naming `regular` as its clone source. The installer and both test
+   suites pick it up from there.
+1. Add its `oc:<name>` shortcut to `opencode/aliases.zsh` and document the
+   profile in this file, `README.md`, and `AGENTS.md`;
+   `tests/documentation_test.sh` fails until all four exist.
 1. Keep the shared instructions, OCX policy, permissions, and MCP configuration
    aligned; specialize only the intended profile fields.
-1. Validate every model and variant against the live catalog, run the installer,
-   and verify the resulting link.
+1. Validate every model and variant against the live model catalog, run the
+   installer, and verify the resulting link.
 
 ## Update OCX components
 
@@ -192,8 +200,9 @@ find "$HOME/.config/opencode" -maxdepth 2 -type l -print
 ocx profile list --global
 ```
 
-Expected managed links are the eight global entries in the ownership table plus
-the `boost`, `regular`, and `go` profile directories.
+Expected managed links are the global entries in the ownership table plus the
+`boost`, `regular`, and `go` profile directories, exactly as
+`opencode/_managed-entries.tsv` declares them.
 
 ## Troubleshooting
 

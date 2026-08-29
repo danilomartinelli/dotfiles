@@ -7,6 +7,9 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/opencode-catalog.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/opencode-catalog.sh"
 scenario_init dotfiles-opencode-install-tests
 
 make_fake_clis() {
@@ -80,6 +83,33 @@ jsonc_to_json() {
   yq -p json -o json '.' "$1"
 }
 
+opencode_profile_add_line() {
+  local name=$1
+  local clone=$2
+
+  if [[ $clone == - ]]; then
+    printf 'ocx profile add %s --global\n' "$name"
+  else
+    printf 'ocx profile add %s --clone %s --global\n' "$name" "$clone"
+  fi
+}
+
+assert_catalog_links() {
+  local config_dir=$1
+  local phase=$2
+  local name
+
+  while IFS= read -r name; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/$name" \
+      "$config_dir/$name" "OpenCode $name ($phase)"
+  done < <(opencode_catalog_names entry)
+
+  while IFS= read -r name; do
+    assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$name" \
+      "$config_dir/profiles/$name" "OpenCode $name profile ($phase)"
+  done < <(opencode_catalog_names profile)
+}
+
 test_shell_uses_regular_ocx_profile_and_shortcuts() {
   local fake_bin home output
 
@@ -108,10 +138,13 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
 }
 
 test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
-  local jsonc_path managed_path
-  local -a managed_paths
+  local jsonc_path managed_path name
+  local -a directory_payload managed_paths
 
-  managed_paths=(
+  # The catalog names each entry, not what OCX installed inside a directory
+  # entry, so directory contents stay enumerated. This list is what catches an
+  # `ocx update` silently dropping a component.
+  directory_payload=(
     agents/coder.md
     agents/researcher.md
     agents/reviewer.md
@@ -123,19 +156,20 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
     skills/plan-protocol/SKILL.md
     skills/plan-review/SKILL.md
     tools/philosophy.md
-    ocx.jsonc
-    opencode.jsonc
-    tui.jsonc
-    profiles/boost/AGENTS.md
-    profiles/boost/ocx.jsonc
-    profiles/boost/opencode.jsonc
-    profiles/regular/AGENTS.md
-    profiles/regular/ocx.jsonc
-    profiles/regular/opencode.jsonc
-    profiles/go/AGENTS.md
-    profiles/go/ocx.jsonc
-    profiles/go/opencode.jsonc
   )
+  managed_paths=("${directory_payload[@]}")
+
+  while IFS= read -r name; do
+    opencode_entry_is_directory "$name" || managed_paths+=("$name")
+  done < <(opencode_catalog_names entry)
+
+  while IFS= read -r name; do
+    managed_paths+=(
+      "profiles/$name/AGENTS.md"
+      "profiles/$name/ocx.jsonc"
+      "profiles/$name/opencode.jsonc"
+    )
+  done < <(opencode_catalog_names profile)
 
   for managed_path in "${managed_paths[@]}"; do
     [[ -f $REPOSITORY_ROOT/opencode/$managed_path ]] \
@@ -151,6 +185,26 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
     [[ ! -e $REPOSITORY_ROOT/opencode/$managed_path ]] \
       || scenario_fail "runtime or legacy OpenCode payload is versioned: $managed_path"
   done
+
+  # Versioned content with no catalog row would never be linked, so the
+  # catalog and the checkout have to agree in both directions. Between them
+  # these three cover every row the catalog can declare.
+  while IFS= read -r name; do
+    opencode_catalog_has entry "$name" \
+      || scenario_fail "versioned OpenCode config has no catalog row: $name"
+  done < <(find "$REPOSITORY_ROOT/opencode" -maxdepth 1 -type f \
+    -name '*.jsonc' -exec basename -- {} \; | sort)
+
+  while IFS= read -r name; do
+    opencode_catalog_has entry "$name" \
+      || scenario_fail "versioned OpenCode directory has no catalog row: $name"
+  done < <(printf '%s\n' "${directory_payload[@]%%/*}" | sort -u)
+
+  while IFS= read -r name; do
+    opencode_catalog_has profile "$name" \
+      || scenario_fail "versioned OpenCode profile has no catalog row: $name"
+  done < <(find "$REPOSITORY_ROOT/opencode/profiles" -mindepth 1 -maxdepth 1 \
+    -type d -exec basename -- {} \; | sort)
 }
 
 test_tui_matches_terminal_theme_and_interaction_defaults() {
@@ -317,18 +371,75 @@ test_specialized_profiles_clone_regular_contract_and_route_models() {
     || scenario_fail 'boost profile model routing is incorrect'
 }
 
+test_catalog_declares_each_clone_source_before_its_clones() {
+  local kind name clone
+  local -a declared=()
+
+  while IFS=$'\t' read -r kind name clone; do
+    [[ $kind == entry || $kind == profile ]] \
+      || scenario_fail "unknown OpenCode catalog kind: $kind"
+    [[ -n $name && -n $clone ]] \
+      || scenario_fail "incomplete OpenCode catalog row: $kind $name"
+
+    if [[ $kind == profile ]]; then
+      if [[ $clone != - ]]; then
+        [[ " ${declared[*]:-} " == *" $clone "* ]] \
+          || scenario_fail "profile $name clones $clone before it is declared"
+      fi
+      declared+=("$name")
+    fi
+  done < <(opencode_catalog_rows)
+
+  [[ ${#declared[@]} -gt 0 ]] \
+    || scenario_fail 'OpenCode catalog declares no profiles'
+}
+
+test_installer_rejects_an_unusable_catalog() {
+  local fake_bin home
+  local -a run
+
+  home=$(scenario_tmpdir catalog)
+  fake_bin=$(make_fake_clis "$home")
+  run=(env HOME="$home" PATH="$fake_bin:/usr/bin:/bin")
+
+  assert_fails_with_output 'missing catalog' 'entry catalog not found' \
+    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/absent.tsv" \
+    "$REPOSITORY_ROOT/opencode/install.sh"
+
+  printf 'widget\tagents\t-\n' >"$home/unknown-kind.tsv"
+  assert_fails_with_output 'unknown catalog kind' \
+    'unknown OpenCode catalog kind' \
+    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/unknown-kind.tsv" \
+    "$REPOSITORY_ROOT/opencode/install.sh"
+
+  printf 'entry\tagents\n' >"$home/incomplete.tsv"
+  assert_fails_with_output 'incomplete catalog row' \
+    'invalid OpenCode catalog row' \
+    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/incomplete.tsv" \
+    "$REPOSITORY_ROOT/opencode/install.sh"
+}
+
 test_installer_links_only_dotfiles_owned_entries() {
-  local config_dir fake_bin home profile
+  local config_dir current_add fake_bin home kind clone name previous_add
+  local runtime_path
 
   home=$(scenario_tmpdir install)
   fake_bin=$(make_fake_clis "$home")
   config_dir=$home/.config/opencode
+  mkdir -p "$config_dir"
 
-  # A real directory left by an earlier tool run must be discarded outright.
-  # The default replace-with-backup policy would instead park it in a sibling
-  # .backup, so this proves the installer selects replace-generated.
-  mkdir -p "$config_dir/agents"
-  printf 'stale generated agent\n' >"$config_dir/agents/stale.md"
+  # Seed a real target for every managed entry. The default
+  # replace-with-backup policy would park each one in a sibling .backup, so
+  # the absence of those below is what proves the installer selects
+  # replace-generated for the whole catalog and not one arbitrary member.
+  while IFS= read -r name; do
+    if opencode_entry_is_directory "$name"; then
+      mkdir -p "$config_dir/$name"
+      printf 'stale generated entry\n' >"$config_dir/$name/stale.marker"
+    else
+      printf 'stale generated entry\n' >"$config_dir/$name"
+    fi
+  done < <(opencode_catalog_names entry)
 
   scenario_capture "$home" env HOME="$home" \
     PATH="$fake_bin:/usr/bin:/bin" \
@@ -336,32 +447,38 @@ test_installer_links_only_dotfiles_owned_entries() {
 
   [[ -z $(find "$config_dir" -maxdepth 2 -name '*.backup' -print -quit) ]] \
     || scenario_fail 'installer backed up a generated OpenCode entry or profile'
-  [[ ! -e $config_dir/agents/stale.md ]] \
-    || scenario_fail 'installer kept stale generated OpenCode content'
 
-  for profile in agents commands skills tools ocx.jsonc opencode.jsonc opencode-mem.jsonc tui.jsonc; do
-    assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
-      "$config_dir/$profile" "OpenCode $profile"
-  done
+  while IFS= read -r name; do
+    opencode_entry_is_directory "$name" || continue
+    [[ ! -e $config_dir/$name/stale.marker ]] \
+      || scenario_fail "installer kept stale generated content: $name"
+  done < <(opencode_catalog_names entry)
 
-  for profile in boost regular go; do
-    assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
-      "$config_dir/profiles/$profile" "OpenCode $profile profile"
-  done
+  while IFS= read -r name; do
+    [[ ! -e $config_dir/profiles/$name/generated ]] \
+      || scenario_fail "installer kept the generated $name profile directory"
+  done < <(opencode_catalog_names profile)
 
-  assert_contains "$home/events.log" 'ocx profile add regular --global'
-  assert_contains "$home/events.log" \
-    'ocx profile add go --clone regular --global'
-  assert_contains "$home/events.log" \
-    'ocx profile add boost --clone regular --global'
-  assert_before "$home/events.log" 'ocx profile add regular --global' \
-    'ocx profile add go --clone regular --global'
+  assert_catalog_links "$config_dir" 'first install'
 
-  for profile in plugins .ocx package.json .gitignore profiles/default; do
-    [[ -e $config_dir/$profile ]] \
-      || scenario_fail "OCX runtime entry was removed: $profile"
-    [[ ! -L $config_dir/$profile ]] \
-      || scenario_fail "OCX runtime entry was linked: $profile"
+  # OCX creates every profile, and the installer applies catalog rows in file
+  # order, which is what keeps a clone source materialized before its clones.
+  previous_add=
+  while IFS=$'\t' read -r kind name clone; do
+    [[ $kind == profile ]] || continue
+    current_add=$(opencode_profile_add_line "$name" "$clone")
+    assert_contains "$home/events.log" "$current_add"
+    if [[ -n $previous_add ]]; then
+      assert_before "$home/events.log" "$previous_add" "$current_add"
+    fi
+    previous_add=$current_add
+  done < <(opencode_catalog_rows)
+
+  for runtime_path in plugins .ocx package.json .gitignore profiles/default; do
+    [[ -e $config_dir/$runtime_path ]] \
+      || scenario_fail "OCX runtime entry was removed: $runtime_path"
+    [[ ! -L $config_dir/$runtime_path ]] \
+      || scenario_fail "OCX runtime entry was linked: $runtime_path"
   done
 
   assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
@@ -372,15 +489,7 @@ test_installer_links_only_dotfiles_owned_entries() {
     PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
 
-  for profile in agents commands skills tools ocx.jsonc opencode.jsonc opencode-mem.jsonc tui.jsonc; do
-    assert_link_target "$REPOSITORY_ROOT/opencode/$profile" \
-      "$config_dir/$profile" "OpenCode $profile after reinstall"
-  done
-
-  for profile in boost regular go; do
-    assert_link_target "$REPOSITORY_ROOT/opencode/profiles/$profile" \
-      "$config_dir/profiles/$profile" "OpenCode $profile profile after reinstall"
-  done
+  assert_catalog_links "$config_dir" 'reinstall'
 
   assert_contains "$config_dir/plugins/workspace.ts" 'runtime plugin'
   assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
@@ -397,6 +506,10 @@ scenario_run 'OpenCode regular profile trusts project configuration' \
   test_regular_profile_trusts_project_configuration
 scenario_run 'OpenCode specialized profiles clone regular and route models' \
   test_specialized_profiles_clone_regular_contract_and_route_models
+scenario_run 'OpenCode catalog declares each clone source before its clones' \
+  test_catalog_declares_each_clone_source_before_its_clones
+scenario_run 'OpenCode installer rejects an unusable catalog' \
+  test_installer_rejects_an_unusable_catalog
 scenario_run 'OpenCode installer links managed entries and preserves OCX runtime state' \
   test_installer_links_only_dotfiles_owned_entries
 scenario_finish

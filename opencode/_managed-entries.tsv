@@ -1,0 +1,17 @@
+# Managed OpenCode entry catalog consumed by install.sh, the installer
+# test, and the documentation check.
+# Columns: kind, name, clone (kind ∈ entry|profile; clone is - when none)
+# Row order is apply order: a clone source must precede the profiles that
+# clone it.
+
+entry	agents	-
+entry	commands	-
+entry	skills	-
+entry	tools	-
+entry	ocx.jsonc	-
+entry	opencode.jsonc	-
+entry	opencode-mem.jsonc	-
+entry	tui.jsonc	-
+profile	regular	-
+profile	go	regular
+profile	boost	regular

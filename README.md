@@ -450,21 +450,24 @@ account-specific state outside this repository.
 ### OpenCode and OCX
 
 OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
-the `kdco` registry and links the dotfiles-owned `agents`, `commands`, `skills`,
-`tools`, `ocx.jsonc`, `opencode.jsonc`, `tui.jsonc`, and the `regular`, `go`,
-and `boost` profile directories. The managed TUI follows the terminal's
-Catppuccin Macchiato theme and keeps audible notifications disabled. OCX retains
-`.ocx`, generated `plugins`, `package.json`, `.gitignore`, and
-`profiles/default`.
+the `kdco` registry and links the dotfiles-owned `agents/`, `commands/`,
+`skills/`, `tools/`, `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`,
+`tui.jsonc`, and the `regular`, `go`, and `boost` profile directories.
+`opencode/_managed-entries.tsv` is the one catalog behind that list: the
+installer and both test suites read it rather than keeping their own copy, and
+a check keeps this paragraph agreeing with it. The managed TUI
+follows the terminal's Catppuccin Macchiato theme and keeps audible
+notifications disabled. OCX retains `.ocx`, generated `plugins`,
+`package.json`, `.gitignore`, and `profiles/default`.
 
 The `regular` profile carries the active trusted-project model and MCP policy.
 The installer creates it first, then clones that policy into `go` and `boost`.
 `go` routes every role through `opencode-go/*`; `boost` is the uncapped,
-quality-first route across Claude Opus, GPT-5.6 Sol, Codex, Kimi, Grok, MiniMax,
-and GLM. The shell default remains `regular`.
+quality-first route across several providers. The shell default
+remains `regular`.
 
-See [`opencode/README.md`](opencode/README.md) for profile maintenance,
-ownership, verification, and troubleshooting.
+See [`opencode/README.md`](opencode/README.md) for per-role model routing,
+profile maintenance, ownership, verification, and troubleshooting.
 
 ## Validation
 
