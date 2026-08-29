@@ -50,8 +50,7 @@ installer_banner "Installing Mise runtimes"
 if mise install; then
   installer_success "Mise runtimes installed successfully"
 else
-  installer_error "Failed to install Mise runtimes"
-  exit 1
+  installer_fail "Failed to install Mise runtimes"
 fi
 
 # Remove runtimes no longer declared and stale patch versions.

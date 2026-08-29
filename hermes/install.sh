@@ -12,12 +12,12 @@ HERMES_DEFAULT_MODEL="${HERMES_DEFAULT_MODEL:-anthropic/claude-opus-5}"
 
 mkdir -p "$HERMES_HOME"
 
-if ! command -v hermes >/dev/null 2>&1; then
-  installer_note "Install Hermes with: brew install hermes-agent"
-  installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
-  installer_success "Hermes Agent configured"
-  exit 0
-fi
+# Stated before the CLI probe so it reaches you on both paths: the keys matter
+# whether or not hermes itself is installed yet.
+installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
+
+installer_optional_command hermes \
+  "hermes is not installed; model configuration skipped" hermes-agent
 
 installer_success "hermes CLI available"
 
@@ -34,6 +34,5 @@ case "$current_model" in
     ;;
 esac
 
-installer_note "Put provider API keys in ~/.localrc (see .localrc.example)"
 installer_note "Change provider/model interactively with: hermes model"
 installer_success "Hermes Agent configured"

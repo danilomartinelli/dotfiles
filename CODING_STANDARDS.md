@@ -234,6 +234,7 @@ define a per-topic reset variable.
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                               |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                          |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
+| Dock layout                                                     | `tests/dockutil_install_test.sh`                                                                             |
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 

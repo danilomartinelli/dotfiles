@@ -12,8 +12,7 @@ CONFIG_DIR="$HOME/.config/opencode"
 CATALOG="${DOTFILES_OPENCODE_CATALOG:-$TOPIC_DIR/_managed-entries.tsv}"
 
 if [ ! -f "$CATALOG" ]; then
-  installer_error "OpenCode entry catalog not found: $CATALOG"
-  exit 1
+  installer_fail "OpenCode entry catalog not found: $CATALOG"
 fi
 
 mkdir -p "$CONFIG_DIR"
@@ -47,8 +46,7 @@ configure_managed_entry() {
   entry_target="$CONFIG_DIR/$entry_name"
 
   if [ ! -e "$entry_source" ]; then
-    installer_error "OpenCode config source not found: $entry_source"
-    exit 1
+    installer_fail "OpenCode config source not found: $entry_source"
   fi
 
   # OCX owns installation and updates; dotfiles owns the editable result.
@@ -63,8 +61,7 @@ configure_profile() {
   profile_target="$CONFIG_DIR/profiles/$profile_name"
 
   if [ ! -d "$profile_source" ]; then
-    installer_error "OpenCode profile source not found: $profile_source"
-    exit 1
+    installer_fail "OpenCode profile source not found: $profile_source"
   fi
 
   ocx profile remove "$profile_name" --global
@@ -89,8 +86,7 @@ while IFS="$(printf '\t')" read -r catalog_kind catalog_name catalog_clone <&3; 
   esac
 
   if [ -z "$catalog_name" ] || [ -z "$catalog_clone" ]; then
-    installer_error "invalid OpenCode catalog row: $catalog_kind $catalog_name"
-    exit 1
+    installer_fail "invalid OpenCode catalog row: $catalog_kind $catalog_name"
   fi
 
   case "$catalog_kind" in
@@ -105,8 +101,7 @@ while IFS="$(printf '\t')" read -r catalog_kind catalog_name catalog_clone <&3; 
       fi
       ;;
     *)
-      installer_error "unknown OpenCode catalog kind: $catalog_kind"
-      exit 1
+      installer_fail "unknown OpenCode catalog kind: $catalog_kind"
       ;;
   esac
 done 3<"$CATALOG"

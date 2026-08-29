@@ -49,14 +49,12 @@ case "$(uname -s)" in
     download_and_install 'https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh'
     ;;
   *)
-    installer_error "Homebrew installation is unsupported on $(uname -s)"
-    exit 1
+    installer_fail "Homebrew installation is unsupported on $(uname -s)"
     ;;
 esac
 
 if ! "$HOMEBREW_AVAILABILITY" prefix >/dev/null; then
-  installer_error 'Homebrew installation completed, but brew was not found'
-  exit 1
+  installer_fail 'Homebrew installation completed, but brew was not found'
 fi
 
 installer_success 'Homebrew installed successfully.'

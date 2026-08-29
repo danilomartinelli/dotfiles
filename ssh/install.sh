@@ -14,13 +14,9 @@ SOURCE_LOCAL_CONFIG=$DOTFILES_SSH/config_local.example
 SSH_CONFIG=$SSH_DIR/config
 SSH_LOCAL_CONFIG=$SSH_DIR/config_local
 
-fail() {
-  installer_error "$*"
-  exit 1
-}
-
-[ -f "$SOURCE_CONFIG" ] || fail "source config file not found: $SOURCE_CONFIG"
-[ -f "$SOURCE_LOCAL_CONFIG" ] || fail "local config template not found: $SOURCE_LOCAL_CONFIG"
+[ -f "$SOURCE_CONFIG" ] || installer_fail "source config file not found: $SOURCE_CONFIG"
+[ -f "$SOURCE_LOCAL_CONFIG" ] \
+  || installer_fail "local config template not found: $SOURCE_LOCAL_CONFIG"
 
 umask 077
 mkdir -p "$SSH_DIR" "$SSH_DIR/sockets"
@@ -33,7 +29,7 @@ if [ ! -e "$SSH_LOCAL_CONFIG" ] && [ ! -L "$SSH_LOCAL_CONFIG" ]; then
   cp "$SOURCE_LOCAL_CONFIG" "$SSH_LOCAL_CONFIG"
   installer_note "created ~/.ssh/config_local (customize it for your servers)"
 elif [ ! -f "$SSH_LOCAL_CONFIG" ]; then
-  fail "$SSH_LOCAL_CONFIG must be a regular file or a symlink to one"
+  installer_fail "$SSH_LOCAL_CONFIG must be a regular file or a symlink to one"
 fi
 
 chmod 600 "$SSH_LOCAL_CONFIG"

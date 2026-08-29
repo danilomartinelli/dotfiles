@@ -22,18 +22,9 @@ ZED_BUNDLE="dev.zed.Zed"
 
 installer_require_app Zed zed /Applications/Zed.app
 
-assoc_marker="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/zed-associations-applied"
-if [ -f "$assoc_marker" ]; then
-  installer_note "file associations already applied; remove $assoc_marker to reapply"
-  installer_success "Zed configured"
-  exit 0
-fi
+installer_skip_if_applied zed-associations "file associations" "Zed configured"
 
-if ! command -v duti >/dev/null 2>&1; then
-  installer_warn "duti is required to set Zed as the default text editor"
-  installer_hint "Install with: brew install duti"
-  exit 0
-fi
+installer_optional_command duti "duti is required to set Zed as the default text editor"
 
 # Common source/text extensions opened in Zed by default.
 # Role "editor" is used throughout — never "all" — so that .html/.htm do not
@@ -65,8 +56,7 @@ for uti in public.plain-text public.source-code public.script public.shell-scrip
   duti -s "$ZED_BUNDLE" "$uti" editor 2>/dev/null || true
 done
 
-mkdir -p "$(dirname "$assoc_marker")"
-touch "$assoc_marker"
+installer_mark_applied zed-associations
 
 if [ "$failed" -eq 0 ]; then
   installer_success "Zed set as default app for tracked text/source extensions"
