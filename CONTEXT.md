@@ -47,3 +47,23 @@ A path a tool owns entirely, which this repository never links, backs up, or
 removes. Distinct from a generated target: both are written by the tool, but
 only a generated target is ours to destroy.
 _Avoid_: generated, generated state
+
+### Application
+
+**Run-once step**:
+An installer step that rebuilds state a person may have rearranged by hand, so
+it applies on the first run only. Every other step is safe to repeat, which is
+what makes a daily update run harmless.
+_Avoid_: one-time setup, first-run hook, bootstrap step
+
+**Run-once marker**:
+The record that a run-once step has been applied, and the only thing standing
+between an update run and the destruction of that hand-arranged state. Removing
+it, or naming its step in the reset variable, re-arms the step.
+_Avoid_: stamp, flag, sentinel, lock
+
+**Optional dependency**:
+A tool whose absence makes a topic's remaining work meaningless but not wrong,
+so the installer says why and stops successfully. Distinct from a required
+dependency, whose absence is an error.
+_Avoid_: soft dependency, nice-to-have

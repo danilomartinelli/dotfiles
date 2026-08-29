@@ -226,7 +226,8 @@ Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
 Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
 SOPS directories, SSH, Workspace, Mise, Archiver associations, and the Dock.
 The declared Dock layout is applied once so later manual changes survive;
-`DOTFILES_DOCK_RESET=1 dot` opts into reapplying it.
+`DOTFILES_RESET=dock dot` opts into reapplying it, and `DOTFILES_RESET=all dot`
+re-arms every run-once step.
 
 ### Mise runtimes and global CLIs
 

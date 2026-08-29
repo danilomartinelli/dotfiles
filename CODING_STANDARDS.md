@@ -112,21 +112,32 @@ without updating adapters, tests, and user documentation in the same change.
 - Topic installers source `_scripts/installer-preamble.sh` immediately after
   error-mode setup and use its shared interface:
 
-  | Helper                      | Contract                                                           |
-  | --------------------------- | ------------------------------------------------------------------ |
-  | `installer_require_darwin`  | Skip successfully outside macOS                                    |
-  | `installer_require_command` | Stop with an actionable formula hint when a required CLI is absent |
-  | `installer_require_app`     | Warn and skip when an optional application is absent               |
-  | `installer_link_config`     | Delegate configuration linking to `_scripts/link-config`           |
-  | `installer_banner`          | Print a phase heading to stdout                                    |
-  | `installer_success`         | Print successful completion to stdout                              |
-  | `installer_note`            | Print non-error detail to stdout                                   |
-  | `installer_warn`            | Print a warning to stderr                                          |
-  | `installer_error`           | Print an error to stderr                                           |
-  | `installer_hint`            | Continue a warning or error with an actionable stderr hint         |
+  | Helper                       | Contract                                                           |
+  | ---------------------------- | ------------------------------------------------------------------ |
+  | `installer_require_darwin`   | Skip successfully outside macOS                                    |
+  | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
+  | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
+  | `installer_require_app`      | Warn and skip when an optional application is absent               |
+  | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
+  | `installer_mark_applied`     | Record that a run-once step completed                              |
+  | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |
+  | `installer_banner`           | Print a phase heading to stdout                                    |
+  | `installer_success`          | Print successful completion to stdout                              |
+  | `installer_note`             | Print non-error detail to stdout                                   |
+  | `installer_warn`             | Print a warning to stderr                                          |
+  | `installer_error`            | Print an error to stderr                                           |
+  | `installer_hint`             | Continue a warning or error with an actionable stderr hint         |
+  | `installer_fail`             | Print an error and stop the installer                              |
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
-message conventions, or link-conflict policy inside individual installers.
+message conventions, run-once markers, or link-conflict policy inside
+individual installers.
+
+A run-once step rebuilds state a person may have rearranged by hand, so it
+applies on first run only. Gate it with `installer_skip_if_applied` and record
+it with `installer_mark_applied`, both keyed by a short topic key. `DOTFILES_RESET`
+re-arms one or more steps by key, or every step with `all`; nothing else may
+define a per-topic reset variable.
 
 ## Zsh configuration
 

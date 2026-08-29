@@ -42,6 +42,20 @@ installer_require_command() {
   exit 1
 }
 
+# Optional dependency on a CLI command: skip the rest of the installer (exit 0)
+# when it is missing, mirroring installer_require_app. The reason says what the
+# remaining work would have done, because the command name alone does not.
+# Usage: installer_optional_command <command> <reason> [formula]
+# The Homebrew formula defaults to the command name.
+installer_optional_command() {
+  if command -v "$1" >/dev/null 2>&1; then
+    return 0
+  fi
+  installer_warn "$2"
+  installer_hint "Install with: brew install ${3:-$1}"
+  exit 0
+}
+
 # Optional app dependency: skip the rest of the installer (exit 0) when no
 # candidate path exists, mirroring installer_require_darwin. When one exists,
 # INSTALLER_APP holds the first match for manual UI follow-up by the user.
@@ -61,6 +75,41 @@ installer_require_app() {
   installer_warn "$_installer_app_name not installed yet; skipping"
   installer_hint "Install with: brew install --cask $_installer_app_cask"
   exit 0
+}
+
+# Where run-once markers live. Private: the run-once helpers are its only
+# consumers, and the public config-directory resolver is a separate concern.
+_installer_state_dir() {
+  printf '%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
+}
+
+# Gate for a run-once step: report and skip successfully (exit 0) when the step
+# has already been applied, so an update run never rebuilds state the user may
+# have rearranged by hand. DOTFILES_RESET re-arms it, accepting a
+# space-separated list of keys or the word "all".
+# Usage: installer_skip_if_applied <key> <label> <success>
+installer_skip_if_applied() {
+  case " ${DOTFILES_RESET:-} " in
+    *" $1 "* | *" all "*) return 0 ;;
+  esac
+
+  _installer_marker=$(_installer_state_dir)/$1-applied
+  if [ -f "$_installer_marker" ]; then
+    installer_note "$2 already applied; run DOTFILES_RESET=$1 dot to reapply"
+    installer_success "$3"
+    exit 0
+  fi
+  unset _installer_marker
+}
+
+# Record that a run-once step completed. Deliberately not tolerant of failure:
+# an unwritable state directory would silently re-arm the step on the next run.
+# Usage: installer_mark_applied <key>
+installer_mark_applied() {
+  _installer_marker=$(_installer_state_dir)/$1-applied
+  mkdir -p "$(dirname -- "$_installer_marker")"
+  touch "$_installer_marker"
+  unset _installer_marker
 }
 
 installer_link_config() {
@@ -91,4 +140,11 @@ installer_error() {
 # message stays on one stream. Use installer_note for stdout follow-ups.
 installer_hint() {
   printf '  → %s\n' "$*" >&2
+}
+
+# Report an operational failure and stop the installer.
+# Usage: installer_fail <message>
+installer_fail() {
+  installer_error "$*"
+  exit 1
 }

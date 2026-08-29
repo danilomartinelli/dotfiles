@@ -279,6 +279,197 @@ test_unresolvable_anchor_fails() {
   [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a bad anchor'
 }
 
+test_optional_command_passes_when_present() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_optional_command sh "sh is required for the sample step"
+printf "ran\n" >"$HOME/ran"'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  [[ -e $home/ran ]] || scenario_fail 'installer body did not run'
+}
+
+test_optional_command_skips_with_reason_and_hint() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_optional_command sample-missing-tool "sample-missing-tool sets the sample default"
+printf "ran\n" >"$HOME/ran"'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  # Skipping an optional dependency is a success, unlike a required one.
+  assert_equal 0 "$status" 'exit status for a missing optional command'
+  assert_contains "$home/stderr.log" \
+    'Warning: sample-missing-tool sets the sample default'
+  assert_contains "$home/stderr.log" \
+    '  → Install with: brew install sample-missing-tool'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a missing optional command'
+}
+
+test_optional_command_accepts_formula_override() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_optional_command sample-missing-tool "sample reason" sample-formula'
+
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  assert_contains "$home/stderr.log" '  → Install with: brew install sample-formula'
+}
+
+# Body shared by the run-once scenarios: gate, do the work, record the marker.
+write_run_once_installer() {
+  write_synthetic_installer "$1" \
+    'installer_skip_if_applied sample-step "sample layout" "sample configured"
+printf "ran\n" >"$HOME/ran"
+installer_mark_applied sample-step
+installer_success "sample configured"'
+}
+
+test_skip_if_applied_runs_the_step_without_a_marker() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  [[ -e $home/ran ]] || scenario_fail 'run-once step did not run on a clean state directory'
+  [[ -f $home/state/dotfiles/sample-step-applied ]] \
+    || scenario_fail 'run-once marker not recorded'
+  # DOTFILES_RESET is unset here, so the gate must not trip set -u.
+  assert_not_contains "$home/stderr.log" 'unbound variable'
+}
+
+test_skip_if_applied_skips_when_the_marker_exists() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  mkdir -p "$home/state/dotfiles"
+  touch "$home/state/dotfiles/sample-step-applied"
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  status=0
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh" || status=$?
+  assert_equal 0 "$status" 'exit status for an already-applied run-once step'
+  assert_contains "$home/stdout.log" \
+    '  → sample layout already applied; run DOTFILES_RESET=sample-step dot to reapply'
+  # The gate owns the closing line, because the caller cannot print after it.
+  assert_contains "$home/stdout.log" '✓ sample configured'
+  assert_count "$home/stdout.log" '✓ sample configured' 1
+  [[ ! -e $home/ran ]] || scenario_fail 'run-once step ran despite its marker'
+}
+
+test_skip_if_applied_reset_re_arms_the_step() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  mkdir -p "$home/state/dotfiles"
+  touch "$home/state/dotfiles/sample-step-applied"
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET='other-step sample-step' "$checkout/sample/install.sh"
+  [[ -e $home/ran ]] || scenario_fail 'DOTFILES_RESET did not re-arm the named step'
+}
+
+test_skip_if_applied_reset_all_re_arms_every_step() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  mkdir -p "$home/state/dotfiles"
+  touch "$home/state/dotfiles/sample-step-applied"
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET=all "$checkout/sample/install.sh"
+  [[ -e $home/ran ]] || scenario_fail 'DOTFILES_RESET=all did not re-arm the step'
+}
+
+test_skip_if_applied_reset_matches_whole_keys_only() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  mkdir -p "$home/state/dotfiles"
+  touch "$home/state/dotfiles/sample-step-applied"
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  # A longer key that merely contains this one must not re-arm it.
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET='sample-step-extra' "$checkout/sample/install.sh"
+  [[ ! -e $home/ran ]] || scenario_fail 'a partial key match re-armed the step'
+}
+
+test_mark_applied_falls_back_to_local_state() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_mark_applied sample-step'
+
+  scenario_capture "$home" env -u XDG_STATE_HOME HOME="$home" \
+    "$checkout/sample/install.sh"
+  [[ -f $home/.local/state/dotfiles/sample-step-applied ]] \
+    || scenario_fail 'marker not created under the default state directory'
+}
+
+test_fail_reports_and_exits() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_fail "sample source not found: /nowhere"
+printf "ran\n" >"$HOME/ran"'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for installer_fail'
+  assert_contains "$home/stderr.log" 'Error: sample source not found: /nowhere'
+  assert_not_contains "$home/stdout.log" 'sample source not found'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer body ran after installer_fail'
+}
+
+test_fail_exits_from_inside_a_read_loop() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  # opencode/install.sh calls installer_fail from a `while read ... done 3<file`
+  # loop. That is a redirect rather than a pipeline, so exit must end the whole
+  # installer instead of one iteration.
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'printf "%s\n" first second third >"$HOME/rows"
+while read -r row <&3; do
+  if [ "$row" = second ]; then
+    installer_fail "invalid sample row: $row"
+  fi
+  printf "%s\n" "$row" >>"$HOME/seen"
+done 3<"$HOME/rows"
+printf "ran\n" >"$HOME/ran"'
+
+  status=0
+  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for installer_fail inside a read loop'
+  assert_contains "$home/stderr.log" 'Error: invalid sample row: second'
+  assert_equal 'first' "$(cat "$home/seen")" 'rows handled before the failure'
+  [[ ! -e $home/ran ]] || scenario_fail 'installer continued past a failing row'
+}
+
 test_preamble_not_in_topic_catalog() {
   local checkout catalog_output
 
@@ -311,6 +502,27 @@ scenario_run 'require_app skips cleanly with a cask hint' \
   test_require_app_skips_with_cask_hint
 scenario_run 'require_app records the first existing candidate' \
   test_require_app_sets_first_existing_candidate
+scenario_run 'optional_command passes when the command exists' \
+  test_optional_command_passes_when_present
+scenario_run 'optional_command skips successfully with a reason and hint' \
+  test_optional_command_skips_with_reason_and_hint
+scenario_run 'optional_command honors a formula override' \
+  test_optional_command_accepts_formula_override
+scenario_run 'run-once step applies without a marker and records one' \
+  test_skip_if_applied_runs_the_step_without_a_marker
+scenario_run 'run-once step skips once its marker exists' \
+  test_skip_if_applied_skips_when_the_marker_exists
+scenario_run 'DOTFILES_RESET re-arms a named run-once step' \
+  test_skip_if_applied_reset_re_arms_the_step
+scenario_run 'DOTFILES_RESET=all re-arms every run-once step' \
+  test_skip_if_applied_reset_all_re_arms_every_step
+scenario_run 'DOTFILES_RESET matches whole keys only' \
+  test_skip_if_applied_reset_matches_whole_keys_only
+scenario_run 'run-once markers fall back to ~/.local/state' \
+  test_mark_applied_falls_back_to_local_state
+scenario_run 'fail reports on stderr and exits 1' test_fail_reports_and_exits
+scenario_run 'fail terminates the installer from inside a read loop' \
+  test_fail_exits_from_inside_a_read_loop
 scenario_run 'link-config wrapper delegates labels and policies' \
   test_link_config_wrapper_delegates
 scenario_run 'output helpers emit the inner vocabulary' test_output_helpers
