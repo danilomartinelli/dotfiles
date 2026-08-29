@@ -211,11 +211,49 @@
     "JSONC": {
       "prettier": { "allowed": true }
     },
+    // Markdown is formatted with mdformat, not Prettier. `mdformat --check` is
+    // what the repository static checks enforce, and Prettier's Markdown output
+    // does not satisfy it, so leaving Prettier on here silently drifts every
+    // file away from the checked-in format. Both mdformat plugins matter — a
+    // bare installation mangles YAML frontmatter and GFM tables — so the
+    // Mise-declared one is reached through `mise exec` rather than trusting
+    // whatever PATH Zed inherits, matching agent_servers.opencode above.
+    //
+    // Registry-backed Markdown under opencode/{agents,commands,skills,tools}
+    // must stay byte-identical to its OCX receipt. Saving one of those files
+    // here would reformat it, so update them with OCX instead of the editor.
     "Markdown": {
-      "prettier": { "allowed": true }
+      "prettier": { "allowed": false },
+      "formatter": {
+        "external": {
+          "command": "mise",
+          "arguments": ["exec", "--", "mdformat", "-"]
+        }
+      }
     },
     "YAML": {
       "prettier": { "allowed": true }
+    },
+    // The flags mirror the repository shfmt invocation exactly: -i 2 -ci -bn.
+    // --filename lets shfmt infer the dialect from the path instead of guessing
+    // it from a buffer that reaches the formatter on stdin.
+    "Shell Script": {
+      "formatter": {
+        "external": {
+          "command": "mise",
+          "arguments": [
+            "exec",
+            "--",
+            "shfmt",
+            "--filename",
+            "{buffer_path}",
+            "-i",
+            "2",
+            "-ci",
+            "-bn"
+          ]
+        }
+      }
     },
     "Elixir": {
       "tab_size": 2

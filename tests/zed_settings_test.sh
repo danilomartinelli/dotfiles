@@ -49,6 +49,32 @@ jq -e '
 ' >/dev/null <<<"$settings_json" \
   || fail 'formatter policy or unversioned sandbox paths are invalid'
 
+# Zed must run the same formatters the static checks enforce. Prettier's
+# Markdown output does not satisfy `mdformat --check`, so leaving it enabled
+# drifts every file away from the checked-in format.
+jq -e '
+  .languages.Markdown.prettier.allowed == false
+  and .languages.Markdown.formatter.external == {
+    "command": "mise",
+    "arguments": ["exec", "--", "mdformat", "-"]
+  }
+  and .languages["Shell Script"].formatter.external == {
+    "command": "mise",
+    "arguments": [
+      "exec",
+      "--",
+      "shfmt",
+      "--filename",
+      "{buffer_path}",
+      "-i",
+      "2",
+      "-ci",
+      "-bn"
+    ]
+  }
+' >/dev/null <<<"$settings_json" \
+  || fail 'Markdown must format with mdformat and Shell Script with shfmt -i 2 -ci -bn'
+
 jq -e 'type == "array"' >/dev/null <<<"$keymap_json" \
   || fail 'keymap.json must contain a JSONC array'
 

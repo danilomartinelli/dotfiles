@@ -77,6 +77,9 @@ without updating adapters, tests, and user documentation in the same change.
 ### Formatting and control flow
 
 - Format POSIX and Bash files with `shfmt -i 2 -ci -bn`.
+- Zed formats `Shell Script` buffers with the same flags through
+  `mise exec -- shfmt`, so saving a file in the editor and running the static
+  check produce identical output.
 - Indent with two spaces and never with tabs.
 - Do not run `shfmt` over Zsh-only syntax.
 - Quote paths, parameter expansions, and command substitutions unless splitting
@@ -167,6 +170,10 @@ define a per-topic reset variable.
   `*.jsonc`, matching Zed's documented workaround.
 - Do not add an external Prettier command to Zed settings unless Prettier is
   also declared and guaranteed on `PATH`.
+- Reach a Mise-declared formatter from Zed through `mise exec` rather than a
+  bare command name, because Zed does not inherit the interactive shell's
+  Mise activation. Homebrew-provisioned formatters such as `nixfmt` are
+  invoked directly.
 - Validate JSONC with a comment-aware consumer or its focused test. Do not claim
   that strict `jq` accepts JSONC.
 
@@ -189,6 +196,9 @@ define a per-topic reset variable.
   single blank line around block elements.
 - Keep lines readable and let the Mise-managed `mdformat` normalize wrapping,
   lists, and GFM tables.
+- Zed formats Markdown with `mise exec -- mdformat`, not Prettier. Prettier's
+  Markdown output does not satisfy `mdformat --check`, so enabling it drifts
+  every file away from the format the static checks enforce.
 - Use the repository `mdformat` installation with `mdformat-gfm` and
   `mdformat-frontmatter`; an unrelated bare installation can damage tables and
   skill frontmatter.
