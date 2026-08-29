@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "configuring Tailscale"
 
-installer_require_app Tailscale tailscale-app "/Applications/Tailscale.app"
+installer_optional_app Tailscale tailscale-app "/Applications/Tailscale.app"
 
 if command -v tailscale >/dev/null 2>&1; then
   installer_success "tailscale CLI available"

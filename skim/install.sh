@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting Skim as default PDF viewer"
 
-installer_require_app Skim skim /Applications/Skim.app
+installer_optional_app Skim skim /Applications/Skim.app
 
 installer_require_command duti
 

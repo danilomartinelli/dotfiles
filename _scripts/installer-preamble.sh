@@ -43,7 +43,7 @@ installer_require_command() {
 }
 
 # Optional dependency on a CLI command: skip the rest of the installer (exit 0)
-# when it is missing, mirroring installer_require_app. The reason says what the
+# when it is missing, mirroring installer_optional_app. The reason says what the
 # remaining work would have done, because the command name alone does not.
 # Usage: installer_optional_command <command> <reason> [formula]
 # The Homebrew formula defaults to the command name.
@@ -59,8 +59,8 @@ installer_optional_command() {
 # Optional app dependency: skip the rest of the installer (exit 0) when no
 # candidate path exists, mirroring installer_require_darwin. When one exists,
 # INSTALLER_APP holds the first match for manual UI follow-up by the user.
-# Usage: installer_require_app <name> <cask> </Applications/Name.app>...
-installer_require_app() {
+# Usage: installer_optional_app <name> <cask> </Applications/Name.app>...
+installer_optional_app() {
   _installer_app_name=$1
   _installer_app_cask=$2
   shift 2

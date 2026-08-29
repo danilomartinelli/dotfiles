@@ -141,13 +141,13 @@ test_require_command_accepts_formula_override() {
   assert_contains "$home/stderr.log" '  → Install with: brew install sample-formula'
 }
 
-test_require_app_skips_with_cask_hint() {
+test_optional_app_skips_with_cask_hint() {
   local checkout home
 
   checkout=$(make_checkout)
   home=$checkout/home
   write_synthetic_installer "$checkout/sample/install.sh" \
-    'installer_require_app Sample sample-cask "$HOME/Applications/Sample.app"
+    'installer_optional_app Sample sample-cask "$HOME/Applications/Sample.app"
 printf "ran\n" >"$HOME/ran"'
 
   scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
@@ -156,14 +156,14 @@ printf "ran\n" >"$HOME/ran"'
   [[ ! -e $home/ran ]] || scenario_fail 'installer body ran despite a missing app'
 }
 
-test_require_app_sets_first_existing_candidate() {
+test_optional_app_sets_first_existing_candidate() {
   local checkout home
 
   checkout=$(make_checkout)
   home=$checkout/home
   mkdir -p "$home/Applications/Sample 2.app" "$home/Applications/Sample.app"
   write_synthetic_installer "$checkout/sample/install.sh" \
-    'installer_require_app Sample sample-cask \
+    'installer_optional_app Sample sample-cask \
   "$HOME/Applications/Sample 3.app" \
   "$HOME/Applications/Sample 2.app" \
   "$HOME/Applications/Sample.app"
@@ -498,10 +498,10 @@ scenario_run 'require_command fails loudly with a formula hint' \
   test_require_command_fails_with_formula_hint
 scenario_run 'require_command honors a formula override' \
   test_require_command_accepts_formula_override
-scenario_run 'require_app skips cleanly with a cask hint' \
-  test_require_app_skips_with_cask_hint
-scenario_run 'require_app records the first existing candidate' \
-  test_require_app_sets_first_existing_candidate
+scenario_run 'optional_app skips cleanly with a cask hint' \
+  test_optional_app_skips_with_cask_hint
+scenario_run 'optional_app records the first existing candidate' \
+  test_optional_app_sets_first_existing_candidate
 scenario_run 'optional_command passes when the command exists' \
   test_optional_command_passes_when_present
 scenario_run 'optional_command skips successfully with a reason and hint' \

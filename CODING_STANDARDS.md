@@ -117,7 +117,7 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_require_darwin`   | Skip successfully outside macOS                                    |
   | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
   | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
-  | `installer_require_app`      | Warn and skip when an optional application is absent               |
+  | `installer_optional_app`     | Warn and skip when an optional application is absent               |
   | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
   | `installer_mark_applied`     | Record that a run-once step completed                              |
   | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |

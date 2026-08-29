@@ -14,7 +14,7 @@ mkdir -p "$CONFIG_DIR"
 
 installer_link_config --label "Ghostty config" "$TOPIC_DIR/config" "$CONFIG_DIR/config"
 
-installer_require_app Ghostty ghostty /Applications/Ghostty.app
+installer_optional_app Ghostty ghostty /Applications/Ghostty.app
 
 # Register Ghostty as the default handler for Unix executables (idempotent).
 if defaults read com.apple.LaunchServices/com.apple.launchservices.secure LSHandlers 2>/dev/null | grep -q "com.mitchellh.ghostty"; then

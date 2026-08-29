@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "configuring Raycast script commands"
 
-installer_require_app Raycast raycast "/Applications/Raycast.app"
+installer_optional_app Raycast raycast "/Applications/Raycast.app"
 
 SCRIPTS_DIR="$TOPIC_DIR/scripts"
 

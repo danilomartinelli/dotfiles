@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "configuring Bartender"
 
-installer_require_app Bartender bartender \
+installer_optional_app Bartender bartender \
   "/Applications/Bartender 6.app" "/Applications/Bartender.app"
 
 # No `defaults write` here: modern Bartender manages launch-at-login via

@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "configuring KeyClu"
 
-installer_require_app KeyClu keyclu "/Applications/KeyClu.app"
+installer_optional_app KeyClu keyclu "/Applications/KeyClu.app"
 
 # No `defaults write` here: launch-at-login is SMAppService territory on
 # modern macOS and the app persists its own preferences on quit.

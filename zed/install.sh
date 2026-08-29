@@ -20,7 +20,7 @@ installer_link_config --label "Zed keymap" \
 
 ZED_BUNDLE="dev.zed.Zed"
 
-installer_require_app Zed zed /Applications/Zed.app
+installer_optional_app Zed zed /Applications/Zed.app
 
 installer_skip_if_applied zed-associations "file associations" "Zed configured"
 
