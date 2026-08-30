@@ -8,8 +8,6 @@ set -e
 installer_require_darwin
 installer_banner "setting Archiver as default app for compressed files"
 
-installer_require_command duti
-
 ARCHIVER_BUNDLE="com.incrediblebee.Archiver"
 ARCHIVER_APP=${ARCHIVER_APP:-/Applications/Archiver.app}
 PLIST_BUDDY_BIN=${PLIST_BUDDY_BIN:-/usr/libexec/PlistBuddy}
@@ -33,6 +31,9 @@ if [ ! -x "$LSREGISTER_BIN" ] || ! "$LSREGISTER_BIN" -f "$ARCHIVER_APP" >/dev/nu
   installer_hint "Open Archiver once, then rerun dot."
   exit 0
 fi
+
+installer_optional_command duti \
+  "duti is required to set Archiver as the default app for compressed files"
 
 installer_apply_associations Archiver "$ARCHIVER_BUNDLE" \
   "Archiver set as default for compressed files"

@@ -10,7 +10,8 @@ installer_banner "setting Skim as default PDF viewer"
 
 installer_optional_app Skim skim /Applications/Skim.app
 
-installer_require_command duti
+installer_optional_command duti \
+  "duti is required to set Skim as the default PDF viewer"
 
 SKIM_BUNDLE="net.sourceforge.skim-app.skim"
 

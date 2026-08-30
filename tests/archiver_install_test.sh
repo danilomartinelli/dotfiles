@@ -108,6 +108,33 @@ test_missing_app_is_advisory() {
   assert_not_contains "$fixture/events.log" 'duti '
 }
 
+test_missing_duti_reports_the_missing_app_first() {
+  local fixture
+  fixture=$(make_fixture)
+  rm "$fixture/fake-bin/duti"
+  export ARCHIVER_PRESENT=0
+  invoke_archiver "$fixture"
+  unset ARCHIVER_PRESENT
+
+  # Neither installed: the topic has nothing to do, and says so about the app
+  # it configures rather than about a tool it never had a reason to reach for.
+  assert_contains "$fixture/stderr.log" 'Archiver app not found'
+  assert_not_contains "$fixture/stderr.log" 'duti'
+  assert_not_contains "$fixture/events.log" 'codesign'
+}
+
+test_missing_duti_skips_the_associations() {
+  local fixture
+  fixture=$(make_fixture)
+  rm "$fixture/fake-bin/duti"
+  invoke_archiver "$fixture"
+
+  assert_contains "$fixture/stderr.log" \
+    'duti is required to set Archiver as the default app for compressed files'
+  assert_contains "$fixture/stderr.log" 'brew install duti'
+  assert_not_contains "$fixture/stdout.log" 'Archiver set as default'
+}
+
 test_individual_association_failures_are_aggregated() {
   local fixture
   fixture=$(make_fixture)
@@ -124,5 +151,7 @@ scenario_run 'supported archive types use the viewer role' test_supported_types_
 scenario_run 'an invalid signature produces one actionable warning' test_invalid_signature_is_reported_once
 scenario_run 'Launch Services registration failures skip associations' test_registration_failure_skips_associations
 scenario_run 'a missing Archiver installation remains advisory' test_missing_app_is_advisory
+scenario_run 'a missing duti reports the missing app first' test_missing_duti_reports_the_missing_app_first
+scenario_run 'a missing duti skips the associations without failing' test_missing_duti_skips_the_associations
 scenario_run 'individual association failures are aggregated' test_individual_association_failures_are_aggregated
 scenario_finish

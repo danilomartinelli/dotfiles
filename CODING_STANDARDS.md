@@ -164,6 +164,13 @@ version, and only `report` rows are named and counted. Where a topic gates its
 associations as a run-once step, editing the catalog changes what the next
 apply would set without setting it; the reset key applies it.
 
+A missing `duti` skips a topic's associations through
+`installer_optional_command` rather than stopping the run. A default
+application is a preference no later step consumes, and a topic that claims
+file types has nothing else to do without it. Check the application the topic
+configures before the tool that configures it, so a machine with neither is
+told about the application it is missing.
+
 Installer run order is declared, not alphabetical. `_scripts/setup` names the
 prerequisite topics — those whose installers create state a later installer
 consumes — and runs them before the rest, which follow in catalog order. Add a
