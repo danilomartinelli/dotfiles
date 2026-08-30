@@ -335,6 +335,56 @@ installer_mark_applied sample-step
 installer_success "sample configured"'
 }
 
+# The linking half of the same rule. installer_config_dir only resolves, so the
+# five topics that link into a tool directory each spelled out resolve, create,
+# compose. This helper owns all three and a topic states none of them.
+test_link_tool_config_creates_the_directory_and_links() {
+  local checkout home source target
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  source=$checkout/sample/settings.json
+  target=$home/.config/sampletool/settings.json
+  printf '{}\n' >"$source"
+
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_link_tool_config sampletool "Sample settings" settings.json'
+
+  scenario_capture "$home" env -u XDG_CONFIG_HOME HOME="$home" \
+    "$checkout/sample/install.sh"
+
+  assert_equal "$source" "$(readlink "$target")" 'linked tool config'
+  assert_contains "$home/stdout.log" 'Sample settings linked'
+
+  # Idempotent for the same reason installer_link_config is: the linker is the
+  # one that decides an existing target is already current.
+  scenario_capture "$home" env -u XDG_CONFIG_HOME HOME="$home" \
+    "$checkout/sample/install.sh"
+  assert_contains "$home/stdout.log" 'Sample settings already linked'
+}
+
+test_link_tool_config_ignores_xdg_config_home() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  printf '{}\n' >"$checkout/sample/settings.json"
+
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_link_tool_config sampletool "Sample settings" settings.json'
+
+  scenario_capture "$home" env HOME="$home" XDG_CONFIG_HOME="$checkout/xdg" \
+    "$checkout/sample/install.sh"
+
+  # The helper resolves through installer_config_dir, so ADR 0003 holds here
+  # too rather than only where a topic spells the resolver out.
+  assert_equal "$checkout/sample/settings.json" \
+    "$(readlink "$home/.config/sampletool/settings.json")" \
+    'linked tool config with XDG_CONFIG_HOME set'
+  [[ ! -e $checkout/xdg ]] \
+    || scenario_fail 'link helper wrote below XDG_CONFIG_HOME'
+}
+
 test_config_dir_resolves_under_home() {
   local checkout home
 
@@ -757,6 +807,10 @@ scenario_run 'optional_command skips successfully with a reason and hint' \
   test_optional_command_skips_with_reason_and_hint
 scenario_run 'optional_command honors a formula override' \
   test_optional_command_accepts_formula_override
+scenario_run 'link_tool_config creates the tool directory and links into it' \
+  test_link_tool_config_creates_the_directory_and_links
+scenario_run 'link_tool_config ignores XDG_CONFIG_HOME' \
+  test_link_tool_config_ignores_xdg_config_home
 scenario_run 'config_dir resolves a tool directory under HOME without creating it' \
   test_config_dir_resolves_under_home
 scenario_run 'config_dir ignores XDG_CONFIG_HOME' \

@@ -10,12 +10,9 @@ installer_require_command mise
 MISE_CONFIG_DIR=$(installer_config_dir mise)
 MISE_GLOBAL_CONFIG_FILE=$MISE_CONFIG_DIR/config.toml
 export MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE
-mkdir -p "$MISE_CONFIG_DIR"
 
-installer_link_config --label "Mise config" \
-  "$TOPIC_DIR/config.toml" "$MISE_CONFIG_DIR/config.toml"
-installer_link_config --label "Mise lock" \
-  "$TOPIC_DIR/mise.lock" "$MISE_CONFIG_DIR/mise.lock"
+installer_link_tool_config mise "Mise config" config.toml
+installer_link_tool_config mise "Mise lock" mise.lock
 
 remove_legacy_link() {
   legacy_path=$1

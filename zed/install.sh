@@ -8,15 +8,8 @@ set -e
 installer_require_darwin
 installer_banner "setting up Zed configuration"
 
-CONFIG_DIR=$(installer_config_dir zed)
-
-mkdir -p "$CONFIG_DIR"
-
-installer_link_config --label "Zed settings" \
-  "$TOPIC_DIR/settings.json" "$CONFIG_DIR/settings.json"
-
-installer_link_config --label "Zed keymap" \
-  "$TOPIC_DIR/keymap.json" "$CONFIG_DIR/keymap.json"
+installer_link_tool_config zed "Zed settings" settings.json
+installer_link_tool_config zed "Zed keymap" keymap.json
 
 ZED_BUNDLE="dev.zed.Zed"
 

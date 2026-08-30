@@ -133,6 +133,7 @@ without updating adapters, tests, and user documentation in the same change.
 
 | `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
 | `installer_link_config` | Delegate configuration linking to `_scripts/link-config` |
+| `installer_link_tool_config` | Create a tool's configuration directory and link one file into it |
 | `installer_banner` | Print a phase heading to stdout |
 | `installer_success` | Print successful completion to stdout |
 | `installer_note` | Print non-error detail to stdout |
@@ -140,6 +141,11 @@ without updating adapters, tests, and user documentation in the same change.
 | `installer_error` | Print an error to stderr |
 | `installer_hint` | Continue a warning or error with an actionable stderr hint |
 | `installer_fail` | Print an error and stop the installer |
+
+A topic that links a file into `$HOME/.config/<tool>` calls
+`installer_link_tool_config`, which resolves the directory, creates it, and
+composes the target. Reach for `installer_link_config` directly only to link
+outside that directory or under a policy other than the default.
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside

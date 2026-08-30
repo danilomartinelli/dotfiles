@@ -8,11 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting up Ghostty configuration"
 
-CONFIG_DIR=$(installer_config_dir ghostty)
-
-mkdir -p "$CONFIG_DIR"
-
-installer_link_config --label "Ghostty config" "$TOPIC_DIR/config" "$CONFIG_DIR/config"
+installer_link_tool_config ghostty "Ghostty config" config
 
 installer_optional_app Ghostty ghostty /Applications/Ghostty.app
 

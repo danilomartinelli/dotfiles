@@ -235,6 +235,24 @@ installer_link_config() {
   "$DOTFILES_ROOT/_scripts/link-config" "$@"
 }
 
+# Link a file this repository owns into a tool's configuration directory. The
+# three steps every linking topic spelled out — resolve the directory, create
+# it, compose the target path — are implementation here, so a topic states the
+# tool, the label, and the file and nothing about where any of them land.
+#
+# The target keeps the source's name. No topic links a file under a different
+# one, and an argument for that would widen the interface for a case that does
+# not exist. A topic linking outside $HOME/.config, or under a policy other
+# than the default, calls installer_link_config directly.
+# Usage: installer_link_tool_config <tool> <label> <file>
+installer_link_tool_config() {
+  _installer_link_dir=$(installer_config_dir "$1")
+  mkdir -p "$_installer_link_dir"
+  installer_link_config --label "$2" \
+    "$TOPIC_DIR/$3" "$_installer_link_dir/$3"
+  unset _installer_link_dir
+}
+
 installer_banner() {
   printf '› %s\n' "$*"
 }
