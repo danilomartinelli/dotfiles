@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+#
+# Render the managed OpenCode profile payloads.
+#
+# OCX has no profile inheritance: nothing above a profile layers into its
+# ocx.jsonc or opencode.jsonc, so every shared key has to be physically present
+# in every profile. The layering therefore happens here, before the payload
+# reaches ~/.config/opencode. profiles/_shared holds the policy each profile
+# shares, profiles/_routing.tsv holds the only thing that differs, and this
+# script composes the two into the directories opencode/install.sh links.
+
+set -euo pipefail
+
+SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: render-opencode-profiles [--check] [topic-directory]
+
+  --check  Report stale payloads and exit 1 instead of writing them
+
+The topic directory defaults to the opencode topic beside this script.
+EOF
+}
+
+check_only=false
+topic_dir=$SCRIPT_DIR/../opencode
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --check)
+      check_only=true
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      printf 'render-opencode-profiles: unknown option: %s\n' "$1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      topic_dir=$1
+      ;;
+  esac
+  shift
+done
+
+fail() {
+  printf 'render-opencode-profiles: %s\n' "$1" >&2
+  exit 1
+}
+
+topic_dir=$(CDPATH='' cd -P -- "$topic_dir" 2>/dev/null && pwd) \
+  || fail "topic directory not found: $topic_dir"
+
+roster=$topic_dir/_managed-entries.tsv
+shared_dir=$topic_dir/profiles/_shared
+routing=$topic_dir/profiles/_routing.tsv
+
+for required in "$roster" "$routing" "$shared_dir/AGENTS.md" \
+  "$shared_dir/ocx.jsonc" "$shared_dir/opencode.jsonc"; do
+  [ -r "$required" ] || fail "required source not readable: $required"
+done
+
+# Roster order is apply order in the installer, and rendering in the same order
+# keeps a diff of this script's output readable against one of the installer's.
+mapfile -t profiles < <(
+  awk -F'\t' '$1 == "profile" { print $2 }' "$roster"
+)
+[ "${#profiles[@]}" -gt 0 ] || fail "no profile rows in $roster"
+
+mapfile -t roles < <(jq -r '.agent | keys_unsorted[]' "$shared_dir/opencode.jsonc")
+[ "${#roles[@]}" -gt 0 ] \
+  || fail "no agents declared in $shared_dir/opencode.jsonc"
+
+# The routing table and the shared base are two halves of one declaration, so
+# they are checked against each other before anything is rendered. Both
+# directions matter: an unknown row is a typo, and a missing one would silently
+# render a profile that routes an agent nowhere.
+validate_routing() {
+  local declared expected_roles line missing profile role
+  local -a row
+  local -A seen=()
+
+  expected_roles=$(printf '%s\n' default small "${roles[@]}" | sort)
+
+  while IFS= read -r line; do
+    case $line in
+      '' | '#'*) continue ;;
+    esac
+
+    IFS=$'\t' read -r -a row <<<"$line"
+    [ "${#row[@]}" -eq 7 ] \
+      || fail "expected 7 columns, got ${#row[@]}: $line"
+
+    profile=${row[0]}
+    role=${row[1]}
+
+    printf '%s\n' "${profiles[@]}" | grep -Fqx -- "$profile" \
+      || fail "routing row names a profile with no roster entry: $profile"
+    printf '%s\n' default small "${roles[@]}" | grep -Fqx -- "$role" \
+      || fail "routing row names an undeclared agent: $profile $role"
+    [ -z "${seen["$profile/$role"]:-}" ] \
+      || fail "duplicate routing row: $profile $role"
+    seen["$profile/$role"]=1
+
+    [ -n "${row[2]}" ] && [ "${row[2]}" != - ] \
+      || fail "routing row declares no model: $profile $role"
+
+    case $role in
+      default | small)
+        [ "${row[3]}${row[4]}${row[5]}${row[6]}" = '----' ] \
+          || fail "$profile $role takes a model only, not model options"
+        ;;
+    esac
+
+    case ${row[4]} in
+      - | [0-9] | [0-9].[0-9]*) ;;
+      *) fail "$profile $role has a non-numeric temperature: ${row[4]}" ;;
+    esac
+  done <"$routing"
+
+  # Extra and misspelled rows are already refused above, so what is left to
+  # check is a role the shared base declares and this profile never routes.
+  for profile in "${profiles[@]}"; do
+    declared=$(
+      awk -F'\t' -v profile="$profile" \
+        '$1 == profile { print $2 }' "$routing" | sort
+    )
+    missing=$(
+      comm -13 <(printf '%s\n' "$declared") <(printf '%s\n' "$expected_roles") \
+        | tr '\n' ' '
+    )
+    [ -z "$missing" ] || fail "$profile has no routing row for: ${missing% }"
+  done
+}
+
+render_config() {
+  local profile=$1
+
+  jq --indent 2 --arg profile "$profile" --rawfile routing "$routing" '
+    def routed($row; $index; $key):
+      if $row[$index] == "-" then {} else {($key): $row[$index]} end;
+
+    ($routing
+     | split("\n")
+     | map(select(length > 0 and (startswith("#") | not)) | split("\t"))
+     | map(select(.[0] == $profile))
+     | map({key: .[1], value: .})
+     | from_entries) as $routes
+    | {
+        "$schema": .["$schema"],
+        model: $routes["default"][2],
+        small_model: $routes["small"][2]
+      }
+      + (del(.["$schema"])
+         | .agent = (
+             .agent
+             | to_entries
+             | map(
+                 $routes[.key] as $row
+                 | {
+                     key: .key,
+                     value: (
+                       {model: $row[2]}
+                       + routed($row; 3; "variant")
+                       + (if $row[4] == "-" then {}
+                          else {temperature: ($row[4] | tonumber)} end)
+                       + routed($row; 5; "reasoningEffort")
+                       + routed($row; 6; "textVerbosity")
+                       + .value
+                     )
+                   }
+               )
+             | from_entries))
+  ' "$shared_dir/opencode.jsonc"
+}
+
+# A payload is written only when it changes, so a no-op render leaves the
+# checkout untouched and --check has nothing to report.
+sync_payload() {
+  local rendered=$1
+  local stored=$2
+
+  if [ -f "$stored" ] && cmp -s "$rendered" "$stored"; then
+    return 0
+  fi
+
+  if [ "$check_only" = true ]; then
+    printf 'stale: %s\n' "${stored#"$topic_dir/"}" >&2
+    stale=$((stale + 1))
+    return 0
+  fi
+
+  mkdir -p -- "$(dirname -- "$stored")"
+  cp -- "$rendered" "$stored"
+  printf '  → rendered %s\n' "${stored#"$topic_dir/"}"
+}
+
+validate_routing
+
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-opencode-profiles.XXXXXX")
+trap 'rm -rf -- "$work_dir"' EXIT
+
+stale=0
+for profile in "${profiles[@]}"; do
+  render_config "$profile" >"$work_dir/opencode.jsonc"
+  sync_payload "$work_dir/opencode.jsonc" \
+    "$topic_dir/profiles/$profile/opencode.jsonc"
+  sync_payload "$shared_dir/ocx.jsonc" "$topic_dir/profiles/$profile/ocx.jsonc"
+  sync_payload "$shared_dir/AGENTS.md" "$topic_dir/profiles/$profile/AGENTS.md"
+done
+
+if [ "$check_only" = true ]; then
+  if [ "$stale" -gt 0 ]; then
+    printf 'render-opencode-profiles: %d payload(s) out of date; run _scripts/render-opencode-profiles\n' \
+      "$stale" >&2
+    exit 1
+  fi
+  printf 'OpenCode profile payloads are up to date.\n'
+fi

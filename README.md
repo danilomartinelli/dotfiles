@@ -117,16 +117,17 @@ dependency and installer failures stop the run.
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
 
-| Command                           | Purpose                                                           |
-| --------------------------------- | ----------------------------------------------------------------- |
-| `dot`                             | Update the checkout, dependencies, links, and topic configuration |
-| `dot --edit`                      | Open the active physical checkout in `$EDITOR`                    |
-| `dot --help`                      | Print supported lifecycle options                                 |
-| `_scripts/bootstrap`              | Run the complete first-machine installation                       |
-| `_scripts/setup bootstrap`        | Invoke the canonical bootstrap implementation                     |
-| `_scripts/setup update`           | Invoke the canonical daily-update implementation                  |
-| `dotfiles-root.symlink --install` | Repair `~/.dotfiles-root` for this checkout                       |
-| `set-defaults`                    | Explicitly reapply tracked macOS preferences                      |
+| Command                             | Purpose                                                           |
+| ----------------------------------- | ----------------------------------------------------------------- |
+| `dot`                               | Update the checkout, dependencies, links, and topic configuration |
+| `dot --edit`                        | Open the active physical checkout in `$EDITOR`                    |
+| `dot --help`                        | Print supported lifecycle options                                 |
+| `_scripts/bootstrap`                | Run the complete first-machine installation                       |
+| `_scripts/setup bootstrap`          | Invoke the canonical bootstrap implementation                     |
+| `_scripts/setup update`             | Invoke the canonical daily-update implementation                  |
+| `dotfiles-root.symlink --install`   | Repair `~/.dotfiles-root` for this checkout                       |
+| `set-defaults`                      | Explicitly reapply tracked macOS preferences                      |
+| `_scripts/render-opencode-profiles` | Rewrite the managed OpenCode profile payloads from their sources  |
 
 ## Software catalog
 
@@ -463,10 +464,12 @@ notifications disabled. OCX retains `.ocx`, generated `plugins`,
 `package.json`, `.gitignore`, and `profiles/default`.
 
 The `regular` profile carries the active trusted-project model and MCP policy.
-The installer creates it first, then clones that policy into `go` and `boost`.
-`go` routes every role through `opencode-go/*`; `boost` is the uncapped,
-quality-first route across several providers. The shell default
-remains `regular`.
+OCX cannot layer one profile over another, so `opencode/profiles/_shared/`
+states that policy once and `opencode/profiles/_routing.tsv` states only what
+distinguishes each profile; `_scripts/render-opencode-profiles` composes the
+two into the three payloads the installer links. `go` routes every role through
+`opencode-go/*`; `boost` is the uncapped, quality-first route across several
+providers. The shell default remains `regular`.
 
 See [`opencode/README.md`](opencode/README.md) for per-role model routing,
 profile maintenance, ownership, verification, and troubleshooting.

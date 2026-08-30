@@ -28,6 +28,13 @@ It declares every entry and profile the installer links, and both
 `tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
 expectations from it. Adding or removing a managed entry starts there.
 
+The three profile directories are rendered, not written by hand.
+`opencode/profiles/_shared/` holds the policy every profile shares and
+`opencode/profiles/_routing.tsv` holds the model routing that distinguishes
+them; `_scripts/render-opencode-profiles` composes the two into the payloads
+the installer links. Edit the sources and rerun the renderer rather than
+editing a profile directory.
+
 ## Install or refresh
 
 Run the topic installer directly:
@@ -46,7 +53,9 @@ Normal bootstrap and `dot` updates also run it. The installer:
    `~/.config/opencode`, replacing each generated target instead of backing it
    up.
 1. Creates `regular`, clones `go` and `boost` from it with OCX, then replaces
-   each generated profile directory with its repository link.
+   each generated profile directory with its repository link. The clone copies
+   only `ocx.jsonc` and the link discards even that, so every byte OpenCode
+   reads comes from this repository.
 
 Re-running the installer is supported. Once the workspace receipt exists, it
 does not reinstall the component bundle, so local edits exposed through the
@@ -88,10 +97,13 @@ Plugins remain in `opencode.jsonc`, which is their single configuration owner.
 
 ### Profile contract and model routing
 
-The installer materializes `regular` first and uses `ocx profile add --clone regular` for both specialized profiles. Their `AGENTS.md` instructions and
-`ocx.jsonc` policy stay identical to `regular`; permissions, MCP servers, and
-the researcher's read-oriented GitLab policy are also preserved. Only model
-routing and model-specific options differ.
+OCX has no profile inheritance. Nothing above a profile layers into its
+`ocx.jsonc` or `opencode.jsonc`, so every shared key has to be physically
+present in every profile, and `ocx profile add --clone` copies only `ocx.jsonc`
+at creation time. The layering therefore happens in this repository:
+`profiles/_shared/` states the instructions, the OCX policy, the permissions,
+the MCP servers, and the researcher's read-oriented GitLab policy exactly once,
+and each profile contributes only the routing rows below.
 
 | Role       | `regular`                     | `go`                                  | `boost`                           |
 | ---------- | ----------------------------- | ------------------------------------- | --------------------------------- |
@@ -147,35 +159,50 @@ Edit the repository source, not the link under `~/.config/opencode`:
 - Global OpenCode configuration: `opencode/opencode.jsonc`
 - OpenCode memory plugin configuration: `opencode/opencode-mem.jsonc`
 - Global TUI configuration: `opencode/tui.jsonc`
+- Shared profile policy: `opencode/profiles/_shared/`
+- Model routing: `opencode/profiles/_routing.tsv`
 
 Changes are immediately visible through the symbolic links. Review the Git diff
 before keeping changes produced by an OCX component update.
 
 ## Edit or add a profile
 
-Each managed profile contains:
+A profile directory holds three rendered files:
 
-- `AGENTS.md` for profile-specific instructions.
-- `ocx.jsonc` for OCX profile behavior.
-- `opencode.jsonc` for models, agents, MCP servers, and OpenCode settings.
+- `AGENTS.md` and `ocx.jsonc`, copied from `profiles/_shared/`.
+- `opencode.jsonc`, composed from `profiles/_shared/opencode.jsonc` and the
+  profile's rows in `profiles/_routing.tsv`.
 
-To change an existing profile, edit its directory below `opencode/profiles/`.
+To change what every profile shares, edit `profiles/_shared/`. To change one
+profile's routing, edit its rows in `profiles/_routing.tsv`. Either way, render
+the result:
+
+```bash
+_scripts/render-opencode-profiles
+```
+
+The routing table carries one row per profile and role, with `-` omitting a
+key. `default` and `small` name the profile's `model` and `small_model` and
+take a model only; the remaining roles are the agents declared in
+`profiles/_shared/opencode.jsonc`. The renderer refuses a row that names an
+unknown profile or agent, a duplicate row, a role the shared base declares and
+the profile never routes, and a non-numeric temperature.
 
 To add another profile derived from the trusted-project baseline:
 
-1. Run `ocx profile add <name> --clone regular --global` to generate its
-   initial files.
-1. Add those three files under `opencode/profiles/<name>/`.
+1. Add its rows to `opencode/profiles/_routing.tsv`.
 1. Add a `profile` row to `opencode/_managed-entries.tsv` below the `regular`
    row, naming `regular` as its clone source. The installer and both test
    suites pick it up from there.
+1. Run `_scripts/render-opencode-profiles` to write the profile directory.
 1. Add its `oc:<name>` shortcut to `opencode/aliases.zsh` and document the
    profile in this file, `README.md`, and `AGENTS.md`;
    `tests/documentation_test.sh` fails until all four exist.
-1. Keep the shared instructions, OCX policy, permissions, and MCP configuration
-   aligned; specialize only the intended profile fields.
 1. Validate every model and variant against the live model catalog, run the
    installer, and verify the resulting link.
+
+Nothing else is edited by hand: the shared instructions, OCX policy,
+permissions, and MCP configuration come from `profiles/_shared/` unchanged.
 
 ## Update OCX components
 
@@ -199,10 +226,13 @@ Run the focused suite:
 tests/opencode_install_test.sh
 ```
 
-It verifies the shell defaults and aliases, JSON and TUI configuration, cloned
-profile policy, exact model routing, payload ownership, exact link targets,
-repeat installation, preservation of runtime state, and receipt-aware workspace
-installation.
+It verifies the shell defaults and aliases, JSON and TUI configuration, that
+every profile still matches its composed result, exact model routing, payload
+ownership, exact link targets, repeat installation, preservation of runtime
+state, and receipt-aware workspace installation.
+
+`_scripts/render-opencode-profiles --check` reports the same drift on its own,
+naming each payload that no longer matches its sources.
 
 Inspect the live links when diagnosing a machine-specific issue:
 

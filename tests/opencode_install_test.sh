@@ -12,6 +12,8 @@ source "$TEST_DIR/_support/shell-scenario.sh"
 source "$TEST_DIR/_support/opencode-catalog.sh"
 scenario_init dotfiles-opencode-install-tests
 
+TAB=$'\t'
+
 make_fake_clis() {
   local home=$1
   local fake_bin=$home/fake-bin
@@ -165,7 +167,15 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
     skills/plan-review/SKILL.md
     tools/philosophy.md
   )
-  managed_paths=("${directory_payload[@]}")
+  # The three payloads below are rendered from these two sources, so a missing
+  # source is a broken profile even while the rendered copies still exist.
+  managed_paths=(
+    "${directory_payload[@]}"
+    profiles/_routing.tsv
+    profiles/_shared/AGENTS.md
+    profiles/_shared/ocx.jsonc
+    profiles/_shared/opencode.jsonc
+  )
 
   while IFS= read -r name; do
     opencode_entry_is_directory "$name" || managed_paths+=("$name")
@@ -212,7 +222,7 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
     opencode_catalog_has profile "$name" \
       || scenario_fail "versioned OpenCode profile has no catalog row: $name"
   done < <(find "$REPOSITORY_ROOT/opencode/profiles" -mindepth 1 -maxdepth 1 \
-    -type d -exec basename -- {} \; | sort)
+    -type d ! -name '_*' -exec basename -- {} \; | sort)
 }
 
 test_tui_matches_terminal_theme_and_interaction_defaults() {
@@ -283,30 +293,41 @@ test_regular_profile_trusts_project_configuration() {
     || scenario_fail 'regular profile glab permissions are incorrect'
 }
 
-test_specialized_profiles_clone_regular_contract_and_route_models() {
-  local boost_config go_config profile regular_config regular_dir
+test_profile_payloads_are_composed_from_the_shared_base() {
+  local fixture stored
 
-  regular_dir=$REPOSITORY_ROOT/opencode/profiles/regular
-  regular_config=$regular_dir/opencode.jsonc
+  # OCX cannot layer a profile, so the shared half of every payload is composed
+  # here instead. Checking the render is what replaces comparing the three
+  # stored copies against each other: it catches a payload whose shared policy
+  # drifted, and a shared edit that was never rendered out.
+  "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check >/dev/null \
+    || scenario_fail 'checked-in OpenCode profiles differ from the composed result'
+
+  fixture=$(scenario_tmpdir compose)
+  cp -R "$REPOSITORY_ROOT/opencode" "$fixture/opencode"
+  stored=$fixture/opencode/profiles/boost/opencode.jsonc
+
+  jq --indent 2 '.permission["linear_*"] = "ask"' "$stored" >"$fixture/drifted"
+  mv "$fixture/drifted" "$stored"
+
+  assert_fails_with_output 'drifted shared policy' \
+    'profiles/boost/opencode.jsonc' \
+    "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
+
+  cp "$REPOSITORY_ROOT/opencode/profiles/_routing.tsv" "$stored.routing"
+  grep -v "^go${TAB}scribe" "$stored.routing" \
+    >"$fixture/opencode/profiles/_routing.tsv"
+
+  assert_fails_with_output 'unrouted agent' \
+    'go has no routing row for: scribe' \
+    "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
+}
+
+test_specialized_profiles_route_models() {
+  local boost_config go_config
+
   go_config=$REPOSITORY_ROOT/opencode/profiles/go/opencode.jsonc
   boost_config=$REPOSITORY_ROOT/opencode/profiles/boost/opencode.jsonc
-
-  for profile in go boost; do
-    cmp -s "$regular_dir/AGENTS.md" \
-      "$REPOSITORY_ROOT/opencode/profiles/$profile/AGENTS.md" \
-      || scenario_fail "$profile profile instructions diverge from regular"
-    cmp -s "$regular_dir/ocx.jsonc" \
-      "$REPOSITORY_ROOT/opencode/profiles/$profile/ocx.jsonc" \
-      || scenario_fail "$profile OCX policy diverges from regular"
-    jq -s -e '
-		.[0].permission == .[1].permission and
-		.[0].mcp == .[1].mcp and
-		.[0].agent.researcher.permission == .[1].agent.researcher.permission
-	' <(jsonc_to_json "$regular_config") \
-      <(jsonc_to_json \
-        "$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc") >/dev/null \
-      || scenario_fail "$profile OpenCode policy diverges from regular"
-  done
 
   jsonc_to_json "$go_config" | jq -e '
 		[
@@ -544,8 +565,10 @@ scenario_run 'OpenCode TUI matches terminal theme and interaction defaults' \
   test_tui_matches_terminal_theme_and_interaction_defaults
 scenario_run 'OpenCode regular profile trusts project configuration' \
   test_regular_profile_trusts_project_configuration
-scenario_run 'OpenCode specialized profiles clone regular and route models' \
-  test_specialized_profiles_clone_regular_contract_and_route_models
+scenario_run 'OpenCode profiles are composed from the shared base' \
+  test_profile_payloads_are_composed_from_the_shared_base
+scenario_run 'OpenCode specialized profiles route models' \
+  test_specialized_profiles_route_models
 scenario_run 'OpenCode catalog declares each clone source before its clones' \
   test_catalog_declares_each_clone_source_before_its_clones
 scenario_run 'OpenCode profile removal unlinks instead of descending' \

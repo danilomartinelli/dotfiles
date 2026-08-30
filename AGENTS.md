@@ -91,19 +91,21 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 
 ## Sources of truth
 
-| Concern                                         | Source                          |
-| ----------------------------------------------- | ------------------------------- |
-| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                      |
-| Runtimes and language-package CLIs              | `mise/config.toml`              |
-| Mise versions and checksums                     | `mise/mise.lock` (generated)    |
-| macOS preferences                               | `_macos/defaults.tsv`           |
-| Dock layout                                     | `dock/_layout.tsv`              |
-| Topic discovery and load classes                | `_scripts/topic-catalog`        |
-| Setup orchestration                             | `_scripts/setup`                |
-| OpenCode and OCX workspace                      | `opencode/`                     |
-| Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv` |
-| Public lifecycle and commands                   | `README.md`                     |
-| Coding and validation rules                     | `CODING_STANDARDS.md`           |
+| Concern                                         | Source                           |
+| ----------------------------------------------- | -------------------------------- |
+| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                       |
+| Runtimes and language-package CLIs              | `mise/config.toml`               |
+| Mise versions and checksums                     | `mise/mise.lock` (generated)     |
+| macOS preferences                               | `_macos/defaults.tsv`            |
+| Dock layout                                     | `dock/_layout.tsv`               |
+| Topic discovery and load classes                | `_scripts/topic-catalog`         |
+| Setup orchestration                             | `_scripts/setup`                 |
+| OpenCode and OCX workspace                      | `opencode/`                      |
+| Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv`  |
+| Shared OpenCode profile policy                  | `opencode/profiles/_shared/`     |
+| OpenCode profile model routing                  | `opencode/profiles/_routing.tsv` |
+| Public lifecycle and commands                   | `README.md`                      |
+| Coding and validation rules                     | `CODING_STANDARDS.md`            |
 
 Never edit `mise/mise.lock` manually. Regenerate it through Mise from the
 repository root and review the generated diff narrowly.
@@ -153,9 +155,13 @@ OCX registry checksums. Update them through `ocx update`, do not reformat them
 independently, and require `ocx verify --cwd ~/.config/opencode --verbose` to
 remain green.
 
-Install `regular` first and clone specialized profiles from it. Keep profile
-instructions, permissions, MCP policy, and researcher shell policy aligned;
-specialize model routing and model-specific options only.
+The three profile directories are rendered, not authored. OCX has no profile
+inheritance and `--clone` copies only `ocx.jsonc`, so shared policy lives in
+`opencode/profiles/_shared/`, routing lives in `opencode/profiles/_routing.tsv`,
+and `_scripts/render-opencode-profiles` composes both into the payloads the
+installer links. Edit a source and rerun the renderer; never edit a profile
+directory directly. Adding a profile is a routing declaration plus a roster
+row, then the renderer.
 
 Adding or removing a managed entry starts in
 `opencode/_managed-entries.tsv`. Its documentation check then requires the same
