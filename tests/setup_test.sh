@@ -129,6 +129,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$fixture/_scripts/installer-preamble.sh"
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
+  cp "$REPOSITORY_ROOT/_scripts/checklist" "$fixture/_scripts/checklist"
   cp "$REPOSITORY_ROOT/_scripts/_checklist.tsv" "$fixture/_scripts/_checklist.tsv"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
@@ -143,6 +144,7 @@ make_fixture() {
   chmod +x \
     "$fixture/_scripts/setup" \
     "$fixture/_scripts/bootstrap" \
+    "$fixture/_scripts/checklist" \
     "$fixture/_scripts/topic-catalog" \
     "$fixture/_scripts/link-dotfiles" \
     "$fixture/_scripts/link-config" \
@@ -312,13 +314,16 @@ test_checklist_opening_requires_interactive_opt_in() {
 
 # The app column of the checklist catalog is the single owner of what gets
 # opened and of which heading a row prints under, which is only true while
-# setup keeps naming no application itself.
+# neither setup nor the checklist module names an application itself.
 test_setup_states_no_application_paths() {
   local fixture
 
   fixture=$(make_fixture)
   assert_not_contains "$fixture/_scripts/setup" '/Applications/'
-  assert_contains "$fixture/_scripts/setup" 'CHECKLIST_CATALOG'
+  assert_not_contains "$fixture/_scripts/checklist" '/Applications/'
+  assert_contains "$fixture/_scripts/checklist" 'CHECKLIST_CATALOG'
+  # Setup decides when the checklist runs and nothing about what it holds.
+  assert_not_contains "$fixture/_scripts/setup" 'CHECKLIST_OPEN_CANDIDATES'
 }
 
 test_checklist_catalog_rows_are_well_formed() {

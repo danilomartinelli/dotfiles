@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+#
+# The post-bootstrap checklist: the steps a person must finish by hand once
+# setup has run.
+#
+# The catalog in _checklist.tsv decides both what is printed and what
+# --open-apps opens, so a row can never be listed as opened while being left
+# closed. Setup delegates here rather than carrying the sections itself.
+#
+# Usage: _scripts/checklist [--open-apps]
+
+set -e
+set -o pipefail
+
+CHECKLIST_PATH=${BASH_SOURCE[0]}
+SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$CHECKLIST_PATH")" && pwd)"
+ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
+DOTFILES_ROOT=${DOTFILES_ROOT:-$("$ROOT_RESOLVER" "$CHECKLIST_PATH")}
+export DOTFILES_ROOT
+CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checklist.tsv}
+
+# shellcheck source=_scripts/catalog.sh
+. "$DOTFILES_ROOT/_scripts/catalog.sh"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: _scripts/checklist [--open-apps]
+
+  Print the post-bootstrap checklist.
+  --open-apps  Also open the apps the catalog names, from an interactive
+               terminal only.
+EOF
+}
+
+fail() {
+  printf '  [\033[0;31mFAIL\033[0m] %s\n' "$1" >&2
+  exit 1
+}
+
+open_apps=false
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --open-apps)
+      open_apps=true
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'checklist: unknown argument: %s\n' "$1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+# Rows of the checklist catalog, split by the section that prints them. The
+# app column decides both membership and what gets opened, so a row can never
+# be listed as opened while being left closed.
+CHECKLIST_CREDENTIAL=()
+CHECKLIST_OPENED=()
+CHECKLIST_MANUAL=()
+CHECKLIST_SHELL=()
+CHECKLIST_OPEN_CANDIDATES=()
+CHECKLIST_LOADED=false
+
+load_checklist() {
+  [ "$CHECKLIST_LOADED" = false ] || return 0
+
+  catalog_each_row "$CHECKLIST_CATALOG" load_checklist_row \
+    || fail "checklist catalog not found: $CHECKLIST_CATALOG"
+
+  CHECKLIST_LOADED=true
+}
+
+load_checklist_row() {
+  local kind=$1
+  local app=$2
+  local label=$3
+  local note=$4
+
+  if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
+    fail "invalid checklist row: $kind $label"
+  fi
+
+  note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
+
+  case "$kind" in
+    credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;
+    shell) CHECKLIST_SHELL+=("$label"$'\t'"$note") ;;
+    app)
+      if [ "$app" = - ]; then
+        CHECKLIST_MANUAL+=("$label"$'\t'"$note")
+      else
+        CHECKLIST_OPENED+=("$label"$'\t'"$note")
+        CHECKLIST_OPEN_CANDIDATES+=("$app")
+      fi
+      ;;
+    *) fail "unknown checklist kind '$kind' for $label" ;;
+  esac
+  return 0
+}
+
+# Open the first candidate that exists. Candidates are "|"-separated so an app
+# shipping under more than one name stays a single catalog row.
+open_app() {
+  local candidates=$1
+  local candidate
+
+  while IFS= read -r candidate; do
+    if [ -d "$candidate" ]; then
+      open -ga "$candidate" 2>/dev/null || true
+      return 0
+    fi
+  done <<<"${candidates//|/$'\n'}"
+  return 0
+}
+
+print_checklist_section() {
+  local heading=$1
+  local format=$2
+  local row
+
+  shift 2
+  [ "$#" -gt 0 ] || return 0
+
+  printf '\n'
+  printf '  \033[1m%s\033[0m\n' "$heading"
+  for row in "$@"; do
+    # shellcheck disable=SC2059 # The format is this file's, never the catalog's.
+    printf "$format" "${row%%$'\t'*}" "${row#*$'\t'}"
+  done
+}
+
+print_app_checklist() {
+  load_checklist
+
+  printf '\n'
+  printf '  \033[00;34m==>\033[0m \033[1mPost-bootstrap checklist\033[0m\n'
+  printf '\n'
+  printf '  Safety: this command does not access, create, delete, or modify Keychain items.\n'
+  printf '  Log in manually in each app. A missing Slack Key prompt can indicate a\n'
+  printf '  credential problem; stop and investigate it outside this setup flow.\n'
+  printf '\n'
+  printf '  The following steps require manual action in the UI:\n'
+
+  print_checklist_section 'Credentials & keys' '    %-33s# %s\n' \
+    ${CHECKLIST_CREDENTIAL[@]+"${CHECKLIST_CREDENTIAL[@]}"}
+  print_checklist_section \
+    'Apps this opt-in command opens — finish their setup wizards' \
+    '    %-15s→ %s\n' \
+    ${CHECKLIST_OPENED[@]+"${CHECKLIST_OPENED[@]}"}
+  print_checklist_section 'Apps requiring in-app setup' '    %-15s→ %s\n' \
+    ${CHECKLIST_MANUAL[@]+"${CHECKLIST_MANUAL[@]}"}
+  print_checklist_section 'Shell' '    %-33s# %s\n' \
+    ${CHECKLIST_SHELL[@]+"${CHECKLIST_SHELL[@]}"}
+  printf '\n'
+}
+
+open_app_checklist() {
+  local candidates
+
+  if [ ! -t 0 ] || [ ! -t 1 ]; then
+    fail 'app checklist opening requires an interactive terminal; no applications were opened'
+  fi
+
+  print_app_checklist
+
+  # This is deliberately separate from bootstrap and update. The caller must
+  # explicitly request checklist --open-apps from an interactive terminal.
+  for candidates in ${CHECKLIST_OPEN_CANDIDATES[@]+"${CHECKLIST_OPEN_CANDIDATES[@]}"}; do
+    open_app "$candidates"
+  done
+}
+
+if [ "$open_apps" = true ]; then
+  open_app_checklist
+else
+  print_app_checklist
+fi

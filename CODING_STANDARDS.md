@@ -147,7 +147,7 @@ individual installers.
 
 Every tab-separated catalog file is read through `_scripts/catalog.sh`, which
 the preamble sources for installers and which `_macos/set-defaults.sh`,
-`_scripts/setup`, and `_scripts/render-opencode-profiles` source directly. Call
+`_scripts/checklist`, and `_scripts/render-opencode-profiles` source directly. Call
 `catalog_each_row <catalog> <handler>` and write a handler that takes the
 leading columns it needs; do not write a `read` loop of your own. The reader
 pads every row to seven arguments, and owns what counts as a
