@@ -1,11 +1,10 @@
 # Private shell-startup orchestrator. This file is sourced only by ~/.zshrc.
 
-# `c [tab]` uses this as its project root. Local and shared environment files
-# retain their existing ability to override it. Default matches the Workspace
-# layout created by workspace/install.sh (`~/Workspace/github.com/<user>`).
-export PROJECTS="$HOME/Workspace/github.com"
-
 # Keep secrets outside the repository, then apply shared non-sensitive values.
+# `.commonrc` owns WORKSPACE and the PROJECTS root derived from it, and it is
+# sourced after `.localrc` so a WORKSPACE set there reaches that derivation.
+# Nothing above may export PROJECTS: an earlier assignment wins the `:-` in
+# `.commonrc` and silently pins the project root to the default.
 [[ -r "$HOME/.localrc" ]] && source "$HOME/.localrc"
 [[ -r "$DOTFILES_ROOT/.commonrc" ]] && source "$DOTFILES_ROOT/.commonrc"
 

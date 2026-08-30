@@ -107,14 +107,22 @@ scenario_write_file "$FIXTURE/functions/sample_function" <<'EOF'
 print -r -- sample-function
 EOF
 
+# WORKSPACE is set here, and PROJECTS is derived from it in .commonrc below,
+# because that is the ordering contract: .localrc runs first so an override in
+# it reaches the derivation. Startup must not export PROJECTS before either
+# file, which would win the `:-` and pin the project root to the default.
 scenario_write_file "$TEST_HOME/.localrc" <<'EOF'
 print -r -- local-environment >> "$SCENARIO_EVENT_LOG"
 export PATH="$PATH:/local/bin"
+export WORKSPACE="/overridden/workspace"
 EOF
 
+# Mirrors the WORKSPACE and PROJECTS lines of the tracked .commonrc.
 scenario_write_file "$FIXTURE/.commonrc" <<'EOF'
 print -r -- common-environment >> "$SCENARIO_EVENT_LOG"
 export PATH="$PATH:/common/bin"
+export WORKSPACE="${WORKSPACE:-$HOME/Workspace}"
+export PROJECTS="${PROJECTS:-$WORKSPACE/github.com}"
 EOF
 
 scenario_write_file "$FIXTURE/alpha/path.zsh" <<'EOF'
@@ -195,7 +203,7 @@ expected_manpath="$FAKE_HOMEBREW_PREFIX/man:/usr/local/man:/usr/local/mysql/man:
 assert_equal "$expected_path" "$PATH" 'PATH order'
 assert_equal "$expected_manpath" "$MANPATH" 'MANPATH order'
 assert_equal "$FAKE_HOMEBREW_PREFIX" "$HOMEBREW_PREFIX" 'Homebrew prefix'
-assert_equal "$HOME/Workspace/github.com" "$PROJECTS" 'project root'
+assert_equal /overridden/workspace/github.com "$PROJECTS" 'project root follows the WORKSPACE override'
 assert_equal "$HOME/.zsh_history" "$HISTFILE" 'history file'
 assert_equal 100000 "$HISTSIZE" 'history size'
 assert_equal 100000 "$SAVEHIST" 'saved history size'
@@ -279,7 +287,7 @@ STARTUP_PATH="$BREW_PREFIX/bin:/base/bin:/usr/local/bin:/usr/bin:/bin"
 test_startup_order_and_reload() {
   local events="$MAIN_ARTIFACTS/events.log"
 
-  if ! scenario_capture "$MAIN_ARTIFACTS" env -u ZSH \
+  if ! scenario_capture "$MAIN_ARTIFACTS" env -u ZSH -u WORKSPACE -u PROJECTS \
     HOME="$TEST_HOME" \
     PATH="$STARTUP_PATH" \
     MANPATH='/base/man:' \
@@ -320,7 +328,7 @@ test_optional_homebrew_integration() {
   local events="$OPTIONAL_ARTIFACTS/events.log"
 
   # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-  if ! scenario_capture "$OPTIONAL_ARTIFACTS" env -u ZSH \
+  if ! scenario_capture "$OPTIONAL_ARTIFACTS" env -u ZSH -u WORKSPACE -u PROJECTS \
     HOME="$TEST_HOME" \
     PATH="$STARTUP_PATH" \
     MANPATH='/base/man:' \
