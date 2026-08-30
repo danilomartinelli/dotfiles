@@ -16,13 +16,40 @@ source "$(dirname -- "$TEST_PATH")/_support/opencode-catalog.sh"
 
 failures=0
 
+# Print the Markdown section a heading opens, up to the next heading of the
+# same or higher level. A documentation contract scoped this way cannot be
+# satisfied by an unrelated mention elsewhere in the file.
+doc_section() {
+  local doc_path=$1
+  local heading=$2
+  local depth=${heading%%[! #]*}
+
+  awk -v heading="$heading" -v stop="^#{1,${#depth}} " '
+    $0 == heading { inside = 1; next }
+    inside && $0 ~ stop { inside = 0 }
+    inside { print }
+  ' "$doc_path"
+}
+
+# With a heading, the name must appear inside that section; without one, the
+# whole file owns the fact.
 assert_documented_in() {
   local doc_path=$1
   local kind=$2
   local name=$3
+  local heading=${4-}
+  local where=${doc_path#"$REPOSITORY_ROOT/"}
+  local haystack
 
-  if ! grep -Fq -- "\`$name\`" "$doc_path"; then
-    printf '%s is missing %s: %s\n' "${doc_path#"$REPOSITORY_ROOT/"}" "$kind" "$name" >&2
+  if [ -n "$heading" ]; then
+    haystack=$(doc_section "$doc_path" "$heading")
+    where="$where ($heading)"
+  else
+    haystack=$(cat "$doc_path")
+  fi
+
+  if ! printf '%s\n' "$haystack" | grep -Fq -- "\`$name\`"; then
+    printf '%s is missing %s: %s\n' "$where" "$kind" "$name" >&2
     failures=$((failures + 1))
   fi
 }
@@ -98,8 +125,11 @@ while IFS=$'\t' read -r entry_kind entry_name _; do
     documented_name=$entry_name
   fi
 
-  assert_documented_in "$README" 'OpenCode managed entry' "$documented_name"
-  assert_documented_in "$AGENTS" 'OpenCode managed entry' "$documented_name"
+  assert_documented_in "$README" 'OpenCode managed entry' "$documented_name" \
+    '### OpenCode and OCX'
+  assert_documented_in "$AGENTS" 'OpenCode managed entry' "$documented_name" \
+    '### OpenCode and OCX'
+  # The whole of opencode/README.md owns this surface, so it needs no anchor.
   assert_documented_in "$OPENCODE_README" 'OpenCode managed entry' \
     "$documented_name"
 
@@ -117,10 +147,47 @@ done < <(
     "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" | sort -u
 )
 
+# Brewfile declares which third-party taps exist; homebrew/_bundle.sh declares
+# which ones Homebrew is told to trust before `brew bundle` runs. Neither can
+# derive the other — trust is not expressible in a Brewfile — so the two lists
+# are held to each other here rather than by hand.
+brewfile_taps=$(
+  awk -F "'" '/^tap / { print $2 }' "$REPOSITORY_ROOT/Brewfile" | sort -u
+)
+trusted_taps=$(
+  sed -n "s/^TRUSTED_TAPS='\(.*\)'$/\1/p" "$REPOSITORY_ROOT/homebrew/_bundle.sh" \
+    | tr ' ' '\n' | sed '/^$/d' | sort -u
+)
+
+while IFS= read -r tap_name; do
+  [ -n "$tap_name" ] || continue
+  printf '%s\n' "$trusted_taps" | grep -Fqx -- "$tap_name" || {
+    printf 'homebrew/_bundle.sh is missing a trusted tap declared in Brewfile: %s\n' \
+      "$tap_name" >&2
+    failures=$((failures + 1))
+  }
+done <<<"$brewfile_taps"
+
+while IFS= read -r tap_name; do
+  [ -n "$tap_name" ] || continue
+  printf '%s\n' "$brewfile_taps" | grep -Fqx -- "$tap_name" || {
+    printf 'homebrew/_bundle.sh trusts a tap the Brewfile does not declare: %s\n' \
+      "$tap_name" >&2
+    failures=$((failures + 1))
+  }
+done <<<"$trusted_taps"
+
 # The catalog tables are rendered from Brewfile and mise/config.toml, so the
 # grep coverage above proves a name is mentioned and this proves the row around
 # it still matches what was declared.
 if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check >/dev/null; then
+  failures=$((failures + 1))
+fi
+
+# The profile payloads are rendered the same way, and until now only the
+# OpenCode suite noticed a stale one. The suite that enforces the managed-entry
+# ritual is where an unrendered profile edit should surface too.
+if ! "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check >/dev/null; then
   failures=$((failures + 1))
 fi
 

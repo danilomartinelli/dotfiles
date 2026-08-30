@@ -140,7 +140,9 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 - Put npm, PyPI/pipx, Ruby gem, Go module, and comparable CLIs in
   `mise/config.toml`.
 - Add a third-party tap to both `Brewfile` and the narrow trust flow in
-  `homebrew/_bundle.sh`.
+  `homebrew/_bundle.sh`. `tests/documentation_test.sh` holds the two lists to
+  each other, because trust is not expressible in a Brewfile and neither list
+  can derive the other.
 - Give every declaration a trailing comment; it is the description
   `_scripts/render-software-catalog` renders into the README catalog tables.
   Run the renderer with the declaration change.

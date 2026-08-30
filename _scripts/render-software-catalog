@@ -173,8 +173,11 @@ emit_mise_rows() {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
       return value
     }
-    /^\[settings\]/ { in_tools = 0 }
+    # Any section header ends [tools]. Naming only [settings] would keep
+    # reading rows out of whatever section were inserted between them, and
+    # tests/documentation_test.sh derives the same list by the same rule.
     /^\[tools\]/ { in_tools = 1; next }
+    /^\[/ { in_tools = 0 }
     !in_tools { next }
     /^[[:space:]]*(#.*)?$/ { next }
     {
