@@ -9,11 +9,13 @@
 
 set -e
 
-# Check if we're in a git repository
-if ! git rev-parse --git-dir >/dev/null 2>&1; then
-  echo "Error: Not in a git repository." >&2
-  exit 1
-fi
+# shellcheck disable=SC1091 # Loaded from the adapter checkout beside this script.
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/adapter-checkout.sh"
+
+# shellcheck disable=SC1091 # Loaded from the resolved dotfiles checkout.
+. "$DOTFILES_ROOT/git/_branch-state.sh"
+
+_dotfiles_git_state_require_worktree git
 
 if [ -z "$EDITOR" ]; then
   echo "Error: \$EDITOR is not set." >&2

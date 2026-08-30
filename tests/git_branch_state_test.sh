@@ -207,6 +207,47 @@ test_current_branch_adapter_errors() {
   assert_contains "$STDERR_LOG" 'Error: Not in a git repository.'
 }
 
+# The Git directory is the case the hand-rolled guards got wrong: `rev-parse
+# --git-dir` succeeds there, so an adapter checking it would stage or pull
+# from inside .git while every adapter crossing the seam refused.
+test_worktree_guard_covers_the_git_directory() {
+  local adapter
+
+  new_fixture
+
+  for adapter in git-all git-amend git-credit git-edit-new git-up git-undo; do
+    capture_status invoke_adapter_at "$WORKTREE/.git" "$adapter" name email
+    assert_equal 1 "$CAPTURED_STATUS" "$adapter Git-directory status"
+    assert_contains "$STDERR_LOG" 'Error: Not in a git repository.'
+  done
+
+  # A tree that is no repository at all reaches the same refusal.
+  for adapter in git-all git-amend git-credit git-edit-new git-up git-undo; do
+    capture_status invoke_adapter_at "$FIXTURE" "$adapter" name email
+    assert_equal 1 "$CAPTURED_STATUS" "$adapter non-repository status"
+    assert_contains "$STDERR_LOG" 'Error: Not in a git repository.'
+  done
+
+  # The guard refuses without touching the work tree it was pointed away from.
+  assert_equal 'initial' "$(command cat "$WORKTREE/tracked.txt")" \
+    'guarded adapters leave the work tree alone'
+}
+
+# Passing the guard must still reach the adapter's own work.
+test_guarded_adapters_run_inside_a_worktree() {
+  new_fixture
+
+  printf '%s\n' untracked >"$WORKTREE/new.txt"
+  invoke_adapter git-all
+  git -C "$WORKTREE" diff --cached --name-only | grep -q new.txt \
+    || fail 'git-all did not stage the new file'
+
+  git -C "$WORKTREE" commit -qm 'stage everything'
+  invoke_adapter git-undo
+  git -C "$WORKTREE" diff --cached --name-only | grep -q new.txt \
+    || fail 'git-undo did not restore the staged change'
+}
+
 test_promote_and_track() {
   local remote_offline
 
@@ -325,4 +366,8 @@ test_unpushed_copy_and_prompt
 echo 'ok 4 - unpushed commands, clipboard, and prompt share cached state'
 test_nuke
 echo 'ok 5 - nuke deletes exact local and live origin branches'
-echo '1..5'
+test_worktree_guard_covers_the_git_directory
+echo 'ok 6 - every command adapter refuses outside a work tree'
+test_guarded_adapters_run_inside_a_worktree
+echo 'ok 7 - guarded adapters still do their work inside a work tree'
+echo '1..7'
