@@ -59,7 +59,8 @@ _dotfiles_completion_files=()
 # removed, or renamed, and those always bump a directory mtime; content
 # edits never change the catalog. The cache is keyed by checkout path so
 # parallel worktrees never share entries, and the classifier stays the
-# single source of truth. See _docs/adr/0002-topic-catalog-cache.md.
+# single source of truth. See
+# docs/adr/0006-the-topic-catalog-cache-watches-directories-not-content.md.
 typeset -g _dotfiles_catalog_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/topic-catalog${DOTFILES_ROOT//\//%}"
 typeset -g _dotfiles_catalog=''
 if [[ -r $_dotfiles_catalog_cache ]]; then
