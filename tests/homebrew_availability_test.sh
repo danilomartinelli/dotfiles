@@ -7,6 +7,9 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
 TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-homebrew-availability-tests.XXXXXX")
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
+# shellcheck source=tests/_support/stubs.sh
+source "$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")" && pwd)/_support/stubs.sh"
+
 fail() {
   printf 'FAIL: %s\n' "$1" >&2
   exit 1
@@ -50,6 +53,7 @@ new_fixture() {
   BREW_TEMPLATE=$FIXTURE/brew-template
 
   mkdir -p "$FIXTURE/homebrew" "$FIXTURE/_scripts" "$FAKE_BIN" "$VALID_PREFIX" "$FIXTURE/tmp"
+  stub_uname "$FAKE_BIN"
   : >"$INSTALL_LOG"
 
   cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
@@ -79,11 +83,6 @@ case "${BREW_TEST_PREFIX_MODE:-valid}" in
 esac
 EOF
 
-  cat >"$FAKE_BIN/uname" <<'EOF'
-#!/bin/sh
-printf '%s\n' "${BREW_TEST_UNAME:-Darwin}"
-EOF
-
   cat >"$FAKE_BIN/curl" <<'EOF'
 #!/bin/sh
 printf '%s\n' curl >> "$BREW_TEST_INSTALL_LOG"
@@ -110,12 +109,11 @@ EOF
     "$FIXTURE/homebrew/_availability.sh" \
     "$FIXTURE/homebrew/install.sh" \
     "$BREW_TEMPLATE" \
-    "$FAKE_BIN/uname" \
     "$FAKE_BIN/curl"
 
   BREW_TEST_PREFIX=$VALID_PREFIX
   BREW_TEST_PREFIX_MODE=valid
-  BREW_TEST_UNAME=Darwin
+  FAKE_UNAME=Darwin
   BREW_TEST_INSTALL_MODE=install
   BREW_TEST_INSTALL_TARGET=$FAKE_BIN/brew
 }
@@ -146,7 +144,7 @@ capture_installer() {
     DOTFILES_HOMEBREW_ROOT="$PLATFORM_ROOT" \
     BREW_TEST_PREFIX="$BREW_TEST_PREFIX" \
     BREW_TEST_PREFIX_MODE="$BREW_TEST_PREFIX_MODE" \
-    BREW_TEST_UNAME="$BREW_TEST_UNAME" \
+    FAKE_UNAME="$FAKE_UNAME" \
     BREW_TEST_INSTALL_LOG="$INSTALL_LOG" \
     BREW_TEST_INSTALL_MODE="$BREW_TEST_INSTALL_MODE" \
     BREW_TEST_INSTALL_TARGET="$BREW_TEST_INSTALL_TARGET" \

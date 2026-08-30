@@ -7,6 +7,8 @@ TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-installer-preamble-tests
 
 PREAMBLE=$REPOSITORY_ROOT/_scripts/installer-preamble.sh
@@ -82,16 +84,14 @@ test_darwin_guard_skips_on_non_darwin() {
   home=$checkout/home
   fake_bin=$home/fake-bin
   mkdir -p "$fake_bin"
-  scenario_write_executable "$fake_bin/uname" <<'EOF'
-#!/bin/sh
-printf '%s\n' Linux
-EOF
+  stub_uname "$fake_bin"
 
   write_synthetic_installer "$checkout/sample/install.sh" \
     'installer_require_darwin
 printf "ran\n" >"$HOME/ran"'
 
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
+  scenario_capture "$home" env HOME="$home" FAKE_UNAME=Linux \
+    PATH="$fake_bin:/usr/bin:/bin" \
     "$checkout/sample/install.sh"
   [[ ! -e $home/ran ]]
 }
@@ -517,14 +517,7 @@ write_association_fixture() {
   local fake_bin=$checkout/home/fake-bin
 
   mkdir -p "$fake_bin"
-  scenario_write_executable "$fake_bin/duti" <<'EOF'
-#!/bin/sh
-printf 'duti %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-for failing in ${FAIL_DUTI:-}; do
-  [ "$failing" != "$3" ] || exit 1
-done
-exit 0
-EOF
+  stub_duti "$fake_bin"
 
   printf '%s' "$catalog" >"$checkout/sample/_associations.tsv"
   write_synthetic_installer "$checkout/sample/install.sh" \

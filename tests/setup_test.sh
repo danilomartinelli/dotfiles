@@ -6,6 +6,8 @@ TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPOSITORY_ROOT="$(cd "$TEST_DIR/.." && pwd -P)"
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-setup-tests
 TEST_ROOT=$SCENARIO_ROOT
 
@@ -13,10 +15,7 @@ write_fixture_scripts() {
   local fixture
   fixture=$1
 
-  scenario_write_executable "$fixture/fake-bin/uname" <<'EOF'
-#!/bin/sh
-printf '%s\n' "${FAKE_UNAME:-Darwin}"
-EOF
+  stub_uname "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/git" <<'EOF'
 #!/bin/sh

@@ -6,6 +6,8 @@ TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-archiver-install-tests
 
 make_fixture() {
@@ -14,10 +16,7 @@ make_fixture() {
   mkdir -p "$fixture/fake-bin" "$fixture/home" "$fixture/Archiver.app/Contents"
   : >"$fixture/Archiver.app/Contents/Info.plist"
 
-  scenario_write_executable "$fixture/fake-bin/uname" <<'EOF'
-#!/bin/sh
-printf '%s\n' "${FAKE_UNAME:-Darwin}"
-EOF
+  stub_uname "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/PlistBuddy" <<'EOF'
 #!/bin/sh
@@ -37,13 +36,7 @@ printf 'lsregister %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_LSREGISTER:-0}"
 EOF
 
-  scenario_write_executable "$fixture/fake-bin/duti" <<'EOF'
-#!/bin/sh
-printf 'duti %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-case "${FAIL_DUTI_UTI:-}" in
-  "$3") exit 1 ;;
-esac
-EOF
+  stub_duti "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
 }
@@ -190,9 +183,9 @@ test_a_bailed_run_leaves_the_step_armed() {
 test_individual_association_failures_are_aggregated() {
   local fixture
   fixture=$(make_fixture)
-  export FAIL_DUTI_UTI=public.zip-archive
+  export FAIL_DUTI=public.zip-archive
   invoke_archiver "$fixture"
-  unset FAIL_DUTI_UTI
+  unset FAIL_DUTI
 
   assert_contains "$fixture/stderr.log" 'Failed to set Archiver as default for .zip'
   assert_contains "$fixture/stderr.log" \

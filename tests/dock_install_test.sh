@@ -6,6 +6,8 @@ TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-dock-install-tests
 
 # A synthetic layout, so adding an app to the real Dock never breaks this file.
@@ -33,10 +35,7 @@ make_fixture() {
 
   write_catalog "$fixture/layout.tsv"
 
-  scenario_write_executable "$fixture/fake-bin/uname" <<'EOF'
-#!/bin/sh
-printf '%s\n' Darwin
-EOF
+  stub_uname "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/dockutil" <<'EOF'
 #!/bin/sh
@@ -44,10 +43,7 @@ printf 'dockutil %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
 EOF
 
   # The installer restarts the Dock; never let that reach the real machine.
-  scenario_write_executable "$fixture/fake-bin/killall" <<'EOF'
-#!/bin/sh
-printf 'killall %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-EOF
+  stub_killall "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
 }

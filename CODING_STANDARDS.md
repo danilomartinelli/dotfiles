@@ -288,6 +288,13 @@ the dependent installer.
 - A focused test proves its contract only. Run the complete safe suite for
   shared setup, discovery, security, or repository-wide documentation changes.
 
+Fixtures share their stub binaries through `tests/_support/stubs.sh`, which
+owns what each faked command does and the one variable that injects its
+failure. `shell-scenario.sh` owns how a stub is written; the stub library owns
+what it is, so two tests standing in for the same command cannot disagree
+about its interface. Add a stub there when a second fixture needs the same
+command, and leave a fake in place when it is genuinely specific to one test.
+
 ### Focused validation matrix
 
 | Change area                                                     | Required focused validation                                                                                  |

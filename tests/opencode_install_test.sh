@@ -10,6 +10,9 @@ source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/opencode-catalog.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/opencode-catalog.sh"
+# shellcheck source=tests/_support/stubs.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-opencode-install-tests
 
 TAB=$'\t'
@@ -20,10 +23,7 @@ make_fake_clis() {
 
   mkdir -p "$fake_bin"
 
-  scenario_write_executable "$fake_bin/uname" <<'EOF'
-#!/bin/sh
-printf 'Darwin\n'
-EOF
+  stub_uname "$fake_bin"
 
   scenario_write_executable "$fake_bin/opencode" <<'EOF'
 #!/bin/sh
