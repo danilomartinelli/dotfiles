@@ -32,15 +32,5 @@ if [ ! -x "$LSREGISTER_BIN" ] || ! "$LSREGISTER_BIN" -f "$ARCHIVER_APP" >/dev/nu
   exit 0
 fi
 
-installer_skip_if_applied archiver-associations "file associations" \
-  "Archiver configured"
-
-installer_optional_command duti \
-  "duti is required to set Archiver as the default app for compressed files"
-
-installer_apply_associations Archiver "$ARCHIVER_BUNDLE" \
+installer_claim_file_types Archiver "$ARCHIVER_BUNDLE" \
   "Archiver set as default for compressed files"
-
-installer_mark_applied archiver-associations
-
-installer_success "Archiver configured"

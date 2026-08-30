@@ -197,6 +197,40 @@ _installer_apply_association() {
   return 0
 }
 
+# A topic claims its declared file types. This is the whole ritual the claiming
+# topics used to spell out in order: gate on the run-once marker, require duti,
+# apply TOPIC_DIR/_associations.tsv, then record the marker. The order carries
+# the decisions in docs/adr/0005-file-type-associations-apply-once.md — the
+# marker is written only after the apply returns, so a run that bailed leaves
+# the step armed — and it is implementation here rather than something each
+# topic has to re-honour.
+#
+# The run-once key is derived from the topic directory, so no installer spells
+# "<topic>-associations" by hand and no topic can gate on one key and mark
+# another.
+# Usage: installer_claim_file_types <name> <bundle> <applied>
+installer_claim_file_types() {
+  _installer_claim_name=$1
+  _installer_claim_bundle=$2
+  _installer_claim_applied=$3
+  _installer_claim_key="$(basename -- "$TOPIC_DIR")-associations"
+
+  installer_skip_if_applied "$_installer_claim_key" 'file associations' \
+    "$_installer_claim_name configured"
+
+  installer_optional_command duti \
+    "duti is required to set $_installer_claim_name as the default app for its declared file types"
+
+  installer_apply_associations "$_installer_claim_name" \
+    "$_installer_claim_bundle" "$_installer_claim_applied"
+
+  installer_mark_applied "$_installer_claim_key"
+  installer_success "$_installer_claim_name configured"
+
+  unset _installer_claim_name _installer_claim_bundle _installer_claim_applied \
+    _installer_claim_key
+}
+
 installer_link_config() {
   "$DOTFILES_ROOT/_scripts/link-config" "$@"
 }

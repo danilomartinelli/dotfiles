@@ -531,6 +531,25 @@ EOF
     'installer_apply_associations Sample com.example.sample "sample associations set"'
 }
 
+write_claim_fixture() {
+  local checkout=$1
+
+  write_association_fixture "$checkout" "$(printf '%b\n' '.md\teditor\treport\t-')"
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_claim_file_types Sample com.example.sample "sample associations set"'
+}
+
+invoke_claim() {
+  local checkout=$1
+  shift
+  scenario_capture "$checkout/home" env \
+    HOME="$checkout/home" \
+    XDG_STATE_HOME="$checkout/home/state" \
+    PATH="$checkout/home/fake-bin:/usr/bin:/bin" \
+    "$@" \
+    "$checkout/sample/install.sh"
+}
+
 invoke_associations() {
   local checkout=$1
   scenario_capture "$checkout/home" env \
@@ -661,6 +680,70 @@ EOF
   fi
 }
 
+# The run-once key is derived from the topic directory, which is what stops a
+# topic gating on one key and marking another.
+test_claim_derives_its_key_from_the_topic() {
+  local checkout
+  checkout=$(make_checkout)
+  write_claim_fixture "$checkout"
+
+  invoke_claim "$checkout"
+  [[ -f $checkout/home/state/dotfiles/sample-associations-applied ]] \
+    || scenario_fail 'claim did not record a marker keyed by the topic'
+}
+
+test_claim_applies_once_and_reports_the_marker() {
+  local checkout
+  checkout=$(make_checkout)
+  write_claim_fixture "$checkout"
+
+  invoke_claim "$checkout"
+  assert_contains "$checkout/home/stdout.log" '✓ sample associations set'
+  assert_contains "$checkout/home/stdout.log" '✓ Sample configured'
+
+  # scenario_capture starts a fresh event log per run, so an empty one here is
+  # the second run reasserting nothing.
+  invoke_claim "$checkout"
+  assert_not_contains "$checkout/home/events.log" 'duti -s'
+  assert_contains "$checkout/home/stdout.log" \
+    'file associations already applied; run DOTFILES_RESET=sample-associations dot to reapply'
+  assert_contains "$checkout/home/stdout.log" '✓ Sample configured'
+}
+
+test_claim_reset_re_arms_the_step() {
+  local checkout
+  checkout=$(make_checkout)
+  write_claim_fixture "$checkout"
+
+  invoke_claim "$checkout"
+  invoke_claim "$checkout" DOTFILES_RESET=sample-associations
+  assert_contains "$checkout/home/events.log" 'duti -s com.example.sample .md editor'
+  assert_contains "$checkout/home/stdout.log" '✓ sample associations set'
+}
+
+# A machine with the app but without duti has applied nothing, so the step has
+# to stay armed for the run that follows installing duti.
+test_claim_without_duti_leaves_the_step_armed() {
+  local checkout
+  checkout=$(make_checkout)
+  write_claim_fixture "$checkout"
+  rm "$checkout/home/fake-bin/duti"
+
+  invoke_claim "$checkout"
+  assert_contains "$checkout/home/stderr.log" \
+    'duti is required to set Sample as the default app for its declared file types'
+  [[ ! -f $checkout/home/state/dotfiles/sample-associations-applied ]] \
+    || scenario_fail 'a run without duti recorded the marker'
+}
+
+scenario_run 'claim derives its run-once key from the topic' \
+  test_claim_derives_its_key_from_the_topic
+scenario_run 'claim applies once and reports the marker' \
+  test_claim_applies_once_and_reports_the_marker
+scenario_run 'DOTFILES_RESET re-arms a claimed catalog' \
+  test_claim_reset_re_arms_the_step
+scenario_run 'a claim without duti leaves the step armed' \
+  test_claim_without_duti_leaves_the_step_armed
 scenario_run 'resolves TOPIC_DIR and DOTFILES_ROOT from the installer' \
   test_resolves_topic_dir_and_checkout_root
 scenario_run 'Darwin guard exits successfully on non-Darwin' \

@@ -22,13 +22,5 @@ ZED_BUNDLE="dev.zed.Zed"
 
 installer_optional_app Zed zed /Applications/Zed.app
 
-installer_skip_if_applied zed-associations "file associations" "Zed configured"
-
-installer_optional_command duti "duti is required to set Zed as the default text editor"
-
-installer_apply_associations Zed "$ZED_BUNDLE" \
+installer_claim_file_types Zed "$ZED_BUNDLE" \
   "Zed set as default app for tracked text/source extensions"
-
-installer_mark_applied zed-associations
-
-installer_success "Zed configured"

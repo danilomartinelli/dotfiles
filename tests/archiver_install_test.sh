@@ -141,7 +141,7 @@ test_missing_duti_skips_the_associations() {
   invoke_archiver "$fixture"
 
   assert_contains "$fixture/stderr.log" \
-    'duti is required to set Archiver as the default app for compressed files'
+    'duti is required to set Archiver as the default app for its declared file types'
   assert_contains "$fixture/stderr.log" 'brew install duti'
   assert_not_contains "$fixture/stdout.log" 'Archiver set as default'
 }
