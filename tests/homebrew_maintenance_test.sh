@@ -6,6 +6,8 @@ TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-homebrew-maintenance-tests
 
 make_fixture() {
@@ -16,28 +18,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/homebrew/_maintenance.sh" "$fixture/homebrew/_availability.sh"
 
-  scenario_write_executable "$fixture/fake-bin/brew" <<'EOF'
-#!/bin/sh
-printf 'brew %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-case "$1" in
-  tap)
-    [ -n "${FAKE_BREW_TAPS:-}" ] && printf '%s\n' "$FAKE_BREW_TAPS"
-    ;;
-  list)
-    if [ "${FAIL_BREW_LIST:-0}" -ne 0 ]; then
-      exit "$FAIL_BREW_LIST"
-    fi
-    case "$2" in
-      --formula) [ -n "${FAKE_BREW_FORMULAE:-}" ] && printf '%s\n' "$FAKE_BREW_FORMULAE" ;;
-      --cask) [ -n "${FAKE_BREW_CASKS:-}" ] && printf '%s\n' "$FAKE_BREW_CASKS" ;;
-    esac
-    exit 0
-    ;;
-  untap)
-    exit "${FAIL_BREW_UNTAP:-0}"
-    ;;
-esac
-EOF
+  stub_brew "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
 }

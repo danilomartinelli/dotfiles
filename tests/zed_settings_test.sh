@@ -3,7 +3,11 @@
 set -euo pipefail
 
 TEST_PATH=${BASH_SOURCE[0]}
-REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
+TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")" && pwd)
+REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
+# shellcheck source=tests/_support/jsonc.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/jsonc.sh"
 ZED_SETTINGS=$REPOSITORY_ROOT/zed/settings.json
 ZED_KEYMAP=$REPOSITORY_ROOT/zed/keymap.json
 PRETTIER_CONFIG=$REPOSITORY_ROOT/.prettierrc.json
@@ -11,10 +15,6 @@ PRETTIER_CONFIG=$REPOSITORY_ROOT/.prettierrc.json
 fail() {
   printf 'Zed settings test failed: %s\n' "$1" >&2
   exit 1
-}
-
-jsonc_to_json() {
-  sed '/^[[:space:]]*\/\//d' "$1" | jq '.'
 }
 
 settings_json=$(jsonc_to_json "$ZED_SETTINGS") \

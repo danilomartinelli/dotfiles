@@ -59,3 +59,60 @@ printf 'killall %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_KILLALL:-0}"
 EOF
 }
+
+# The package manager. One stub covers every subcommand this repository runs,
+# under one convention: FAIL_BREW_<SUBCOMMAND> is an exit status and
+# FAKE_BREW_<NOUN> is the output a subcommand prints. A subcommand with
+# neither variable set succeeds silently, so a fixture declares only the
+# behaviour its scenario depends on.
+#
+# The name is a parameter because setup_test.sh writes the stub aside as a
+# template and has its fake Homebrew installer copy it into place mid-run,
+# which is how that suite reaches the not-yet-installed path.
+# Usage: stub_brew <bin-dir> [name]
+stub_brew() {
+  _stub_write "$1/${2:-brew}" <<'EOF'
+#!/bin/sh
+printf 'brew %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+case "$1" in
+  --prefix)
+    [ "${FAIL_BREW_PREFIX:-0}" -eq 0 ] || exit "$FAIL_BREW_PREFIX"
+    [ -z "${FAKE_BREW_PREFIX:-}" ] || printf '%s\n' "$FAKE_BREW_PREFIX"
+    ;;
+  update)
+    exit "${FAIL_BREW_UPDATE:-0}"
+    ;;
+  upgrade)
+    exit "${FAIL_BREW_UPGRADE:-0}"
+    ;;
+  tap)
+    # `brew tap` with no argument lists; with one it adds.
+    if [ "$#" -gt 1 ]; then
+      exit "${FAIL_BREW_TAP:-0}"
+    fi
+    [ -z "${FAKE_BREW_TAPS:-}" ] || printf '%s\n' "$FAKE_BREW_TAPS"
+    ;;
+  untap)
+    exit "${FAIL_BREW_UNTAP:-0}"
+    ;;
+  list)
+    [ "${FAIL_BREW_LIST:-0}" -eq 0 ] || exit "$FAIL_BREW_LIST"
+    case "$2" in
+      --formula)
+        [ -z "${FAKE_BREW_FORMULAE:-}" ] || printf '%s\n' "$FAKE_BREW_FORMULAE"
+        ;;
+      --cask)
+        [ -z "${FAKE_BREW_CASKS:-}" ] || printf '%s\n' "$FAKE_BREW_CASKS"
+        ;;
+    esac
+    ;;
+  bundle)
+    exit "${FAIL_BREW_BUNDLE:-0}"
+    ;;
+  trust)
+    exit "${FAIL_BREW_TRUST:-0}"
+    ;;
+esac
+exit 0
+EOF
+}

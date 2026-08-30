@@ -33,45 +33,7 @@ printf 'ssh-keygen %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 exit 99
 EOF
 
-  scenario_write_executable "$fixture/fake-bin/brew-template" <<'EOF'
-#!/bin/sh
-printf 'brew %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-case "$1" in
-  --prefix)
-    if [ "${FAIL_BREW_PREFIX:-0}" -ne 0 ]; then
-      exit "$FAIL_BREW_PREFIX"
-    fi
-    printf '%s\n' "$FAKE_BREW_PREFIX"
-    ;;
-  update)
-    exit "${FAIL_BREW_UPDATE:-0}"
-    ;;
-  upgrade)
-    exit "${FAIL_BREW_UPGRADE:-0}"
-    ;;
-  tap)
-    if [ "$#" -eq 1 ]; then
-      [ -n "${FAKE_BREW_TAPS:-}" ] && printf '%s\n' "$FAKE_BREW_TAPS"
-      exit 0
-    fi
-    exit "${FAIL_BREW_TAP:-0}"
-    ;;
-  list)
-    case "$2" in
-      --formula) [ -n "${FAKE_BREW_FORMULAE:-}" ] && printf '%s\n' "$FAKE_BREW_FORMULAE" ;;
-      --cask) [ -n "${FAKE_BREW_CASKS:-}" ] && printf '%s\n' "$FAKE_BREW_CASKS" ;;
-    esac
-    exit 0
-    ;;
-  untap)
-    exit "${FAIL_BREW_UNTAP:-0}"
-    ;;
-  bundle)
-    exit "${FAIL_BREW_BUNDLE:-0}"
-    ;;
-esac
-exit 0
-EOF
+  stub_brew "$fixture/fake-bin" brew-template
 
   scenario_write_executable "$fixture/homebrew/install.sh" <<'EOF'
 #!/bin/sh

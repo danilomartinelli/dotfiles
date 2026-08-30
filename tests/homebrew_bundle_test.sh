@@ -6,6 +6,8 @@ TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-homebrew-bundle-tests
 
 make_fixture() {
@@ -17,19 +19,7 @@ make_fixture() {
   chmod +x "$fixture/homebrew/_bundle.sh" "$fixture/homebrew/_availability.sh"
   printf '%s\n' "tap 'xo/xo'" "brew 'archiver'" >"$fixture/Brewfile"
 
-  scenario_write_executable "$fixture/fake-bin/brew" <<'EOF'
-#!/bin/sh
-printf 'brew %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-case "$1" in
-  trust)
-    exit "${FAIL_BREW_TRUST:-0}"
-    ;;
-  bundle)
-    exit "${FAIL_BREW_BUNDLE:-0}"
-    ;;
-esac
-exit 0
-EOF
+  stub_brew "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
 }

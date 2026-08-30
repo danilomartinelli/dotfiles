@@ -295,6 +295,15 @@ what it is, so two tests standing in for the same command cannot disagree
 about its interface. Add a stub there when a second fixture needs the same
 command, and leave a fake in place when it is genuinely specific to one test.
 
+Every faked command follows one convention: `FAIL_<COMMAND>_<SUBCOMMAND>` is an
+exit status and `FAKE_<COMMAND>_<NOUN>` is the output a subcommand prints. A
+subcommand with neither set succeeds silently, so a fixture declares only the
+behavior its scenario depends on.
+
+`tests/_support/jsonc.sh` owns reading tracked JSONC, and
+`tests/_support/opencode-catalog.sh` owns reading the managed entry catalog.
+A second fixture needing either reads it from there rather than restating it.
+
 ### Focused validation matrix
 
 | Change area                                                     | Required focused validation                                                                                  |

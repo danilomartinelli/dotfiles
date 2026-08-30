@@ -13,6 +13,9 @@ source "$TEST_DIR/_support/opencode-catalog.sh"
 # shellcheck source=tests/_support/stubs.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/jsonc.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/jsonc.sh"
 scenario_init dotfiles-opencode-install-tests
 
 TAB=$'\t'
@@ -87,10 +90,6 @@ assert_link_target() {
 
   [[ -L $link ]] || scenario_fail "$description is not a symbolic link"
   assert_equal "$expected" "$(readlink "$link")" "$description target"
-}
-
-jsonc_to_json() {
-  yq -p json -o json '.' "$1"
 }
 
 opencode_profile_add_line() {
