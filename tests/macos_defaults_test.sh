@@ -8,12 +8,15 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/fixture.sh"
 scenario_init dotfiles-macos-defaults-tests
 
 make_fixture() {
   local fixture
-  fixture=$(scenario_tmpdir fixture)
-  mkdir -p "$fixture/_macos" "$fixture/_scripts" "$fixture/fake-bin" "$fixture/home/Library"
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/_macos" "$fixture/_scripts" "$fixture/home/Library"
   cp "$REPOSITORY_ROOT/_macos/set-defaults.sh" "$fixture/_macos/set-defaults.sh"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   chmod +x "$fixture/_macos/set-defaults.sh"
@@ -25,7 +28,6 @@ com.apple.finder	FXPreferredViewStyle	string	Nlsv
 com.apple.finder	NewWindowTargetPath	string	file://$HOME/
 EOF
 
-  stub_uname "$fixture/fake-bin"
   scenario_write_executable "$fixture/fake-bin/defaults" <<'EOF'
 #!/bin/sh
 printf 'defaults %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
@@ -58,11 +60,9 @@ EOF
 
 invoke_defaults() {
   local fixture=$1
-  scenario_capture "$fixture" env \
-    HOME="$fixture/home" \
-    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+  fixture_run "$fixture" \
     DOTFILES_MACOS_DEFAULTS_CATALOG="$fixture/_macos/defaults.tsv" \
-    "$fixture/_macos/set-defaults.sh"
+    -- "$fixture/_macos/set-defaults.sh"
 }
 
 test_catalog_order_and_expansion() {

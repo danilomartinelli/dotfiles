@@ -8,6 +8,9 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/fixture.sh"
 scenario_init dotfiles-dock-install-tests
 
 # A synthetic layout, so adding an app to the real Dock never breaks this file.
@@ -25,17 +28,14 @@ EOF
 
 make_fixture() {
   local fixture
-  fixture=$(scenario_tmpdir fixture)
+  fixture=$(installer_fixture)
   mkdir -p \
-    "$fixture/fake-bin" \
     "$fixture/home/Applications/One.app" \
     "$fixture/home/Applications/Two.app" \
     "$fixture/home/Downloads" \
     "$fixture/home/Workspace"
 
   write_catalog "$fixture/layout.tsv"
-
-  stub_uname "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/dockutil" <<'EOF'
 #!/bin/sh
@@ -54,14 +54,11 @@ invoke_dock() {
   local artifacts=$2
   shift 2
 
-  scenario_capture "$artifacts" env \
-    PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    HOME="$fixture/home" \
-    XDG_STATE_HOME="$fixture/state" \
+  fixture_run "$fixture" --artifacts "$artifacts" \
     WORKSPACE="$fixture/home/Workspace" \
     DOTFILES_DOCK_CATALOG="$fixture/layout.tsv" \
     "$@" \
-    "$REPOSITORY_ROOT/dock/install.sh"
+    -- "$REPOSITORY_ROOT/dock/install.sh"
 }
 
 test_first_run_rebuilds_the_dock_and_records_the_marker() {

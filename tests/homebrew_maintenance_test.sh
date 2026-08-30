@@ -8,12 +8,15 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/fixture.sh"
 scenario_init dotfiles-homebrew-maintenance-tests
 
 make_fixture() {
   local fixture
-  fixture=$(scenario_tmpdir fixture)
-  mkdir -p "$fixture/homebrew" "$fixture/fake-bin"
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/homebrew"
   cp "$REPOSITORY_ROOT/homebrew/_maintenance.sh" "$fixture/homebrew/_maintenance.sh"
   cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/homebrew/_maintenance.sh" "$fixture/homebrew/_availability.sh"
@@ -25,17 +28,15 @@ make_fixture() {
 
 invoke_maintenance() {
   local fixture=$1
-  scenario_capture "$fixture" env \
-    PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    "$fixture/homebrew/_maintenance.sh" --brew "$fixture/fake-bin/brew"
+  shift
+  fixture_run "$fixture" "$@" \
+    -- "$fixture/homebrew/_maintenance.sh" --brew "$fixture/fake-bin/brew"
 }
 
 test_unused_legacy_tap_is_removed() {
   local fixture
   fixture=$(make_fixture)
-  export FAKE_BREW_TAPS=xo/xo
-  invoke_maintenance "$fixture"
-  unset FAKE_BREW_TAPS
+  invoke_maintenance "$fixture" FAKE_BREW_TAPS=xo/xo
 
   assert_contains "$fixture/events.log" 'brew untap xo/xo'
   assert_contains "$fixture/stdout.log" 'Removed unused legacy Homebrew tap: xo/xo'
@@ -53,9 +54,7 @@ test_absent_tap_is_ignored() {
 test_tap_with_installed_item_is_preserved() {
   local fixture
   fixture=$(make_fixture)
-  export FAKE_BREW_TAPS=xo/xo FAKE_BREW_FORMULAE=xo/xo/usql
-  invoke_maintenance "$fixture"
-  unset FAKE_BREW_TAPS FAKE_BREW_FORMULAE
+  invoke_maintenance "$fixture" FAKE_BREW_TAPS=xo/xo FAKE_BREW_FORMULAE=xo/xo/usql
 
   assert_not_contains "$fixture/events.log" 'brew untap'
   assert_contains "$fixture/stderr.log" 'preserving legacy tap xo/xo because it still owns installed packages'
@@ -64,9 +63,7 @@ test_tap_with_installed_item_is_preserved() {
 test_inspection_failure_preserves_tap() {
   local fixture
   fixture=$(make_fixture)
-  export FAKE_BREW_TAPS=xo/xo FAIL_BREW_LIST=1
-  invoke_maintenance "$fixture"
-  unset FAKE_BREW_TAPS FAIL_BREW_LIST
+  invoke_maintenance "$fixture" FAKE_BREW_TAPS=xo/xo FAIL_BREW_LIST=1
 
   assert_not_contains "$fixture/events.log" 'brew untap'
   assert_contains "$fixture/stderr.log" 'could not inspect installed packages; preserving legacy tap xo/xo'

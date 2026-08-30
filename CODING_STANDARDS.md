@@ -312,6 +312,13 @@ exit status and `FAKE_<COMMAND>_<NOUN>` is the output a subcommand prints. A
 subcommand with neither set succeeds silently, so a fixture declares only the
 behavior its scenario depends on.
 
+`tests/_support/fixture.sh` owns what an installer fixture is: the fake `$HOME`,
+the run-once marker directory, and the `fake-bin` first on `PATH`. Build one
+with `installer_fixture` and invoke through `fixture_run`, which takes per-run
+`KEY=value` overrides before `--`. Pass failure injection that way rather than
+exporting it: an `export` before the call and an `unset` after leaks into the
+next case whenever something returns between the two.
+
 `tests/_support/jsonc.sh` owns reading tracked JSONC, and
 `tests/_support/opencode-catalog.sh` owns reading the managed entry catalog.
 A second fixture needing either reads it from there rather than restating it.

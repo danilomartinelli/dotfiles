@@ -8,15 +8,16 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/fixture.sh"
 scenario_init dotfiles-archiver-install-tests
 
 make_fixture() {
   local fixture
-  fixture=$(scenario_tmpdir fixture)
-  mkdir -p "$fixture/fake-bin" "$fixture/home" "$fixture/Archiver.app/Contents"
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/Archiver.app/Contents"
   : >"$fixture/Archiver.app/Contents/Info.plist"
-
-  stub_uname "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/PlistBuddy" <<'EOF'
 #!/bin/sh
@@ -41,22 +42,18 @@ EOF
   printf '%s\n' "$fixture"
 }
 
-# HOME and XDG_STATE_HOME are fixture-local because the associations are a
-# run-once step: without them the marker would land in the real state directory
-# and disarm both the next scenario and the next dot run.
+# Extra KEY=value pairs reach this run only, so failure injection never
+# outlives the case that asked for it.
 invoke_archiver() {
   local fixture=$1
   shift
-  scenario_capture "$fixture" env -u DOTFILES_RESET \
-    HOME="$fixture/home" \
-    XDG_STATE_HOME="$fixture/state" \
-    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+  fixture_run "$fixture" \
     ARCHIVER_APP="$fixture/Archiver.app" \
     PLIST_BUDDY_BIN="$fixture/fake-bin/PlistBuddy" \
     CODESIGN_BIN="$fixture/fake-bin/codesign" \
     LSREGISTER_BIN="$fixture/fake-bin/lsregister" \
     "$@" \
-    "$REPOSITORY_ROOT/archiver/install.sh"
+    -- "$REPOSITORY_ROOT/archiver/install.sh"
 }
 
 archiver_marker() {
@@ -80,9 +77,7 @@ test_supported_types_use_viewer_role() {
 test_invalid_signature_is_reported_once() {
   local fixture
   fixture=$(make_fixture)
-  export FAIL_CODESIGN=1
-  invoke_archiver "$fixture"
-  unset FAIL_CODESIGN
+  invoke_archiver "$fixture" FAIL_CODESIGN=1
 
   assert_contains "$fixture/stderr.log" 'invalid code signature; skipping file associations'
   assert_not_contains "$fixture/events.log" 'lsregister'
@@ -92,9 +87,7 @@ test_invalid_signature_is_reported_once() {
 test_registration_failure_skips_associations() {
   local fixture
   fixture=$(make_fixture)
-  export FAIL_LSREGISTER=1
-  invoke_archiver "$fixture"
-  unset FAIL_LSREGISTER
+  invoke_archiver "$fixture" FAIL_LSREGISTER=1
 
   assert_contains "$fixture/stderr.log" 'macOS could not register Archiver'
   assert_not_contains "$fixture/events.log" 'duti '
@@ -103,9 +96,7 @@ test_registration_failure_skips_associations() {
 test_missing_app_is_advisory() {
   local fixture
   fixture=$(make_fixture)
-  export ARCHIVER_PRESENT=0
-  invoke_archiver "$fixture"
-  unset ARCHIVER_PRESENT
+  invoke_archiver "$fixture" ARCHIVER_PRESENT=0
 
   assert_contains "$fixture/stderr.log" 'Archiver app not found'
   assert_not_contains "$fixture/events.log" 'codesign'
@@ -116,9 +107,7 @@ test_missing_duti_reports_the_missing_app_first() {
   local fixture
   fixture=$(make_fixture)
   rm "$fixture/fake-bin/duti"
-  export ARCHIVER_PRESENT=0
-  invoke_archiver "$fixture"
-  unset ARCHIVER_PRESENT
+  invoke_archiver "$fixture" ARCHIVER_PRESENT=0
 
   # Neither installed: the topic has nothing to do, and says so about the app
   # it configures rather than about a tool it never had a reason to reach for.
@@ -169,9 +158,7 @@ test_a_bailed_run_leaves_the_step_armed() {
 
   # The marker sits below every gate, so a run that applied nothing cannot
   # record itself as applied and wedge the topic permanently.
-  export FAIL_LSREGISTER=1
-  invoke_archiver "$fixture"
-  unset FAIL_LSREGISTER
+  invoke_archiver "$fixture" FAIL_LSREGISTER=1
 
   [[ ! -e $(archiver_marker "$fixture") ]] \
     || scenario_fail 'a run that skipped the associations recorded them as applied'
@@ -183,9 +170,7 @@ test_a_bailed_run_leaves_the_step_armed() {
 test_individual_association_failures_are_aggregated() {
   local fixture
   fixture=$(make_fixture)
-  export FAIL_DUTI=public.zip-archive
-  invoke_archiver "$fixture"
-  unset FAIL_DUTI
+  invoke_archiver "$fixture" FAIL_DUTI=public.zip-archive
 
   assert_contains "$fixture/stderr.log" 'Failed to set Archiver as default for .zip'
   assert_contains "$fixture/stderr.log" \
