@@ -9,14 +9,24 @@ repository owns from what the installed tools own.
 ### Linking
 
 **Config linker**:
-The single owner of what happens when a link target already exists. Topic
-installers reach it through `installer_link_config`.
+The single owner of what happens when a link target already exists, and the
+only place a link target is removed or backed up. Topic installers reach it
+through `installer_link_config`; home linking reaches it directly.
 _Avoid_: symlinker, link script
 
 **Conflict policy**:
-The named rule an installer selects to declare what should happen to an
-existing target. The installer states intent; the linker performs the change.
+The named rule a caller selects to declare what should happen to an existing
+target. The caller states intent; the linker performs the change.
 _Avoid_: strategy, mode, conflict handling
+
+**Confirmed replacement**:
+The intent a caller states when a person, not a classification, decided a
+target should go: an answer at a prompt or an explicit batch instruction.
+Destroys like a generated-target replacement and shares its refusals,
+because what a removal must never touch does not depend on why it was asked
+for. Distinct from a generated target, which is a claim about who writes the
+file rather than about who chose.
+_Avoid_: force, overwrite, user-approved
 
 ### Declaration
 

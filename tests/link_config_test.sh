@@ -147,6 +147,43 @@ test_replace_generated_refuses_unsafe_targets() {
   [[ -d /usr ]] || scenario_fail 'root refusal did not leave the filesystem intact'
 }
 
+# replace-confirmed destroys like replace-generated and says something
+# different, because the caller is asserting an operator's decision rather
+# than a claim about who writes the file.
+test_replace_confirmed_destroys_and_shares_the_guard() {
+  local home source target
+
+  home=$(scenario_tmpdir confirmed)
+  source=$home/checkout/topic/settings
+  target=$home/.config/tool/settings
+  mkdir -p "$source" "$home/.config/tool"
+  printf 'tracked\n' >"$source/entry.md"
+  printf 'hand written\n' >"$target"
+
+  invoke_link "$home" --policy replace-confirmed --label 'settings' \
+    "$source" "$target"
+  assert_equal "$source" "$(readlink "$target")" 'confirmed target replaced'
+  assert_contains "$home/stdout.log" 'Replaced settings as confirmed'
+  assert_not_contains "$home/stdout.log" 'generated'
+  [[ ! -e $home/.config/tool/settings.backup ]] \
+    || scenario_fail 'replace-confirmed left a backup'
+
+  invoke_link "$home" --policy replace-confirmed --label 'settings' \
+    "$source" "$target"
+  assert_contains "$home/stdout.log" 'settings already linked'
+
+  # The same three refusals, because they do not depend on the caller's reason.
+  assert_fails_with_status 2 \
+    invoke_link "$home" --policy replace-confirmed "$source" "$home"
+  assert_contains "$home/stderr.log" 'refusing to remove'
+  assert_fails_with_status 2 \
+    invoke_link "$home" --policy replace-confirmed "$source" "$home/checkout"
+  assert_contains "$home/stderr.log" 'it contains the source'
+  assert_fails_with_status 2 \
+    invoke_link "$home" --policy replace-confirmed "$source" /
+  [[ -f $source/entry.md ]] || scenario_fail 'a refusal destroyed the source'
+}
+
 test_missing_source_fails() {
   local home
 
@@ -164,5 +201,7 @@ scenario_run 'replace-generated discards generated targets without a backup' \
   test_replace_generated
 scenario_run 'replace-generated refuses to remove unsafe targets' \
   test_replace_generated_refuses_unsafe_targets
+scenario_run 'replace-confirmed destroys without a backup and shares the guard' \
+  test_replace_confirmed_destroys_and_shares_the_guard
 scenario_run 'missing source fails' test_missing_source_fails
 scenario_finish

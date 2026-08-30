@@ -11,6 +11,7 @@ ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
 DOTFILES_ROOT=${DOTFILES_ROOT:-$("$ROOT_RESOLVER" "$LINK_DOTFILES_PATH")}
 export DOTFILES_ROOT
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
+LINK_CONFIG=$DOTFILES_ROOT/_scripts/link-config
 
 LINK_ACTION=''
 overwrite_all=false
@@ -140,6 +141,20 @@ absolute_link_target() {
   esac
 }
 
+# This module decides *which* action a conflict gets — from a batch flag, a
+# remembered all-answer, or the prompt. The config linker performs it. Every
+# removal belongs to the linker, which is what ADR 0001 settled for installers
+# and what this caller now honours too: the linker refuses to clobber an
+# existing backup and guards the paths an unattended rm -rf must never take.
+link_action_policy() {
+  case "$1" in
+    overwrite) printf '%s\n' replace-confirmed ;;
+    backup) printf '%s\n' replace-with-backup ;;
+    skip) printf '%s\n' preserve-existing ;;
+    *) return 1 ;;
+  esac
+}
+
 link_file() {
   local src
   local dst
@@ -147,6 +162,7 @@ link_file() {
   local current_src
   local current_src_abs
   local action
+  local policy
 
   src=$1
   dst=$2
@@ -166,6 +182,10 @@ link_file() {
     fi
   fi
 
+  # With no conflict there is nothing to decide, so the default policy never
+  # reaches an existing target.
+  policy=replace-with-backup
+
   if [ -e "$dst" ] || [ -L "$dst" ]; then
     if [ -n "$batch_mode" ]; then
       action=$batch_mode
@@ -180,24 +200,13 @@ link_file() {
       action=$LINK_ACTION
     fi
 
-    case "$action" in
-      overwrite)
-        rm -rf "$dst" || return 1
-        success "removed $dst"
-        ;;
-      backup)
-        mv "$dst" "${dst}.backup" || return 1
-        success "moved $dst to ${dst}.backup"
-        ;;
-      skip)
-        success "skipped $src"
-        return 0
-        ;;
-    esac
+    policy=$(link_action_policy "$action") || return 1
   fi
 
-  ln -s "$src_abs" "$dst" || return 1
-  success "linked $src to $dst"
+  # The linker reports what it did — linked, kept, backed up, replaced — so
+  # saying "linked" here too would be a second voice, and a wrong one whenever
+  # the policy was preserve-existing.
+  "$LINK_CONFIG" --policy "$policy" --label "$dst" "$src_abs" "$dst" || return 1
 }
 
 catalog=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || exit 1
