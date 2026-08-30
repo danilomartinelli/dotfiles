@@ -185,9 +185,11 @@
       "enabled": true
     }
   },
-  "instructions": ["./tools/philosophy.md"],
+  "instructions": [
+    "./tools/philosophy.md"
+  ],
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.3",
+    "@tarquinen/opencode-dcp@3.1.15",
     "@franlol/opencode-md-table-formatter@0.0.6",
     "opencode-claude-auth@2.1.6",
     "opencode-mem"
