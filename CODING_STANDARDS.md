@@ -145,6 +145,11 @@ Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
 
+`_scripts/link-config --status <source> <target>` reports what an existing
+target is — `current`, `conflict`, or `absent` — and changes nothing. It is how
+`_scripts/link-dotfiles` decides which conflict policy to ask for; no caller
+derives that classification for itself.
+
 Every tab-separated catalog file is read through `_scripts/catalog.sh`, which
 the preamble sources for installers and which `_macos/set-defaults.sh`,
 `_scripts/checklist`, and `_scripts/render-opencode-profiles` source directly. Call

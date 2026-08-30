@@ -184,6 +184,53 @@ test_replace_confirmed_destroys_and_shares_the_guard() {
   [[ -f $source/entry.md ]] || scenario_fail 'a refusal destroyed the source'
 }
 
+# The classification a caller reads before it states an intent. link-dotfiles is
+# its only consumer, and it had its own copy of this rule until the linker
+# started answering the question it already had to answer to act.
+test_status_classifies_without_changing_anything() {
+  local home source target
+
+  home=$(scenario_tmpdir status)
+  source=$home/source.conf
+  target=$home/.config/app/config
+  mkdir -p "$(dirname "$target")"
+  printf 'tracked\n' >"$source"
+
+  invoke_link "$home" --status "$source" "$target"
+  assert_equal 'absent' "$(cat "$home/stdout.log")" 'status for a free target'
+
+  printf 'local\n' >"$target"
+  invoke_link "$home" --status "$source" "$target"
+  assert_equal 'conflict' "$(cat "$home/stdout.log")" 'status for a real file'
+  assert_contains "$target" 'local'
+
+  ln -sfn "$home/elsewhere.conf" "$target"
+  invoke_link "$home" --status "$source" "$target"
+  assert_equal 'conflict' "$(cat "$home/stdout.log")" 'status for a wrong link'
+
+  ln -sfn "$source" "$target"
+  invoke_link "$home" --status "$source" "$target"
+  assert_equal 'current' "$(cat "$home/stdout.log")" 'status for the right link'
+
+  # A relative link to the same file is the same link, which is the case the
+  # two implementations used to answer differently.
+  ln -sfn './source.conf' "$home/relative"
+  invoke_link "$home" --status "$source" "$home/relative"
+  assert_equal 'current' "$(cat "$home/stdout.log")" 'status for a relative link'
+
+  assert_equal "$source" "$(readlink "$target")" 'status left the link alone'
+}
+
+test_status_refuses_a_missing_source() {
+  local home
+
+  home=$(scenario_tmpdir status-missing)
+  if invoke_link "$home" --status "$home/missing" "$home/target"; then
+    return 1
+  fi
+  assert_contains "$home/stderr.log" 'source not found'
+}
+
 test_missing_source_fails() {
   local home
 
@@ -203,5 +250,8 @@ scenario_run 'replace-generated refuses to remove unsafe targets' \
   test_replace_generated_refuses_unsafe_targets
 scenario_run 'replace-confirmed destroys without a backup and shares the guard' \
   test_replace_confirmed_destroys_and_shares_the_guard
+scenario_run 'status classifies a target without changing it' \
+  test_status_classifies_without_changing_anything
+scenario_run 'status refuses a missing source' test_status_refuses_a_missing_source
 scenario_run 'missing source fails' test_missing_source_fails
 scenario_finish

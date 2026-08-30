@@ -106,29 +106,6 @@ choose_link_action() {
   done
 }
 
-absolute_link_target() {
-  local dst
-  local target
-  local target_dir
-  local target_name
-
-  dst=$1
-  target=$2
-
-  case "$target" in
-    /*) printf '%s\n' "$target" ;;
-    *)
-      target_dir=$(dirname "$target")
-      target_name=$(basename "$target")
-      if cd "$(dirname "$dst")/$target_dir" 2>/dev/null; then
-        printf '%s/%s\n' "$(pwd -P)" "$target_name"
-      else
-        printf '%s\n' "$target"
-      fi
-      ;;
-  esac
-}
-
 # This module decides *which* action a conflict gets — from a batch flag, a
 # remembered all-answer, or the prompt. The config linker performs it. Every
 # removal belongs to the linker, which is what ADR 0001 settled for installers
@@ -147,8 +124,7 @@ link_file() {
   local src
   local dst
   local src_abs
-  local current_src
-  local current_src_abs
+  local status
   local action
   local policy
 
@@ -161,35 +137,41 @@ link_file() {
 
   src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
 
-  if [ -L "$dst" ]; then
-    current_src=$(readlink "$dst" 2>/dev/null || true)
-    current_src_abs=$(absolute_link_target "$dst" "$current_src")
-    if [ "$src_abs" = "$current_src_abs" ]; then
+  # The linker classifies the target it owns. Deriving it here a second time is
+  # what let the two modules disagree about the same link.
+  status=$("$LINK_CONFIG" --status "$src_abs" "$dst") || return 1
+
+  case "$status" in
+    current)
       success "already linked $dst"
       return 0
-    fi
-  fi
+      ;;
+    conflict)
+      if [ -n "$batch_mode" ]; then
+        action=$batch_mode
+      elif [ "$overwrite_all" = true ]; then
+        action=overwrite
+      elif [ "$backup_all" = true ]; then
+        action=backup
+      elif [ "$skip_all" = true ]; then
+        action=skip
+      else
+        choose_link_action "$src" "$dst" || return 1
+        action=$LINK_ACTION
+      fi
 
-  # With no conflict there is nothing to decide, so the default policy never
-  # reaches an existing target.
-  policy=replace-with-backup
-
-  if [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ -n "$batch_mode" ]; then
-      action=$batch_mode
-    elif [ "$overwrite_all" = true ]; then
-      action=overwrite
-    elif [ "$backup_all" = true ]; then
-      action=backup
-    elif [ "$skip_all" = true ]; then
-      action=skip
-    else
-      choose_link_action "$src" "$dst" || return 1
-      action=$LINK_ACTION
-    fi
-
-    policy=$(link_action_policy "$action") || return 1
-  fi
+      policy=$(link_action_policy "$action") || return 1
+      ;;
+    absent)
+      # With no conflict there is nothing to decide, so the default policy
+      # never reaches an existing target.
+      policy=replace-with-backup
+      ;;
+    *)
+      warn "unknown link status '$status' for $dst"
+      return 1
+      ;;
+  esac
 
   # The linker reports what it did — linked, kept, backed up, replaced — so
   # saying "linked" here too would be a second voice, and a wrong one whenever

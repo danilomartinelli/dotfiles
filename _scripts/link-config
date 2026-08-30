@@ -8,6 +8,11 @@ set -eu
 usage() {
   cat >&2 <<'EOF'
 Usage: link-config [--policy POLICY] [--label LABEL] <source> <target>
+       link-config --status <source> <target>
+
+Options:
+  --status  Print what the target is — current, conflict, or absent — and
+            exit without changing anything.
 
 Policies:
   replace-with-backup  Default. Back up an existing real target once, then link.
@@ -22,6 +27,7 @@ EOF
 
 policy=replace-with-backup
 label=
+status_only=false
 source_path=
 target_path=
 
@@ -42,6 +48,10 @@ while [ "$#" -gt 0 ]; do
       }
       label=$2
       shift 2
+      ;;
+    --status)
+      status_only=true
+      shift
       ;;
     -h | --help)
       usage
@@ -166,6 +176,21 @@ link_is_current() {
   expected_target=$(canonical_file_path "$source_path") || return 1
   [ "$current_target" = "$expected_target" ]
 }
+
+# What a caller has to know before it can state an intent. Home linking derived
+# this a second time, by different path arithmetic, and reported it in a second
+# voice; the module that owns what happens to an existing target owns what that
+# target is. Prints one word and changes nothing.
+if [ "$status_only" = true ]; then
+  if link_is_current; then
+    echo current
+  elif [ -e "$target_path" ] || [ -L "$target_path" ]; then
+    echo conflict
+  else
+    echo absent
+  fi
+  exit 0
+fi
 
 if link_is_current; then
   echo "  ✓ $label already linked"

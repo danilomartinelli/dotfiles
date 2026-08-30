@@ -14,6 +14,14 @@ only place a link target is removed or backed up. Topic installers reach it
 through `installer_link_config`; home linking reaches it directly.
 _Avoid_: symlinker, link script
 
+**Target classification**:
+What an existing link target is, before any policy applies: current, a
+conflict, or absent. The config linker has to answer this to act at all, so it
+answers it for callers too rather than letting each one re-derive it by its own
+path arithmetic. Distinct from a conflict policy, which is what a caller wants
+done about a conflict rather than what the conflict is.
+_Avoid_: link state, target check, already-linked
+
 **Conflict policy**:
 The named rule a caller selects to declare what should happen to an existing
 target. The caller states intent; the linker performs the change.
