@@ -38,6 +38,7 @@ catalogs, validation lists, or subsystem runbooks between files.
 | Runtime and language-package tools   | `mise/config.toml`              |
 | Resolved Mise versions and checksums | `mise/mise.lock`                |
 | macOS preferences                    | `_macos/defaults.tsv`           |
+| Dock layout                          | `dock/_layout.tsv`              |
 | Topic discovery and load classes     | `_scripts/topic-catalog`        |
 | Setup orchestration                  | `_scripts/setup`                |
 | OpenCode and OCX configuration       | `opencode/`                     |
@@ -122,6 +123,7 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
   | `installer_optional_app`     | Warn and skip when an optional application is absent               |
   | `installer_config_dir`       | Resolve a tool's configuration directory without creating it       |
+  | `installer_workspace_root`   | Resolve the Workspace root without creating it                     |
   | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
   | `installer_mark_applied`     | Record that a run-once step completed                              |
   | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |
@@ -260,7 +262,7 @@ the dependent installer.
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                               |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                          |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
-| Dock layout                                                     | `tests/dockutil_install_test.sh`                                                                             |
+| Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 

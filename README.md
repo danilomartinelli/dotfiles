@@ -225,9 +225,10 @@ The Mac App Store declaration is `Xcode` (app id `497799835`).
 Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
 Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
 SOPS directories, SSH, Workspace, Mise, Archiver associations, and the Dock.
-The declared Dock layout is applied once so later manual changes survive;
-`DOTFILES_RESET=dock dot` opts into reapplying it, and `DOTFILES_RESET=all dot`
-re-arms every run-once step.
+The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and is
+applied once so later manual changes survive. Editing a row therefore takes
+effect on the next `DOTFILES_RESET=dock dot`; `DOTFILES_RESET=all dot` re-arms
+every run-once step.
 
 ### Mise runtimes and global CLIs
 

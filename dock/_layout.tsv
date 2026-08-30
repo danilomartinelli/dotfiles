@@ -1,0 +1,25 @@
+# Dock layout catalog consumed by install.sh.
+# Columns: section, path, view, display (section ∈ apps|others)
+# A "-" omits the flag; view ∈ grid|fan|list|auto, display ∈ folder|stack.
+# Row order within a section is apply order, so the last "others" row is the
+# one closest to the trash. Paths expand $HOME and $WORKSPACE, nothing else.
+
+apps	/Applications/Ghostty.app	-	-
+apps	/Applications/Linear.app	-	-
+apps	/Applications/Dia.app	-	-
+apps	/Applications/Zed.app	-	-
+apps	/Applications/Obsidian.app	-	-
+apps	/Applications/TablePlus.app	-	-
+apps	/Applications/Lens.app	-	-
+apps	/Applications/Postman.app	-	-
+apps	/Applications/OrbStack.app	-	-
+apps	/Applications/Figma.app	-	-
+apps	/Applications/Spark Desktop.app	-	-
+apps	/Applications/Spotify.app	-	-
+apps	/Applications/WhatsApp.app	-	-
+apps	/Applications/Bitwarden.app	-	-
+apps	/System/Applications/System Settings.app	-	-
+
+# The others section sits right of the divider, beside the trash.
+others	$WORKSPACE	list	folder
+others	$HOME/Downloads	list	folder

@@ -87,6 +87,15 @@ installer_config_dir() {
   printf '%s\n' "$HOME/.config/$1"
 }
 
+# The Workspace root. Lives here rather than in the workspace topic because two
+# topics have to agree on it: workspace/install.sh builds the layout under it,
+# and the Dock catalog places it beside the trash. Resolves only; the caller
+# creates the directory, so the path stays safe to compute.
+# Usage: installer_workspace_root
+installer_workspace_root() {
+  printf '%s\n' "${WORKSPACE:-$HOME/Workspace}"
+}
+
 # Where run-once markers live. Honours XDG_STATE_HOME where
 # installer_config_dir ignores XDG_CONFIG_HOME, because this path is ours: no
 # tool has to agree with us about where our own markers sit. Private: the

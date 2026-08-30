@@ -7,7 +7,7 @@ set -eu
 
 installer_banner "setting up Workspace layout"
 
-workspace_root=${WORKSPACE:-$HOME/Workspace}
+workspace_root=$(installer_workspace_root)
 github_root=$workspace_root/github.com
 
 mkdir -p "$github_root"

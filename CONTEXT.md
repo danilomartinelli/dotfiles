@@ -21,8 +21,10 @@ _Avoid_: strategy, mode, conflict handling
 ### Declaration
 
 **Catalog**:
-The single owner of a list that more than one consumer needs, whether declared
-as data or computed from the checkout. Consumers read it; none restate it.
+The single owner of a list, whether declared as data or computed from the
+checkout. Consumers read it; none restates it. One consumer is enough: what
+makes a list a catalog is that it exists in exactly one place, not how many
+readers it has.
 _Avoid_: roster, manifest, registry, inventory
 
 ### Ownership
