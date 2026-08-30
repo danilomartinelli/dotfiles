@@ -13,6 +13,12 @@ export DOTFILES_ROOT
 HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 
+# Topics whose installers create state that later installers consume, in the
+# order they must run. Everything else follows in catalog order. Run order is
+# orchestration and lives here: the catalog classifies topics by name, and
+# nothing in a name says the Dock needs the Workspace directory to exist.
+PREREQUISITE_TOPICS=(workspace)
+
 BREW_BIN=''
 CATALOG_SNAPSHOT=''
 CATALOG_CAPTURED=false
@@ -36,6 +42,20 @@ warn() {
 fail() {
   printf '  [\033[0;31mFAIL\033[0m] %s\n' "$1" >&2
   exit 1
+}
+
+# Whether the first argument appears among the remaining ones.
+list_contains() {
+  local needle=$1
+  local candidate
+
+  shift
+  for candidate in "$@"; do
+    if [ "$candidate" = "$needle" ]; then
+      return 0
+    fi
+  done
+  return 1
 }
 
 usage() {
@@ -183,11 +203,35 @@ install_topics() {
   local kind
   local installer
   local relative_installer
+  local prerequisite
+  local -a discovered=()
+  local -a ordered=()
 
   catalog=$(setup_catalog) || return 1
 
   while IFS=$'\t' read -r kind installer; do
     [ "$kind" = installer ] || continue
+    discovered+=("$installer")
+  done <<<"$catalog"
+
+  # A declared prerequisite that discovery never found is a typo or a deleted
+  # topic. Stop: silently skipping it would restore the alphabetical order the
+  # declaration exists to override, and only the dependent topic would notice.
+  for prerequisite in "${PREREQUISITE_TOPICS[@]}"; do
+    installer=$DOTFILES_ROOT/$prerequisite/install.sh
+    if ! list_contains "$installer" "${discovered[@]}"; then
+      fail "declared prerequisite topic has no installer: $prerequisite"
+    fi
+    ordered+=("$installer")
+  done
+
+  for installer in "${discovered[@]}"; do
+    if ! list_contains "$installer" "${ordered[@]}"; then
+      ordered+=("$installer")
+    fi
+  done
+
+  for installer in "${ordered[@]}"; do
     relative_installer=${installer#"$DOTFILES_ROOT"/}
 
     info "topic installer: $relative_installer"
@@ -196,7 +240,7 @@ install_topics() {
     else
       fail "topic installer: $relative_installer"
     fi
-  done <<<"$catalog"
+  done
 }
 
 run_dependency_pipeline() {

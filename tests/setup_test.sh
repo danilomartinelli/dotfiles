@@ -108,6 +108,14 @@ printf '%s\n' topic-zulu >> "$SCENARIO_EVENT_LOG"
 exit "${FAIL_TOPIC_ZULU:-0}"
 EOF
 
+  # Declared in PREREQUISITE_TOPICS, and alphabetically last, so its position in
+  # the event log is the whole proof that run order is declared.
+  scenario_write_executable "$fixture/workspace/install.sh" <<'EOF'
+#!/bin/sh
+printf '%s\n' topic-workspace >> "$SCENARIO_EVENT_LOG"
+exit "${FAIL_TOPIC_WORKSPACE:-0}"
+EOF
+
   scenario_write_executable "$fixture/_ignored/install.sh" <<'EOF'
 #!/bin/sh
 printf '%s\n' topic-ignored >> "$SCENARIO_EVENT_LOG"
@@ -141,6 +149,7 @@ make_fixture() {
     "$fixture/_macos" \
     "$fixture/alpha" \
     "$fixture/zulu" \
+    "$fixture/workspace" \
     "$fixture/_ignored" \
     "$fixture/homebrew" \
     "$fixture/git" \
@@ -248,7 +257,7 @@ test_bootstrap_sequence() {
   assert_before "$fixture/events.log" hostname homebrew-installer
   assert_before "$fixture/events.log" 'brew tap nikitabobko/tap' 'brew trust --tap'
   assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
-  assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
+  assert_before "$fixture/events.log" 'brew bundle --file' topic-workspace
   assert_before "$fixture/events.log" topic-alpha topic-zulu
   assert_count "$fixture/events.log" homebrew-installer 1
   assert_not_contains "$fixture/events.log" 'git '
@@ -537,7 +546,39 @@ test_command_adapters() {
   assert_not_contains "$edit_fixture/events.log" 'git '
 }
 
+test_prerequisite_topics_run_first() {
+  local fixture
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
+
+  # workspace sorts last and runs first; alpha and zulu keep catalog order.
+  assert_before "$fixture/events.log" topic-workspace topic-alpha
+  assert_before "$fixture/events.log" topic-workspace topic-zulu
+  assert_before "$fixture/events.log" topic-alpha topic-zulu
+}
+
+test_unknown_prerequisite_topic_stops_the_run() {
+  local fixture
+
+  fixture=$(make_fixture)
+  rm -rf "$fixture/workspace"
+
+  if invoke "$fixture" "$fixture/_scripts/setup" bootstrap; then
+    return 1
+  fi
+
+  assert_contains "$fixture/stderr.log" \
+    'declared prerequisite topic has no installer: workspace'
+  assert_not_contains "$fixture/events.log" topic-alpha
+  assert_not_contains "$fixture/stdout.log" 'setup bootstrap complete'
+}
+
 scenario_run 'setup rejects unknown modes' test_setup_usage
+scenario_run 'declared prerequisite topics run before the remainder' \
+  test_prerequisite_topics_run_first
+scenario_run 'a declared prerequisite without an installer stops the run' \
+  test_unknown_prerequisite_topic_stops_the_run
 scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
 scenario_run 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
 scenario_run 'standard modes never open apps or launch the checklist' \

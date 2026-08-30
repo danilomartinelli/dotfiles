@@ -57,6 +57,12 @@ _Avoid_: generated, generated state
 
 ### Application
 
+**Prerequisite topic**:
+A topic whose installer must run before the topics that depend on state it
+creates, so its place in the run order is declared rather than inherited from
+its name.
+_Avoid_: ordered topic, priority topic, first-run topic
+
 **Run-once step**:
 An installer step that rebuilds state a person may have rearranged by hand, so
 it applies on the first run only. Every other step is safe to repeat, which is

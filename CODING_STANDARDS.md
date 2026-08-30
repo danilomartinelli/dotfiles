@@ -151,6 +151,13 @@ it with `installer_mark_applied`, both keyed by a short topic key. `DOTFILES_RES
 re-arms one or more steps by key, or every step with `all`; nothing else may
 define a per-topic reset variable.
 
+Installer run order is declared, not alphabetical. `_scripts/setup` names the
+prerequisite topics — those whose installers create state a later installer
+consumes — and runs them before the rest, which follow in catalog order. Add a
+topic to that list when another installer would otherwise read state that does
+not exist yet; do not work around the ordering by recreating that state inside
+the dependent installer.
+
 ## Zsh configuration
 
 - Treat interactive Zsh as a reloadable module graph, not a one-shot script.
