@@ -21,6 +21,7 @@ brew 'awscli'                       # AWS command-line interface
 brew 'bat'                          # Syntax-highlighting `cat` replacement
 brew 'bitwarden-cli'                # Bitwarden command-line client
 brew 'btop'                         # Process and resource monitor
+brew 'cloudflared'                  # Cloudflare Tunnel client for exposing local services
 brew 'cocoapods'                    # Cocoa dependency manager for iOS/macOS projects (React Native)
 brew 'coreutils'                    # GNU core utilities, including `gls` and `gdate`
 brew 'defaultbrowser'               # Inspect or change the macOS default browser
@@ -82,6 +83,7 @@ cask 'android-studio'               # Android development IDE
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
 cask 'lens'                         # Kubernetes IDE
 cask 'linear'                       # Project management and issue tracking
+cask 'openchamber'                  # Desktop and web interface for OpenCode agents
 cask 'postman'                      # API development and testing tool
 cask 'tableplus'                    # Database management tool
 cask 'zed'                          # High-performance collaborative code editor

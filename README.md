@@ -163,6 +163,7 @@ is its description. Run the renderer after changing a declaration;
 | `bat`                     | Syntax-highlighting `cat` replacement                             |
 | `bitwarden-cli`           | Bitwarden command-line client                                     |
 | `btop`                    | Process and resource monitor                                      |
+| `cloudflared`             | Cloudflare Tunnel client for exposing local services              |
 | `cocoapods`               | Cocoa dependency manager for iOS/macOS projects (React Native)    |
 | `coreutils`               | GNU core utilities, including `gls` and `gdate`                   |
 | `defaultbrowser`          | Inspect or change the macOS default browser                       |
@@ -231,7 +232,7 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 
 | Group                     | Homebrew casks                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `lens`, `linear`, `postman`, `tableplus`, `zed`                                |
+| Development               | `android-studio`, `chatgpt`, `lens`, `linear`, `openchamber`, `postman`, `tableplus`, `zed`                 |
 | Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                         |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
@@ -317,18 +318,19 @@ through their preferred Git subcommand form.
 
 ### General utilities
 
-| Command           | Usage and purpose                                                 |
-| ----------------- | ----------------------------------------------------------------- |
-| `battery-status`  | Print the macOS battery indicator used by the prompt              |
-| `dns-flush`       | Flush the macOS DNS cache with `sudo`                             |
-| `dot`             | Run normal dotfiles maintenance                                   |
-| `e`               | `e [path]`: open a path or the current directory in `$EDITOR`     |
-| `headers`         | `headers URL`: print HTTP response headers                        |
-| `keyclu-import`   | Open the tracked KeyClu shortcut collection for import            |
-| `nix-install`     | Explicitly install Nix; never runs during bootstrap or `dot`      |
-| `set-defaults`    | Apply tracked macOS preferences                                   |
-| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity   |
-| `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key |
+| Command            | Usage and purpose                                                             |
+| ------------------ | ----------------------------------------------------------------------------- |
+| `battery-status`   | Print the macOS battery indicator used by the prompt                          |
+| `dns-flush`        | Flush the macOS DNS cache with `sudo`                                         |
+| `dot`              | Run normal dotfiles maintenance                                               |
+| `e`                | `e [path]`: open a path or the current directory in `$EDITOR`                 |
+| `headers`          | `headers URL`: print HTTP response headers                                    |
+| `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                        |
+| `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                  |
+| `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary |
+| `set-defaults`     | Apply tracked macOS preferences                                               |
+| `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity               |
+| `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key             |
 
 ### Git utilities
 
@@ -467,16 +469,17 @@ de-duplicated.
 
 ### Configuration ownership
 
-| Configuration         | Installed location            | Ownership rule                                            |
-| --------------------- | ----------------------------- | --------------------------------------------------------- |
-| Private environment   | `~/.localrc`                  | Generated locally, mode `600`, never committed            |
-| Shared shell defaults | `.commonrc`                   | Tracked and secret-free                                   |
-| Git identity          | `git/gitconfig.local.symlink` | Generated locally and gitignored                          |
-| Private SSH hosts     | `~/.ssh/config_local`         | Preserved by the tracked SSH config                       |
-| SOPS age identities   | `~/.config/sops/age/`         | Machine-private, mode `600`                               |
-| Zed settings          | `~/.config/zed/settings.json` | Tracked JSONC-compatible config, no plaintext credentials |
-| OpenCode workspace    | `~/.config/opencode`          | Split between dotfiles-owned links and OCX runtime state  |
-| Hermes state          | `~/.hermes`                   | Machine-local runtime state                               |
+| Configuration         | Installed location                    | Ownership rule                                                         |
+| --------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| Private environment   | `~/.localrc`                          | Generated locally, mode `600`, never committed                         |
+| Shared shell defaults | `.commonrc`                           | Tracked and secret-free                                                |
+| Git identity          | `git/gitconfig.local.symlink`         | Generated locally and gitignored                                       |
+| Private SSH hosts     | `~/.ssh/config_local`                 | Preserved by the tracked SSH config                                    |
+| SOPS age identities   | `~/.config/sops/age/`                 | Machine-private, mode `600`                                            |
+| Zed settings          | `~/.config/zed/settings.json`         | Tracked JSONC-compatible config, no plaintext credentials              |
+| OpenCode workspace    | `~/.config/opencode`                  | Split between dotfiles-owned links and OCX runtime state               |
+| Hermes state          | `~/.hermes`                           | Machine-local runtime state                                            |
+| OpenChamber settings  | `~/.config/openchamber/settings.json` | Catalogued keys merged in; relay keys and session state left untouched |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth

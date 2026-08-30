@@ -1,0 +1,47 @@
+# OpenChamber settings catalog consumed by install.sh and its test.
+# Columns: key, value (value is the JSON literal the key holds)
+#
+# The installer merges these keys into ~/.config/openchamber/settings.json and
+# leaves every other key untouched. That file is not linked or copied whole
+# because it also holds relayEncryptionKey, relaySigningKey, security-scoped
+# bookmarks, and per-machine session state, none of which may be tracked.
+#
+# {{DOTFILES_ROOT}} in a value is replaced with the resolved checkout path.
+
+# OpenCode CLI: the wrapper applies the OCX profile that a directly spawned
+# binary would otherwise miss. See bin/opencode-profile.
+opencodeBinary	"{{DOTFILES_ROOT}}/bin/opencode-profile"
+
+# Appearance
+themeId	"catppuccin-dark"
+themeVariant	"dark"
+useSystemTheme	true
+darkThemeId	"catppuccin-dark"
+lightThemeId	"catppuccin-light"
+monoFont	"jetbrains-mono"
+splashBgDark	"#1E1E2E"
+splashBgLight	"#fff6f4"
+splashFgDark	"#CDD6F4"
+splashFgLight	"#2e314a"
+
+# Notifications
+notificationMode	"hidden-only"
+nativeNotificationsEnabled	true
+notifyOnCompletion	true
+notifyOnError	true
+notifyOnQuestion	true
+notifyOnSubtasks	true
+notificationTemplates	{"completion":{"title":"{agent_name} is ready","message":"{model_name} completed the task"},"error":{"title":"Tool error","message":"{last_message}"},"question":{"title":"Input needed","message":"{last_message}"},"subtask":{"title":"{agent_name} is ready","message":"{model_name} completed the task"}}
+
+# Session and sidebar
+showReasoningTraces	true
+sidebarProjectDisplayMode	"all"
+sidebarProjectSortOrder	"manual"
+sidebarSessionGroupingMode	"by-worktree"
+sidebarShowRecentSection	true
+mobileKeyboardMode	"native"
+usageSelectedModels	{"claude":["Fable"]}
+
+# Desktop host
+desktopKeepAwakeEnabled	true
+desktopLocalPort	57123

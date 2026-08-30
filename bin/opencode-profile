@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# opencode-profile
+#
+# Runs OpenCode with an OCX profile's configuration applied, for hosts that
+# spawn the binary directly instead of going through `ocx opencode`.
+#
+# Desktop hosts such as OpenChamber ask for a path to the OpenCode binary and
+# exec it without a login shell, so they see neither the topic environment nor
+# the profile that `ocx` merges in at launch. `ocx opencode` cannot fill that
+# slot: it consumes -h, -v, and --version itself and prints its profile banner
+# on stdout, which the host then reads as command output.
+#
+# OPENCODE_CONFIG merges over the global ~/.config/opencode/opencode.jsonc
+# instead of replacing it, so the permissions, agents, MCP servers, plugins,
+# and instructions declared there survive while the profile adds model routing.
+#
+# USAGE:
+#   opencode-profile [opencode arguments...]
+#   OCX_PROFILE=boost opencode-profile [opencode arguments...]
+
+set -eu
+
+# shellcheck disable=SC1091 # Loaded from the adapter checkout beside this script.
+. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/adapter-checkout.sh"
+
+# opencode/env.zsh is the single declaration of every OPENCODE_* value and of
+# the default profile, so it is sourced rather than copied here. It must stay
+# POSIX-sourceable for that reason. An explicit OCX_PROFILE still wins.
+requested_profile=${OCX_PROFILE:-}
+# shellcheck disable=SC1091 # Loaded from the resolved dotfiles checkout.
+. "$DOTFILES_ROOT/opencode/env.zsh"
+if [ -n "$requested_profile" ]; then
+  OCX_PROFILE=$requested_profile
+  export OCX_PROFILE
+fi
+
+profile_config=$HOME/.config/opencode/profiles/$OCX_PROFILE/opencode.jsonc
+if [ -f "$profile_config" ]; then
+  OPENCODE_CONFIG=$profile_config
+  export OPENCODE_CONFIG
+else
+  printf 'opencode-profile: no configuration for profile %s; using the global one only\n' \
+    "$OCX_PROFILE" >&2
+fi
+
+brew_prefix=$("$DOTFILES_ROOT/homebrew/_availability.sh" prefix --fallback 2>/dev/null) || brew_prefix=
+mise_binary=$brew_prefix/bin/mise
+
+if [ ! -x "$mise_binary" ]; then
+  echo "opencode-profile: mise not found; install it with 'brew bundle'." >&2
+  exit 1
+fi
+
+opencode_binary=$("$mise_binary" which opencode 2>/dev/null) || opencode_binary=
+if [ -z "$opencode_binary" ] || [ ! -x "$opencode_binary" ]; then
+  echo "opencode-profile: opencode not installed; run 'mise install'." >&2
+  exit 1
+fi
+
+exec "$opencode_binary" "$@"

@@ -106,6 +106,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv`  |
 | Shared OpenCode profile policy                  | `opencode/profiles/_shared/`     |
 | OpenCode profile model routing                  | `opencode/profiles/_routing.tsv` |
+| OpenChamber tracked settings                    | `openchamber/_settings.tsv`      |
 | Public lifecycle and commands                   | `README.md`                      |
 | Coding and validation rules                     | `CODING_STANDARDS.md`            |
 
@@ -191,6 +192,22 @@ which the same check enforces.
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose --pure` catalog. Variants are
 model-specific; do not invent a universal reasoning or performance option.
+
+### OpenChamber
+
+OpenChamber hosts OpenCode in a desktop app and spawns the CLI directly, so it
+sees neither the topic environment nor the profile that `ocx` merges in at
+launch. Its `opencodeBinary` setting therefore points at `bin/opencode-profile`,
+which exports `OPENCODE_CONFIG` for the selected profile. That variable merges
+over the global `opencode.jsonc` instead of replacing it, so model routing
+arrives without displacing the permissions, agents, MCP servers, and plugins
+declared globally. `ocx opencode` cannot fill the slot: it consumes `-h`, `-v`,
+and `--version` itself and prints its profile banner on stdout.
+
+`~/.config/openchamber/settings.json` is merged key by key from
+`openchamber/_settings.tsv`, never linked or copied whole. The same file holds
+`relayEncryptionKey`, `relaySigningKey`, security-scoped bookmarks, and session
+state, none of which may be tracked. Track a preference by adding its row.
 
 ## Editing and simplification
 
