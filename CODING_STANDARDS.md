@@ -287,8 +287,13 @@ the dependent installer.
 - Cover behavior changes with isolated fixtures in `tests/`.
 - Use temporary homes and fake external commands; never consume real
   credentials, package state, application state, or network services.
-- Prefer the shared `tests/_support/shell-scenario.sh` mechanics for new
-  scenario suites.
+- Use the shared `tests/_support/shell-scenario.sh` mechanics: `scenario_run`
+  reports each case and tallies, so one failure never hides the cases after it.
+  A suite defines an assertion of its own only for vocabulary the harness has
+  no business knowing, such as Git refs.
+- `tests/documentation_test.sh` is the one exception, and says so in the file:
+  it accumulates every undocumented surface and reports them together, because
+  listing them one run at a time is the wrong shape for a coverage sweep.
 - Name a test after observable behavior, not an implementation detail.
 - Assert exit status, stdout/stderr ownership, filesystem state, idempotency,
   and destructive boundaries where relevant.

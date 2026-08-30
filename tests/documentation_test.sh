@@ -14,6 +14,10 @@ OPENCODE_ALIASES=$REPOSITORY_ROOT/opencode/aliases.zsh
 # shellcheck disable=SC1091
 source "$(dirname -- "$TEST_PATH")/_support/opencode-catalog.sh"
 
+# This suite deliberately does not use scenario_run. Its job is to list every
+# undocumented surface in one pass, so it accumulates failures and reports them
+# together; stopping at the first missing name would hide the rest and turn one
+# documentation sweep into a dozen runs.
 failures=0
 
 # Print the Markdown section a heading opens, up to the next heading of the

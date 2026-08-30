@@ -83,6 +83,12 @@ assert_not_contains() {
   fi
 }
 
+assert_empty() {
+  local file=$1
+
+  [ ! -s "$file" ] || scenario_fail "Expected $file to be empty"
+}
+
 assert_count() {
   local file=$1
   local pattern=$2

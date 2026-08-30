@@ -1,43 +1,18 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -u
 
 TEST_PATH=${BASH_SOURCE[0]}
-REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
-TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-homebrew-availability-tests.XXXXXX")
-trap 'rm -rf "$TEST_ROOT"' EXIT
-
+TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")" && pwd)
+REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
+# shellcheck source=tests/_support/shell-scenario.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
-source "$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")" && pwd)/_support/stubs.sh"
-
-fail() {
-  printf 'FAIL: %s\n' "$1" >&2
-  exit 1
-}
-
-assert_equal() {
-  local expected=$1 actual=$2 description=$3
-  [[ $actual == "$expected" ]] \
-    || fail "$description (expected '$expected', got '$actual')"
-}
-
-assert_contains() {
-  local file=$1 expected=$2
-  grep -Fq -- "$expected" "$file" \
-    || fail "Expected $file to contain: $expected"
-}
-
-assert_not_contains() {
-  local file=$1 unexpected=$2
-  if grep -Fq -- "$unexpected" "$file"; then
-    fail "Expected $file not to contain: $unexpected"
-  fi
-}
-
-assert_empty() {
-  local file=$1
-  [[ ! -s $file ]] || fail "Expected $file to be empty"
-}
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/stubs.sh"
+scenario_init dotfiles-homebrew-availability-tests
+TEST_ROOT=$SCENARIO_ROOT
 
 new_fixture() {
   FIXTURE=$(mktemp -d "$TEST_ROOT/fixture.XXXXXX")
@@ -126,19 +101,17 @@ install_fake_brew() {
 }
 
 capture_module() {
-  set +e
+  CAPTURED_STATUS=0
   PATH="$FAKE_BIN:/usr/bin:/bin" \
     DOTFILES_HOMEBREW_ROOT="$PLATFORM_ROOT" \
     BREW_TEST_PREFIX="$BREW_TEST_PREFIX" \
     BREW_TEST_PREFIX_MODE="$BREW_TEST_PREFIX_MODE" \
     "$FIXTURE/homebrew/_availability.sh" "$@" \
-    >"$STDOUT_LOG" 2>"$STDERR_LOG"
-  CAPTURED_STATUS=$?
-  set -e
+    >"$STDOUT_LOG" 2>"$STDERR_LOG" || CAPTURED_STATUS=$?
 }
 
 capture_installer() {
-  set +e
+  CAPTURED_STATUS=0
   PATH="$FAKE_BIN:/usr/bin:/bin" \
     TMPDIR="$FIXTURE/tmp" \
     DOTFILES_HOMEBREW_ROOT="$PLATFORM_ROOT" \
@@ -150,9 +123,7 @@ capture_installer() {
     BREW_TEST_INSTALL_TARGET="$BREW_TEST_INSTALL_TARGET" \
     BREW_TEST_TEMPLATE="$BREW_TEMPLATE" \
     "$FIXTURE/homebrew/install.sh" \
-    >"$STDOUT_LOG" 2>"$STDERR_LOG"
-  CAPTURED_STATUS=$?
-  set -e
+    >"$STDOUT_LOG" 2>"$STDERR_LOG" || CAPTURED_STATUS=$?
 }
 
 test_binary_precedence() {
@@ -254,7 +225,7 @@ test_installer_verification() {
   assert_equal 0 "$CAPTURED_STATUS" 'fresh Homebrew installer status'
   assert_contains "$INSTALL_LOG" curl
   assert_contains "$STDOUT_LOG" 'Homebrew installed successfully.'
-  [[ -x $BREW_TEST_INSTALL_TARGET ]] || fail 'Downloaded installer did not create brew'
+  [[ -x $BREW_TEST_INSTALL_TARGET ]] || scenario_fail 'Downloaded installer did not create brew'
 
   new_fixture
   BREW_TEST_INSTALL_MODE=noop
@@ -263,10 +234,9 @@ test_installer_verification() {
   assert_contains "$STDERR_LOG" 'Homebrew installation completed, but brew was not found'
 }
 
-test_binary_precedence
-test_prefix_validation
-test_prefix_fallbacks
-test_usage_contract
-test_installer_verification
-
-printf 'PASS: Homebrew availability interface\n'
+scenario_run 'the brew binary is found by precedence' test_binary_precedence
+scenario_run 'a prefix is validated before it is trusted' test_prefix_validation
+scenario_run 'prefix fallbacks follow the platform roots' test_prefix_fallbacks
+scenario_run 'the usage contract rejects unknown arguments' test_usage_contract
+scenario_run 'the installer verifies brew afterwards' test_installer_verification
+scenario_finish

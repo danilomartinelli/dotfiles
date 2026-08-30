@@ -1,55 +1,37 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -u
 
 TEST_PATH=${BASH_SOURCE[0]}
-REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
+TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")" && pwd)
+REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 BRANCH_STATE_MODULE=$REPOSITORY_ROOT/git/_branch-state.sh
-TEST_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-git-branch-state-tests.XXXXXX")
-trap 'rm -rf "$TEST_ROOT"' EXIT
+# shellcheck source=tests/_support/shell-scenario.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/shell-scenario.sh"
+scenario_init dotfiles-git-branch-state-tests
+TEST_ROOT=$SCENARIO_ROOT
 
-fail() {
-  printf 'FAIL: %s\n' "$1" >&2
-  exit 1
-}
-
-assert_equal() {
-  local expected=$1 actual=$2 description=$3
-  [[ $actual == "$expected" ]] \
-    || fail "$description (expected '$expected', got '$actual')"
-}
-
-assert_contains() {
-  local file=$1 expected=$2
-  grep -Fq -- "$expected" "$file" \
-    || fail "Expected $file to contain: $expected"
-}
-
-assert_not_contains() {
-  local file=$1 unexpected=$2
-  if grep -Fq -- "$unexpected" "$file"; then
-    fail "Expected $file not to contain: $unexpected"
-  fi
-}
-
+# Git refs are this suite's own vocabulary; everything else it asserts comes
+# from the shared harness.
 assert_ref_exists() {
   local repository=$1 ref=$2
   git -C "$repository" show-ref --verify --quiet "$ref" \
-    || fail "Expected $repository to contain ref $ref"
+    || scenario_fail "Expected $repository to contain ref $ref"
 }
 
 assert_ref_missing() {
   local repository=$1 ref=$2
   if git -C "$repository" show-ref --verify --quiet "$ref"; then
-    fail "Expected $repository not to contain ref $ref"
+    scenario_fail "Expected $repository not to contain ref $ref"
   fi
 }
 
+# Several cases assert both the status and what was printed, so the status is
+# captured rather than asserted in place.
 capture_status() {
-  set +e
-  "$@"
-  CAPTURED_STATUS=$?
-  set -e
+  CAPTURED_STATUS=0
+  "$@" || CAPTURED_STATUS=$?
 }
 
 new_fixture() {
@@ -96,7 +78,7 @@ query_state_at() {
   shift 2
 
   (
-    cd "$directory"
+    cd "$directory" || exit 1
     # shellcheck disable=SC1090 # The module path is resolved at runtime.
     . "$BRANCH_STATE_MODULE"
     "$operation" git "$@"
@@ -108,7 +90,7 @@ invoke_adapter_at() {
   shift 2
 
   (
-    cd "$directory"
+    cd "$directory" || exit 1
     HOME=$TEST_HOME \
       PATH="$FAKE_BIN:$PATH" \
       PBCOPY_CAPTURE=$PBCOPY_CAPTURE \
@@ -124,7 +106,7 @@ invoke_adapter() {
 
 invoke_need_push() {
   (
-    cd "$WORKTREE"
+    cd "$WORKTREE" || exit 1
     HOME=$TEST_HOME DOTFILES_ROOT=$REPOSITORY_ROOT zsh -d -f -c '
       autoload -U colors
       colors
@@ -240,12 +222,12 @@ test_guarded_adapters_run_inside_a_worktree() {
   printf '%s\n' untracked >"$WORKTREE/new.txt"
   invoke_adapter git-all
   git -C "$WORKTREE" diff --cached --name-only | grep -q new.txt \
-    || fail 'git-all did not stage the new file'
+    || scenario_fail 'git-all did not stage the new file'
 
   git -C "$WORKTREE" commit -qm 'stage everything'
   invoke_adapter git-undo
   git -C "$WORKTREE" diff --cached --name-only | grep -q new.txt \
-    || fail 'git-undo did not restore the staged change'
+    || scenario_fail 'git-undo did not restore the staged change'
 }
 
 test_promote_and_track() {
@@ -335,11 +317,11 @@ test_unpushed_copy_and_prompt() {
     "Remote-tracking branch 'origin/main' is not available locally. Run 'git fetch origin'."
 
   invoke_need_push
-  [[ ! -s $STDOUT_LOG ]] || fail 'Prompt should be quiet without a cached origin ref'
+  [[ ! -s $STDOUT_LOG ]] || scenario_fail 'Prompt should be quiet without a cached origin ref'
 
   git -C "$WORKTREE" checkout --detach -q
   invoke_need_push
-  [[ ! -s $STDOUT_LOG ]] || fail 'Prompt should be quiet in detached HEAD state'
+  [[ ! -s $STDOUT_LOG ]] || scenario_fail 'Prompt should be quiet in detached HEAD state'
 }
 
 test_nuke() {
@@ -356,18 +338,17 @@ test_nuke() {
   assert_contains "$STDERR_LOG" "Info: Branch 'absent' does not exist on origin."
 }
 
-test_branch_state_contract
-echo 'ok 1 - branch-state queries distinguish repository, ref, and remote states'
-test_current_branch_adapter_errors
-echo 'ok 2 - current-branch adapters reject detached HEAD consistently'
-test_promote_and_track
-echo 'ok 3 - promote and track enforce matching origin state'
-test_unpushed_copy_and_prompt
-echo 'ok 4 - unpushed commands, clipboard, and prompt share cached state'
-test_nuke
-echo 'ok 5 - nuke deletes exact local and live origin branches'
-test_worktree_guard_covers_the_git_directory
-echo 'ok 6 - every command adapter refuses outside a work tree'
-test_guarded_adapters_run_inside_a_worktree
-echo 'ok 7 - guarded adapters still do their work inside a work tree'
-echo '1..7'
+scenario_run 'branch-state queries distinguish repository, ref, and remote states' \
+  test_branch_state_contract
+scenario_run 'current-branch adapters reject detached HEAD consistently' \
+  test_current_branch_adapter_errors
+scenario_run 'promote and track enforce matching origin state' \
+  test_promote_and_track
+scenario_run 'unpushed commands, clipboard, and prompt share cached state' \
+  test_unpushed_copy_and_prompt
+scenario_run 'nuke deletes exact local and live origin branches' test_nuke
+scenario_run 'every command adapter refuses outside a work tree' \
+  test_worktree_guard_covers_the_git_directory
+scenario_run 'guarded adapters still do their work inside a work tree' \
+  test_guarded_adapters_run_inside_a_worktree
+scenario_finish
