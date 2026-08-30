@@ -11,8 +11,9 @@ scenario_init dotfiles-macos-defaults-tests
 make_fixture() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
-  mkdir -p "$fixture/_macos" "$fixture/fake-bin" "$fixture/home/Library"
+  mkdir -p "$fixture/_macos" "$fixture/_scripts" "$fixture/fake-bin" "$fixture/home/Library"
   cp "$REPOSITORY_ROOT/_macos/set-defaults.sh" "$fixture/_macos/set-defaults.sh"
+  cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   chmod +x "$fixture/_macos/set-defaults.sh"
   cat >"$fixture/_macos/defaults.tsv" <<'EOF'
 # test catalog

@@ -6,6 +6,9 @@ set -eu
 SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
 CATALOG=${DOTFILES_MACOS_DEFAULTS_CATALOG:-$SCRIPT_DIR/defaults.tsv}
 
+# shellcheck source=_scripts/catalog.sh
+. "$SCRIPT_DIR/../_scripts/catalog.sh"
+
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "Error: This script is only for macOS" >&2
   exit 1
@@ -20,42 +23,38 @@ expand_value() {
   printf '%s\n' "$1" | sed "s|\$HOME|$HOME|g"
 }
 
-apply_catalog() {
-  while IFS="$(printf '\t')" read -r domain key type value || [ -n "${domain:-}" ]; do
-    case "${domain:-}" in
-      '' | \#*)
-        domain=
-        continue
-        ;;
-    esac
+apply_catalog_row() {
+  domain=$1
+  key=$2
+  type=$3
+  value=$4
 
-    if [ -z "${key:-}" ] || [ -z "${type:-}" ] || [ -z "${value:-}" ]; then
-      echo "Error: invalid catalog row: $domain	$key	$type	$value" >&2
+  if [ -z "$key" ] || [ -z "$type" ] || [ -z "$value" ]; then
+    echo "Error: invalid catalog row: $domain $key    $type   $value" >&2
+    exit 1
+  fi
+
+  value=$(expand_value "$value")
+
+  case "$type" in
+    bool)
+      defaults write "$domain" "$key" -bool "$value"
+      ;;
+    int)
+      defaults write "$domain" "$key" -int "$value"
+      ;;
+    float)
+      defaults write "$domain" "$key" -float "$value"
+      ;;
+    string)
+      defaults write "$domain" "$key" -string "$value"
+      ;;
+    *)
+      echo "Error: unknown catalog type '$type' for $domain $key" >&2
       exit 1
-    fi
-
-    value=$(expand_value "$value")
-
-    case "$type" in
-      bool)
-        defaults write "$domain" "$key" -bool "$value"
-        ;;
-      int)
-        defaults write "$domain" "$key" -int "$value"
-        ;;
-      float)
-        defaults write "$domain" "$key" -float "$value"
-        ;;
-      string)
-        defaults write "$domain" "$key" -string "$value"
-        ;;
-      *)
-        echo "Error: unknown catalog type '$type' for $domain $key" >&2
-        exit 1
-        ;;
-    esac
-    domain=
-  done <"$CATALOG"
+      ;;
+  esac
+  return 0
 }
 
 # The screencapture location default is silently ignored by macOS unless the
@@ -102,7 +101,7 @@ restart_services() {
 }
 
 ensure_screenshot_dir
-apply_catalog
+catalog_each_row "$CATALOG" apply_catalog_row
 show_library_folder
 set_default_browser
 restart_services

@@ -124,6 +124,12 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   bootstrap and update.
 - Source `_scripts/installer-preamble.sh` immediately after shell error-mode
   setup and use its guards, messages, and linking wrapper.
+- Read every tab-separated catalog through `catalog_each_row` from
+  `_scripts/catalog.sh`, which the preamble sources. No consumer writes its
+  own `read` loop.
+- Read every tab-separated catalog through `catalog_each_row` from
+  `_scripts/catalog.sh`, which the preamble sources. No consumer writes its
+  own `read` loop.
 - Do not duplicate checkout resolution, Darwin detection, dependency hints,
   output conventions, or conflict handling in individual topics.
 - Only `*.symlink` files and directories are linked automatically.

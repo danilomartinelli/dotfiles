@@ -14,6 +14,9 @@ HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checklist.tsv}
 
+# shellcheck source=_scripts/catalog.sh
+. "$DOTFILES_ROOT/_scripts/catalog.sh"
+
 # Topics whose installers create state that later installers consume, in the
 # order they must run. Everything else follows in catalog order. Run order is
 # orchestration and lives here: the catalog classifies topics by name, and
@@ -276,45 +279,40 @@ CHECKLIST_OPEN_CANDIDATES=()
 CHECKLIST_LOADED=false
 
 load_checklist() {
-  local kind app label note
-
   [ "$CHECKLIST_LOADED" = false ] || return 0
 
-  if [ ! -f "$CHECKLIST_CATALOG" ]; then
-    fail "checklist catalog not found: $CHECKLIST_CATALOG"
-  fi
-
-  while IFS=$'\t' read -r kind app label note || [ -n "${kind:-}" ]; do
-    case "${kind:-}" in
-      '' | \#*)
-        kind=
-        continue
-        ;;
-    esac
-
-    if [ -z "${app:-}" ] || [ -z "${label:-}" ] || [ -z "${note:-}" ]; then
-      fail "invalid checklist row: $kind $label"
-    fi
-
-    note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
-
-    case "$kind" in
-      credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;
-      shell) CHECKLIST_SHELL+=("$label"$'\t'"$note") ;;
-      app)
-        if [ "$app" = - ]; then
-          CHECKLIST_MANUAL+=("$label"$'\t'"$note")
-        else
-          CHECKLIST_OPENED+=("$label"$'\t'"$note")
-          CHECKLIST_OPEN_CANDIDATES+=("$app")
-        fi
-        ;;
-      *) fail "unknown checklist kind '$kind' for $label" ;;
-    esac
-    kind=
-  done <"$CHECKLIST_CATALOG"
+  catalog_each_row "$CHECKLIST_CATALOG" load_checklist_row \
+    || fail "checklist catalog not found: $CHECKLIST_CATALOG"
 
   CHECKLIST_LOADED=true
+}
+
+load_checklist_row() {
+  local kind=$1
+  local app=$2
+  local label=$3
+  local note=$4
+
+  if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
+    fail "invalid checklist row: $kind $label"
+  fi
+
+  note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
+
+  case "$kind" in
+    credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;
+    shell) CHECKLIST_SHELL+=("$label"$'\t'"$note") ;;
+    app)
+      if [ "$app" = - ]; then
+        CHECKLIST_MANUAL+=("$label"$'\t'"$note")
+      else
+        CHECKLIST_OPENED+=("$label"$'\t'"$note")
+        CHECKLIST_OPEN_CANDIDATES+=("$app")
+      fi
+      ;;
+    *) fail "unknown checklist kind '$kind' for $label" ;;
+  esac
+  return 0
 }
 
 # Open the first candidate that exists. Candidates are "|"-separated so an app

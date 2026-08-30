@@ -44,63 +44,58 @@ entry_label() {
   basename -- "$1" .app
 }
 
-apply_catalog() {
-  while IFS="$(printf '\t')" read -r section path view display || [ -n "${section:-}" ]; do
-    case "${section:-}" in
-      '' | \#*)
-        section=
-        continue
-        ;;
-    esac
+# One catalog row. Always returns zero: a missing app is a fact about this
+# machine, not a reason to stop rebuilding the rest of the Dock.
+apply_catalog_row() {
+  section=$1
+  entry_declared=$2
+  view=$3
+  display=$4
 
-    if [ -z "${path:-}" ] || [ -z "${view:-}" ] || [ -z "${display:-}" ]; then
-      installer_fail "invalid catalog row: $section	$path	$view	$display"
-    fi
+  if [ -z "$entry_declared" ] || [ -z "$view" ] || [ -z "$display" ]; then
+    installer_fail "invalid catalog row: $section $entry_declared   $view   $display"
+  fi
 
-    case "$section" in
-      apps | others) ;;
-      *) installer_fail "unknown catalog section '$section' for $path" ;;
-    esac
+  case "$section" in
+    apps | others) ;;
+    *) installer_fail "unknown catalog section '$section' for $entry_declared" ;;
+  esac
 
-    entry_path=$(expand_path "$path")
-    entry_name=$(entry_label "$entry_path")
+  entry_path=$(expand_path "$entry_declared")
+  entry_name=$(entry_label "$entry_path")
 
-    if [ ! -e "$entry_path" ]; then
-      installer_warn "Skipping $entry_name (not found at $entry_path)"
-      section=
-      continue
-    fi
+  if [ ! -e "$entry_path" ]; then
+    installer_warn "Skipping $entry_name (not found at $entry_path)"
+    return 0
+  fi
 
-    set -- --add "$entry_path" --section "$section"
+  set -- --add "$entry_path" --section "$section"
 
-    case "$view" in
-      -) ;;
-      grid | fan | list | auto) set -- "$@" --view "$view" ;;
-      *) installer_fail "unknown catalog view '$view' for $entry_path" ;;
-    esac
+  case "$view" in
+    -) ;;
+    grid | fan | list | auto) set -- "$@" --view "$view" ;;
+    *) installer_fail "unknown catalog view '$view' for $entry_path" ;;
+  esac
 
-    case "$display" in
-      -) ;;
-      folder | stack) set -- "$@" --display "$display" ;;
-      *) installer_fail "unknown catalog display '$display' for $entry_path" ;;
-    esac
+  case "$display" in
+    -) ;;
+    folder | stack) set -- "$@" --display "$display" ;;
+    *) installer_fail "unknown catalog display '$display' for $entry_path" ;;
+  esac
 
-    # </dev/null keeps dockutil away from the catalog this loop is reading.
-    if dockutil "$@" --no-restart >/dev/null 2>&1 </dev/null; then
-      installer_success "Added $entry_name"
-    else
-      installer_warn "Failed to add $entry_name"
-    fi
-
-    section=
-  done <"$CATALOG"
+  if dockutil "$@" --no-restart >/dev/null 2>&1; then
+    installer_success "Added $entry_name"
+  else
+    installer_warn "Failed to add $entry_name"
+  fi
+  return 0
 }
 
 if ! dockutil --remove all --no-restart >/dev/null 2>&1 </dev/null; then
   installer_warn "Failed to clear dock"
 fi
 
-apply_catalog
+catalog_each_row "$CATALOG" apply_catalog_row
 
 if killall Dock >/dev/null 2>&1; then
   installer_success "Dock restarted"

@@ -169,6 +169,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
   cp "$REPOSITORY_ROOT/_scripts/_checklist.tsv" "$fixture/_scripts/_checklist.tsv"
+  cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"

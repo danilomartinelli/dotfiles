@@ -143,6 +143,17 @@ Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
 
+Every tab-separated catalog is read through `_scripts/catalog.sh`, which the
+preamble sources for installers and which `_macos/set-defaults.sh` and
+`_scripts/setup` source directly. Call
+`catalog_each_row <catalog> <handler>` and write a handler that takes the
+row's four columns; do not write a `read` loop of your own. The reader owns
+what counts as a comment, delivery of a final row with no trailing newline,
+and reading on file descriptor 3 so a handler running `duti`, `dockutil`, or
+`ocx` cannot consume the rows still to come. A handler must return zero:
+consumers run under `set -e`, so a non-zero return stops the run rather than
+skipping a row.
+
 A tool's configuration directory is `installer_config_dir <tool>`, which
 resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
 not reintroduce that variable in an installer, a `*.zsh` file, or a tracked
@@ -281,6 +292,7 @@ the dependent installer.
 | Checkout resolution                                             | `_scripts/test-checkout-root`                                                                                |
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                   |
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
+| Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh` |
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                               |

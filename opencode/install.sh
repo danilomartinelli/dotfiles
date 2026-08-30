@@ -77,13 +77,12 @@ configure_profile() {
     "$profile_source" "$profile_target"
 }
 
-# Apply the catalog in file order, so a clone source is always materialized
-# before the profiles that clone it. Reading on file descriptor 3 leaves stdin
-# free, so an ocx call below can never consume the rows still to be applied.
-while IFS="$(printf '\t')" read -r catalog_kind catalog_name catalog_clone <&3; do
-  case "$catalog_kind" in
-    '' | \#*) continue ;;
-  esac
+# One catalog row, applied in file order so a clone source is always
+# materialized before the profiles that clone it.
+configure_catalog_row() {
+  catalog_kind=$1
+  catalog_name=$2
+  catalog_clone=$3
 
   if [ -z "$catalog_name" ] || [ -z "$catalog_clone" ]; then
     installer_fail "invalid OpenCode catalog row: $catalog_kind $catalog_name"
@@ -104,6 +103,9 @@ while IFS="$(printf '\t')" read -r catalog_kind catalog_name catalog_clone <&3; 
       installer_fail "unknown OpenCode catalog kind: $catalog_kind"
       ;;
   esac
-done 3<"$CATALOG"
+  return 0
+}
+
+catalog_each_row "$CATALOG" configure_catalog_row
 
 installer_success "OpenCode configured"

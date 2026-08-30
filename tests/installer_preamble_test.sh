@@ -11,6 +11,7 @@ scenario_init dotfiles-installer-preamble-tests
 
 PREAMBLE=$REPOSITORY_ROOT/_scripts/installer-preamble.sh
 LINK_CONFIG=$REPOSITORY_ROOT/_scripts/link-config
+CATALOG_READER=$REPOSITORY_ROOT/_scripts/catalog.sh
 
 make_checkout() {
   local checkout
@@ -23,6 +24,7 @@ make_checkout() {
     "$checkout/home"
 
   cp "$PREAMBLE" "$checkout/_scripts/installer-preamble.sh"
+  cp "$CATALOG_READER" "$checkout/_scripts/catalog.sh"
   cp "$LINK_CONFIG" "$checkout/_scripts/link-config"
   chmod +x "$checkout/_scripts/link-config"
 

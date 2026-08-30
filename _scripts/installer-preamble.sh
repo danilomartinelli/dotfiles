@@ -24,6 +24,10 @@ DOTFILES_ROOT=$_installer_dotfiles_root
 export TOPIC_DIR DOTFILES_ROOT
 unset _installer_anchor _installer_topic_dir _installer_dotfiles_root INSTALLER_ANCHOR
 
+# Every installer that reads a catalog reads it through this module.
+# shellcheck source=_scripts/catalog.sh
+. "$DOTFILES_ROOT/_scripts/catalog.sh"
+
 installer_require_darwin() {
   if [ "$(uname -s)" != "Darwin" ]; then
     exit 0
@@ -143,46 +147,10 @@ installer_apply_associations() {
   _installer_assoc_name=$1
   _installer_assoc_bundle=$2
   _installer_assoc_success=$3
-  _installer_assoc_catalog=$TOPIC_DIR/_associations.tsv
-
-  if [ ! -r "$_installer_assoc_catalog" ]; then
-    installer_fail "association catalog not readable: $_installer_assoc_catalog"
-  fi
-
   _installer_assoc_failed=0
-  _installer_assoc_id=''
-  while IFS="$(printf '\t')" read -r _installer_assoc_id _installer_assoc_role \
-    _installer_assoc_failure _installer_assoc_label \
-    || [ -n "${_installer_assoc_id:-}" ]; do
-    case $_installer_assoc_id in
-      '' | '#'*) continue ;;
-    esac
 
-    # An unknown mode is a catalog bug, and defaulting it either way would
-    # decide silently whether a failure is heard.
-    case ${_installer_assoc_failure:-} in
-      report | ignore) ;;
-      *)
-        installer_fail \
-          "unknown failure mode '${_installer_assoc_failure:-}' for $_installer_assoc_id in $_installer_assoc_catalog"
-        ;;
-    esac
-
-    # </dev/null keeps duti away from the catalog this loop is reading.
-    if duti -s "$_installer_assoc_bundle" "$_installer_assoc_id" \
-      "$_installer_assoc_role" 2>/dev/null </dev/null; then
-      continue
-    fi
-
-    [ "$_installer_assoc_failure" = report ] || continue
-
-    if [ "$_installer_assoc_label" = '-' ]; then
-      _installer_assoc_label=$_installer_assoc_id
-    fi
-    installer_warn \
-      "Failed to set $_installer_assoc_name as default for $_installer_assoc_label"
-    _installer_assoc_failed=$((_installer_assoc_failed + 1))
-  done <"$_installer_assoc_catalog"
+  catalog_each_row "$TOPIC_DIR/_associations.tsv" _installer_apply_association \
+    || installer_fail "association catalog not readable: $TOPIC_DIR/_associations.tsv"
 
   if [ "$_installer_assoc_failed" -eq 0 ]; then
     installer_success "$_installer_assoc_success"
@@ -192,8 +160,41 @@ installer_apply_associations() {
   fi
 
   unset _installer_assoc_name _installer_assoc_bundle _installer_assoc_success \
-    _installer_assoc_catalog _installer_assoc_failed _installer_assoc_id \
-    _installer_assoc_role _installer_assoc_failure _installer_assoc_label
+    _installer_assoc_failed
+}
+
+# One association row. Counts into _installer_assoc_failed, which the caller
+# owns, and always returns zero so a reported failure does not stop the run.
+_installer_apply_association() {
+  _installer_assoc_id=$1
+  _installer_assoc_role=$2
+  _installer_assoc_failure=$3
+  _installer_assoc_label=$4
+
+  # An unknown mode is a catalog bug, and defaulting it either way would
+  # decide silently whether a failure is heard.
+  case $_installer_assoc_failure in
+    report | ignore) ;;
+    *)
+      installer_fail \
+        "unknown failure mode '$_installer_assoc_failure' for $_installer_assoc_id in $TOPIC_DIR/_associations.tsv"
+      ;;
+  esac
+
+  if duti -s "$_installer_assoc_bundle" "$_installer_assoc_id" \
+    "$_installer_assoc_role" 2>/dev/null; then
+    return 0
+  fi
+
+  [ "$_installer_assoc_failure" = report ] || return 0
+
+  if [ "$_installer_assoc_label" = '-' ]; then
+    _installer_assoc_label=$_installer_assoc_id
+  fi
+  installer_warn \
+    "Failed to set $_installer_assoc_name as default for $_installer_assoc_label"
+  _installer_assoc_failed=$((_installer_assoc_failed + 1))
+  return 0
 }
 
 installer_link_config() {
