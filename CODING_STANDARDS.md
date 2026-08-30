@@ -151,6 +151,14 @@ Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
 
+Two modules resolve the checkout, and which one a file uses follows from how it
+is reached. A `bin/` adapter or a `*.zsh` startup file is reached through
+`PATH`, so it sources `_scripts/adapter-checkout.sh` and resolves through
+`dotfiles-root.symlink`. A topic installer is always
+`<checkout>/<topic>/install.sh`, so the preamble resolves `$0/..` and consults
+no resolver. See
+`docs/adr/0009-checkout-resolution-has-two-spellings-on-purpose.md`.
+
 `_scripts/link-config --status <source> <target>` reports what an existing
 target is — `current`, `conflict`, or `absent` — and changes nothing. It is how
 `_scripts/link-dotfiles` decides which conflict policy to ask for; no caller
