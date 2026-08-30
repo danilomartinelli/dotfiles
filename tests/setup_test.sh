@@ -313,68 +313,15 @@ test_checklist_opening_requires_interactive_opt_in() {
     "[ \"\$#\" -eq 2 ] && [ \"\$1\" = checklist ] && [ \"\$2\" = --open-apps ]"
 }
 
-# The app column of the checklist catalog is the single owner of what gets
-# opened and of which heading a row prints under, which is only true while
-# neither setup nor the checklist module names an application itself.
-test_setup_states_no_application_paths() {
+# Setup decides when the checklist runs and nothing about what it holds. What
+# the checklist does with a row belongs to tests/checklist_test.sh, which drives
+# the module through DOTFILES_CHECKLIST_CATALOG rather than reading its source.
+test_setup_names_no_application_or_checklist_content() {
   local fixture
 
   fixture=$(make_fixture)
   assert_not_contains "$fixture/_scripts/setup" '/Applications/'
-  assert_not_contains "$fixture/_scripts/checklist" '/Applications/'
-  assert_contains "$fixture/_scripts/checklist" 'CHECKLIST_CATALOG'
-  # Setup decides when the checklist runs and nothing about what it holds.
   assert_not_contains "$fixture/_scripts/setup" 'CHECKLIST_OPEN_CANDIDATES'
-}
-
-test_checklist_catalog_rows_are_well_formed() {
-  local catalog=$REPOSITORY_ROOT/_scripts/_checklist.tsv
-  local kind app label note candidate
-
-  [ -f "$catalog" ] || scenario_fail "checklist catalog not found: $catalog"
-
-  while IFS=$'\t' read -r kind app label note || [ -n "${kind:-}" ]; do
-    case "${kind:-}" in
-      '' | \#*)
-        kind=
-        continue
-        ;;
-    esac
-
-    [ -n "${app:-}" ] && [ -n "${label:-}" ] && [ -n "${note:-}" ] \
-      || scenario_fail "incomplete checklist row: $kind $label"
-
-    case "$kind" in
-      credential | app | shell) ;;
-      *) scenario_fail "unknown checklist kind '$kind' for $label" ;;
-    esac
-
-    if [ "$kind" != app ] && [ "$app" != - ]; then
-      scenario_fail "$kind row must not declare an app: $label"
-    fi
-
-    if [ "$app" != - ]; then
-      while IFS= read -r candidate; do
-        case "$candidate" in
-          /*.app) ;;
-          *) scenario_fail "checklist candidate is not an app path: $candidate" ;;
-        esac
-      done <<<"${app//|/$'\n'}"
-    fi
-    kind=
-  done <"$catalog"
-}
-
-# The roles named here are the ones git/install.sh and sops/install.sh look
-# for; naming any other role tells a person to create keys those installers
-# will never find.
-test_checklist_names_the_key_roles_the_installers_expect() {
-  local catalog=$REPOSITORY_ROOT/_scripts/_checklist.tsv
-
-  assert_contains "$catalog" 'ssh-key-create default'
-  assert_contains "$catalog" 'sops-key-create default'
-  assert_contains "$REPOSITORY_ROOT/git/install.sh" 'ssh-key-create default'
-  assert_contains "$REPOSITORY_ROOT/sops/install.sh" 'sops-key-create default'
 }
 
 test_app_installers_never_launch_apps_implicitly() {
@@ -613,12 +560,8 @@ scenario_run 'checklist opening requires explicit interactive opt-in' \
   test_checklist_opening_requires_interactive_opt_in
 scenario_run 'app installers never launch apps implicitly' \
   test_app_installers_never_launch_apps_implicitly
-scenario_run 'setup states no application paths of its own' \
-  test_setup_states_no_application_paths
-scenario_run 'checklist catalog rows are well formed' \
-  test_checklist_catalog_rows_are_well_formed
-scenario_run 'checklist names the key roles the installers expect' \
-  test_checklist_names_the_key_roles_the_installers_expect
+scenario_run 'setup names no application paths or checklist content' \
+  test_setup_names_no_application_or_checklist_content
 scenario_run 'legacy Homebrew cleanup precedes update and upgrade' test_legacy_homebrew_cleanup_precedes_upgrade
 scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
 scenario_run 'critical failures stop the run' test_critical_failures_stop
