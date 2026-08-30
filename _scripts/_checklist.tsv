@@ -1,0 +1,49 @@
+# Post-bootstrap checklist catalog consumed by _scripts/setup.
+# Columns: kind, app, label, note (kind is credential|app|shell)
+#
+# The app column is the single owner of what `checklist --open-apps` opens AND
+# of which heading an app row prints under: a row with candidate paths is
+# opened and listed as opened, a "-" row is listed as needing in-app setup.
+# The two lists cannot drift apart because they are one column.
+#
+# Candidates are separated by "|" and the first one that exists is opened, so a
+# tool shipping under more than one name stays a single row.
+#
+# An app may appear twice when it needs both: one row that opens it and one "-"
+# row for the step that follows. Notes expand $DOTFILES_ROOT, nothing else.
+# Row order within a kind is display order.
+
+credential	-	ssh-key-create default	Ed25519 SSH key; git/install.sh enables commit signing from it
+credential	-	ssh-key-create personal	personal SSH key
+credential	-	ssh-key-create work	work SSH key
+credential	-	sops-key-create default	age encryption key; SOPS_AGE_KEY_FILE points at it
+credential	-	gh auth login	GitHub CLI
+credential	-	cursor-agent login	Cursor subscription
+credential	-	aws configure	AWS credentials
+app	/Applications/Google Drive.app	Google Drive	sign in and choose folders to sync
+app	/Applications/Bitwarden.app	Bitwarden	log in to unlock the vault
+app	/Applications/AeroSpace.app	AeroSpace	grant Accessibility permission; log out and back in
+app	/Applications/Bartender 6.app|/Applications/Bartender.app	Bartender	grant Screen Recording permission
+app	/Applications/Caffeine.app	Caffeine	click the coffee cup in the menu bar to activate
+app	/Applications/ChatGPT.app	ChatGPT	sign in; set Option+Space global shortcut
+app	/Applications/CleanShot X.app	CleanShot X	grant Screen Recording + Accessibility permissions
+app	/Applications/Dia.app	Dia	set as default browser: defaultbrowser dia
+app	/Applications/Discord.app	Discord	sign in to your account
+app	/Applications/Paste.app	Paste	grant Accessibility + Full Disk Access permissions
+app	/Applications/KeyClu.app	KeyClu	grant Accessibility permission
+app	/Applications/Raycast.app	Raycast	complete the onboarding; script commands: $DOTFILES_ROOT/raycast/scripts
+app	/Applications/Skim.app	Skim	open once to verify PDF associations
+app	/Applications/Slack.app	Slack	sign in to your workspace(s) manually
+app	/Applications/Spark.app	Spark	sign in to your email accounts
+app	/Applications/Tailscale.app	Tailscale	sign in and connect to your network
+app	-	Bitwarden	System Settings → Passwords → Password Options → enable Bitwarden
+app	-	Raycast	install extensions: ChatGPT, Google Drive, Google Workspace
+app	-	Archiver	open once to register as default for archive types
+app	-	Figma	sign in to your account
+app	-	Ghostty	open once to verify font and shell
+app	-	Obsidian	open or create your vault (Google Drive for sync)
+app	-	OrbStack	open once and complete the onboarding wizard
+app	-	Postman	sign in for workspace sync
+app	-	Spotify	sign in to your account
+app	-	WhatsApp	scan QR code to pair with your phone
+shell	-	source ~/.zshrc	or open a new terminal tab

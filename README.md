@@ -86,6 +86,10 @@ an interactive terminal:
 _scripts/setup checklist --open-apps
 ```
 
+The checklist is declared in `_scripts/_checklist.tsv`. Its app column is the
+single owner of both what that command opens and what the printed list calls
+opened, so edit a row there rather than `_scripts/setup`.
+
 SSH and SOPS installers never invent credentials. Create keys only through the
 explicit commands when needed:
 

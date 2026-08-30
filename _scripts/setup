@@ -12,6 +12,7 @@ DOTFILES_ROOT=$("$ROOT_RESOLVER" "$SETUP_PATH")
 export DOTFILES_ROOT
 HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
+CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checklist.tsv}
 
 # Topics whose installers create state that later installers consume, in the
 # order they must run. Everything else follows in catalog order. Run order is
@@ -264,13 +265,92 @@ install_checkout_root_link() {
   "$ROOT_RESOLVER" --install "$SETUP_PATH" >/dev/null
 }
 
-# Open an app in the background after the explicit interactive opt-in.
+# Rows of the checklist catalog, split by the section that prints them. The
+# app column decides both membership and what gets opened, so a row can never
+# be listed as opened while being left closed.
+CHECKLIST_CREDENTIAL=()
+CHECKLIST_OPENED=()
+CHECKLIST_MANUAL=()
+CHECKLIST_SHELL=()
+CHECKLIST_OPEN_CANDIDATES=()
+CHECKLIST_LOADED=false
+
+load_checklist() {
+  local kind app label note
+
+  [ "$CHECKLIST_LOADED" = false ] || return 0
+
+  if [ ! -f "$CHECKLIST_CATALOG" ]; then
+    fail "checklist catalog not found: $CHECKLIST_CATALOG"
+  fi
+
+  while IFS=$'\t' read -r kind app label note || [ -n "${kind:-}" ]; do
+    case "${kind:-}" in
+      '' | \#*)
+        kind=
+        continue
+        ;;
+    esac
+
+    if [ -z "${app:-}" ] || [ -z "${label:-}" ] || [ -z "${note:-}" ]; then
+      fail "invalid checklist row: $kind $label"
+    fi
+
+    note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
+
+    case "$kind" in
+      credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;
+      shell) CHECKLIST_SHELL+=("$label"$'\t'"$note") ;;
+      app)
+        if [ "$app" = - ]; then
+          CHECKLIST_MANUAL+=("$label"$'\t'"$note")
+        else
+          CHECKLIST_OPENED+=("$label"$'\t'"$note")
+          CHECKLIST_OPEN_CANDIDATES+=("$app")
+        fi
+        ;;
+      *) fail "unknown checklist kind '$kind' for $label" ;;
+    esac
+    kind=
+  done <"$CHECKLIST_CATALOG"
+
+  CHECKLIST_LOADED=true
+}
+
+# Open the first candidate that exists. Candidates are "|"-separated so an app
+# shipping under more than one name stays a single catalog row.
 open_app() {
-  local app_path=$1
-  [ -d "$app_path" ] && open -ga "$app_path" 2>/dev/null || true
+  local candidates=$1
+  local candidate
+
+  while IFS= read -r candidate; do
+    if [ -d "$candidate" ]; then
+      open -ga "$candidate" 2>/dev/null || true
+      return 0
+    fi
+  done <<<"${candidates//|/$'\n'}"
+  return 0
+}
+
+print_checklist_section() {
+  local heading=$1
+  local format=$2
+  local row
+
+  shift 2
+  [ "$#" -gt 0 ] || return 0
+
+  printf '\n'
+  printf '  \033[1m%s\033[0m\n' "$heading"
+  for row in "$@"; do
+    # shellcheck disable=SC2059 # The format is this file's, never the catalog's.
+    printf "$format" "${row%%$'\t'*}" "${row#*$'\t'}"
+  done
 }
 
 print_app_checklist() {
+  load_checklist
+
   printf '\n'
   printf '  \033[00;34m==>\033[0m \033[1mPost-bootstrap checklist\033[0m\n'
   printf '\n'
@@ -279,52 +359,23 @@ print_app_checklist() {
   printf '  credential problem; stop and investigate it outside this setup flow.\n'
   printf '\n'
   printf '  The following steps require manual action in the UI:\n'
-  printf '\n'
-  printf '  \033[1mCredentials & keys\033[0m\n'
-  printf '    ssh-key-create personal          # Ed25519 SSH key\n'
-  printf '    ssh-key-create work              # work SSH key\n'
-  printf '    sops-key-create personal         # age encryption key\n'
-  printf '    gh auth login                    # GitHub CLI\n'
-  printf '    cursor-agent login               # Cursor subscription\n'
-  printf '    aws configure                    # AWS credentials\n'
-  printf '\n'
-  printf '  \033[1mApps this opt-in command opens — finish their setup wizards\033[0m\n'
-  printf '    AeroSpace      → grant Accessibility permission; log out and back in\n'
-  printf '    Bartender      → grant Screen Recording permission\n'
-  printf '    Bitwarden      → log in to unlock the vault\n'
-  printf '    Caffeine       → click the coffee cup in the menu bar to activate\n'
-  printf '    ChatGPT        → sign in; set Option+Space global shortcut\n'
-  printf '    CleanShot X    → grant Screen Recording + Accessibility permissions\n'
-  printf '    Dia            → set as default browser: defaultbrowser dia\n'
-  printf '    Google Drive   → sign in and choose folders to sync\n'
-  printf '    KeyClu         → grant Accessibility permission\n'
-  printf '    Paste          → grant Accessibility + Full Disk Access permissions\n'
-  printf '    Raycast        → complete the onboarding; add script commands dir:\n'
-  printf '      %s/raycast/scripts\n' "$DOTFILES_ROOT"
-  printf '    Discord        → sign in to your account\n'
-  printf '    Slack          → sign in to your workspace(s) manually\n'
-  printf '    Spark          → sign in to your email accounts\n'
-  printf '    Tailscale      → sign in and connect to your network\n'
-  printf '\n'
-  printf '  \033[1mApps requiring in-app setup\033[0m\n'
-  printf '    Bitwarden      → System Settings → Passwords → Password Options → enable Bitwarden\n'
-  printf '    Figma          → sign in to your account\n'
-  printf '    Ghostty        → open once to verify font and shell\n'
-  printf '    Obsidian       → open or create your vault (Google Drive for sync)\n'
-  printf '    OrbStack       → open once and complete the onboarding wizard\n'
-  printf '    Archiver       → open once to register as default for archive types\n'
-  printf '    Postman        → sign in for workspace sync\n'
-  printf '    Raycast        → install extensions: ChatGPT, Google Drive, Google Workspace\n'
-  printf '    Skim           → open once to verify PDF associations\n'
-  printf '    Spotify        → sign in to your account\n'
-  printf '    WhatsApp       → scan QR code to pair with your phone\n'
-  printf '\n'
-  printf '  \033[1mShell\033[0m\n'
-  printf '    source ~/.zshrc   # or open a new terminal tab\n'
+
+  print_checklist_section 'Credentials & keys' '    %-33s# %s\n' \
+    ${CHECKLIST_CREDENTIAL[@]+"${CHECKLIST_CREDENTIAL[@]}"}
+  print_checklist_section \
+    'Apps this opt-in command opens — finish their setup wizards' \
+    '    %-15s→ %s\n' \
+    ${CHECKLIST_OPENED[@]+"${CHECKLIST_OPENED[@]}"}
+  print_checklist_section 'Apps requiring in-app setup' '    %-15s→ %s\n' \
+    ${CHECKLIST_MANUAL[@]+"${CHECKLIST_MANUAL[@]}"}
+  print_checklist_section 'Shell' '    %-33s# %s\n' \
+    ${CHECKLIST_SHELL[@]+"${CHECKLIST_SHELL[@]}"}
   printf '\n'
 }
 
 open_app_checklist() {
+  local candidates
+
   if [ ! -t 0 ] || [ ! -t 1 ]; then
     fail 'app checklist opening requires an interactive terminal; no applications were opened'
   fi
@@ -333,23 +384,9 @@ open_app_checklist() {
 
   # This is deliberately separate from bootstrap and update. The caller must
   # explicitly request checklist --open-apps from an interactive terminal.
-  open_app '/Applications/Google Drive.app'
-  open_app '/Applications/Bitwarden.app'
-  open_app '/Applications/AeroSpace.app'
-  open_app '/Applications/Bartender 6.app'
-  open_app '/Applications/Bartender.app'
-  open_app '/Applications/Caffeine.app'
-  open_app '/Applications/ChatGPT.app'
-  open_app '/Applications/CleanShot X.app'
-  open_app '/Applications/Dia.app'
-  open_app '/Applications/Discord.app'
-  open_app '/Applications/Paste.app'
-  open_app '/Applications/KeyClu.app'
-  open_app '/Applications/Raycast.app'
-  open_app '/Applications/Skim.app'
-  open_app '/Applications/Slack.app'
-  open_app '/Applications/Spark.app'
-  open_app '/Applications/Tailscale.app'
+  for candidates in ${CHECKLIST_OPEN_CANDIDATES[@]+"${CHECKLIST_OPEN_CANDIDATES[@]}"}; do
+    open_app "$candidates"
+  done
 }
 
 run_bootstrap() {

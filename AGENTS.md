@@ -99,6 +99,8 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Mise versions and checksums                     | `mise/mise.lock` (generated)     |
 | macOS preferences                               | `_macos/defaults.tsv`            |
 | Dock layout                                     | `dock/_layout.tsv`               |
+| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`        |
+| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`        |
 | Topic discovery and load classes                | `_scripts/topic-catalog`         |
 | Setup orchestration                             | `_scripts/setup`                 |
 | OpenCode and OCX workspace                      | `opencode/`                      |
