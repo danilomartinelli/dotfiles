@@ -22,7 +22,10 @@
 #
 # The handler runs in the calling shell, so it may set variables the caller
 # reads afterwards. It must return zero: consumers run under `set -e`, and a
-# handler returning non-zero stops the run rather than skipping a row.
+# handler returning non-zero stops the run rather than skipping a row. It must
+# also not call catalog_each_row itself: the second call would reuse both
+# descriptor 3 and this module's variables. No catalog here nests, and a
+# consumer that needs to should read the inner one into a variable first.
 #
 # Usage: catalog_each_row <catalog> <handler>
 catalog_each_row() {
