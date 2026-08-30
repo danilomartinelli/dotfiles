@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+# The one way to run this repository's safe test suites.
+#
+# Discovery, ordering, status accumulation, and the pass/fail verdict live here
+# rather than in a documented shell loop. A loop that runs each suite in turn
+# reports only the last one's status, so a failure anywhere but the end is
+# invisible; that is the whole reason this module exists.
+#
+# Usage: _scripts/test [pattern]
+#
+# Without a pattern every suite runs. With one, only suites whose name contains
+# it run, which is what the focused validation matrix in CODING_STANDARDS.md
+# asks for.
+
+set -uo pipefail
+
+SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+DOTFILES_ROOT=${DOTFILES_TEST_ROOT:-$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)}
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: _scripts/test [pattern]
+
+  Run every safe test suite and report a single verdict.
+  With a pattern, run only the suites whose name contains it.
+EOF
+}
+
+case "${1-}" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    printf 'test: unknown option: %s\n' "$1" >&2
+    usage
+    exit 2
+    ;;
+esac
+
+if [ "$#" -gt 1 ]; then
+  usage
+  exit 2
+fi
+
+pattern=${1-}
+
+# The suite list is discovered, never restated: a new tests/*_test.sh file is
+# picked up by existing here. test-checkout-root is appended because it is a
+# scenario suite that lives outside tests/ so it can exercise the checkout from
+# the repository root.
+suites=()
+while IFS= read -r suite_path; do
+  suites+=("$suite_path")
+done < <(find "$DOTFILES_ROOT/tests" -maxdepth 1 -name '*_test.sh' -type f | sort)
+
+if [ -f "$DOTFILES_ROOT/_scripts/test-checkout-root" ]; then
+  suites+=("$DOTFILES_ROOT/_scripts/test-checkout-root")
+fi
+
+selected=()
+for suite_path in ${suites[@]+"${suites[@]}"}; do
+  suite_name=${suite_path##*/}
+  suite_name=${suite_name%_test.sh}
+  if [ -z "$pattern" ] || [ "${suite_name#*"$pattern"}" != "$suite_name" ]; then
+    selected+=("$suite_path")
+  fi
+done
+
+if [ "${#selected[@]}" -eq 0 ]; then
+  printf 'test: no suite matches: %s\n' "$pattern" >&2
+  exit 1
+fi
+
+failed=()
+passed=0
+
+for suite_path in "${selected[@]}"; do
+  suite_name=${suite_path##*/}
+  suite_name=${suite_name%_test.sh}
+
+  printf '\n\033[00;34m==>\033[0m \033[1m%s\033[0m\n' "$suite_name"
+
+  if "$suite_path"; then
+    passed=$((passed + 1))
+  else
+    failed+=("$suite_name")
+  fi
+done
+
+printf '\n'
+
+if [ "${#failed[@]}" -eq 0 ]; then
+  printf '\033[00;32m✓\033[0m %d suite(s) passed\n' "$passed"
+  exit 0
+fi
+
+# Naming every failing suite is the point: the verdict a person acts on is
+# "which one", not "something".
+printf '\033[0;31m✗\033[0m %d of %d suite(s) failed:\n' \
+  "${#failed[@]}" "${#selected[@]}" >&2
+for suite_name in "${failed[@]}"; do
+  printf '    %s\n' "$suite_name" >&2
+done
+
+exit 1

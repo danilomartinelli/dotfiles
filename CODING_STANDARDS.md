@@ -316,13 +316,19 @@ command, and leave a fake in place when it is genuinely specific to one test.
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 
-Run every safe test without maintaining a duplicated filename list:
+`_scripts/test` runs every safe suite and returns a single verdict. It discovers
+`tests/*_test.sh`, appends `_scripts/test-checkout-root`, and names every suite
+that failed. A shell loop over the same files reports only the last suite's
+status, so run the module rather than the loop:
 
 ```bash
-for test_path in tests/*_test.sh; do
-  "$test_path"
-done
-_scripts/test-checkout-root
+_scripts/test
+```
+
+Pass a pattern to run one row of the matrix above:
+
+```bash
+_scripts/test link_config
 ```
 
 Run applicable static checks:

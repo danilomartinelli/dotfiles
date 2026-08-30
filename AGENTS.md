@@ -211,11 +211,12 @@ Use the focused matrix in `CODING_STANDARDS.md`, then expand in proportion to
 risk. Repository-wide changes require every safe test:
 
 ```bash
-for test_path in tests/*_test.sh; do
-  "$test_path"
-done
-_scripts/test-checkout-root
+_scripts/test
 ```
+
+`_scripts/test` owns discovery, ordering, and the pass/fail verdict, and names
+every suite that failed. Pass a pattern — `_scripts/test link_config` — to run
+one row of the focused matrix.
 
 Run all applicable static checks from `CODING_STANDARDS.md`. At minimum, review
 `git diff --check`; lint and format changed Shell, Zsh, Markdown, JSON/JSONC,
