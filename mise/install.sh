@@ -7,7 +7,7 @@ set -e
 
 installer_require_command mise
 
-MISE_CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/mise
+MISE_CONFIG_DIR=$(installer_config_dir mise)
 MISE_GLOBAL_CONFIG_FILE=$MISE_CONFIG_DIR/config.toml
 export MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE
 mkdir -p "$MISE_CONFIG_DIR"

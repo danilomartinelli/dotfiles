@@ -7,7 +7,7 @@ set -eu
 
 installer_banner "setting up git configuration"
 
-config_dir=${XDG_CONFIG_HOME:-$HOME/.config}/git
+config_dir=$(installer_config_dir git)
 allowed_signers=$config_dir/allowed_signers
 default_key=$HOME/.ssh/id_ed25519.pub
 

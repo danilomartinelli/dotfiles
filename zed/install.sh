@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting up Zed configuration"
 
-CONFIG_DIR="$HOME/.config/zed"
+CONFIG_DIR=$(installer_config_dir zed)
 
 mkdir -p "$CONFIG_DIR"
 

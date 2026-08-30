@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting up Ghostty configuration"
 
-CONFIG_DIR="$HOME/.config/ghostty"
+CONFIG_DIR=$(installer_config_dir ghostty)
 
 mkdir -p "$CONFIG_DIR"
 

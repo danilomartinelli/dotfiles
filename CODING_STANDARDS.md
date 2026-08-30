@@ -121,6 +121,7 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
   | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
   | `installer_optional_app`     | Warn and skip when an optional application is absent               |
+  | `installer_config_dir`       | Resolve a tool's configuration directory without creating it       |
   | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
   | `installer_mark_applied`     | Record that a run-once step completed                              |
   | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |
@@ -135,6 +136,14 @@ without updating adapters, tests, and user documentation in the same change.
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
+
+A tool's configuration directory is `installer_config_dir <tool>`, which
+resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
+not reintroduce that variable in an installer, a `*.zsh` file, or a tracked
+config payload: whether a tool honours it is the tool's fact to state, and Zed
+does not on macOS. A single tool moves through its own variable, such as
+`SOPS_AGE_KEY_FILE`. See
+`docs/adr/0003-tool-config-directories-are-not-xdg-derived.md`.
 
 A run-once step rebuilds state a person may have rearranged by hand, so it
 applies on first run only. Gate it with `installer_skip_if_applied` and record

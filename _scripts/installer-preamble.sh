@@ -77,8 +77,20 @@ installer_optional_app() {
   exit 0
 }
 
-# Where run-once markers live. Private: the run-once helpers are its only
-# consumers, and the public config-directory resolver is a separate concern.
+# The directory a tool reads its configuration from. Spelled the way the tool
+# spells it: XDG_CONFIG_HOME is deliberately ignored, because honouring it is
+# each tool's fact to state rather than ours to assume on its behalf. Resolves
+# only; the caller creates the directory, so the path stays safe to compute.
+# See docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
+# Usage: installer_config_dir <tool>
+installer_config_dir() {
+  printf '%s\n' "$HOME/.config/$1"
+}
+
+# Where run-once markers live. Honours XDG_STATE_HOME where
+# installer_config_dir ignores XDG_CONFIG_HOME, because this path is ours: no
+# tool has to agree with us about where our own markers sit. Private: the
+# run-once helpers are its only consumers.
 _installer_state_dir() {
   printf '%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
 }

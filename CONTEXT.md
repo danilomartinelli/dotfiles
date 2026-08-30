@@ -27,6 +27,13 @@ _Avoid_: roster, manifest, registry, inventory
 
 ### Ownership
 
+**Tool config directory**:
+The directory a tool reads its configuration from, whose location is the tool's
+contract rather than this repository's preference. Distinct from the run-once
+marker directory, which this repository owns and may therefore place where it
+likes.
+_Avoid_: config home, XDG config directory
+
 **Managed entry**:
 A path inside a tool's configuration directory whose editable content this
 repository owns and links from the checkout.

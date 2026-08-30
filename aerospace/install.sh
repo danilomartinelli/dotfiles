@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting up AeroSpace configuration"
 
-CONFIG_DIR="$HOME/.config/aerospace"
+CONFIG_DIR=$(installer_config_dir aerospace)
 
 mkdir -p "$CONFIG_DIR"
 

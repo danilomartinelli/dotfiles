@@ -50,7 +50,7 @@ invoke_installer() {
   local test_home=$1
   scenario_capture "$test_home" env \
     HOME="$test_home" \
-    XDG_CONFIG_HOME="$test_home/.config" \
+    XDG_CONFIG_HOME="$test_home/xdg-decoy" \
     "$REPOSITORY_ROOT/sops/install.sh"
 }
 
@@ -68,7 +68,7 @@ invoke_key_command() {
     cd "$TEST_ROOT" || exit 1
     scenario_capture "$test_home" env \
       HOME="$test_home" \
-      XDG_CONFIG_HOME="$test_home/.config" \
+      XDG_CONFIG_HOME="$test_home/xdg-decoy" \
       PATH="$fake_bin:/usr/bin:/bin" \
       "$REPOSITORY_ROOT/bin/sops-key-create" "$@"
   )
@@ -123,6 +123,10 @@ test_default_key_creation() {
     'recipient file'
   assert_contains "$test_home/stdout.log" 'created'
   assert_contains "$test_home/events.log" 'arg=-o'
+  # XDG_CONFIG_HOME points elsewhere throughout this suite, so the assertions
+  # above prove key material follows $HOME/.config rather than the variable.
+  [[ ! -e $test_home/xdg-decoy ]] \
+    || scenario_fail 'key material written below XDG_CONFIG_HOME'
 }
 
 test_role_paths_and_no_overwrite() {
@@ -158,7 +162,7 @@ test_usage_and_missing_dependency() {
   mkdir -p "$missing_home/empty-bin"
   if scenario_capture "$missing_home" env \
     HOME="$missing_home" \
-    XDG_CONFIG_HOME="$missing_home/.config" \
+    XDG_CONFIG_HOME="$missing_home/xdg-decoy" \
     PATH="$missing_home/empty-bin" \
     "$REPOSITORY_ROOT/sops/create-key" default; then
     return 1

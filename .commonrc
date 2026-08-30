@@ -20,10 +20,16 @@ export VISUAL="zed --wait"
 export WORKSPACE="${WORKSPACE:-$HOME/Workspace}"
 export PROJECTS="${PROJECTS:-$WORKSPACE/github.com}"
 
-# XDG base directories (keep tools predictable across machines)
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+# XDG base directories (keep tools predictable across machines).
+# XDG_CONFIG_HOME is pinned rather than defaulted: topic installers link into
+# ~/.config unconditionally, so a tool that does honour the variable must not
+# be sent looking anywhere else.
+# See docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
+export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+# Stays overridable on purpose: run-once markers are ours to place, so
+# _installer_state_dir honours this one where installer_config_dir does not.
 export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 # Homebrew (non-interactive / CI-friendly defaults)

@@ -57,8 +57,10 @@ if ! command -v age-keygen >/dev/null 2>&1; then
   exit 1
 fi
 
-config_home=${XDG_CONFIG_HOME:-$HOME/.config}
-age_dir=$config_home/sops/age
+# Not XDG-derived, deliberately: this path must agree with the one sops/env.zsh
+# names in SOPS_AGE_KEY_FILE, or sops cannot find the identity created here.
+# See docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
+age_dir=$HOME/.config/sops/age
 key_path=$age_dir/$key_name
 recipient_path=$age_dir/$recipient_name
 

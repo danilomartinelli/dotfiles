@@ -7,7 +7,7 @@ set -e
 
 installer_banner "setting up Neovim configuration"
 
-CONFIG_DIR="$HOME/.config/nvim"
+CONFIG_DIR=$(installer_config_dir nvim)
 
 mkdir -p "$CONFIG_DIR"
 

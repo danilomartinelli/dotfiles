@@ -8,7 +8,7 @@ set -e
 installer_require_darwin
 installer_banner "setting up OpenCode configuration"
 
-CONFIG_DIR="$HOME/.config/opencode"
+CONFIG_DIR=$(installer_config_dir opencode)
 CATALOG="${DOTFILES_OPENCODE_CATALOG:-$TOPIC_DIR/_managed-entries.tsv}"
 
 if [ ! -f "$CATALOG" ]; then

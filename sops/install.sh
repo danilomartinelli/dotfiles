@@ -7,8 +7,7 @@ set -eu
 
 installer_banner "setting up sops configuration"
 
-config_home=${XDG_CONFIG_HOME:-$HOME/.config}
-age_dir=$config_home/sops/age
+age_dir=$(installer_config_dir sops)/age
 default_key=$age_dir/keys.txt
 default_recipient=$age_dir/recipient.txt
 

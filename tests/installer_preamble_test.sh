@@ -333,6 +333,43 @@ installer_mark_applied sample-step
 installer_success "sample configured"'
 }
 
+test_config_dir_resolves_under_home() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_config_dir zed >"$HOME/config_dir"'
+
+  scenario_capture "$home" env -u XDG_CONFIG_HOME HOME="$home" \
+    "$checkout/sample/install.sh"
+  assert_equal "$home/.config/zed" "$(cat "$home/config_dir")" \
+    'resolved tool config directory'
+  # The resolver only resolves. Creating the directory stays the caller's own
+  # line, so sops can keep its umask above the mkdir that needs it.
+  [[ ! -e $home/.config ]] \
+    || scenario_fail 'config directory resolver created a directory'
+}
+
+test_config_dir_ignores_xdg_config_home() {
+  local checkout home
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_config_dir zed >"$HOME/config_dir"'
+
+  scenario_capture "$home" env HOME="$home" XDG_CONFIG_HOME="$checkout/xdg" \
+    "$checkout/sample/install.sh"
+  # Deliberate, not an oversight: honouring XDG_CONFIG_HOME is each tool's fact
+  # to state, and Zed hardcodes ~/.config/zed on macOS. This assertion is what
+  # keeps docs/adr/0003-tool-config-directories-are-not-xdg-derived.md true.
+  assert_equal "$home/.config/zed" "$(cat "$home/config_dir")" \
+    'tool config directory with XDG_CONFIG_HOME set'
+  [[ ! -e $checkout/xdg ]] \
+    || scenario_fail 'resolver wrote below XDG_CONFIG_HOME'
+}
+
 test_skip_if_applied_runs_the_step_without_a_marker() {
   local checkout home
 
@@ -508,6 +545,10 @@ scenario_run 'optional_command skips successfully with a reason and hint' \
   test_optional_command_skips_with_reason_and_hint
 scenario_run 'optional_command honors a formula override' \
   test_optional_command_accepts_formula_override
+scenario_run 'config_dir resolves a tool directory under HOME without creating it' \
+  test_config_dir_resolves_under_home
+scenario_run 'config_dir ignores XDG_CONFIG_HOME' \
+  test_config_dir_ignores_xdg_config_home
 scenario_run 'run-once step applies without a marker and records one' \
   test_skip_if_applied_runs_the_step_without_a_marker
 scenario_run 'run-once step skips once its marker exists' \
