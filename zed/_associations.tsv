@@ -11,8 +11,7 @@
 #
 # Applying this catalog is a run-once step, so editing a row changes what the
 # next apply would set without setting it. DOTFILES_RESET=zed-associations dot
-# does. See docs/adr/0004-a-catalog-edit-does-not-re-arm-the-dock-rebuild.md
-# for the same shape in the Dock catalog.
+# applies it. See docs/adr/0005-file-type-associations-apply-once.md.
 
 .txt	editor	report	-
 .md	editor	report	-

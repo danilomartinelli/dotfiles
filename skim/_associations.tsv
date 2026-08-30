@@ -4,6 +4,10 @@
 # "ignore" is best-effort because Launch Services does not know every
 # identifier on every macOS version. A "-" label falls back to the identifier.
 #
+# Applying this catalog is a run-once step, so editing a row changes what the
+# next apply would set without setting it. DOTFILES_RESET=skim-associations dot
+# applies it. See docs/adr/0005-file-type-associations-apply-once.md.
+#
 # Role "editor" throughout — never "all" — so that the viewer role registered
 # by macOS Preview is not claimed unexpectedly.
 

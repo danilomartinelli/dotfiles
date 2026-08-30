@@ -226,10 +226,14 @@ The Mac App Store declaration is `Xcode` (app id `497799835`).
 Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
 Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
 SOPS directories, SSH, Workspace, Mise, Archiver associations, and the Dock.
-The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and is
-applied once so later manual changes survive. Editing a row therefore takes
-effect on the next `DOTFILES_RESET=dock dot`; `DOTFILES_RESET=all dot` re-arms
-every run-once step.
+The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
+file types each app claims are declared in `<topic>/_associations.tsv`. Both are
+applied once so later manual changes survive: a Dock you rearranged and a
+default application you set in Finder both outlive an update run. Editing a row
+therefore takes effect on the next `DOTFILES_RESET=dock dot`,
+`DOTFILES_RESET=archiver-associations dot`, `DOTFILES_RESET=skim-associations dot`,
+or `DOTFILES_RESET=zed-associations dot`; `DOTFILES_RESET=all dot` re-arms every
+run-once step.
 
 ### Mise runtimes and global CLIs
 

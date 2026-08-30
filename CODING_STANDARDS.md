@@ -160,9 +160,10 @@ A topic that claims file types declares them in `<topic>/_associations.tsv`
 and applies them with `installer_apply_associations`; no installer writes its
 own association loop. A row whose failure mode is `ignore` is best-effort,
 because Launch Services does not recognise every identifier on every macOS
-version, and only `report` rows are named and counted. Where a topic gates its
-associations as a run-once step, editing the catalog changes what the next
-apply would set without setting it; the reset key applies it.
+version, and only `report` rows are named and counted. Applying a catalog is a run-once
+step in every topic that claims file types, so editing a row changes what the
+next apply would set without setting it; `DOTFILES_RESET=<topic>-associations dot` applies it. See
+`docs/adr/0005-file-type-associations-apply-once.md`.
 
 A missing `duti` skips a topic's associations through
 `installer_optional_command` rather than stopping the run. A default

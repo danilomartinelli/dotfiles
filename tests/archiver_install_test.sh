@@ -11,7 +11,7 @@ scenario_init dotfiles-archiver-install-tests
 make_fixture() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
-  mkdir -p "$fixture/fake-bin" "$fixture/Archiver.app/Contents"
+  mkdir -p "$fixture/fake-bin" "$fixture/home" "$fixture/Archiver.app/Contents"
   : >"$fixture/Archiver.app/Contents/Info.plist"
 
   scenario_write_executable "$fixture/fake-bin/uname" <<'EOF'
@@ -48,15 +48,26 @@ EOF
   printf '%s\n' "$fixture"
 }
 
+# HOME and XDG_STATE_HOME are fixture-local because the associations are a
+# run-once step: without them the marker would land in the real state directory
+# and disarm both the next scenario and the next dot run.
 invoke_archiver() {
   local fixture=$1
-  scenario_capture "$fixture" env \
+  shift
+  scenario_capture "$fixture" env -u DOTFILES_RESET \
+    HOME="$fixture/home" \
+    XDG_STATE_HOME="$fixture/state" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     ARCHIVER_APP="$fixture/Archiver.app" \
     PLIST_BUDDY_BIN="$fixture/fake-bin/PlistBuddy" \
     CODESIGN_BIN="$fixture/fake-bin/codesign" \
     LSREGISTER_BIN="$fixture/fake-bin/lsregister" \
+    "$@" \
     "$REPOSITORY_ROOT/archiver/install.sh"
+}
+
+archiver_marker() {
+  printf '%s\n' "$1/state/dotfiles/archiver-associations-applied"
 }
 
 test_supported_types_use_viewer_role() {
@@ -135,6 +146,47 @@ test_missing_duti_skips_the_associations() {
   assert_not_contains "$fixture/stdout.log" 'Archiver set as default'
 }
 
+test_associations_apply_once() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_archiver "$fixture"
+  assert_contains "$fixture/stdout.log" 'Archiver set as default for compressed files'
+  [[ -f $(archiver_marker "$fixture") ]] \
+    || scenario_fail 'a successful apply did not record the run-once step'
+
+  invoke_archiver "$fixture"
+  assert_contains "$fixture/stdout.log" \
+    'file associations already applied; run DOTFILES_RESET=archiver-associations dot to reapply'
+  assert_contains "$fixture/stdout.log" 'Archiver configured'
+  assert_not_contains "$fixture/events.log" 'duti '
+}
+
+test_reset_re_arms_the_associations() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_archiver "$fixture"
+  invoke_archiver "$fixture" DOTFILES_RESET=archiver-associations
+
+  assert_count "$fixture/events.log" 'duti -s com.incrediblebee.Archiver' 9
+}
+
+test_a_bailed_run_leaves_the_step_armed() {
+  local fixture
+  fixture=$(make_fixture)
+
+  # The marker sits below every gate, so a run that applied nothing cannot
+  # record itself as applied and wedge the topic permanently.
+  export FAIL_LSREGISTER=1
+  invoke_archiver "$fixture"
+  unset FAIL_LSREGISTER
+
+  [[ ! -e $(archiver_marker "$fixture") ]] \
+    || scenario_fail 'a run that skipped the associations recorded them as applied'
+
+  invoke_archiver "$fixture"
+  assert_count "$fixture/events.log" 'duti -s com.incrediblebee.Archiver' 9
+}
+
 test_individual_association_failures_are_aggregated() {
   local fixture
   fixture=$(make_fixture)
@@ -153,5 +205,8 @@ scenario_run 'Launch Services registration failures skip associations' test_regi
 scenario_run 'a missing Archiver installation remains advisory' test_missing_app_is_advisory
 scenario_run 'a missing duti reports the missing app first' test_missing_duti_reports_the_missing_app_first
 scenario_run 'a missing duti skips the associations without failing' test_missing_duti_skips_the_associations
+scenario_run 'associations apply once and report the marker' test_associations_apply_once
+scenario_run 'DOTFILES_RESET re-arms the associations' test_reset_re_arms_the_associations
+scenario_run 'a bailed run leaves the associations armed' test_a_bailed_run_leaves_the_step_armed
 scenario_run 'individual association failures are aggregated' test_individual_association_failures_are_aggregated
 scenario_finish
