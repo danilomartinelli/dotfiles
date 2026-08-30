@@ -340,6 +340,7 @@ A second fixture needing either reads it from there rather than restating it.
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                   |
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |
+| Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                               |
 | Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh` |
