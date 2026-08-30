@@ -54,7 +54,15 @@ case "$1 $2" in
     printf 'node_modules\n' >"$config_dir/.gitignore"
     ;;
   'profile remove')
-    rm -rf "$config_dir/profiles/$3"
+    # Real ocx removes the profile path with one recursive remove, which
+    # unlinks a symbolic link instead of descending into it. Verified against
+    # ocx 2.0.15; opencode/README.md records the constraint, and the profile
+    # removal scenario below pins this fake to it.
+    if [ -L "$config_dir/profiles/$3" ]; then
+      rm -- "$config_dir/profiles/$3"
+    else
+      rm -rf -- "$config_dir/profiles/$3"
+    fi
     ;;
   'profile add')
     if [ "${4:-}" = '--clone' ] && [ ! -e "$config_dir/profiles/${5:-}" ]; then
@@ -393,6 +401,36 @@ test_catalog_declares_each_clone_source_before_its_clones() {
     || scenario_fail 'OpenCode catalog declares no profiles'
 }
 
+# By the second install the profile path is a link into this checkout, and the
+# installer calls ocx profile remove against it on every rerun. Real ocx unlinks
+# rather than descending, which is the only reason that is safe. An unfaithful
+# fake would delete the versioned payload out of the repository, so every
+# scenario that runs the installer proves this against a fixture link first.
+assert_fake_ocx_unlinks_profiles() {
+  local fake_bin=$1
+  local probe profiles source
+
+  probe=$(scenario_tmpdir probe)
+  profiles=$probe/.config/opencode/profiles
+  source=$probe/versioned/regular
+
+  mkdir -p "$profiles" "$source"
+  printf 'versioned payload\n' >"$source/opencode.jsonc"
+  ln -s "$source" "$profiles/regular"
+
+  scenario_capture "$probe" env HOME="$probe" PATH="$fake_bin:/usr/bin:/bin" \
+    "$fake_bin/ocx" profile remove regular --global
+
+  [[ ! -e $profiles/regular && ! -L $profiles/regular ]] \
+    || scenario_fail 'fake ocx left the managed profile link in place'
+  [[ -f $source/opencode.jsonc ]] \
+    || scenario_fail 'fake ocx deleted versioned content through the profile link'
+}
+
+test_profile_removal_unlinks_instead_of_descending() {
+  assert_fake_ocx_unlinks_profiles "$(make_fake_clis "$(scenario_tmpdir removal)")"
+}
+
 test_installer_rejects_an_unusable_catalog() {
   local fake_bin home
   local -a run
@@ -426,6 +464,9 @@ test_installer_links_only_dotfiles_owned_entries() {
   fake_bin=$(make_fake_clis "$home")
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir"
+
+  # The reinstall below points the fake at profile links into this checkout.
+  assert_fake_ocx_unlinks_profiles "$fake_bin"
 
   # Seed a real target for every managed entry. The default
   # replace-with-backup policy would park each one in a sibling .backup, so
@@ -507,6 +548,8 @@ scenario_run 'OpenCode specialized profiles clone regular and route models' \
   test_specialized_profiles_clone_regular_contract_and_route_models
 scenario_run 'OpenCode catalog declares each clone source before its clones' \
   test_catalog_declares_each_clone_source_before_its_clones
+scenario_run 'OpenCode profile removal unlinks instead of descending' \
+  test_profile_removal_unlinks_instead_of_descending
 scenario_run 'OpenCode installer rejects an unusable catalog' \
   test_installer_rejects_an_unusable_catalog
 scenario_run 'OpenCode installer links managed entries and preserves OCX runtime state' \

@@ -54,6 +54,17 @@ managed links are preserved. It refreshes the three managed profiles without
 replacing `.ocx`, `plugins`, `package.json`, `.gitignore`, or
 `profiles/default`.
 
+Refreshing a profile calls `ocx profile remove` before `ocx profile add`, and
+after the first install that path is a symbolic link into this checkout. `ocx`
+removes a profile with a single recursive remove, which unlinks the link rather
+than descending into it, so the versioned payload behind it is untouched.
+Verified against `ocx` 2.0.15, the version `mise/config.toml` declares.
+Re-verify it when that version changes: a release that deleted a profile's
+contents would take repository files with it, and `configure_profile` would
+then have to stop calling `ocx profile remove` for an already-linked profile.
+`tests/opencode_install_test.sh` holds its `ocx` fake to the verified behaviour
+before any scenario points that fake at the checkout.
+
 ## Use OpenCode
 
 Open a new Zsh session or run `reload!` after changing the shell files.
