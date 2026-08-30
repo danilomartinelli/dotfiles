@@ -54,6 +54,10 @@ fail() {
   exit 1
 }
 
+# shellcheck source=_scripts/markdown-table.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/markdown-table.sh"
+
 repository_root=$(CDPATH='' cd -P -- "$repository_root" 2>/dev/null && pwd) \
   || fail "repository root not found: $repository_root"
 
@@ -208,63 +212,19 @@ emit_mise_rows() {
   ' "$mise_config"
 }
 
-# Cells are padded to the widest in their column, which is what mdformat would
-# do to the table anyway. Rendering it already normalized keeps the formatter
-# and this script from disagreeing about a file they both write.
-format_table() {
-  awk -F'\t' -v header="$1" '
-    BEGIN {
-      columns = split(header, heading, "\t")
-      for (column = 1; column <= columns; column++) {
-        width[column] = length(heading[column])
-      }
-    }
-    {
-      for (column = 1; column <= NF; column++) {
-        rows[NR, column] = $column
-        if (length($column) > width[column]) {
-          width[column] = length($column)
-        }
-      }
-      total = NR
-    }
-    END {
-      line = "|"
-      rule = "|"
-      for (column = 1; column <= columns; column++) {
-        line = line sprintf(" %-*s |", width[column], heading[column])
-        dashes = ""
-        while (length(dashes) < width[column]) {
-          dashes = dashes "-"
-        }
-        rule = rule " " dashes " |"
-      }
-      print line
-      print rule
-      for (row = 1; row <= total; row++) {
-        line = "|"
-        for (column = 1; column <= columns; column++) {
-          line = line sprintf(" %-*s |", width[column], rows[row, column])
-        }
-        print line
-      }
-    }
-  '
-}
-
 render_block() {
   case "$1" in
     homebrew-formulae)
-      emit_formula_rows | format_table "$(printf 'Formula\tPurpose')"
+      emit_formula_rows | markdown_table "$(printf 'Formula\tPurpose')"
       ;;
     homebrew-casks)
-      emit_cask_rows | format_table "$(printf 'Group\tHomebrew casks')"
+      emit_cask_rows | markdown_table "$(printf 'Group\tHomebrew casks')"
       ;;
     mac-app-store)
-      emit_mas_rows | format_table "$(printf 'Mac App Store app\tApp ID\tPurpose')"
+      emit_mas_rows | markdown_table "$(printf 'Mac App Store app\tApp ID\tPurpose')"
       ;;
     mise-tools)
-      emit_mise_rows | format_table "$(printf 'Tool\tDeclared version\tRole')"
+      emit_mise_rows | markdown_table "$(printf 'Tool\tDeclared version\tRole')"
       ;;
     *)
       fail "unknown generated block: $1"
@@ -276,35 +236,9 @@ work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-software-catalog.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT
 
 rendered=$work_dir/README.md
-block=''
 
-# Marked regions are replaced whole and everything else is copied through, so
-# the hand-written prose around the tables survives every render.
-while IFS= read -r line; do
-  case "$line" in
-    '<!-- generated: '*' -->')
-      [ -z "$block" ] || fail "nested generated marker: $line"
-      block=${line#'<!-- generated: '}
-      block=${block%' -->'}
-      # mdformat separates an HTML block from the table below it, so the render
-      # writes the blank lines the formatter would add rather than fighting it.
-      printf '%s\n\n' "$line" >>"$rendered"
-      render_block "$block" >>"$rendered"
-      printf '\n' >>"$rendered"
-      ;;
-    '<!-- generated-end -->')
-      [ -n "$block" ] || fail 'generated-end without an opening marker'
-      block=''
-      printf '%s\n' "$line" >>"$rendered"
-      ;;
-    *)
-      [ -n "$block" ] || printf '%s\n' "$line" >>"$rendered"
-      ;;
-  esac
-done <"$readme"
-
-[ -z "$block" ] || fail "unterminated generated block: $block"
-grep -Fq '<!-- generated: ' "$readme" || fail "no generated blocks in $readme"
+markdown_render_blocks "$readme" render_block >"$rendered" \
+  || fail "cannot render $readme"
 
 if cmp -s "$rendered" "$readme"; then
   if [ "$check_only" = true ]; then

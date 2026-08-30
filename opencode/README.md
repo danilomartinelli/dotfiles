@@ -105,17 +105,21 @@ at creation time. The layering therefore happens in this repository:
 the MCP servers, and the researcher's read-oriented GitLab policy exactly once,
 and each profile contributes only the routing rows below.
 
-| Role       | `regular`                     | `go`                                  | `boost`                           |
-| ---------- | ----------------------------- | ------------------------------------- | --------------------------------- |
-| Default    | `openai/gpt-5.6-terra`        | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`              |
-| Small      | `openai/gpt-5.6-luna`         | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`              |
-| Plan       | `openai/gpt-5.6-terra` (high) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`) |
-| Build      | `openai/gpt-5.6-terra` (high) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)      |
-| Coder      | `openai/gpt-5.6-luna` (high)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.6-luna` (`xhigh`)   |
-| Explore    | `openai/gpt-5.6-luna` (low)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)      |
-| Researcher | `openai/gpt-5.6-sol` (high)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)  |
-| Scribe     | `openai/gpt-5.6-luna` (low)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`  |
-| Reviewer   | `openai/gpt-5.6-sol` (high)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`) |
+<!-- generated: profile-routing -->
+
+| Role       | `regular`                       | `go`                                  | `boost`                           |
+| ---------- | ------------------------------- | ------------------------------------- | --------------------------------- |
+| Default    | `openai/gpt-5.6-terra`          | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`              |
+| Small      | `openai/gpt-5.6-luna`           | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`              |
+| Plan       | `openai/gpt-5.6-terra` (`high`) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`) |
+| Build      | `openai/gpt-5.6-terra` (`high`) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)      |
+| Coder      | `openai/gpt-5.6-luna` (`high`)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.6-luna` (`xhigh`)   |
+| Explore    | `openai/gpt-5.6-luna` (`low`)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)      |
+| Researcher | `openai/gpt-5.6-sol` (`high`)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)  |
+| Scribe     | `openai/gpt-5.6-luna` (`low`)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`  |
+| Reviewer   | `openai/gpt-5.6-sol` (`high`)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`) |
+
+<!-- generated-end -->
 
 `go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
 has no cost ceiling: it combines direct Anthropic, OpenAI, Kimi, MiniMax, and

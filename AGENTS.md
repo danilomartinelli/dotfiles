@@ -161,9 +161,12 @@ Dotfiles owns `agents/`, `commands/`, `skills/`, `tools/`, `ocx.jsonc`,
 `.gitignore`, and `profiles/default/`; never copy or version those runtime
 paths.
 
-The versioned `agents/`, `commands/`, `skills/`, and `tools/` payloads retain
-OCX registry checksums. Update them through `ocx update`, do not reformat them
-independently, and require `ocx verify --cwd ~/.config/opencode --verbose` to
+The versioned `agents/`, `commands/`, `skills/`, and `tools/` payloads are
+registry content this repository tracks rather than authors. Nothing in the
+checkout records their provenance — they carry no checksum and there is no
+lock file — so `ocx verify --cwd ~/.config/opencode --verbose` is the only
+thing that can tell you they still match the registry. Update them through
+`ocx update`, do not reformat them independently, and require that verify to
 remain green.
 
 The three profile directories are rendered, not authored. OCX has no profile

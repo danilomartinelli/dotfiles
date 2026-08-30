@@ -56,6 +56,10 @@ fail() {
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/catalog.sh"
 
+# shellcheck source=_scripts/markdown-table.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/markdown-table.sh"
+
 topic_dir=$(CDPATH='' cd -P -- "$topic_dir" 2>/dev/null && pwd) \
   || fail "topic directory not found: $topic_dir"
 
@@ -139,6 +143,62 @@ validate_routing() {
   done
 }
 
+# A role's cell is its model, plus the one knob that distinguishes it: the
+# variant when the provider takes one, otherwise the reasoning effort. Every
+# other column is a number the prose around this table does not discuss.
+routing_cell() {
+  local profile=$1 role=$2
+
+  awk -F'\t' -v profile="$profile" -v role="$role" '
+    $1 == profile && $2 == role {
+      cell = "`" $3 "`"
+      knob = ($4 != "-") ? $4 : (($6 != "-") ? $6 : "")
+      if (knob != "") {
+        cell = cell " (`" knob "`)"
+      }
+      print cell
+      exit
+    }
+  ' "$routing"
+}
+
+# Roles read Default, Small, then the agents in the order the shared base
+# declares them, which is the order a person meets them in opencode.jsonc.
+emit_routing_rows() {
+  local role label profile row
+
+  for role in default small "${roles[@]}"; do
+    case $role in
+      default) label=Default ;;
+      small) label=Small ;;
+      *) label=$(printf '%s' "${role:0:1}" | tr '[:lower:]' '[:upper:]')${role:1} ;;
+    esac
+
+    row=$label
+    for profile in "${profiles[@]}"; do
+      row=$row$'\t'$(routing_cell "$profile" "$role")
+    done
+    printf '%s\n' "$row"
+  done
+}
+
+render_readme_block() {
+  local profile header
+
+  case "$1" in
+    profile-routing)
+      header=Role
+      for profile in "${profiles[@]}"; do
+        header=$header$'\t'"\`$profile\`"
+      done
+      emit_routing_rows | markdown_table "$header"
+      ;;
+    *)
+      fail "unknown generated block: $1"
+      ;;
+  esac
+}
+
 render_config() {
   local profile=$1
 
@@ -214,6 +274,13 @@ for profile in "${profiles[@]}"; do
   sync_payload "$shared_dir/ocx.jsonc" "$topic_dir/profiles/$profile/ocx.jsonc"
   sync_payload "$shared_dir/AGENTS.md" "$topic_dir/profiles/$profile/AGENTS.md"
 done
+
+# The routing table in the topic README is the same declaration in the shape a
+# person reads. It was maintained by hand beside the catalog that drives the
+# payloads, with nothing holding the two together.
+markdown_render_blocks "$topic_dir/README.md" render_readme_block \
+  >"$work_dir/README.md" || fail "cannot render $topic_dir/README.md"
+sync_payload "$work_dir/README.md" "$topic_dir/README.md"
 
 if [ "$check_only" = true ]; then
   if [ "$stale" -gt 0 ]; then
