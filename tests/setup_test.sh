@@ -321,7 +321,7 @@ test_setup_names_no_application_or_checklist_content() {
 
   fixture=$(make_fixture)
   assert_not_contains "$fixture/_scripts/setup" '/Applications/'
-  assert_not_contains "$fixture/_scripts/setup" 'CHECKLIST_OPEN_CANDIDATES'
+  assert_not_contains "$fixture/_scripts/setup" 'CHECKLIST_OPEN_PATHS'
 }
 
 test_app_installers_never_launch_apps_implicitly() {

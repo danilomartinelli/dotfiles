@@ -88,7 +88,10 @@ _scripts/setup checklist --open-apps
 
 The checklist is declared in `_scripts/_checklist.tsv`. Its app column is the
 single owner of both what that command opens and what the printed list calls
-opened, so edit a row there rather than `_scripts/setup`.
+opened, so edit a row there rather than `_scripts/setup`. A row may name
+several `|`-separated application paths in preference order: the first one
+installed is the one opened, and a row with none installed is printed as not
+installed rather than as one that opens.
 
 SSH and SOPS installers never invent credentials. Create keys only through the
 explicit commands when needed:

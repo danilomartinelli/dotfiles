@@ -56,14 +56,18 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-# Rows of the checklist catalog, split by the section that prints them. The
-# app column decides both membership and what gets opened, so a row can never
-# be listed as opened while being left closed.
+# Rows of the checklist catalog, split by the section that prints them. The app
+# column decides both membership and what gets opened, and membership follows
+# the *resolved* path rather than the declaration: an app row whose candidates
+# are all absent cannot be opened, so it is never listed among the ones that
+# open. Resolving at load is what makes that true — the section and the opening
+# loop then read the same answer instead of computing it twice.
 CHECKLIST_CREDENTIAL=()
 CHECKLIST_OPENED=()
 CHECKLIST_MANUAL=()
+CHECKLIST_ABSENT=()
 CHECKLIST_SHELL=()
-CHECKLIST_OPEN_CANDIDATES=()
+CHECKLIST_OPEN_PATHS=()
 CHECKLIST_LOADED=false
 
 load_checklist() {
@@ -80,6 +84,7 @@ load_checklist_row() {
   local app=$2
   local label=$3
   local note=$4
+  local resolved
 
   if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
     fail "invalid checklist row: $kind $label"
@@ -93,9 +98,11 @@ load_checklist_row() {
     app)
       if [ "$app" = - ]; then
         CHECKLIST_MANUAL+=("$label"$'\t'"$note")
-      else
+      elif resolved=$(resolve_app_path "$app"); then
         CHECKLIST_OPENED+=("$label"$'\t'"$note")
-        CHECKLIST_OPEN_CANDIDATES+=("$app")
+        CHECKLIST_OPEN_PATHS+=("$resolved")
+      else
+        CHECKLIST_ABSENT+=("$label"$'\t'"$note")
       fi
       ;;
     *) fail "unknown checklist kind '$kind' for $label" ;;
@@ -103,19 +110,21 @@ load_checklist_row() {
   return 0
 }
 
-# Open the first candidate that exists. Candidates are "|"-separated so an app
-# shipping under more than one name stays a single catalog row.
-open_app() {
+# The first candidate that exists, or nothing. Candidates are "|"-separated so
+# an app shipping under more than one name stays a single catalog row, and their
+# order is the preference: a machine with both Bartender 6 and Bartender gets
+# the one the catalog names first.
+resolve_app_path() {
   local candidates=$1
   local candidate
 
   while IFS= read -r candidate; do
     if [ -d "$candidate" ]; then
-      open -ga "$candidate" 2>/dev/null || true
+      printf '%s\n' "$candidate"
       return 0
     fi
   done <<<"${candidates//|/$'\n'}"
-  return 0
+  return 1
 }
 
 print_checklist_section() {
@@ -154,13 +163,16 @@ print_app_checklist() {
     ${CHECKLIST_OPENED[@]+"${CHECKLIST_OPENED[@]}"}
   print_checklist_section 'Apps requiring in-app setup' '    %-15s→ %s\n' \
     ${CHECKLIST_MANUAL[@]+"${CHECKLIST_MANUAL[@]}"}
+  print_checklist_section 'Apps not installed yet — install them, then rerun' \
+    '    %-15s→ %s\n' \
+    ${CHECKLIST_ABSENT[@]+"${CHECKLIST_ABSENT[@]}"}
   print_checklist_section 'Shell' '    %-33s# %s\n' \
     ${CHECKLIST_SHELL[@]+"${CHECKLIST_SHELL[@]}"}
   printf '\n'
 }
 
 open_app_checklist() {
-  local candidates
+  local app_path
 
   if [ ! -t 0 ] || [ ! -t 1 ]; then
     fail 'app checklist opening requires an interactive terminal; no applications were opened'
@@ -169,9 +181,11 @@ open_app_checklist() {
   print_app_checklist
 
   # This is deliberately separate from bootstrap and update. The caller must
-  # explicitly request checklist --open-apps from an interactive terminal.
-  for candidates in ${CHECKLIST_OPEN_CANDIDATES[@]+"${CHECKLIST_OPEN_CANDIDATES[@]}"}; do
-    open_app "$candidates"
+  # explicitly request checklist --open-apps from an interactive terminal. Every
+  # path here resolved at load, so this opens exactly what the section above
+  # listed.
+  for app_path in ${CHECKLIST_OPEN_PATHS[@]+"${CHECKLIST_OPEN_PATHS[@]}"}; do
+    open -ga "$app_path" 2>/dev/null || true
   done
 }
 

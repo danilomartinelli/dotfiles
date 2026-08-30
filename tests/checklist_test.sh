@@ -22,14 +22,6 @@ SHIPPED_CATALOG=$REPOSITORY_ROOT/_scripts/_checklist.tsv
 # shellcheck disable=SC1091
 source "$REPOSITORY_ROOT/_scripts/catalog.sh"
 
-# One rule stays out of reach: which of a row's "|"-separated candidates
-# open_app picks. It sits behind the interactive-terminal gate, and every way to
-# satisfy that gate from a suite is worse than the gap — `script` copies
-# terminal attributes from its own stdin and dies when the suite runs from a
-# pipe, and pty.spawn does not return under the system Python 3.9. Which rows
-# are opened at all is covered below; only the choice among candidate paths for
-# one row is not.
-#
 # A fixture is a catalog plus a fake-bin holding the stubbed `open`. The module
 # itself is never copied: the shipped file is the one under test.
 new_fixture() {
@@ -61,6 +53,46 @@ invoke_checklist() {
     DOTFILES_ROOT="$REPOSITORY_ROOT" \
     DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
     "$CHECKLIST" "$@"
+}
+
+# The opt-in path refuses a non-interactive caller, so reaching it needs a
+# terminal. `script` cannot supply one: it copies terminal attributes from its
+# own stdin and dies when the suite runs from a pipe. pty.spawn cannot either —
+# its stdin-copying loop does not return under the system Python 3.9. Forking a
+# pty directly and draining it needs neither, so this behaves the same in a
+# terminal and in a pipeline.
+PTY_RUNNER='
+import os, pty, sys
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp(sys.argv[1], sys.argv[1:])
+chunks = []
+while True:
+    try:
+        data = os.read(fd, 1024)
+    except OSError:
+        break
+    if not data:
+        break
+    chunks.append(data)
+os.close(fd)
+_, status = os.waitpid(pid, 0)
+sys.stdout.buffer.write(b"".join(chunks))
+sys.stdout.buffer.flush()
+sys.exit(os.waitstatus_to_exitcode(status))
+'
+
+invoke_checklist_on_a_terminal() {
+  local fixture=$1
+  shift
+  /usr/bin/python3 -c "$PTY_RUNNER" \
+    env \
+    HOME="$fixture/home" \
+    OPEN_LOG="$fixture/open.log" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    DOTFILES_ROOT="$REPOSITORY_ROOT" \
+    DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
+    "$CHECKLIST" "$@" >"$fixture/stdout.log" 2>&1
 }
 
 # Print the lines a heading owns, up to the next heading. A row asserted this
@@ -204,6 +236,66 @@ test_opening_requires_an_interactive_terminal() {
   assert_empty "$fixture/open.log"
 }
 
+# The section a row prints under follows the resolved path, not the
+# declaration. A row naming apps this machine does not have cannot be opened, so
+# listing it among the ones that open would promise what the run then skips.
+test_an_app_row_with_no_installed_candidate_is_not_listed_as_opened() {
+  local fixture
+  fixture=$(new_fixture)
+  mkdir -p "$fixture/Present.app"
+
+  write_catalog "$fixture" \
+    "app"$'\t'"$fixture/Present.app"$'\t'"PresentApp"$'\t'"finish the wizard" \
+    "app"$'\t'"$fixture/Missing.app|$fixture/AlsoMissing.app"$'\t'"AbsentApp"$'\t'"finish the wizard"
+
+  invoke_checklist "$fixture"
+
+  assert_in_section "$fixture/stdout.log" 'this opt-in command opens' 'PresentApp'
+  assert_in_section "$fixture/stdout.log" 'Apps not installed yet' 'AbsentApp'
+  assert_not_in_section "$fixture/stdout.log" 'this opt-in command opens' 'AbsentApp'
+  assert_not_in_section "$fixture/stdout.log" 'Apps not installed yet' 'PresentApp'
+}
+
+test_opening_takes_the_first_candidate_that_exists() {
+  local fixture
+  fixture=$(new_fixture)
+  mkdir -p "$fixture/Second.app" "$fixture/Third.app"
+
+  write_catalog "$fixture" \
+    "app"$'\t'"$fixture/First.app|$fixture/Second.app|$fixture/Third.app"$'\t'"Ranked"$'\t'"finish the wizard" \
+    "app"$'\t'"$fixture/Absent.app"$'\t'"AbsentApp"$'\t'"finish the wizard" \
+    "app"$'\t'"-"$'\t'"ManualApp"$'\t'"configure it in-app"
+
+  invoke_checklist_on_a_terminal "$fixture" --open-apps
+
+  assert_contains "$fixture/open.log" "-ga $fixture/Second.app"
+  assert_not_contains "$fixture/open.log" 'First.app'
+  assert_not_contains "$fixture/open.log" 'Third.app'
+  # A row with nothing installed and a row with no app at all are both skipped,
+  # so exactly one application is opened.
+  assert_not_contains "$fixture/open.log" 'Absent.app'
+  assert_not_contains "$fixture/open.log" 'ManualApp'
+  assert_count "$fixture/open.log" 'open ' 1
+}
+
+# The order of the candidates is the preference, which only shows when more
+# than one of them is installed.
+test_opening_prefers_the_earlier_of_two_installed_candidates() {
+  local fixture
+  fixture=$(new_fixture)
+  mkdir -p "$fixture/Preferred 6.app" "$fixture/Preferred.app"
+
+  write_catalog "$fixture" \
+    "app"$'\t'"$fixture/Preferred 6.app|$fixture/Preferred.app"$'\t'"Preferred"$'\t'"finish the wizard"
+
+  invoke_checklist_on_a_terminal "$fixture" --open-apps
+
+  # The path carries a space, so this also holds the array expansion to
+  # delivering one argument rather than two.
+  assert_contains "$fixture/open.log" "-ga $fixture/Preferred 6.app"
+  assert_count "$fixture/open.log" 'open ' 1
+}
+
 # The shipped catalog, read through the one reader. A second hand-written read
 # loop here is what this suite exists to remove.
 CATALOG_FAILURES=0
@@ -288,6 +380,12 @@ scenario_run 'a missing catalog stops the checklist' \
 scenario_run 'printing never opens anything' test_printing_never_opens_anything
 scenario_run 'opening requires an interactive terminal' \
   test_opening_requires_an_interactive_terminal
+scenario_run 'an app row with no installed candidate is not listed as opened' \
+  test_an_app_row_with_no_installed_candidate_is_not_listed_as_opened
+scenario_run 'opening takes the first candidate that exists' \
+  test_opening_takes_the_first_candidate_that_exists
+scenario_run 'opening prefers the earlier of two installed candidates' \
+  test_opening_prefers_the_earlier_of_two_installed_candidates
 scenario_run 'the shipped catalog is well formed' \
   test_the_shipped_catalog_is_well_formed
 scenario_run 'the shipped catalog names the key roles the installers expect' \
