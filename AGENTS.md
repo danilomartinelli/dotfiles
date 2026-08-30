@@ -100,7 +100,6 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | macOS preferences                               | `_macos/defaults.tsv`            |
 | Dock layout                                     | `dock/_layout.tsv`               |
 | Post-bootstrap checklist                        | `_scripts/_checklist.tsv`        |
-| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`        |
 | Topic discovery and load classes                | `_scripts/topic-catalog`         |
 | Setup orchestration                             | `_scripts/setup`                 |
 | OpenCode and OCX workspace                      | `opencode/`                      |
@@ -124,12 +123,11 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   bootstrap and update.
 - Source `_scripts/installer-preamble.sh` immediately after shell error-mode
   setup and use its guards, messages, and linking wrapper.
-- Read every tab-separated catalog through `catalog_each_row` from
-  `_scripts/catalog.sh`, which the preamble sources. No consumer writes its
-  own `read` loop.
-- Read every tab-separated catalog through `catalog_each_row` from
-  `_scripts/catalog.sh`, which the preamble sources. No consumer writes its
-  own `read` loop.
+- Read every tab-separated catalog *file* through `catalog_each_row` from
+  `_scripts/catalog.sh`, which the preamble sources. No such consumer writes
+  its own `read` loop. A catalog arriving as a command's stdout, such as
+  `_scripts/topic-catalog` output, is read directly; see
+  `docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md`.
 - Do not duplicate checkout resolution, Darwin detection, dependency hints,
   output conventions, or conflict handling in individual topics.
 - Only `*.symlink` files and directories are linked automatically.

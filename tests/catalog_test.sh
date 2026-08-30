@@ -29,7 +29,7 @@ EOF
     "$fixture/consumer.sh"
 }
 
-echo_row_body="row() { printf '[%s|%s|%s|%s]\n' \"\$1\" \"\$2\" \"\$3\" \"\$4\"; }"
+echo_row_body="row() { printf '[%s|%s|%s|%s|%s|%s|%s]\n' \"\$1\" \"\$2\" \"\$3\" \"\$4\" \"\$5\" \"\$6\" \"\$7\"; }"
 
 test_comment_and_blank_rows_are_skipped() {
   local fixture
@@ -43,8 +43,8 @@ test_comment_and_blank_rows_are_skipped() {
     'bravo	four	five	six' >"$fixture/catalog.tsv"
 
   invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
-  assert_contains "$fixture/stdout.log" '[alpha|one|two|three]'
-  assert_contains "$fixture/stdout.log" '[bravo|four|five|six]'
+  assert_contains "$fixture/stdout.log" '[alpha|one|two|three|||]'
+  assert_contains "$fixture/stdout.log" '[bravo|four|five|six|||]'
   assert_not_contains "$fixture/stdout.log" 'comment'
 }
 
@@ -58,17 +58,45 @@ test_a_final_row_without_a_newline_is_delivered() {
   printf 'alpha\tone\ttwo\tthree\nbravo\tfour\tfive\tsix' >"$fixture/catalog.tsv"
 
   invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
-  assert_contains "$fixture/stdout.log" '[bravo|four|five|six]'
+  assert_contains "$fixture/stdout.log" '[bravo|four|five|six|||]'
 }
 
-test_short_rows_pad_to_four_columns() {
+test_short_rows_pad_to_the_declared_width() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
 
   printf '%s\n' 'alpha	one	two' >"$fixture/catalog.tsv"
 
   invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
-  assert_contains "$fixture/stdout.log" '[alpha|one|two|]'
+  assert_contains "$fixture/stdout.log" '[alpha|one|two||||]'
+}
+
+# The widest catalog here is seven columns. Before the reader delivered them
+# all, that catalog needed a reader of its own, so the width is what keeps the
+# rule "one reader" true rather than aspirational.
+test_the_widest_catalog_arrives_whole() {
+  local fixture
+  fixture=$(scenario_tmpdir fixture)
+
+  printf '%s\n' \
+    'boost	default	model	-	-	high	low' \
+    'boost	plan	other	fast	0.2	-	-' >"$fixture/catalog.tsv"
+
+  invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
+  assert_contains "$fixture/stdout.log" '[boost|default|model|-|-|high|low]'
+  assert_contains "$fixture/stdout.log" '[boost|plan|other|fast|0.2|-|-]'
+}
+
+# A row wider than the declared width would pack its tail into the last
+# argument rather than being refused, so the failure is worth stating.
+test_an_overwide_row_packs_its_tail() {
+  local fixture
+  fixture=$(scenario_tmpdir fixture)
+
+  printf '%s\n' 'a	b	c	d	e	f	g	h' >"$fixture/catalog.tsv"
+
+  invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
+  assert_contains "$fixture/stdout.log" '[a|b|c|d|e|f|g	h]'
 }
 
 # The reason the module exists: a handler running duti, dockutil, or ocx must
@@ -129,8 +157,12 @@ scenario_run 'comment and blank rows are skipped' \
   test_comment_and_blank_rows_are_skipped
 scenario_run 'a final row without a trailing newline is delivered' \
   test_a_final_row_without_a_newline_is_delivered
-scenario_run 'short rows pad to four columns' \
-  test_short_rows_pad_to_four_columns
+scenario_run 'short rows pad to the declared width' \
+  test_short_rows_pad_to_the_declared_width
+scenario_run 'the widest catalog arrives whole' \
+  test_the_widest_catalog_arrives_whole
+scenario_run 'an overwide row packs its tail into the last column' \
+  test_an_overwide_row_packs_its_tail
 scenario_run 'a handler reading stdin cannot consume the rows' \
   test_a_handler_reading_stdin_cannot_consume_the_rows
 scenario_run 'an unreadable catalog reports and fails' \

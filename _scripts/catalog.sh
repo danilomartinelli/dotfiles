@@ -7,9 +7,14 @@
 # counts as a comment, whether a final row without a trailing newline is
 # delivered, and which file descriptor the rows arrive on.
 
-# Call <handler> once per data row of <catalog>, passing the row's four columns
-# as arguments. A row with fewer columns pads the rest with empty strings, so a
-# handler always receives four.
+# Call <handler> once per data row of <catalog>, passing the row's columns as
+# arguments. A row is padded with empty strings to seven, so a handler always
+# receives seven and may read only the leading ones it declares. Seven is the
+# widest catalog here rather than the widest a consumer happens to need: an
+# arity that fits some catalogs and not others is what made the wide ones grow
+# readers of their own. A row with more columns than that packs its tail into
+# the last argument, so widening a catalog past seven means widening the read
+# below first.
 #
 # Blank rows and rows whose first column starts with "#" are skipped. A final
 # row without a trailing newline is still delivered, which is the case a
@@ -38,7 +43,8 @@ catalog_each_row() {
   fi
 
   while IFS="$(printf '\t')" read -r \
-    _catalog_column_1 _catalog_column_2 _catalog_column_3 _catalog_column_4 <&3 \
+    _catalog_column_1 _catalog_column_2 _catalog_column_3 _catalog_column_4 \
+    _catalog_column_5 _catalog_column_6 _catalog_column_7 <&3 \
     || [ -n "${_catalog_column_1:-}" ]; do
     case ${_catalog_column_1:-} in
       '' | '#'*)
@@ -49,11 +55,14 @@ catalog_each_row() {
 
     "$_catalog_handler" \
       "$_catalog_column_1" "${_catalog_column_2:-}" \
-      "${_catalog_column_3:-}" "${_catalog_column_4:-}"
+      "${_catalog_column_3:-}" "${_catalog_column_4:-}" \
+      "${_catalog_column_5:-}" "${_catalog_column_6:-}" \
+      "${_catalog_column_7:-}"
 
     _catalog_column_1=''
   done 3<"$_catalog_path"
 
   unset _catalog_path _catalog_handler \
-    _catalog_column_1 _catalog_column_2 _catalog_column_3 _catalog_column_4
+    _catalog_column_1 _catalog_column_2 _catalog_column_3 _catalog_column_4 \
+    _catalog_column_5 _catalog_column_6 _catalog_column_7
 }

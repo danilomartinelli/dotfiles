@@ -145,16 +145,23 @@ Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
 
-Every tab-separated catalog is read through `_scripts/catalog.sh`, which the
-preamble sources for installers and which `_macos/set-defaults.sh` and
-`_scripts/setup` source directly. Call
+Every tab-separated catalog file is read through `_scripts/catalog.sh`, which
+the preamble sources for installers and which `_macos/set-defaults.sh`,
+`_scripts/setup`, and `_scripts/render-opencode-profiles` source directly. Call
 `catalog_each_row <catalog> <handler>` and write a handler that takes the
-row's four columns; do not write a `read` loop of your own. The reader owns
-what counts as a comment, delivery of a final row with no trailing newline,
-and reading on file descriptor 3 so a handler running `duti`, `dockutil`, or
-`ocx` cannot consume the rows still to come. A handler must return zero:
-consumers run under `set -e`, so a non-zero return stops the run rather than
-skipping a row.
+leading columns it needs; do not write a `read` loop of your own. The reader
+pads every row to seven arguments, and owns what counts as a
+comment, delivery of a final row with no trailing newline, and reading on file
+descriptor 3 so a handler running `duti`, `dockutil`, or `ocx` cannot consume
+the rows still to come. A handler must return zero: consumers run under
+`set -e`, so a non-zero return stops the run rather than skipping a row.
+
+A catalog that arrives as a command's stdout rather than a file is read
+directly by its consumer. `_scripts/topic-catalog` output is the only one, and
+`docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md` records
+why routing it through the reader would cost the property the reader exists
+for. Widening a catalog past seven columns means widening the reader first; a
+wider row packs its tail into the last argument instead of failing.
 
 A tool's configuration directory is `installer_config_dir <tool>`, which
 resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
