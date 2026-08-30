@@ -1,35 +1,41 @@
+# Runtime and language-package declarations for this machine.
+#
+# A trailing comment is the tool's catalog role, which
+# _scripts/render-software-catalog renders into README.md. A comment on its own
+# line stays here as rationale.
+
 [tools]
-"aqua:koalaman/shellcheck" = "latest"
-bun = "1.3.2"
-elixir = "1.18"
-erlang = "28"
-go = "1.25.5"
-"go:mvdan.cc/sh/v3/cmd/shfmt" = "latest"
-java = "temurin-21"
-node = "lts"
-"npm:@anthropic-ai/claude-code" = "2.1.223"
-"npm:@agentclientprotocol/claude-agent-acp" = "0.65.0"
-"npm:@agentclientprotocol/codex-acp" = "1.1.13"
-"npm:@earendil-works/pi-coding-agent" = "0.84.0"
-"npm:@colbymchenry/codegraph" = "1.5.0"
-"npm:@openai/codex" = "0.146.1"
-"npm:eas-cli" = "16.28.0"
-"npm:neonctl" = "3.6.0"
-"npm:ocx" = "2.0.15"
-"npm:opencode-ai" = { version = "1.18.23", npm_args = "--ignore-scripts=false" }
-"npm:skills" = "1.5.21"
-"npm:wrangler" = "4.119.0"
-"pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" }
-"pipx:kimi-cli" = "1.49.0"
+"aqua:koalaman/shellcheck" = "latest"                           # Shell linting
+bun = "1.3.2"                                                   # JavaScript runtime and package manager
+elixir = "1.18"                                                 # Elixir runtime
+erlang = "28"                                                   # BEAM runtime
+go = "1.25.5"                                                   # Go toolchain
+"go:mvdan.cc/sh/v3/cmd/shfmt" = "latest"                        # Shell formatting
+java = "temurin-21"                                             # Java runtime
+node = "lts"                                                    # Node.js LTS
+"npm:@anthropic-ai/claude-code" = "2.1.223"                     # Claude Code CLI
+"npm:@agentclientprotocol/claude-agent-acp" = "0.65.0"          # Claude ACP agent
+"npm:@agentclientprotocol/codex-acp" = "1.1.13"                 # Codex ACP agent
+"npm:@earendil-works/pi-coding-agent" = "0.84.0"                # Pi coding agent
+"npm:@colbymchenry/codegraph" = "1.5.0"                         # Repository code graph CLI
+"npm:@openai/codex" = "0.146.1"                                 # Codex CLI
+"npm:eas-cli" = "16.28.0"                                       # Expo Application Services CLI
+"npm:neonctl" = "3.6.0"                                         # Neon CLI
+"npm:ocx" = "2.0.15"                                            # OpenCode extension and profile manager
+"npm:opencode-ai" = { version = "1.18.23", npm_args = "--ignore-scripts=false" } # OpenCode CLI
+"npm:skills" = "1.5.21"                                         # Agent skills CLI
+"npm:wrangler" = "4.119.0"                                      # Cloudflare Workers CLI
+"pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" } # Aider coding assistant
+"pipx:kimi-cli" = "1.49.0"                                      # Kimi CLI
 # Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
-"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm --with mdformat-frontmatter" }
-pnpm = "10.23.0"
-python = "3.14.0"
-ruby = "3.4"
-rust = "1.91.1"
-terraform = "1.14.0"
-uv = "latest"
-yarn = "4.11.0"
+"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm --with mdformat-frontmatter" } # Markdown formatter with GFM/frontmatter plugins
+pnpm = "10.23.0"                                                # JavaScript package manager
+python = "3.14.0"                                               # Python runtime
+ruby = "3.4"                                                    # Ruby runtime
+rust = "1.91.1"                                                 # Rust toolchain
+terraform = "1.14.0"                                            # Infrastructure as code CLI
+uv = "latest"                                                   # Python package and environment manager
+yarn = "4.11.0"                                                 # JavaScript package manager
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]

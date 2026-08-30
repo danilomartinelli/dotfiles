@@ -32,21 +32,22 @@ catalogs, validation lists, or subsystem runbooks between files.
 
 ## Repository structure and naming
 
-| Concern                              | Authoritative source             |
-| ------------------------------------ | -------------------------------- |
-| Homebrew software                    | `Brewfile`                       |
-| Runtime and language-package tools   | `mise/config.toml`               |
-| Resolved Mise versions and checksums | `mise/mise.lock`                 |
-| macOS preferences                    | `_macos/defaults.tsv`            |
-| Dock layout                          | `dock/_layout.tsv`               |
-| Topic discovery and load classes     | `_scripts/topic-catalog`         |
-| Setup orchestration                  | `_scripts/setup`                 |
-| OpenCode and OCX configuration       | `opencode/`                      |
-| Managed OpenCode entry catalog       | `opencode/_managed-entries.tsv`  |
-| Shared OpenCode profile policy       | `opencode/profiles/_shared/`     |
-| OpenCode profile model routing       | `opencode/profiles/_routing.tsv` |
-| Public commands and lifecycle        | `README.md`                      |
-| Agent workflow                       | `AGENTS.md`                      |
+| Concern                              | Authoritative source              |
+| ------------------------------------ | --------------------------------- |
+| Homebrew software and its purposes   | `Brewfile`                        |
+| Runtime and language-package tools   | `mise/config.toml`                |
+| README software catalog tables       | rendered from the two files above |
+| Resolved Mise versions and checksums | `mise/mise.lock`                  |
+| macOS preferences                    | `_macos/defaults.tsv`             |
+| Dock layout                          | `dock/_layout.tsv`                |
+| Topic discovery and load classes     | `_scripts/topic-catalog`          |
+| Setup orchestration                  | `_scripts/setup`                  |
+| OpenCode and OCX configuration       | `opencode/`                       |
+| Managed OpenCode entry catalog       | `opencode/_managed-entries.tsv`   |
+| Shared OpenCode profile policy       | `opencode/profiles/_shared/`      |
+| OpenCode profile model routing       | `opencode/profiles/_routing.tsv`  |
+| Public commands and lifecycle        | `README.md`                       |
+| Agent workflow                       | `AGENTS.md`                       |
 
 Naming follows the executable surface already present:
 
@@ -218,14 +219,18 @@ the dependent installer.
 
 - Preserve the established syntax and grouping in `mise/config.toml` and
   `Brewfile`.
+- A trailing comment on a `brew`, `cask`, `mas`, or `[tools]` declaration is
+  that entry's catalog description, and the comment above a `cask` block is its
+  catalog group. `_scripts/render-software-catalog` renders both into
+  `README.md`, so a declaration without one stops the render.
 - Put runtimes and language-package CLIs in Mise; put system binaries,
   applications, fonts, MAS apps, and taps in Homebrew.
 - A third-party Homebrew formula requires both its tap declaration and a narrow
   trust entry in `homebrew/_bundle.sh`.
 - Regenerate `mise/mise.lock` with Mise from the repository root. Never edit its
   versions, checksums, or generated structure by hand.
-- Keep comments limited to ownership, compatibility, or non-obvious safety
-  rationale.
+- Keep other comments limited to ownership, compatibility, or non-obvious safety
+  rationale, on their own line so they are not read as a catalog description.
 
 ## Markdown and documentation
 

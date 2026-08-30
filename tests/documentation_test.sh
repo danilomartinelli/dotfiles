@@ -117,6 +117,13 @@ done < <(
     "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" | sort -u
 )
 
+# The catalog tables are rendered from Brewfile and mise/config.toml, so the
+# grep coverage above proves a name is mentioned and this proves the row around
+# it still matches what was declared.
+if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check >/dev/null; then
+  failures=$((failures + 1))
+fi
+
 if ((failures > 0)); then
   exit 1
 fi

@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+#
+# Render README.md's software catalog tables from the files that declare the
+# software.
+#
+# The catalog restated 300-odd declared names by hand, and the documentation
+# check could only prove that each name appeared somewhere in backticks: not
+# that a version was right, not that a purpose still described the package, not
+# that a row still had a declaration behind it. The names, versions, groups and
+# descriptions now come from Brewfile and mise/config.toml, where a trailing
+# comment is the entry's catalog description. Prose outside the marked blocks is
+# never touched.
+
+set -euo pipefail
+
+SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: render-software-catalog [--check] [repository-root]
+
+  --check  Report a stale catalog and exit 1 instead of rewriting it
+
+The repository root defaults to the checkout holding this script.
+EOF
+}
+
+check_only=false
+repository_root=$SCRIPT_DIR/..
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --check)
+      check_only=true
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    -*)
+      printf 'render-software-catalog: unknown option: %s\n' "$1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      repository_root=$1
+      ;;
+  esac
+  shift
+done
+
+fail() {
+  printf 'render-software-catalog: %s\n' "$1" >&2
+  exit 1
+}
+
+repository_root=$(CDPATH='' cd -P -- "$repository_root" 2>/dev/null && pwd) \
+  || fail "repository root not found: $repository_root"
+
+brewfile=$repository_root/Brewfile
+mise_config=$repository_root/mise/config.toml
+readme=$repository_root/README.md
+
+for required in "$brewfile" "$mise_config" "$readme"; do
+  [ -r "$required" ] || fail "required source not readable: $required"
+done
+
+# Every emitter writes tab-separated cells and stops on a declaration with no
+# description, because a blank cell in the rendered table would read as a
+# package nobody had to explain rather than one nobody did.
+emit_formula_rows() {
+  awk -F'\t' '
+    function trim(value) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      return value
+    }
+    /^brew / {
+      rest = substr($0, index($0, "'"'"'") + 1)
+      name = substr(rest, 1, index(rest, "'"'"'") - 1)
+      hash = index($0, "#")
+      purpose = hash ? trim(substr($0, hash + 1)) : ""
+      if (purpose == "") {
+        printf "render-software-catalog: brew %s has no catalog description\n", name > "/dev/stderr"
+        exit 1
+      }
+      printf "`%s`\t%s\n", name, purpose
+    }
+  ' "$brewfile"
+}
+
+# A cask's group is the comment directly above its block, so the Brewfile
+# states the grouping the table renders instead of the table inventing one.
+# Only a comment that opens a block counts: a stray cask under the file header
+# would otherwise be filed under a sentence of prose.
+emit_cask_rows() {
+  awk '
+    function trim(value) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      return value
+    }
+    /^#/ {
+      pending = trim(substr($0, 2))
+      next
+    }
+    /^[[:space:]]*$/ {
+      pending = ""
+      group = ""
+      next
+    }
+    !/^cask / {
+      pending = ""
+      group = ""
+      next
+    }
+    {
+      rest = substr($0, index($0, "'"'"'") + 1)
+      name = substr(rest, 1, index(rest, "'"'"'") - 1)
+      if (pending != "") {
+        group = pending
+        pending = ""
+      }
+      if (group == "") {
+        printf "render-software-catalog: cask %s has no catalog group\n", name > "/dev/stderr"
+        failed = 1
+        exit 1
+      }
+      if (!(group in members)) {
+        order[++groups] = group
+      }
+      members[group] = members[group] (members[group] == "" ? "" : ", ") "`" name "`"
+    }
+    END {
+      if (failed) {
+        exit 1
+      }
+      for (index_ = 1; index_ <= groups; index_++) {
+        printf "%s\t%s\n", order[index_], members[order[index_]]
+      }
+    }
+  ' "$brewfile"
+}
+
+emit_mas_rows() {
+  awk '
+    function trim(value) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      return value
+    }
+    /^mas / {
+      rest = substr($0, index($0, "'"'"'") + 1)
+      name = substr(rest, 1, index(rest, "'"'"'") - 1)
+      identifier = substr($0, index($0, "id:") + 3)
+      hash = index($0, "#")
+      purpose = hash ? trim(substr($0, hash + 1)) : ""
+      if (hash) {
+        identifier = substr(identifier, 1, index(identifier, "#") - 1)
+      }
+      gsub(/[[:space:],]/, "", identifier)
+      if (purpose == "") {
+        printf "render-software-catalog: mas %s has no catalog description\n", name > "/dev/stderr"
+        exit 1
+      }
+      printf "`%s`\t`%s`\t%s\n", name, identifier, purpose
+    }
+  ' "$brewfile"
+}
+
+# Versions are read from the declaration rather than restated, so a floating
+# "latest" and a pinned release are both reported as declared.
+emit_mise_rows() {
+  awk '
+    function trim(value) {
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      return value
+    }
+    /^\[settings\]/ { in_tools = 0 }
+    /^\[tools\]/ { in_tools = 1; next }
+    !in_tools { next }
+    /^[[:space:]]*(#.*)?$/ { next }
+    {
+      name = trim(substr($0, 1, index($0, "=") - 1))
+      gsub(/"/, "", name)
+      value = substr($0, index($0, "=") + 1)
+      hash = index(value, "#")
+      role = hash ? trim(substr(value, hash + 1)) : ""
+      if (hash) {
+        value = substr(value, 1, hash - 1)
+      }
+      if (index(value, "version") > 0) {
+        value = substr(value, index(value, "version"))
+        value = substr(value, index(value, "=") + 1)
+      }
+      version = substr(value, index(value, "\"") + 1)
+      version = substr(version, 1, index(version, "\"") - 1)
+      if (role == "") {
+        printf "render-software-catalog: mise tool %s has no catalog role\n", name > "/dev/stderr"
+        exit 1
+      }
+      if (version == "") {
+        printf "render-software-catalog: mise tool %s declares no version\n", name > "/dev/stderr"
+        exit 1
+      }
+      printf "`%s`\t`%s`\t%s\n", name, version, role
+    }
+  ' "$mise_config"
+}
+
+# Cells are padded to the widest in their column, which is what mdformat would
+# do to the table anyway. Rendering it already normalized keeps the formatter
+# and this script from disagreeing about a file they both write.
+format_table() {
+  awk -F'\t' -v header="$1" '
+    BEGIN {
+      columns = split(header, heading, "\t")
+      for (column = 1; column <= columns; column++) {
+        width[column] = length(heading[column])
+      }
+    }
+    {
+      for (column = 1; column <= NF; column++) {
+        rows[NR, column] = $column
+        if (length($column) > width[column]) {
+          width[column] = length($column)
+        }
+      }
+      total = NR
+    }
+    END {
+      line = "|"
+      rule = "|"
+      for (column = 1; column <= columns; column++) {
+        line = line sprintf(" %-*s |", width[column], heading[column])
+        dashes = ""
+        while (length(dashes) < width[column]) {
+          dashes = dashes "-"
+        }
+        rule = rule " " dashes " |"
+      }
+      print line
+      print rule
+      for (row = 1; row <= total; row++) {
+        line = "|"
+        for (column = 1; column <= columns; column++) {
+          line = line sprintf(" %-*s |", width[column], rows[row, column])
+        }
+        print line
+      }
+    }
+  '
+}
+
+render_block() {
+  case "$1" in
+    homebrew-formulae)
+      emit_formula_rows | format_table "$(printf 'Formula\tPurpose')"
+      ;;
+    homebrew-casks)
+      emit_cask_rows | format_table "$(printf 'Group\tHomebrew casks')"
+      ;;
+    mac-app-store)
+      emit_mas_rows | format_table "$(printf 'Mac App Store app\tApp ID\tPurpose')"
+      ;;
+    mise-tools)
+      emit_mise_rows | format_table "$(printf 'Tool\tDeclared version\tRole')"
+      ;;
+    *)
+      fail "unknown generated block: $1"
+      ;;
+  esac
+}
+
+work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-software-catalog.XXXXXX")
+trap 'rm -rf -- "$work_dir"' EXIT
+
+rendered=$work_dir/README.md
+block=''
+
+# Marked regions are replaced whole and everything else is copied through, so
+# the hand-written prose around the tables survives every render.
+while IFS= read -r line; do
+  case "$line" in
+    '<!-- generated: '*' -->')
+      [ -z "$block" ] || fail "nested generated marker: $line"
+      block=${line#'<!-- generated: '}
+      block=${block%' -->'}
+      # mdformat separates an HTML block from the table below it, so the render
+      # writes the blank lines the formatter would add rather than fighting it.
+      printf '%s\n\n' "$line" >>"$rendered"
+      render_block "$block" >>"$rendered"
+      printf '\n' >>"$rendered"
+      ;;
+    '<!-- generated-end -->')
+      [ -n "$block" ] || fail 'generated-end without an opening marker'
+      block=''
+      printf '%s\n' "$line" >>"$rendered"
+      ;;
+    *)
+      [ -n "$block" ] || printf '%s\n' "$line" >>"$rendered"
+      ;;
+  esac
+done <"$readme"
+
+[ -z "$block" ] || fail "unterminated generated block: $block"
+grep -Fq '<!-- generated: ' "$readme" || fail "no generated blocks in $readme"
+
+if cmp -s "$rendered" "$readme"; then
+  if [ "$check_only" = true ]; then
+    printf 'README software catalog is up to date.\n'
+  fi
+  exit 0
+fi
+
+if [ "$check_only" = true ]; then
+  diff -u "$readme" "$rendered" >&2 || true
+  fail 'README software catalog is out of date; run _scripts/render-software-catalog'
+fi
+
+cp -- "$rendered" "$readme"
+printf '  → rendered %s\n' "${readme#"$repository_root/"}"

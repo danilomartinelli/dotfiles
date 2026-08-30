@@ -128,6 +128,7 @@ macOS defaults.
 | `dotfiles-root.symlink --install`   | Repair `~/.dotfiles-root` for this checkout                       |
 | `set-defaults`                      | Explicitly reapply tracked macOS preferences                      |
 | `_scripts/render-opencode-profiles` | Rewrite the managed OpenCode profile payloads from their sources  |
+| `_scripts/render-software-catalog`  | Rewrite the README software catalog from the declarations         |
 
 ## Software catalog
 
@@ -135,79 +136,91 @@ macOS defaults.
 `mise/config.toml` declares language runtimes and language-distributed CLIs;
 `mise/mise.lock` pins their resolved versions and checksums.
 
+The tables below are rendered from those two files by
+`_scripts/render-software-catalog`, so a name, a version, a group, or a purpose
+is written once, where the software is declared. Each entry's trailing comment
+is its description. Run the renderer after changing a declaration;
+`tests/documentation_test.sh` fails while the catalog is out of date.
+
 ### Homebrew command-line tools
 
-| Formula                   | Purpose                                          |
-| ------------------------- | ------------------------------------------------ |
-| `age`                     | Encryption backend used by SOPS identities       |
-| `ansible`                 | Automation and configuration management          |
-| `atuin`                   | SQLite-backed shell history with optional sync   |
-| `aws-vault`               | Keychain-backed AWS credentials and SSO sessions |
-| `awscli`                  | AWS command-line interface                       |
-| `bat`                     | Syntax-highlighting `cat` replacement            |
-| `bitwarden-cli`           | Bitwarden command-line client                    |
-| `btop`                    | Process and resource monitor                     |
-| `cocoapods`               | Cocoa dependency manager for iOS/macOS projects  |
-| `coreutils`               | GNU core utilities, including `gls` and `gdate`  |
-| `defaultbrowser`          | Inspect or change the macOS default browser      |
-| `direnv`                  | Directory-specific environment loading           |
-| `dockutil`                | Programmatic Dock configuration                  |
-| `duti`                    | Default application associations                 |
-| `eza`                     | Modern `ls` replacement                          |
-| `fd`                      | Modern `find` replacement                        |
-| `fzf`                     | Command-line fuzzy finder                        |
-| `gawk`                    | GNU awk                                          |
-| `gh`                      | GitHub CLI                                       |
-| `git`                     | Version control                                  |
-| `git-delta`               | Syntax-highlighting Git pager                    |
-| `git-lfs`                 | Git Large File Storage                           |
-| `gitleaks`                | Secret scanner                                   |
-| `go-task`                 | Project task runner                              |
-| `glab`                    | GitLab CLI                                       |
-| `gnu-sed`                 | GNU sed as `gsed`                                |
-| `grc`                     | Colorized output for common commands             |
-| `helm`                    | Kubernetes package manager                       |
-| `helmfile`                | Declarative Helm release management              |
-| `hermes-agent`            | Hermes Agent CLI                                 |
-| `imagemagick`             | Image conversion and manipulation                |
-| `jq`                      | JSON processor                                   |
-| `k9s`                     | Kubernetes terminal UI                           |
-| `ksops`                   | SOPS integration for Kustomize                   |
-| `kubectx`                 | Kubernetes context and namespace switchers       |
-| `kubernetes-cli`          | `kubectl`                                        |
-| `kustomize`               | Kubernetes manifest customization                |
-| `vultr-cli`               | Vultr and VKE command-line client                |
-| `lazygit`                 | Git terminal UI                                  |
-| `mas`                     | Mac App Store CLI                                |
-| `mise`                    | Runtime and tool version manager                 |
-| `mkcert`                  | Locally trusted development certificates         |
-| `neovim`                  | Terminal editor                                  |
-| `nixfmt`                  | Nix formatter                                    |
-| `pandoc`                  | Document converter                               |
-| `python@3.12`             | Python runtime required by Aider                 |
-| `ripgrep`                 | Fast recursive text search                       |
-| `sops`                    | Secrets encryption with age, KMS, or PGP         |
-| `spaceman-diff`           | Visual image diffs                               |
-| `stern`                   | Multi-pod Kubernetes log tailing                 |
-| `tmux`                    | Terminal multiplexer                             |
-| `psviderski/tap/uncloud`  | Uncloud deployment CLI (`uc`)                    |
-| `vjeantet/tap/alerter`    | Send native macOS notifications from the CLI     |
-| `usage`                   | Usage-spec support for CLI completions           |
-| `watch`                   | Periodically rerun a command                     |
-| `watchexec`               | Rerun commands on file changes                   |
-| `watchman`                | Filesystem watcher                               |
-| `wget`                    | File downloader                                  |
-| `xh`                      | Friendly terminal HTTP client                    |
-| `yq`                      | YAML, TOML, and XML processor                    |
-| `zoxide`                  | Smarter directory navigation                     |
-| `zsh-autosuggestions`     | Fish-like Zsh suggestions                        |
-| `zsh-syntax-highlighting` | Zsh command-line highlighting                    |
+<!-- generated: homebrew-formulae -->
+
+| Formula                   | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `age`                     | Encryption backend used by SOPS identities                        |
+| `ansible`                 | Automation and configuration management                           |
+| `atuin`                   | SQLite-backed shell history with optional sync                    |
+| `aws-vault`               | Keychain-backed AWS credentials and SSO sessions                  |
+| `awscli`                  | AWS command-line interface                                        |
+| `bat`                     | Syntax-highlighting `cat` replacement                             |
+| `bitwarden-cli`           | Bitwarden command-line client                                     |
+| `btop`                    | Process and resource monitor                                      |
+| `cocoapods`               | Cocoa dependency manager for iOS/macOS projects (React Native)    |
+| `coreutils`               | GNU core utilities, including `gls` and `gdate`                   |
+| `defaultbrowser`          | Inspect or change the macOS default browser                       |
+| `direnv`                  | Directory-specific environment loading                            |
+| `dockutil`                | Programmatic Dock configuration                                   |
+| `duti`                    | Default application associations                                  |
+| `eza`                     | Modern `ls` replacement                                           |
+| `fd`                      | Modern `find` replacement                                         |
+| `fzf`                     | Command-line fuzzy finder                                         |
+| `gawk`                    | GNU awk                                                           |
+| `gh`                      | GitHub CLI                                                        |
+| `git`                     | Version control                                                   |
+| `git-delta`               | Syntax-highlighting Git pager                                     |
+| `git-lfs`                 | Git Large File Storage                                            |
+| `gitleaks`                | Secret scanner                                                    |
+| `go-task`                 | Project task runner                                               |
+| `glab`                    | GitLab CLI                                                        |
+| `gnu-sed`                 | GNU sed as `gsed`                                                 |
+| `grc`                     | Colorized output for common commands                              |
+| `helm`                    | Kubernetes package manager                                        |
+| `helmfile`                | Declarative Helm release management                               |
+| `hermes-agent`            | Hermes Agent CLI                                                  |
+| `imagemagick`             | Image conversion and manipulation                                 |
+| `jq`                      | JSON processor                                                    |
+| `k9s`                     | Kubernetes terminal UI                                            |
+| `ksops`                   | SOPS integration for Kustomize                                    |
+| `kubectx`                 | Kubernetes context and namespace switchers (`kubectx`, `kubens`)  |
+| `kubernetes-cli`          | `kubectl`                                                         |
+| `kustomize`               | Kubernetes manifest customization                                 |
+| `vultr-cli`               | Vultr and VKE command-line client                                 |
+| `lazygit`                 | Git terminal UI                                                   |
+| `mas`                     | Mac App Store CLI                                                 |
+| `mise`                    | Runtime and tool version manager (successor to asdf)              |
+| `mkcert`                  | Locally trusted development certificates                          |
+| `neovim`                  | Terminal editor                                                   |
+| `nixfmt`                  | Nix formatter                                                     |
+| `pandoc`                  | Document converter                                                |
+| `python@3.12`             | Python 3.12 runtime required by Aider (`aider-chat` needs < 3.13) |
+| `ripgrep`                 | Fast recursive text search                                        |
+| `sops`                    | Secrets encryption with age, KMS, or PGP                          |
+| `spaceman-diff`           | Visual image diffs                                                |
+| `stern`                   | Multi-pod Kubernetes log tailing                                  |
+| `tmux`                    | Terminal multiplexer                                              |
+| `psviderski/tap/uncloud`  | Uncloud deployment CLI (`uc`)                                     |
+| `vjeantet/tap/alerter`    | Send native macOS notifications from the CLI                      |
+| `usage`                   | Usage-spec support for CLI completions                            |
+| `watch`                   | Periodically rerun a command                                      |
+| `watchexec`               | Rerun commands on file changes                                    |
+| `watchman`                | Filesystem watcher                                                |
+| `wget`                    | File downloader                                                   |
+| `xh`                      | Friendly terminal HTTP client                                     |
+| `yq`                      | YAML, TOML, and XML processor                                     |
+| `zoxide`                  | Smarter directory navigation                                      |
+| `zsh-autosuggestions`     | Fish-like Zsh suggestions                                         |
+| `zsh-syntax-highlighting` | Zsh command-line highlighting                                     |
+
+<!-- generated-end -->
 
 Third-party taps are declared in `Brewfile`. `homebrew/_bundle.sh` maintains a
 narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 `vultr/vultr-cli` before running `brew bundle`.
 
 ### Applications and fonts
+
+<!-- generated: homebrew-casks -->
 
 | Group                     | Homebrew casks                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -221,7 +234,15 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 | Runtime and containers    | `orbstack`                                                                                                  |
 | Fonts                     | `font-jetbrains-mono-nerd-font`                                                                             |
 
-The Mac App Store declaration is `Xcode` (app id `497799835`).
+<!-- generated-end -->
+
+<!-- generated: mac-app-store -->
+
+| Mac App Store app | App ID      | Purpose                                    |
+| ----------------- | ----------- | ------------------------------------------ |
+| `Xcode`           | `497799835` | Apple's integrated development environment |
+
+<!-- generated-end -->
 
 Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
 Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
@@ -241,6 +262,8 @@ Versions may be floating declarations such as `latest`, `lts`, or a minor
 series. Reproducibility comes from the generated `mise/mise.lock`. Run
 `mise install` to reconcile the lock and `mise upgrade` to advance it
 deliberately.
+
+<!-- generated: mise-tools -->
 
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
@@ -274,6 +297,8 @@ deliberately.
 | `terraform`                                 | `1.14.0`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
 | `yarn`                                      | `4.11.0`         | JavaScript package manager                      |
+
+<!-- generated-end -->
 
 Generated `.codegraph/` and `.wrangler/` directories are machine-local and
 must not be committed.
@@ -539,8 +564,10 @@ instead.
 - Add system packages, applications, fonts, and taps to `Brewfile`.
 - Add language-package CLIs and runtimes to `mise/config.toml`, regenerate the
   lock from the repository root, and review the generated diff.
-- Update the software catalog above; documentation coverage will report any
-  missing declaration.
+- Give the new declaration a trailing comment: it is the purpose or role the
+  catalog renders, and a declaration without one stops the render.
+- Run `_scripts/render-software-catalog` to update the catalog tables.
+  Documentation coverage reports both a missing declaration and a stale table.
 
 Implementation, testing, and delivery rules live in
 [`CODING_STANDARDS.md`](CODING_STANDARDS.md). Agent-specific instructions live

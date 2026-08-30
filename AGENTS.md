@@ -94,6 +94,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Concern                                         | Source                           |
 | ----------------------------------------------- | -------------------------------- |
 | Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                       |
+| README software catalog tables                  | rendered from declarations       |
 | Runtimes and language-package CLIs              | `mise/config.toml`               |
 | Mise versions and checksums                     | `mise/mise.lock` (generated)     |
 | macOS preferences                               | `_macos/defaults.tsv`            |
@@ -134,7 +135,9 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   `mise/config.toml`.
 - Add a third-party tap to both `Brewfile` and the narrow trust flow in
   `homebrew/_bundle.sh`.
-- Update the README software catalog with every declaration change.
+- Give every declaration a trailing comment; it is the description
+  `_scripts/render-software-catalog` renders into the README catalog tables.
+  Run the renderer with the declaration change.
 - Do not run broad package-manager repair commands such as `npm audit fix`.
 
 ### OpenCode and OCX
