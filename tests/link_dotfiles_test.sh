@@ -14,6 +14,7 @@ make_repo() {
   mkdir -p "$repo/_scripts" "$repo/sample" "$repo/bin" "$repo/home"
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$repo/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$repo/_scripts/link-config"
+  cp "$REPOSITORY_ROOT/_scripts/output.sh" "$repo/_scripts/output.sh"
   cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$repo/_scripts/topic-catalog"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$repo/dotfiles-root.symlink"
   chmod +x "$repo/_scripts/link-dotfiles" "$repo/_scripts/link-config" \

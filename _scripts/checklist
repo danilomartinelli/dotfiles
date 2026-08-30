@@ -32,10 +32,9 @@ Usage: _scripts/checklist [--open-apps]
 EOF
 }
 
-fail() {
-  printf '  [\033[0;31mFAIL\033[0m] %s\n' "$1" >&2
-  exit 1
-}
+# shellcheck source=_scripts/output.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/output.sh"
 
 open_apps=false
 

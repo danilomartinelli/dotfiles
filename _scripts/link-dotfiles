@@ -56,21 +56,9 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-info() {
-  printf '  [ \033[00;34m..\033[0m ] %s\n' "$1"
-}
-
-prompt() {
-  printf '  [ \033[0;33m??\033[0m ] %s\n' "$1"
-}
-
-success() {
-  printf '  [ \033[00;32mOK\033[0m ] %s\n' "$1"
-}
-
-warn() {
-  printf '  [\033[0;33mWARN\033[0m] %s\n' "$1" >&2
-}
+# shellcheck source=_scripts/output.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/output.sh"
 
 choose_link_action() {
   local src

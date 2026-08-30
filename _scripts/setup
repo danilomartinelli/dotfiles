@@ -23,26 +23,9 @@ BREW_BIN=''
 CATALOG_SNAPSHOT=''
 CATALOG_CAPTURED=false
 
-info() {
-  printf '  [ \033[00;34m..\033[0m ] %s\n' "$1"
-}
-
-prompt() {
-  printf '  [ \033[0;33m??\033[0m ] %s\n' "$1"
-}
-
-success() {
-  printf '  [ \033[00;32mOK\033[0m ] %s\n' "$1"
-}
-
-warn() {
-  printf '  [\033[0;33mWARN\033[0m] %s\n' "$1" >&2
-}
-
-fail() {
-  printf '  [\033[0;31mFAIL\033[0m] %s\n' "$1" >&2
-  exit 1
-}
+# shellcheck source=_scripts/output.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/output.sh"
 
 # Whether the first argument appears among the remaining ones.
 list_contains() {
