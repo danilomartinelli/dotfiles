@@ -116,24 +116,25 @@ without updating adapters, tests, and user documentation in the same change.
 - Topic installers source `_scripts/installer-preamble.sh` immediately after
   error-mode setup and use its shared interface:
 
-  | Helper                       | Contract                                                           |
-  | ---------------------------- | ------------------------------------------------------------------ |
-  | `installer_require_darwin`   | Skip successfully outside macOS                                    |
-  | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
-  | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
-  | `installer_optional_app`     | Warn and skip when an optional application is absent               |
-  | `installer_config_dir`       | Resolve a tool's configuration directory without creating it       |
-  | `installer_workspace_root`   | Resolve the Workspace root without creating it                     |
-  | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
-  | `installer_mark_applied`     | Record that a run-once step completed                              |
-  | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |
-  | `installer_banner`           | Print a phase heading to stdout                                    |
-  | `installer_success`          | Print successful completion to stdout                              |
-  | `installer_note`             | Print non-error detail to stdout                                   |
-  | `installer_warn`             | Print a warning to stderr                                          |
-  | `installer_error`            | Print an error to stderr                                           |
-  | `installer_hint`             | Continue a warning or error with an actionable stderr hint         |
-  | `installer_fail`             | Print an error and stop the installer                              |
+  | Helper                         | Contract                                                            |
+  | ------------------------------ | ------------------------------------------------------------------- |
+  | `installer_require_darwin`     | Skip successfully outside macOS                                     |
+  | `installer_require_command`    | Stop with an actionable formula hint when a required CLI is absent  |
+  | `installer_optional_command`   | Warn and skip when an optional CLI is absent                        |
+  | `installer_optional_app`       | Warn and skip when an optional application is absent                |
+  | `installer_config_dir`         | Resolve a tool's configuration directory without creating it        |
+  | `installer_workspace_root`     | Resolve the Workspace root without creating it                      |
+  | `installer_skip_if_applied`    | Skip successfully when a run-once step has already been applied     |
+  | `installer_mark_applied`       | Record that a run-once step completed                               |
+  | `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
+  | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
+  | `installer_banner`             | Print a phase heading to stdout                                     |
+  | `installer_success`            | Print successful completion to stdout                               |
+  | `installer_note`               | Print non-error detail to stdout                                    |
+  | `installer_warn`               | Print a warning to stderr                                           |
+  | `installer_error`              | Print an error to stderr                                            |
+  | `installer_hint`               | Continue a warning or error with an actionable stderr hint          |
+  | `installer_fail`               | Print an error and stop the installer                               |
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
@@ -152,6 +153,14 @@ applies on first run only. Gate it with `installer_skip_if_applied` and record
 it with `installer_mark_applied`, both keyed by a short topic key. `DOTFILES_RESET`
 re-arms one or more steps by key, or every step with `all`; nothing else may
 define a per-topic reset variable.
+
+A topic that claims file types declares them in `<topic>/_associations.tsv`
+and applies them with `installer_apply_associations`; no installer writes its
+own association loop. A row whose failure mode is `ignore` is best-effort,
+because Launch Services does not recognise every identifier on every macOS
+version, and only `report` rows are named and counted. Where a topic gates its
+associations as a run-once step, editing the catalog changes what the next
+apply would set without setting it; the reset key applies it.
 
 Installer run order is declared, not alphabetical. `_scripts/setup` names the
 prerequisite topics — those whose installers create state a later installer

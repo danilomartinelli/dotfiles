@@ -116,7 +116,8 @@ test_individual_association_failures_are_aggregated() {
   unset FAIL_DUTI_UTI
 
   assert_contains "$fixture/stderr.log" 'Failed to set Archiver as default for .zip'
-  assert_contains "$fixture/stderr.log" 'Some file types could not be configured (1 failed)'
+  assert_contains "$fixture/stderr.log" \
+    'Some Archiver file associations could not be configured (1 failed)'
 }
 
 scenario_run 'supported archive types use the viewer role' test_supported_types_use_viewer_role

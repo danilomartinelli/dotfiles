@@ -34,26 +34,5 @@ if [ ! -x "$LSREGISTER_BIN" ] || ! "$LSREGISTER_BIN" -f "$ARCHIVER_APP" >/dev/nu
   exit 0
 fi
 
-failed=0
-while IFS='|' read -r label uti; do
-  if ! duti -s "$ARCHIVER_BUNDLE" "$uti" viewer 2>/dev/null; then
-    installer_warn "Failed to set Archiver as default for $label"
-    failed=$((failed + 1))
-  fi
-done <<'EOF'
-.zip|public.zip-archive
-.rar|public.rar-archive
-.7z|org.7-zip.7-zip-archive
-.tar|public.tar-archive
-.gz|org.gnu.gnu-zip-archive
-.bz2|public.bzip2-archive
-.xz|org.tukaani.xz-archive
-.tgz|org.gnu.gnu-zip-tar-archive
-.tbz2|public.bzip2-tar-archive
-EOF
-
-if [ "$failed" -eq 0 ]; then
-  installer_success "Archiver set as default for compressed files"
-else
-  installer_warn "Some file types could not be configured ($failed failed)"
-fi
+installer_apply_associations Archiver "$ARCHIVER_BUNDLE" \
+  "Archiver set as default for compressed files"

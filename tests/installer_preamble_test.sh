@@ -507,6 +507,140 @@ printf "ran\n" >"$HOME/ran"'
   [[ ! -e $home/ran ]] || scenario_fail 'installer continued past a failing row'
 }
 
+# The catalog lives beside the installer, so a fixture topic dir is the whole
+# setup: no path override exists, by design.
+write_association_fixture() {
+  local checkout=$1
+  local catalog=$2
+  local fake_bin=$checkout/home/fake-bin
+
+  mkdir -p "$fake_bin"
+  scenario_write_executable "$fake_bin/duti" <<'EOF'
+#!/bin/sh
+printf 'duti %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+for failing in ${FAIL_DUTI:-}; do
+  [ "$failing" != "$3" ] || exit 1
+done
+exit 0
+EOF
+
+  printf '%s' "$catalog" >"$checkout/sample/_associations.tsv"
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'installer_apply_associations Sample com.example.sample "sample associations set"'
+}
+
+invoke_associations() {
+  local checkout=$1
+  scenario_capture "$checkout/home" env \
+    PATH="$checkout/home/fake-bin:/usr/bin:/bin" \
+    "$checkout/sample/install.sh"
+}
+
+test_associations_apply_every_row_with_its_role() {
+  local checkout
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' \
+    '# comment line ignored' \
+    '' \
+    '.md\teditor\treport\t-' \
+    'public.zip-archive\tviewer\treport\t.zip' \
+    'com.adobe.pdf\teditor\tignore\t-')"
+
+  invoke_associations "$checkout"
+
+  assert_count "$checkout/home/events.log" 'duti -s com.example.sample' 3
+  assert_contains "$checkout/home/events.log" '.md editor'
+  assert_contains "$checkout/home/events.log" 'public.zip-archive viewer'
+  assert_contains "$checkout/home/events.log" 'com.adobe.pdf editor'
+  assert_before "$checkout/home/events.log" '.md editor' 'public.zip-archive viewer'
+  assert_contains "$checkout/home/stdout.log" '✓ sample associations set'
+  assert_not_contains "$checkout/home/stderr.log" 'Warning:'
+}
+
+test_associations_name_a_reported_failure_by_label() {
+  local checkout
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' \
+    'public.zip-archive\tviewer\treport\t.zip' \
+    '.md\teditor\treport\t-')"
+
+  export FAIL_DUTI='public.zip-archive'
+  invoke_associations "$checkout"
+  unset FAIL_DUTI
+
+  # The label column carries the human name; a "-" falls back to the identifier.
+  assert_contains "$checkout/home/stderr.log" \
+    'Warning: Failed to set Sample as default for .zip'
+  assert_contains "$checkout/home/stderr.log" \
+    'Warning: Some Sample file associations could not be configured (1 failed)'
+  assert_not_contains "$checkout/home/stdout.log" 'sample associations set'
+}
+
+test_associations_count_every_reported_failure() {
+  local checkout
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' \
+    '.md\teditor\treport\t-' \
+    '.rst\teditor\treport\t-' \
+    '.txt\teditor\treport\t-')"
+
+  export FAIL_DUTI='.md .rst'
+  invoke_associations "$checkout"
+  unset FAIL_DUTI
+
+  # A count of 2 is what proves the loop does not run in a subshell, which is
+  # why the catalog is read by redirection rather than through a pipe.
+  assert_contains "$checkout/home/stderr.log" \
+    'Warning: Some Sample file associations could not be configured (2 failed)'
+  assert_contains "$checkout/home/stderr.log" 'default for .md'
+  assert_contains "$checkout/home/stderr.log" 'default for .rst'
+}
+
+test_associations_swallow_a_best_effort_failure() {
+  local checkout status
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' \
+    'public.source-code\teditor\tignore\t-' \
+    '.md\teditor\treport\t-')"
+
+  export FAIL_DUTI='public.source-code'
+  status=0
+  invoke_associations "$checkout" || status=$?
+  unset FAIL_DUTI
+
+  # Best-effort rows keep running under set -e and never reach the count.
+  assert_equal 0 "$status" 'exit status when only a best-effort row fails'
+  assert_contains "$checkout/home/events.log" '.md editor'
+  assert_not_contains "$checkout/home/stderr.log" 'public.source-code'
+  assert_contains "$checkout/home/stdout.log" '✓ sample associations set'
+}
+
+test_associations_fail_without_a_catalog() {
+  local checkout status
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' '.md\teditor\treport\t-')"
+  rm "$checkout/sample/_associations.tsv"
+
+  status=0
+  invoke_associations "$checkout" || status=$?
+  assert_equal 1 "$status" 'exit status for a missing association catalog'
+  assert_contains "$checkout/home/stderr.log" 'Error: association catalog not readable'
+  assert_not_contains "$checkout/home/stdout.log" 'sample associations set'
+}
+
+test_associations_fail_on_an_unknown_failure_mode() {
+  local checkout status
+  checkout=$(make_checkout)
+  write_association_fixture "$checkout" "$(printf '%b\n' '.md\teditor\tigore\t-')"
+
+  status=0
+  invoke_associations "$checkout" || status=$?
+  # Defaulting a typo either way would decide silently whether a failure is
+  # heard, so an unknown mode is a catalog bug rather than a tolerated value.
+  assert_equal 1 "$status" 'exit status for an unknown failure mode'
+  assert_contains "$checkout/home/stderr.log" "Error: unknown failure mode 'igore' for .md"
+}
+
 test_preamble_not_in_topic_catalog() {
   local checkout catalog_output
 
@@ -574,4 +708,16 @@ scenario_run 'INSTALLER_ANCHOR does not leak past the preamble' \
 scenario_run 'unresolvable INSTALLER_ANCHOR fails loudly' test_unresolvable_anchor_fails
 scenario_run 'preamble is excluded from topic discovery' \
   test_preamble_not_in_topic_catalog
+scenario_run 'associations apply every catalog row with its own role' \
+  test_associations_apply_every_row_with_its_role
+scenario_run 'a reported association failure is named by its label' \
+  test_associations_name_a_reported_failure_by_label
+scenario_run 'every reported association failure reaches the count' \
+  test_associations_count_every_reported_failure
+scenario_run 'a best-effort association failure is neither named nor counted' \
+  test_associations_swallow_a_best_effort_failure
+scenario_run 'a missing association catalog fails loudly' \
+  test_associations_fail_without_a_catalog
+scenario_run 'an unknown association failure mode fails loudly' \
+  test_associations_fail_on_an_unknown_failure_mode
 scenario_finish

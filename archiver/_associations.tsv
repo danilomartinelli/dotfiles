@@ -1,0 +1,15 @@
+# Archiver file-type association catalog consumed by installer_apply_associations.
+# Columns: identifier, role, failure, label
+# identifier is a UTI or a filename extension; failure ∈ report|ignore, where
+# "ignore" is best-effort because Launch Services does not know every
+# identifier on every macOS version. A "-" label falls back to the identifier.
+
+public.zip-archive	viewer	report	.zip
+public.rar-archive	viewer	report	.rar
+org.7-zip.7-zip-archive	viewer	report	.7z
+public.tar-archive	viewer	report	.tar
+org.gnu.gnu-zip-archive	viewer	report	.gz
+public.bzip2-archive	viewer	report	.bz2
+org.tukaani.xz-archive	viewer	report	.xz
+org.gnu.gnu-zip-tar-archive	viewer	report	.tgz
+public.bzip2-tar-archive	viewer	report	.tbz2

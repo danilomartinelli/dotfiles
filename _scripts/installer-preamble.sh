@@ -133,6 +133,69 @@ installer_mark_applied() {
   unset _installer_marker
 }
 
+# Apply a topic's declared file-type associations and report the outcome.
+# Reads TOPIC_DIR/_associations.tsv so a topic gains an association by editing
+# data. A "report" row names and counts its failure; an "ignore" row is
+# best-effort, because Launch Services does not recognise every identifier on
+# every macOS version. A "-" label falls back to the identifier.
+# Usage: installer_apply_associations <name> <bundle> <success>
+installer_apply_associations() {
+  _installer_assoc_name=$1
+  _installer_assoc_bundle=$2
+  _installer_assoc_success=$3
+  _installer_assoc_catalog=$TOPIC_DIR/_associations.tsv
+
+  if [ ! -r "$_installer_assoc_catalog" ]; then
+    installer_fail "association catalog not readable: $_installer_assoc_catalog"
+  fi
+
+  _installer_assoc_failed=0
+  _installer_assoc_id=''
+  while IFS="$(printf '\t')" read -r _installer_assoc_id _installer_assoc_role \
+    _installer_assoc_failure _installer_assoc_label \
+    || [ -n "${_installer_assoc_id:-}" ]; do
+    case $_installer_assoc_id in
+      '' | '#'*) continue ;;
+    esac
+
+    # An unknown mode is a catalog bug, and defaulting it either way would
+    # decide silently whether a failure is heard.
+    case ${_installer_assoc_failure:-} in
+      report | ignore) ;;
+      *)
+        installer_fail \
+          "unknown failure mode '${_installer_assoc_failure:-}' for $_installer_assoc_id in $_installer_assoc_catalog"
+        ;;
+    esac
+
+    # </dev/null keeps duti away from the catalog this loop is reading.
+    if duti -s "$_installer_assoc_bundle" "$_installer_assoc_id" \
+      "$_installer_assoc_role" 2>/dev/null </dev/null; then
+      continue
+    fi
+
+    [ "$_installer_assoc_failure" = report ] || continue
+
+    if [ "$_installer_assoc_label" = '-' ]; then
+      _installer_assoc_label=$_installer_assoc_id
+    fi
+    installer_warn \
+      "Failed to set $_installer_assoc_name as default for $_installer_assoc_label"
+    _installer_assoc_failed=$((_installer_assoc_failed + 1))
+  done <"$_installer_assoc_catalog"
+
+  if [ "$_installer_assoc_failed" -eq 0 ]; then
+    installer_success "$_installer_assoc_success"
+  else
+    installer_warn \
+      "Some $_installer_assoc_name file associations could not be configured ($_installer_assoc_failed failed)"
+  fi
+
+  unset _installer_assoc_name _installer_assoc_bundle _installer_assoc_success \
+    _installer_assoc_catalog _installer_assoc_failed _installer_assoc_id \
+    _installer_assoc_role _installer_assoc_failure _installer_assoc_label
+}
+
 installer_link_config() {
   "$DOTFILES_ROOT/_scripts/link-config" "$@"
 }

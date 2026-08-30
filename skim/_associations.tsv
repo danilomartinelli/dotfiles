@@ -1,0 +1,11 @@
+# Skim file-type association catalog consumed by installer_apply_associations.
+# Columns: identifier, role, failure, label
+# identifier is a UTI or a filename extension; failure ∈ report|ignore, where
+# "ignore" is best-effort because Launch Services does not know every
+# identifier on every macOS version. A "-" label falls back to the identifier.
+#
+# Role "editor" throughout — never "all" — so that the viewer role registered
+# by macOS Preview is not claimed unexpectedly.
+
+.pdf	editor	report	-
+com.adobe.pdf	editor	ignore	-

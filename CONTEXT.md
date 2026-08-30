@@ -82,3 +82,21 @@ A tool whose absence makes a topic's remaining work meaningless but not wrong,
 so the installer says why and stops successfully. Distinct from a required
 dependency, whose absence is an error.
 _Avoid_: soft dependency, nice-to-have
+
+**File-type association**:
+A request that macOS route one file-type identifier — a filename extension or a
+UTI — to a topic's app in a named role. A topic declares the whole set it
+claims; it does not describe how each one is applied.
+_Avoid_: file type binding, default app mapping, UTI claim, handler
+
+**Best-effort association**:
+An association whose failure is expected rather than reported, because Launch
+Services does not recognise every identifier on every macOS version. Every
+other association's failure is named and counted.
+_Avoid_: optional association, soft association, fallback UTI
+
+**Association role**:
+The capability an association claims. Never the one that claims everything,
+because a role macOS already maps elsewhere — the browser's hold on HTML —
+turns applying a default into a system prompt.
+_Avoid_: handler role, all, viewer/editor
