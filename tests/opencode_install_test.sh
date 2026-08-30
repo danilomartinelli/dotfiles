@@ -249,8 +249,7 @@ test_regular_profile_trusts_project_configuration() {
 		.permission["linear_*"] == "allow" and
 		.mcp.linear == {
 			"type": "remote",
-			"url": "https://mcp.linear.app/mcp",
-			"enabled": false
+			"url": "https://mcp.linear.app/mcp"
 		}
 	' >/dev/null \
     || scenario_fail 'regular profile Linear MCP policy is incorrect'

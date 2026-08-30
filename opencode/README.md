@@ -116,10 +116,10 @@ not discover those sources a second time. It exports
 discovery, while `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` continues to omit
 `.claude/skills`.
 
-The profile also declares Linear's remote MCP with `linear_*` tools allowed,
-but keeps the server disabled. Set `mcp.linear.enabled` to `true` in
-`opencode/profiles/regular/opencode.jsonc` when it should become available; the
-first connection will require Linear authentication.
+The profile also declares Linear's remote MCP with `linear_*` tools allowed, and
+the server is enabled, so the first connection requires Linear authentication.
+Set `mcp.linear.enabled` to `false` in
+`opencode/profiles/regular/opencode.jsonc` to turn it off again.
 
 Zed's ACP integration is separate from these interactive aliases and starts
 OpenCode through OCX with the `boost` profile explicitly.
