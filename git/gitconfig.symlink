@@ -67,3 +67,10 @@
 # for single-valued options, so this include must stay at the bottom.
 [include]
         path = ~/.gitconfig.local
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[user]
+	email = danilomartinelli429@gmail.com
