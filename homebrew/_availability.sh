@@ -2,6 +2,12 @@
 #
 # Resolve the Homebrew executable and installation prefix for every caller.
 
+# The platform roots Homebrew installs under are absolute, so a test that wants
+# them to land in a fixture tree has no way in. DOTFILES_HOMEBREW_ROOT is that
+# way in: it prefixes every hardcoded path below and is empty in normal use, so
+# the shipped file is the one under test rather than a rewritten copy of it.
+BREW_ROOT=${DOTFILES_HOMEBREW_ROOT:-}
+
 find_brew_binary() {
   brew_binary=$(command -v brew 2>/dev/null) || brew_binary=
   if [ -n "$brew_binary" ] && [ -x "$brew_binary" ]; then
@@ -10,9 +16,9 @@ find_brew_binary() {
   fi
 
   for brew_binary in \
-    /opt/homebrew/bin/brew \
-    /usr/local/bin/brew \
-    /home/linuxbrew/.linuxbrew/bin/brew; do
+    "$BREW_ROOT/opt/homebrew/bin/brew" \
+    "$BREW_ROOT/usr/local/bin/brew" \
+    "$BREW_ROOT/home/linuxbrew/.linuxbrew/bin/brew"; do
     if [ -x "$brew_binary" ]; then
       printf '%s\n' "$brew_binary"
       return 0
@@ -43,12 +49,12 @@ find_brew_prefix() {
 find_brew_prefix_with_fallback() {
   if brew_prefix=$(find_brew_prefix); then
     printf '%s\n' "$brew_prefix"
-  elif [ -d /opt/homebrew ]; then
-    printf '%s\n' /opt/homebrew
-  elif [ -d /usr/local/Homebrew ]; then
-    printf '%s\n' /usr/local
+  elif [ -d "$BREW_ROOT/opt/homebrew" ]; then
+    printf '%s\n' "$BREW_ROOT/opt/homebrew"
+  elif [ -d "$BREW_ROOT/usr/local/Homebrew" ]; then
+    printf '%s\n' "$BREW_ROOT/usr/local"
   else
-    printf '%s\n' /usr/local
+    printf '%s\n' "$BREW_ROOT/usr/local"
   fi
 }
 

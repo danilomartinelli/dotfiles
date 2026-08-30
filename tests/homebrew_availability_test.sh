@@ -39,9 +39,10 @@ assert_empty() {
 new_fixture() {
   FIXTURE=$(mktemp -d "$TEST_ROOT/fixture.XXXXXX")
   FAKE_BIN=$FIXTURE/fake-bin
-  OPT_PREFIX=$FIXTURE/platform/opt/homebrew
-  USR_PREFIX=$FIXTURE/platform/usr/local
-  LINUX_PREFIX=$FIXTURE/platform/home/linuxbrew/.linuxbrew
+  PLATFORM_ROOT=$FIXTURE/platform
+  OPT_PREFIX=$PLATFORM_ROOT/opt/homebrew
+  USR_PREFIX=$PLATFORM_ROOT/usr/local
+  LINUX_PREFIX=$PLATFORM_ROOT/home/linuxbrew/.linuxbrew
   VALID_PREFIX=$FIXTURE/valid-prefix
   STDOUT_LOG=$FIXTURE/stdout.log
   STDERR_LOG=$FIXTURE/stderr.log
@@ -51,12 +52,7 @@ new_fixture() {
   mkdir -p "$FIXTURE/homebrew" "$FIXTURE/_scripts" "$FAKE_BIN" "$VALID_PREFIX" "$FIXTURE/tmp"
   : >"$INSTALL_LOG"
 
-  sed \
-    -e "s|/opt/homebrew|$OPT_PREFIX|g" \
-    -e "s|/usr/local|$USR_PREFIX|g" \
-    -e "s|/home/linuxbrew/.linuxbrew|$LINUX_PREFIX|g" \
-    "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-    >"$FIXTURE/homebrew/_availability.sh"
+  cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/homebrew/install.sh" "$FIXTURE/homebrew/install.sh"
   cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$FIXTURE/_scripts/installer-preamble.sh"
 
@@ -133,6 +129,7 @@ install_fake_brew() {
 capture_module() {
   set +e
   PATH="$FAKE_BIN:/usr/bin:/bin" \
+    DOTFILES_HOMEBREW_ROOT="$PLATFORM_ROOT" \
     BREW_TEST_PREFIX="$BREW_TEST_PREFIX" \
     BREW_TEST_PREFIX_MODE="$BREW_TEST_PREFIX_MODE" \
     "$FIXTURE/homebrew/_availability.sh" "$@" \
@@ -145,6 +142,7 @@ capture_installer() {
   set +e
   PATH="$FAKE_BIN:/usr/bin:/bin" \
     TMPDIR="$FIXTURE/tmp" \
+    DOTFILES_HOMEBREW_ROOT="$PLATFORM_ROOT" \
     BREW_TEST_PREFIX="$BREW_TEST_PREFIX" \
     BREW_TEST_PREFIX_MODE="$BREW_TEST_PREFIX_MODE" \
     BREW_TEST_UNAME="$BREW_TEST_UNAME" \

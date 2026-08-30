@@ -171,12 +171,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
-  sed \
-    -e "s|/opt/homebrew|$fixture/platform/opt/homebrew|g" \
-    -e "s|/usr/local|$fixture/platform/usr/local|g" \
-    -e "s|/home/linuxbrew/.linuxbrew|$fixture/platform/home/linuxbrew/.linuxbrew|g" \
-    "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-    >"$fixture/homebrew/_availability.sh"
+  cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
   cp "$REPOSITORY_ROOT/homebrew/_maintenance.sh" "$fixture/homebrew/_maintenance.sh"
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
@@ -224,6 +219,7 @@ invoke() {
     HOME="$fixture/home" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     FAKE_BREW_PREFIX="$fixture/fake-prefix" \
+    DOTFILES_HOMEBREW_ROOT="$fixture/platform" \
     EDITOR="$fixture/fake-bin/editor" \
     "$@"
 }

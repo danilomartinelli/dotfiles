@@ -13,12 +13,7 @@ make_fixture() {
   fixture=$(scenario_tmpdir fixture)
   mkdir -p "$fixture/homebrew" "$fixture/fake-bin"
   cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
-  sed \
-    -e "s|/opt/homebrew|$fixture/platform/opt/homebrew|g" \
-    -e "s|/usr/local|$fixture/platform/usr/local|g" \
-    -e "s|/home/linuxbrew/.linuxbrew|$fixture/platform/home/linuxbrew/.linuxbrew|g" \
-    "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-    >"$fixture/homebrew/_availability.sh"
+  cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
   chmod +x "$fixture/homebrew/_bundle.sh" "$fixture/homebrew/_availability.sh"
   printf '%s\n' "tap 'xo/xo'" "brew 'archiver'" >"$fixture/Brewfile"
 
@@ -45,6 +40,7 @@ invoke_bundle() {
   scenario_capture "$fixture" env \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     DOTFILES_ROOT="$fixture" \
+    DOTFILES_HOMEBREW_ROOT="$fixture/platform" \
     "$fixture/homebrew/_bundle.sh" "$@"
 }
 

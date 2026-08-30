@@ -49,12 +49,7 @@ cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$FIXTURE/_scripts/adapter-checkout.sh"
-sed \
-  -e "s|/opt/homebrew|$TEST_ROOT/platform/opt/homebrew|g" \
-  -e "s|/usr/local|$TEST_ROOT/platform/usr/local|g" \
-  -e "s|/home/linuxbrew/.linuxbrew|$TEST_ROOT/platform/home/linuxbrew/.linuxbrew|g" \
-  "$REPOSITORY_ROOT/homebrew/_availability.sh" \
-  >"$FIXTURE/homebrew/_availability.sh"
+cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
 printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >>"$FIXTURE/zsh/prompt.zsh"
@@ -293,6 +288,7 @@ test_startup_order_and_reload() {
     MANPATH='/base/man:' \
     TERM_PROGRAM=Apple_Terminal \
     STARTUP_FIXTURE_ROOT="$FIXTURE" \
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
     FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
     "$ZSH_BIN" -d -f "$TEST_ROOT/assert-startup.zsh"; then
     command cat "$MAIN_ARTIFACTS/stderr.log" >&2
@@ -333,6 +329,7 @@ test_optional_homebrew_integration() {
     PATH="$STARTUP_PATH" \
     MANPATH='/base/man:' \
     STARTUP_FIXTURE_ROOT="$FIXTURE" \
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
     FAKE_HOMEBREW_PREFIX="$TEST_ROOT/missing-homebrew-prefix" \
     EXPECTED_FALLBACK_PREFIX="$TEST_ROOT/platform/usr/local" \
     "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ $HOMEBREW_PREFIX == "$EXPECTED_FALLBACK_PREFIX" && -z ${FAKE_SYNTAX_LOADED-} ]]'; then
