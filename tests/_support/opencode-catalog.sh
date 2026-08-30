@@ -4,26 +4,39 @@
 # the documentation test both derive their expectations from it, so the parse
 # lives here once. Callers must set REPOSITORY_ROOT.
 
-opencode_catalog_rows() {
-  local kind name clone
+# shellcheck source=_scripts/catalog.sh
+# shellcheck disable=SC1091
+source "$REPOSITORY_ROOT/_scripts/catalog.sh"
 
-  while IFS=$'\t' read -r kind name clone; do
-    case $kind in
-      '' | \#*) continue ;;
-    esac
-    printf '%s\t%s\t%s\n' "$kind" "$name" "$clone"
-  done <"$REPOSITORY_ROOT/opencode/_managed-entries.tsv"
+opencode_catalog_print_row() {
+  printf '%s\t%s\t%s\n' "$1" "$2" "$3"
+}
+
+opencode_catalog_rows() {
+  catalog_each_row \
+    "$REPOSITORY_ROOT/opencode/_managed-entries.tsv" \
+    opencode_catalog_print_row
+}
+
+opencode_catalog_print_name() {
+  [ "$1" = "$OPENCODE_CATALOG_WANTED_KIND" ] || return 0
+  printf '%s\n' "$2"
 }
 
 opencode_catalog_names() {
   local wanted=$1
-  local kind name clone
+  local status
 
-  while IFS=$'\t' read -r kind name clone; do
-    if [[ $kind == "$wanted" ]]; then
-      printf '%s\n' "$name"
-    fi
-  done < <(opencode_catalog_rows)
+  OPENCODE_CATALOG_WANTED_KIND=$wanted
+  if catalog_each_row \
+    "$REPOSITORY_ROOT/opencode/_managed-entries.tsv" \
+    opencode_catalog_print_name; then
+    status=0
+  else
+    status=$?
+  fi
+  unset OPENCODE_CATALOG_WANTED_KIND
+  return "$status"
 }
 
 opencode_catalog_has() {

@@ -20,6 +20,7 @@ export DOTFILES_ROOT
 CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checklist.tsv}
 
 # shellcheck source=_scripts/catalog.sh
+# shellcheck disable=SC1091
 . "$DOTFILES_ROOT/_scripts/catalog.sh"
 
 usage() {
@@ -79,6 +80,21 @@ load_checklist() {
   CHECKLIST_LOADED=true
 }
 
+validate_app_candidates() {
+  local candidates=$1
+  local label=$2
+  local candidate
+
+  while IFS= read -r candidate; do
+    case "$candidate" in
+      /*.app) ;;
+      *)
+        fail "invalid checklist row: app $label (checklist candidate is not an app path: $candidate)"
+        ;;
+    esac
+  done <<<"${candidates//|/$'\n'}"
+}
+
 load_checklist_row() {
   local kind=$1
   local app=$2
@@ -89,6 +105,15 @@ load_checklist_row() {
   if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
     fail "invalid checklist row: $kind $label"
   fi
+
+  case "$kind" in
+    credential | shell)
+      [ "$app" = - ] || fail "invalid checklist row: $kind $label"
+      ;;
+    app)
+      [ "$app" = - ] || validate_app_candidates "$app" "$label"
+      ;;
+  esac
 
   note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
 

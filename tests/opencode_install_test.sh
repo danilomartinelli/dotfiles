@@ -421,6 +421,29 @@ test_catalog_declares_each_clone_source_before_its_clones() {
     || scenario_fail 'OpenCode catalog declares no profiles'
 }
 
+test_opencode_catalog_reader_preserves_catalog_row_contract() {
+  local fixture actual expected
+  fixture=$(scenario_tmpdir catalog-reader)
+  mkdir -p "$fixture/opencode"
+  {
+    printf '# comment\n\n'
+    printf 'entry\tfirst\t-\n'
+    printf 'profile\tsecond\tfirst\n'
+    printf 'profile\tfinal\t-'
+  } >"$fixture/opencode/_managed-entries.tsv"
+
+  local REPOSITORY_ROOT=$fixture
+  expected=$'entry\tfirst\t-\nprofile\tsecond\tfirst\nprofile\tfinal\t-'
+  actual=$(opencode_catalog_rows)
+  assert_equal "$expected" "$actual" \
+    'OpenCode catalog rows preserve comments, order, and final rows'
+
+  expected=$'second\nfinal'
+  actual=$(opencode_catalog_names profile)
+  assert_equal "$expected" "$actual" \
+    'OpenCode catalog names preserve final profile rows'
+}
+
 # By the second install the profile path is a link into this checkout, and the
 # installer calls ocx profile remove against it on every rerun. Real ocx unlinks
 # rather than descending, which is the only reason that is safe. An unfaithful
@@ -570,6 +593,8 @@ scenario_run 'OpenCode specialized profiles route models' \
   test_specialized_profiles_route_models
 scenario_run 'OpenCode catalog declares each clone source before its clones' \
   test_catalog_declares_each_clone_source_before_its_clones
+scenario_run 'OpenCode catalog support preserves the shared row contract' \
+  test_opencode_catalog_reader_preserves_catalog_row_contract
 scenario_run 'OpenCode profile removal unlinks instead of descending' \
   test_profile_removal_unlinks_instead_of_descending
 scenario_run 'OpenCode installer rejects an unusable catalog' \

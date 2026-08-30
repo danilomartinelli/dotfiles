@@ -18,10 +18,6 @@ scenario_init dotfiles-checklist-tests
 CHECKLIST=$REPOSITORY_ROOT/_scripts/checklist
 SHIPPED_CATALOG=$REPOSITORY_ROOT/_scripts/_checklist.tsv
 
-# shellcheck source=_scripts/catalog.sh
-# shellcheck disable=SC1091
-source "$REPOSITORY_ROOT/_scripts/catalog.sh"
-
 # A fixture is a catalog plus a fake-bin holding the stubbed `open`. The module
 # itself is never copied: the shipped file is the one under test.
 new_fixture() {
@@ -200,6 +196,50 @@ test_an_unknown_kind_stops_the_checklist() {
   assert_contains "$fixture/stderr.log" "unknown checklist kind 'wishlist'"
 }
 
+test_a_non_app_row_rejects_a_non_dash_app_field() {
+  local fixture status=0
+  fixture=$(new_fixture)
+
+  write_catalog "$fixture" \
+    "credential"$'\t'"$fixture/Unexpected.app"$'\t'"a-key"$'\t'"create it by hand" \
+    "shell"$'\t'"-"$'\t'"valid-shell"$'\t'"run it once"
+
+  invoke_checklist "$fixture" || status=$?
+
+  assert_equal 1 "$status" 'non-app row with an app path status'
+  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_empty "$fixture/stdout.log"
+}
+
+test_an_app_row_rejects_an_existing_non_app_path() {
+  local fixture status=0
+  fixture=$(new_fixture)
+  mkdir -p "$fixture/Unexpected"
+
+  write_catalog "$fixture" \
+    "app"$'\t'"$fixture/Unexpected"$'\t'"UnexpectedApp"$'\t'"finish the wizard"
+
+  invoke_checklist "$fixture" || status=$?
+
+  assert_equal 1 "$status" 'app row with an existing non-app path status'
+  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_empty "$fixture/stdout.log"
+}
+
+test_an_app_row_rejects_a_missing_non_app_path() {
+  local fixture status=0
+  fixture=$(new_fixture)
+
+  write_catalog "$fixture" \
+    "app"$'\t'"$fixture/Missing"$'\t'"MissingApp"$'\t'"finish the wizard"
+
+  invoke_checklist "$fixture" || status=$?
+
+  assert_equal 1 "$status" 'app row with a missing non-app path status'
+  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_empty "$fixture/stdout.log"
+}
+
 test_a_missing_catalog_stops_the_checklist() {
   local fixture
   fixture=$(new_fixture)
@@ -296,54 +336,6 @@ test_opening_prefers_the_earlier_of_two_installed_candidates() {
   assert_count "$fixture/open.log" 'open ' 1
 }
 
-# The shipped catalog, read through the one reader. A second hand-written read
-# loop here is what this suite exists to remove.
-CATALOG_FAILURES=0
-
-check_shipped_row() {
-  local kind=$1 app=$2 label=$3 note=$4 candidate
-
-  if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
-    scenario_fail "incomplete checklist row: $kind $label"
-    CATALOG_FAILURES=$((CATALOG_FAILURES + 1))
-    return 0
-  fi
-
-  case "$kind" in
-    credential | app | shell) ;;
-    *)
-      scenario_fail "unknown checklist kind '$kind' for $label"
-      CATALOG_FAILURES=$((CATALOG_FAILURES + 1))
-      return 0
-      ;;
-  esac
-
-  if [ "$kind" != app ] && [ "$app" != - ]; then
-    scenario_fail "$kind row must not declare an app: $label"
-    CATALOG_FAILURES=$((CATALOG_FAILURES + 1))
-    return 0
-  fi
-
-  if [ "$app" != - ]; then
-    while IFS= read -r candidate; do
-      case "$candidate" in
-        /*.app) ;;
-        *)
-          scenario_fail "checklist candidate is not an app path: $candidate"
-          CATALOG_FAILURES=$((CATALOG_FAILURES + 1))
-          ;;
-      esac
-    done <<<"${app//|/$'\n'}"
-  fi
-  return 0
-}
-
-test_the_shipped_catalog_is_well_formed() {
-  CATALOG_FAILURES=0
-  catalog_each_row "$SHIPPED_CATALOG" check_shipped_row
-  [ "$CATALOG_FAILURES" -eq 0 ]
-}
-
 # The roles named in the catalog are the ones git/install.sh and sops/install.sh
 # look for; naming any other tells a person to create keys those installers
 # will never find.
@@ -375,6 +367,12 @@ scenario_run 'an incomplete row stops the checklist' \
   test_an_incomplete_row_stops_the_checklist
 scenario_run 'an unknown kind stops the checklist' \
   test_an_unknown_kind_stops_the_checklist
+scenario_run 'a non-app row rejects a non-dash app field' \
+  test_a_non_app_row_rejects_a_non_dash_app_field
+scenario_run 'an app row rejects an existing non-app path' \
+  test_an_app_row_rejects_an_existing_non_app_path
+scenario_run 'an app row rejects a missing non-app path' \
+  test_an_app_row_rejects_a_missing_non_app_path
 scenario_run 'a missing catalog stops the checklist' \
   test_a_missing_catalog_stops_the_checklist
 scenario_run 'printing never opens anything' test_printing_never_opens_anything
@@ -386,8 +384,6 @@ scenario_run 'opening takes the first candidate that exists' \
   test_opening_takes_the_first_candidate_that_exists
 scenario_run 'opening prefers the earlier of two installed candidates' \
   test_opening_prefers_the_earlier_of_two_installed_candidates
-scenario_run 'the shipped catalog is well formed' \
-  test_the_shipped_catalog_is_well_formed
 scenario_run 'the shipped catalog names the key roles the installers expect' \
   test_the_shipped_catalog_names_the_key_roles_the_installers_expect
 scenario_run 'the shipped catalog prints every section and opens nothing' \
