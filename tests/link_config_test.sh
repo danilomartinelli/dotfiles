@@ -40,12 +40,18 @@ test_replace_with_backup_and_idempotent() {
   assert_contains "$home/.config/app/config.backup" 'local'
   assert_equal "$source" "$(readlink "$target")" 'relinked after backup'
 
+  # The one backup slot this policy owns is taken, so the link cannot be made.
+  # Exiting zero here reported a link that does not exist all the way up to
+  # setup's [ OK ], which is why this asserts the status and not just the text.
   printf 'local2\n' >"$home/.config/app/config.real"
   rm "$target"
   mv "$home/.config/app/config.real" "$target"
-  invoke_link "$home" --label 'app config' "$source" "$target"
-  assert_contains "$home/stderr.log" 'leaving app config untouched'
+  assert_fails_with_status 1 invoke_link "$home" --label 'app config' "$source" "$target"
+  assert_contains "$home/stderr.log" 'cannot link app config'
+  assert_contains "$home/stderr.log" 'Move or remove'
   assert_contains "$target" 'local2'
+  assert_contains "$home/.config/app/config.backup" 'local'
+  [[ ! -L $target ]] || scenario_fail 'refused link replaced the target anyway'
 }
 
 test_preserve_existing() {

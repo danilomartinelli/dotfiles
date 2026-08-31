@@ -81,7 +81,7 @@ test_batch_backup_and_skip() {
 # The linker refuses to write over a backup it did not make. This module used
 # to `mv` onto the same path unconditionally, so a second conflicting run
 # destroyed whatever the first run had preserved.
-test_an_existing_backup_is_never_clobbered() {
+test_an_existing_backup_stops_the_run() {
   local repo
 
   repo=$(make_repo)
@@ -89,12 +89,15 @@ test_an_existing_backup_is_never_clobbered() {
   invoke_linker "$repo" --batch backup
   assert_contains "$repo/home/.config.backup" 'first'
 
+  # The single backup slot is taken, so the second run cannot link. It stops
+  # rather than continuing: reporting success for a link that was never made
+  # is what let an unlinked config reach setup's [ OK ].
   rm -f "$repo/home/.config"
   printf 'second\n' >"$repo/home/.config"
-  invoke_linker "$repo" --batch backup
+  assert_fails_with_status 1 invoke_linker "$repo" --batch backup
   assert_contains "$repo/home/.config.backup" 'first'
   assert_contains "$repo/home/.config" 'second'
-  assert_contains "$repo/stderr.log" 'leaving'
+  assert_contains "$repo/stderr.log" 'cannot link'
 }
 
 # overwrite destroys without a backup, so it inherits the linker's guard
@@ -128,8 +131,8 @@ test_removal_belongs_to_the_linker() {
 
 scenario_run 'batch overwrite links localrc and topic symlinks' test_batch_link_and_idempotent
 scenario_run 'batch backup and skip honor conflict policy' test_batch_backup_and_skip
-scenario_run 'an existing backup is never clobbered' \
-  test_an_existing_backup_is_never_clobbered
+scenario_run 'an existing backup stops the run instead of reporting success' \
+  test_an_existing_backup_stops_the_run
 scenario_run 'every removal belongs to the config linker' \
   test_removal_belongs_to_the_linker
 scenario_finish

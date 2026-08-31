@@ -24,7 +24,9 @@ _Avoid_: link state, target check, already-linked
 
 **Conflict policy**:
 The named rule a caller selects to declare what should happen to an existing
-target. The caller states intent; the linker performs the change.
+target. The caller states intent; the linker performs the change, or fails
+because it cannot perform it. A policy that keeps the target is honoured, not
+refused.
 _Avoid_: strategy, mode, conflict handling
 
 **Confirmed replacement**:

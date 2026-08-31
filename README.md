@@ -74,6 +74,11 @@ non-interactive and select an explicit conflict policy: keep the existing file,
 back it up, or, for a path its tool regenerates on every run, replace it and
 report the replacement.
 
+Backing up uses one `.backup` slot per destination. When that slot already holds
+an earlier backup, the link cannot be made, so the run stops and names both
+paths instead of reporting a link it never created. Move or remove the named
+backup and rerun.
+
 > [!IMPORTANT]
 > Bootstrap and normal updates do not open graphical applications, recover
 > credentials, or reset Keychain state. Application sign-in remains manual.
