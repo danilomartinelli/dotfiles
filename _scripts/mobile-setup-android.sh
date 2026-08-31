@@ -14,6 +14,13 @@ ANDROID_PACKAGES=(
   "$ANDROID_SYSTEM_IMAGE"
 )
 
+ANDROID_SDK_ROOT_PRESENT=false
+ANDROID_SDKMANAGER_PRESENT=false
+ANDROID_AVDMANAGER_PRESENT=false
+ANDROID_LICENSES_ACCEPTED=false
+ANDROID_AVD_STATE=absent
+ANDROID_MISSING_PACKAGES=''
+
 android_sdk_root() {
   printf '%s\n' "$HOME/Library/Android/sdk"
 }
@@ -184,110 +191,92 @@ android_classify_state() {
   local sdk_root=$1
   local sdkmanager=$2
   local avdmanager=$3
-  local avd_state
-  local sdk_root_present=false
-  local sdkmanager_present=false
-  local avdmanager_present=false
-  local licenses_accepted=false
-  local missing_packages
+  local next_sdk_root_present=false
+  local next_sdkmanager_present=false
+  local next_avdmanager_present=false
+  local next_licenses_accepted=false
+  local next_avd_state
+  local next_missing_packages
 
-  [ -d "$sdk_root" ] && sdk_root_present=true
-  [ -x "$sdkmanager" ] && sdkmanager_present=true
-  [ -x "$avdmanager" ] && avdmanager_present=true
-  [ -f "$sdk_root/licenses/android-sdk-license" ] && licenses_accepted=true
-  missing_packages=$(collect_android_missing_packages "$sdk_root")
-  avd_state=$(android_avd_state)
+  ANDROID_SDK_ROOT_PRESENT=false
+  ANDROID_SDKMANAGER_PRESENT=false
+  ANDROID_AVDMANAGER_PRESENT=false
+  ANDROID_LICENSES_ACCEPTED=false
+  ANDROID_AVD_STATE=absent
+  ANDROID_MISSING_PACKAGES=''
 
-  printf '%s|%s|%s|%s|%s|%s\n' \
-    "$sdk_root_present" "$sdkmanager_present" "$avdmanager_present" \
-    "$licenses_accepted" "$avd_state" "$missing_packages"
+  [ -d "$sdk_root" ] && next_sdk_root_present=true
+  [ -x "$sdkmanager" ] && next_sdkmanager_present=true
+  [ -x "$avdmanager" ] && next_avdmanager_present=true
+  [ -f "$sdk_root/licenses/android-sdk-license" ] && next_licenses_accepted=true
+  if ! next_missing_packages=$(collect_android_missing_packages "$sdk_root"); then
+    return 1
+  fi
+  if ! next_avd_state=$(android_avd_state); then
+    return 1
+  fi
+
+  ANDROID_SDK_ROOT_PRESENT=$next_sdk_root_present
+  ANDROID_SDKMANAGER_PRESENT=$next_sdkmanager_present
+  ANDROID_AVDMANAGER_PRESENT=$next_avdmanager_present
+  ANDROID_LICENSES_ACCEPTED=$next_licenses_accepted
+  ANDROID_AVD_STATE=$next_avd_state
+  ANDROID_MISSING_PACKAGES=$next_missing_packages
 }
 
 android_state_is_ready() {
-  local state=$1
-  local sdk_root_present
-  local sdkmanager_present
-  local avdmanager_present
-  local licenses_accepted
-  local avd_state
-  local missing_packages
-
-  IFS='|' read -r sdk_root_present sdkmanager_present avdmanager_present \
-    licenses_accepted avd_state missing_packages <<<"$state"
-
-  [ "$sdk_root_present" = true ] \
-    && [ "$sdkmanager_present" = true ] \
-    && [ "$avdmanager_present" = true ] \
-    && [ "$licenses_accepted" = true ] \
-    && [ "$avd_state" = compatible ] \
-    && [ -z "$missing_packages" ]
+  [ "$ANDROID_SDK_ROOT_PRESENT" = true ] \
+    && [ "$ANDROID_SDKMANAGER_PRESENT" = true ] \
+    && [ "$ANDROID_AVDMANAGER_PRESENT" = true ] \
+    && [ "$ANDROID_LICENSES_ACCEPTED" = true ] \
+    && [ "$ANDROID_AVD_STATE" = compatible ] \
+    && [ -z "$ANDROID_MISSING_PACKAGES" ]
 }
 
 android_state_is_ready_for_avd_creation() {
-  local state=$1
-  local sdk_root_present
-  local sdkmanager_present
-  local avdmanager_present
-  local licenses_accepted
-  local avd_state
-  local missing_packages
-
-  IFS='|' read -r sdk_root_present sdkmanager_present avdmanager_present \
-    licenses_accepted avd_state missing_packages <<<"$state"
-
-  [ "$sdk_root_present" = true ] \
-    && [ "$sdkmanager_present" = true ] \
-    && [ "$avdmanager_present" = true ] \
-    && [ "$licenses_accepted" = true ] \
-    && [ -z "$missing_packages" ] \
-    && { [ "$avd_state" = absent ] || [ "$avd_state" = compatible ]; }
+  [ "$ANDROID_SDK_ROOT_PRESENT" = true ] \
+    && [ "$ANDROID_SDKMANAGER_PRESENT" = true ] \
+    && [ "$ANDROID_AVDMANAGER_PRESENT" = true ] \
+    && [ "$ANDROID_LICENSES_ACCEPTED" = true ] \
+    && [ -z "$ANDROID_MISSING_PACKAGES" ] \
+    && { [ "$ANDROID_AVD_STATE" = absent ] || [ "$ANDROID_AVD_STATE" = compatible ]; }
 }
 
 report_android_readiness() {
   local sdk_root=$1
   local sdkmanager=$2
   local avdmanager=$3
-  local state=$4
-  local sdk_root_present
-  local sdkmanager_present
-  local avdmanager_present
-  local licenses_accepted
-  local avd_state
-  local missing_packages
   local failed=0
 
-  IFS='|' read -r sdk_root_present sdkmanager_present avdmanager_present \
-    licenses_accepted avd_state missing_packages <<<"$state"
-
-  if [ "$sdk_root_present" != true ]; then
+  if [ "$ANDROID_SDK_ROOT_PRESENT" != true ]; then
     printf 'Android: incomplete — canonical SDK root is absent: %s\n' "$sdk_root"
     failed=1
   fi
 
-  if [ "$sdkmanager_present" != true ] || [ "$avdmanager_present" != true ]; then
+  if [ "$ANDROID_SDKMANAGER_PRESENT" != true ] || [ "$ANDROID_AVDMANAGER_PRESENT" != true ]; then
     printf 'Android: incomplete — SDK command-line tools are absent from %s.\n' "$sdk_root"
-    if [ "$sdkmanager_present" != true ]; then
+    if [ "$ANDROID_SDKMANAGER_PRESENT" != true ]; then
       printf '  → sdkmanager expected at %s.\n' "$sdkmanager"
     fi
-    if [ "$avdmanager_present" != true ]; then
+    if [ "$ANDROID_AVDMANAGER_PRESENT" != true ]; then
       printf '  → avdmanager expected at %s.\n' "$avdmanager"
     fi
     print_next_step 'Complete the Android Studio Setup Wizard and install Command-line Tools (latest), then run: mobile-setup android'
     failed=1
   fi
 
-  if [ "$licenses_accepted" != true ]; then
+  if [ "$ANDROID_LICENSES_ACCEPTED" != true ]; then
     printf 'Android: incomplete — Android SDK licenses are not accepted at %s.\n' "$sdk_root"
     print_next_step 'Accept Android SDK licenses manually, then run: mobile-setup android'
     failed=1
   fi
 
-  if [ -n "$missing_packages" ]; then
-    print_android_missing_packages "$missing_packages"
+  if [ -n "$ANDROID_MISSING_PACKAGES" ]; then
+    print_android_missing_packages "$ANDROID_MISSING_PACKAGES"
     failed=1
   fi
 
-  case "$avd_state" in
+  case "$ANDROID_AVD_STATE" in
     absent)
       printf 'Android: incomplete — %s AVD is absent.\n' "$ANDROID_AVD_NAME"
       print_next_step 'Run: mobile-setup android'
@@ -311,13 +300,14 @@ check_android() {
   local sdk_root
   local sdkmanager
   local avdmanager
-  local state
 
   sdk_root=$(android_sdk_root)
   sdkmanager=$(android_sdkmanager_path "$sdk_root")
   avdmanager=$(android_avdmanager_path "$sdk_root")
-  state=$(android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager")
-  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state"
+  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+    return 1
+  fi
+  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
 }
 
 find_pixel_device() {
@@ -355,45 +345,37 @@ install_android() {
   local sdk_root
   local sdkmanager
   local avdmanager
-  local state
-  local avd_state
   local pixel_device
   local package_name
-  local sdk_root_present
-  local sdkmanager_present
-  local avdmanager_present
-  local licenses_accepted
-  local missing_packages_csv
   local -a missing_packages=()
 
   sdk_root=$(android_sdk_root)
   sdkmanager=$(android_sdkmanager_path "$sdk_root")
   avdmanager=$(android_avdmanager_path "$sdk_root")
-  state=$(android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager")
-  if android_state_is_ready "$state"; then
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state"
+  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+    return 1
+  fi
+  if android_state_is_ready; then
+    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
     printf 'Android: %s AVD is ready; required packages exist, skipping changes.\n' \
       "$ANDROID_AVD_NAME"
     return 0
   fi
-  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state" || true
+  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
 
-  IFS='|' read -r sdk_root_present sdkmanager_present avdmanager_present \
-    licenses_accepted avd_state missing_packages_csv <<<"$state"
-
-  if [ "$sdk_root_present" != true ] || [ "$sdkmanager_present" != true ] \
-    || [ "$avdmanager_present" != true ] || [ "$licenses_accepted" != true ]; then
+  if [ "$ANDROID_SDK_ROOT_PRESENT" != true ] || [ "$ANDROID_SDKMANAGER_PRESENT" != true ] \
+    || [ "$ANDROID_AVDMANAGER_PRESENT" != true ] || [ "$ANDROID_LICENSES_ACCEPTED" != true ]; then
     print_android_manual_prerequisites "$sdk_root" "$sdkmanager"
     return 1
   fi
 
-  if [ "$avd_state" = incompatible ]; then
+  if [ "$ANDROID_AVD_STATE" = incompatible ]; then
     refuse_incompatible_android_avd
     return 1
   fi
 
-  if [ -n "$missing_packages_csv" ]; then
-    IFS=, read -r -a missing_packages <<<"$missing_packages_csv"
+  if [ -n "$ANDROID_MISSING_PACKAGES" ]; then
+    IFS=, read -r -a missing_packages <<<"$ANDROID_MISSING_PACKAGES"
     printf 'Android: installing missing packages:'
     for package_name in "${missing_packages[@]}"; do
       printf ' %s' "$package_name"
@@ -407,23 +389,23 @@ install_android() {
       return 1
     fi
 
-    state=$(android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager")
-    IFS='|' read -r sdk_root_present sdkmanager_present avdmanager_present \
-      licenses_accepted avd_state missing_packages_csv <<<"$state"
-    if ! android_state_is_ready_for_avd_creation "$state"; then
+    if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+      return 1
+    fi
+    if ! android_state_is_ready_for_avd_creation; then
       printf 'Error: Android package installation left the readiness snapshot incomplete.\n' >&2
-      report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state" || true
+      report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
       return 1
     fi
   fi
 
-  if ! android_state_is_ready_for_avd_creation "$state"; then
+  if ! android_state_is_ready_for_avd_creation; then
     printf 'Error: Android cannot create an AVD from the current readiness snapshot.\n' >&2
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state" || true
+    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
     return 1
   fi
 
-  case "$avd_state" in
+  case "$ANDROID_AVD_STATE" in
     compatible)
       printf 'Android: %s AVD is ready; skipping creation.\n' "$ANDROID_AVD_NAME"
       return 0
@@ -453,11 +435,13 @@ install_android() {
     return 1
   fi
 
-  state=$(android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager")
-  if ! android_state_is_ready "$state"; then
+  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+    return 1
+  fi
+  if ! android_state_is_ready; then
     printf 'Error: Android created %s but its final readiness snapshot is incomplete.\n' \
       "$ANDROID_AVD_NAME" >&2
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" "$state" || true
+    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
     return 1
   fi
 

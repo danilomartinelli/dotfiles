@@ -352,6 +352,23 @@ test_ios_install_selects_the_latest_compatible_download() {
   assert_contains "$fixture/stdout.log" 'iOS: ready'
 }
 
+test_ios_install_reports_download_failure_without_cross_target_or_ready_state() {
+  local fixture status=0
+  fixture=$(new_fixture)
+
+  invoke_mobile "$fixture" FAKE_XCODEBUILD_STATUS=1 -- ios || status=$?
+
+  assert_equal 1 "$status" 'iOS runtime download failure status'
+  assert_contains "$fixture/events.log" 'xcodebuild -downloadPlatform iOS'
+  assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_not_contains "$fixture/events.log" 'avdmanager '
+  assert_not_contains "$fixture/stdout.log" 'Android:'
+  assert_contains "$fixture/stderr.log" 'could not download the iOS Simulator runtime'
+  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
+  [[ ! -e $fixture/home/.ios-runtime-ready ]] \
+    || scenario_fail 'failed iOS download left a ready marker'
+}
+
 test_android_install_stops_for_manual_prerequisites() {
   local fixture status=0
   fixture=$(new_fixture)
@@ -368,6 +385,61 @@ test_android_install_stops_for_manual_prerequisites() {
   assert_contains "$fixture/stderr.log" 'mobile-setup android'
   assert_not_contains "$fixture/events.log" 'sdkmanager '
   assert_not_contains "$fixture/events.log" '--licenses'
+}
+
+test_android_classification_replaces_the_complete_named_snapshot() {
+  local fixture root
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  write_android_avd "$fixture"
+  root=$(android_root "$fixture")
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    bash -c '
+      source "$1"
+      sdk_root=$2
+      sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
+      avdmanager="$sdk_root/cmdline-tools/latest/bin/avdmanager"
+      android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"
+      printf "ready sdk_root_present=%s\n" "$ANDROID_SDK_ROOT_PRESENT"
+      printf "ready sdkmanager_present=%s\n" "$ANDROID_SDKMANAGER_PRESENT"
+      printf "ready avdmanager_present=%s\n" "$ANDROID_AVDMANAGER_PRESENT"
+      printf "ready licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
+      printf "ready avd_state=%s\n" "$ANDROID_AVD_STATE"
+      printf "ready missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
+      if ! android_state_is_ready; then
+        exit 1
+      fi
+      rm -rf "$sdk_root" "$HOME/.android/avd"
+      android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"
+      printf "empty sdk_root_present=%s\n" "$ANDROID_SDK_ROOT_PRESENT"
+      printf "empty sdkmanager_present=%s\n" "$ANDROID_SDKMANAGER_PRESENT"
+      printf "empty avdmanager_present=%s\n" "$ANDROID_AVDMANAGER_PRESENT"
+      printf "empty licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
+      printf "empty avd_state=%s\n" "$ANDROID_AVD_STATE"
+      printf "empty missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
+      if android_state_is_ready; then
+        exit 1
+      fi
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" "$root"
+
+  assert_contains "$fixture/stdout.log" 'ready sdk_root_present=true'
+  assert_contains "$fixture/stdout.log" 'ready sdkmanager_present=true'
+  assert_contains "$fixture/stdout.log" 'ready avdmanager_present=true'
+  assert_contains "$fixture/stdout.log" 'ready licenses_accepted=true'
+  assert_contains "$fixture/stdout.log" 'ready avd_state=compatible'
+  assert_contains "$fixture/stdout.log" 'ready missing_packages='
+  assert_contains "$fixture/stdout.log" 'empty sdk_root_present=false'
+  assert_contains "$fixture/stdout.log" 'empty sdkmanager_present=false'
+  assert_contains "$fixture/stdout.log" 'empty avdmanager_present=false'
+  assert_contains "$fixture/stdout.log" 'empty licenses_accepted=false'
+  assert_contains "$fixture/stdout.log" 'empty avd_state=absent'
+  assert_contains "$fixture/stdout.log" \
+    'empty missing_packages=platform-tools,emulator,cmdline-tools;latest,platforms;android-36,build-tools;36.0.0,system-images;android-36;google_apis;arm64-v8a'
 }
 
 test_android_freezes_resolved_paths_for_each_invocation() {
@@ -727,8 +799,12 @@ scenario_run 'target selection isolates the other platform' \
 scenario_run 'iOS install skips a matching runtime' test_ios_install_skips_a_matching_runtime
 scenario_run 'iOS install selects the compatible runtime download' \
   test_ios_install_selects_the_latest_compatible_download
+scenario_run 'iOS install reports download failure without cross-target or ready state' \
+  test_ios_install_reports_download_failure_without_cross_target_or_ready_state
 scenario_run 'Android install stops for manual prerequisites' \
   test_android_install_stops_for_manual_prerequisites
+scenario_run 'Android classification replaces the complete named snapshot' \
+  test_android_classification_replaces_the_complete_named_snapshot
 scenario_run 'Android freezes resolved paths for each invocation' \
   test_android_freezes_resolved_paths_for_each_invocation
 scenario_run 'Android install reconciles packages and creates an absent AVD' \
