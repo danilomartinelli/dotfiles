@@ -123,9 +123,25 @@ setup_gitconfig() {
     >"$DOTFILES_ROOT/git/gitconfig.local.symlink"
 }
 
+# The classification this run orchestrates. DOTFILES_TOPIC_CATALOG supplies it
+# from a file instead of running the classifier, which is the seam the Dock, the
+# checklist, the macOS defaults, and the OpenCode entries have each had for their
+# own list. Without one, observing run order meant building a topic tree on disk,
+# and the tests that would not pay for that read this file's source text instead.
+#
+# The rows are still read the way topic-catalog's stdout is read, not through
+# catalog_each_row: what changes here is where the classification comes from, not
+# which shape it has. See
+# docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md.
 setup_catalog() {
   if [ "$CATALOG_CAPTURED" != true ]; then
-    CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
+    if [ -n "${DOTFILES_TOPIC_CATALOG:-}" ]; then
+      [ -r "$DOTFILES_TOPIC_CATALOG" ] \
+        || fail "topic catalog not readable: $DOTFILES_TOPIC_CATALOG"
+      CATALOG_SNAPSHOT=$(cat -- "$DOTFILES_TOPIC_CATALOG") || return 1
+    else
+      CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
+    fi
     CATALOG_CAPTURED=true
   fi
   printf '%s\n' "$CATALOG_SNAPSHOT"

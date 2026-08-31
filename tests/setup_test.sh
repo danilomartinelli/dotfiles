@@ -569,6 +569,54 @@ test_mobile_checks_are_advisory_during_normal_setup() {
   assert_contains "$fixture/stdout.log" 'setup update complete'
 }
 
+# Run order is the whole reason these topics exist in the fixture, and observing
+# it used to mean building a topic tree and letting the classifier find it. The
+# catalog seam states the list directly, so a case can put a topic in a different
+# place, or leave one out, without touching the tree at all.
+declare_topic_catalog() {
+  local fixture=$1
+  shift
+  local topic
+
+  : >"$fixture/topic-catalog.tsv"
+  for topic in "$@"; do
+    printf 'installer\t%s/%s/install.sh\n' "$fixture" "$topic" \
+      >>"$fixture/topic-catalog.tsv"
+  done
+  printf '%s\n' "$fixture/topic-catalog.tsv"
+}
+
+test_the_declared_catalog_decides_which_topics_run_and_in_what_order() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" zulu workspace)
+
+  invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" \
+    "$fixture/_scripts/setup" bootstrap
+
+  # workspace is a declared prerequisite, so it runs first whatever place the
+  # catalog gives it; zulu follows in catalog order.
+  assert_before "$fixture/events.log" topic-workspace topic-zulu
+  # alpha is on disk and absent from the catalog, so nothing runs it.
+  assert_not_contains "$fixture/events.log" topic-alpha
+  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
+}
+
+test_an_unreadable_declared_catalog_stops_the_run() {
+  local fixture
+
+  fixture=$(make_fixture)
+
+  if invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/absent.tsv" \
+    "$fixture/_scripts/setup" bootstrap; then
+    return 1
+  fi
+
+  assert_contains "$fixture/stderr.log" 'topic catalog not readable'
+  assert_not_contains "$fixture/events.log" topic-alpha
+}
+
 test_prerequisite_topics_run_first() {
   local fixture
 
@@ -598,6 +646,10 @@ test_unknown_prerequisite_topic_stops_the_run() {
 }
 
 scenario_run 'setup rejects unknown modes' test_setup_usage
+scenario_run 'the declared catalog decides which topics run and in what order' \
+  test_the_declared_catalog_decides_which_topics_run_and_in_what_order
+scenario_run 'an unreadable declared catalog stops the run' \
+  test_an_unreadable_declared_catalog_stops_the_run
 scenario_run 'declared prerequisite topics run before the remainder' \
   test_prerequisite_topics_run_first
 scenario_run 'a declared prerequisite without an installer stops the run' \
