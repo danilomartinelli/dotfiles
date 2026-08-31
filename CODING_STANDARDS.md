@@ -190,6 +190,14 @@ descriptor 3 so a handler running `duti`, `dockutil`, or `ocx` cannot consume
 the rows still to come. A handler must return zero: consumers run under
 `set -e`, so a non-zero return stops the run rather than skipping a row.
 
+A catalog value that names a path through a placeholder is expanded with
+`catalog_expand <value> <NAME> <replacement>...`, from the same module. The
+caller names what its catalog honours and what each name stands for; the module
+owns the `$NAME` grammar and the rule that every other `$` stays literal. Do not
+reach for `sed`, `${var//}`, or a jq `sub()` at a call site, and do not read a
+replacement out of the environment on the caller's behalf: passing it explicitly
+is what keeps `eval` out of a module every installer sources.
+
 A catalog that arrives as a command's stdout rather than a file is read
 directly by its consumer. `_scripts/topic-catalog` output is the only one, and
 `docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md` records

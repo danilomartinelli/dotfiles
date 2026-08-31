@@ -25,10 +25,6 @@ if [ ! -f "$CATALOG" ]; then
   exit 1
 fi
 
-expand_value() {
-  printf '%s\n' "$1" | sed "s|\$HOME|$HOME|g"
-}
-
 apply_catalog_row() {
   domain=$1
   key=$2
@@ -40,7 +36,7 @@ apply_catalog_row() {
     exit 1
   fi
 
-  value=$(expand_value "$value")
+  value=$(catalog_expand "$value" HOME "$HOME")
 
   case "$type" in
     bool)

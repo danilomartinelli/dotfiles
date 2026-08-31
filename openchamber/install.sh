@@ -24,9 +24,13 @@ mkdir -p "$config_dir"
 # half-applied if the run were interrupted midway.
 owned='{}'
 
+# The row's value is the JSON literal the key holds, so it reaches jq as JSON
+# rather than through a second parse. Expansion happens before that, on the
+# declared text, which is why it no longer needs to ask what JSON type the value
+# turned out to be: the old sub() ran on top-level strings only, so an
+# object-valued row was silently never expanded at all.
 collect_setting() {
-  _setting_value=$(printf '%s' "$2" | jq -c --arg root "$DOTFILES_ROOT" \
-    'if type == "string" then sub("\\{\\{DOTFILES_ROOT\\}\\}"; $root) else . end')
+  _setting_value=$(catalog_expand "$2" DOTFILES_ROOT "$DOTFILES_ROOT")
   owned=$(printf '%s' "$owned" | jq -c --arg key "$1" --argjson value "$_setting_value" \
     '.[$key] = $value')
   unset _setting_value

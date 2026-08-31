@@ -6,11 +6,12 @@
 # because it also holds relayEncryptionKey, relaySigningKey, security-scoped
 # bookmarks, and per-machine session state, none of which may be tracked.
 #
-# {{DOTFILES_ROOT}} in a value is replaced with the resolved checkout path.
+# $DOTFILES_ROOT in a value is replaced with the resolved checkout path. No
+# other name expands, so every other $ stays literal.
 
 # OpenCode CLI: the wrapper applies the OCX profile that a directly spawned
 # binary would otherwise miss. See bin/opencode-profile.
-opencodeBinary	"{{DOTFILES_ROOT}}/bin/opencode-profile"
+opencodeBinary	"$DOTFILES_ROOT/bin/opencode-profile"
 
 # Appearance
 themeId	"catppuccin-dark"

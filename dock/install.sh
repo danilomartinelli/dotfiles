@@ -30,13 +30,6 @@ installer_skip_if_applied dock "dock layout" "dock configured"
 
 WORKSPACE_ROOT=$(installer_workspace_root)
 
-# Rows spell paths the way a person writes them. Only these two expansions
-# exist, so a `$` anywhere else stays a literal `$`.
-expand_path() {
-  printf '%s\n' "$1" \
-    | sed -e "s|\$WORKSPACE|$WORKSPACE_ROOT|g" -e "s|\$HOME|$HOME|g"
-}
-
 # The warning needs a name a person recognises, and the path already carries
 # one: /Applications/Spark Desktop.app is "Spark Desktop", $WORKSPACE is
 # "Workspace". Nothing has to restate it in a column.
@@ -61,7 +54,10 @@ apply_catalog_row() {
     *) installer_fail "unknown catalog section '$section' for $entry_declared" ;;
   esac
 
-  entry_path=$(expand_path "$entry_declared")
+  # Rows spell paths the way a person writes them. Only these two names are
+  # declared, so a `$` anywhere else stays a literal `$`.
+  entry_path=$(catalog_expand "$entry_declared" \
+    WORKSPACE "$WORKSPACE_ROOT" HOME "$HOME")
   entry_name=$(entry_label "$entry_path")
 
   if [ ! -e "$entry_path" ]; then

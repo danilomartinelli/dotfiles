@@ -66,3 +66,58 @@ catalog_each_row() {
     _catalog_column_1 _catalog_column_2 _catalog_column_3 _catalog_column_4 \
     _catalog_column_5 _catalog_column_6 _catalog_column_7
 }
+
+# Expand the placeholders a catalog value declares, and only those.
+#
+# A catalog row spells paths the way a person writes them — `$HOME/Downloads`,
+# `$WORKSPACE`, `$DOTFILES_ROOT/README.md`. Which names a catalog honours is its
+# own fact, so a caller passes each name with the value it stands for; this owns
+# the grammar and the rule that everything else stays literal. Four consumers
+# each carried their own answer before this existed, in three token conventions
+# and three mechanisms, and two of them had no test at all.
+#
+# A name is passed with its replacement rather than read out of the environment
+# on the caller's behalf. Indirect expansion needs `eval` under `set -u`, and
+# docs/adr/0002-one-reset-variable-for-run-once-steps.md already declined to put
+# that line in a module everything sources.
+#
+# Names apply left to right, so a replacement may contain a token a later name
+# expands. No replacement is rescanned for the name that produced it.
+#
+# Usage: catalog_expand <value> <NAME> <replacement> [<NAME> <replacement>...]
+catalog_expand() {
+  _catalog_expand_result=$1
+  shift
+
+  while [ "$#" -gt 1 ]; do
+    _catalog_expand_token=\$$1
+    _catalog_expand_replacement=$2
+    shift 2
+
+    _catalog_expand_done=''
+    _catalog_expand_rest=$_catalog_expand_result
+    while :; do
+      case $_catalog_expand_rest in
+        *"$_catalog_expand_token"*)
+          _catalog_expand_done=$_catalog_expand_done${_catalog_expand_rest%%"$_catalog_expand_token"*}$_catalog_expand_replacement
+          _catalog_expand_rest=${_catalog_expand_rest#*"$_catalog_expand_token"}
+          ;;
+        *)
+          _catalog_expand_done=$_catalog_expand_done$_catalog_expand_rest
+          break
+          ;;
+      esac
+    done
+    _catalog_expand_result=$_catalog_expand_done
+  done
+
+  if [ "$#" -ne 0 ]; then
+    printf 'catalog: expansion name has no replacement: %s\n' "$1" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$_catalog_expand_result"
+
+  unset _catalog_expand_result _catalog_expand_token _catalog_expand_replacement \
+    _catalog_expand_done _catalog_expand_rest
+}

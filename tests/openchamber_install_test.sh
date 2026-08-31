@@ -97,6 +97,24 @@ test_checkout_placeholder_resolves_to_the_wrapper() {
     'the binary path resolved to the profile wrapper in this checkout'
 }
 
+# Only $DOTFILES_ROOT expands. The notification templates are an object-valued
+# row carrying {agent_name} and {model_name} placeholders OpenChamber fills at
+# runtime, and expansion must leave every one of them alone. The row used to
+# skip expansion entirely: the substitution ran on top-level strings only, so
+# what protected these was their JSON type rather than the grammar.
+test_runtime_placeholders_survive_expansion() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_openchamber "$fixture"
+
+  assert_equal '{agent_name} is ready' \
+    "$(jq -r '.notificationTemplates.completion.title' "$(settings_path "$fixture")")" \
+    'a runtime placeholder in an owned object survived expansion'
+  assert_equal '{model_name} completed the task' \
+    "$(jq -r '.notificationTemplates.completion.message' "$(settings_path "$fixture")")" \
+    'a second runtime placeholder survived expansion'
+}
+
 test_a_tracked_value_replaces_a_stale_one() {
   local fixture
   fixture=$(make_fixture)
@@ -165,6 +183,7 @@ test_a_missing_app_skips_the_topic() {
 scenario_run 'every catalogued key reaches settings.json' test_every_catalogued_key_is_written
 scenario_run 'secrets and session state survive the merge' test_untracked_keys_survive_the_merge
 scenario_run 'the checkout placeholder resolves to the wrapper' test_checkout_placeholder_resolves_to_the_wrapper
+scenario_run 'runtime placeholders survive expansion' test_runtime_placeholders_survive_expansion
 scenario_run 'a tracked value replaces a stale one' test_a_tracked_value_replaces_a_stale_one
 scenario_run 'an owned object is replaced whole' test_an_owned_object_is_replaced_whole
 scenario_run 'a missing settings file is created' test_a_missing_settings_file_is_created

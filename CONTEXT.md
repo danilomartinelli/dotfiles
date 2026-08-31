@@ -47,6 +47,13 @@ makes a list a catalog is that it exists in exactly one place, not how many
 readers it has.
 _Avoid_: roster, manifest, registry, inventory
 
+**Declared value**:
+A catalog value written the way a person writes it, naming paths through
+placeholders rather than spelling a machine's own. Which names a catalog honours
+is that catalog's fact; every other `$` is literal text. Distinct from the row
+that carries it, which is the reader's concern rather than the value's.
+_Avoid_: template, interpolation, variable substitution
+
 ### Ownership
 
 **Tool config directory**:

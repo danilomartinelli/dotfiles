@@ -115,7 +115,7 @@ load_checklist_row() {
       ;;
   esac
 
-  note=${note//\$DOTFILES_ROOT/$DOTFILES_ROOT}
+  note=$(catalog_expand "$note" DOTFILES_ROOT "$DOTFILES_ROOT")
 
   case "$kind" in
     credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;

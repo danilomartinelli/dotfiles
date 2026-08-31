@@ -153,6 +153,73 @@ EOF
   assert_contains "$fixture/stdout.log" 'no leaks'
 }
 
+# A catalog row spells paths the way a person writes them. Which names expand is
+# the catalog's own fact, so the caller names them and everything else stays a
+# literal `$`.
+expand_in_sh() {
+  local fixture=$1
+  shift
+  # shellcheck disable=SC2016 # The body is evaluated by the child sh process.
+  scenario_capture "$fixture" sh -c '. "$1"; shift; catalog_expand "$@"' \
+    sh "$READER" "$@"
+}
+
+test_only_the_named_placeholders_expand() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-named)
+
+  # shellcheck disable=SC2016 # A literal placeholder is the input under test.
+  expand_in_sh "$fixture" '$HOME/x $WORKSPACE $NOPE $HOME' \
+    HOME /home/a WORKSPACE /work
+
+  # shellcheck disable=SC2016 # The unexpanded name is what must survive.
+  assert_contains "$fixture/stdout.log" '/home/a/x /work $NOPE /home/a'
+}
+
+test_an_unnamed_placeholder_is_left_literal() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-literal)
+
+  # shellcheck disable=SC2016 # A literal placeholder is the input under test.
+  expand_in_sh "$fixture" 'keep $WORKSPACE and {{HOME}}' HOME /home/a
+
+  # shellcheck disable=SC2016 # The unexpanded name is what must survive.
+  assert_contains "$fixture/stdout.log" 'keep $WORKSPACE and {{HOME}}'
+}
+
+test_a_value_with_no_placeholder_is_unchanged() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-plain)
+
+  expand_in_sh "$fixture" 'plain value' HOME /home/a
+
+  assert_contains "$fixture/stdout.log" 'plain value'
+}
+
+# Every replacement is passed with its name, so nothing here reads the
+# environment on a caller's behalf and no expansion needs `eval`.
+test_a_name_without_a_replacement_is_refused() {
+  local fixture status=0
+  fixture=$(scenario_tmpdir expand-arity)
+
+  # shellcheck disable=SC2016 # A literal placeholder is the input under test.
+  expand_in_sh "$fixture" '$HOME' HOME || status=$?
+
+  assert_equal 1 "$status" 'odd argument count status'
+  assert_contains "$fixture/stderr.log" 'expansion name has no replacement: HOME'
+}
+
+test_a_replacement_containing_a_dollar_is_not_rescanned() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-rescan)
+
+  # shellcheck disable=SC2016 # A literal placeholder is the input under test.
+  expand_in_sh "$fixture" '$HOME/end' HOME '$HOME'
+
+  # shellcheck disable=SC2016 # The unexpanded name is what must survive.
+  assert_contains "$fixture/stdout.log" '$HOME/end'
+}
+
 scenario_run 'comment and blank rows are skipped' \
   test_comment_and_blank_rows_are_skipped
 scenario_run 'a final row without a trailing newline is delivered' \
@@ -169,5 +236,16 @@ scenario_run 'an unreadable catalog reports and fails' \
   test_an_unreadable_catalog_reports_and_fails
 scenario_run 'the reader leaks no variables' \
   test_the_reader_leaks_no_variables
+
+scenario_run 'only the named placeholders expand' \
+  test_only_the_named_placeholders_expand
+scenario_run 'an unnamed placeholder is left literal' \
+  test_an_unnamed_placeholder_is_left_literal
+scenario_run 'a value with no placeholder is unchanged' \
+  test_a_value_with_no_placeholder_is_unchanged
+scenario_run 'a name without a replacement is refused' \
+  test_a_name_without_a_replacement_is_refused
+scenario_run 'a replacement containing a dollar is not rescanned' \
+  test_a_replacement_containing_a_dollar_is_not_rescanned
 
 scenario_finish
