@@ -209,6 +209,28 @@ test_a_name_without_a_replacement_is_refused() {
   assert_contains "$fixture/stderr.log" 'expansion name has no replacement: HOME'
 }
 
+# catalog.sh is sourced by every installer and by the interactive shell's
+# startup, so neither exit from an expansion may leave a name behind. The
+# refusal used to return before its unset.
+test_expansion_leaks_no_variables_on_either_exit() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-leak)
+
+  cat >"$fixture/consumer.sh" <<EOF
+#!/bin/sh
+. "$READER"
+catalog_expand 'value' HOME /home/a >/dev/null
+printf 'after success: %s\\n' "\$(set | grep -c '^_catalog_expand' || true)"
+catalog_expand 'value' HOME >/dev/null 2>&1 || true
+printf 'after refusal: %s\\n' "\$(set | grep -c '^_catalog_expand' || true)"
+EOF
+  chmod +x "$fixture/consumer.sh"
+  scenario_capture "$fixture" "$fixture/consumer.sh"
+
+  assert_contains "$fixture/stdout.log" 'after success: 0'
+  assert_contains "$fixture/stdout.log" 'after refusal: 0'
+}
+
 test_a_replacement_containing_a_dollar_is_not_rescanned() {
   local fixture
   fixture=$(scenario_tmpdir expand-rescan)
@@ -247,5 +269,7 @@ scenario_run 'a name without a replacement is refused' \
   test_a_name_without_a_replacement_is_refused
 scenario_run 'a replacement containing a dollar is not rescanned' \
   test_a_replacement_containing_a_dollar_is_not_rescanned
+scenario_run 'expansion leaks no variables on either exit' \
+  test_expansion_leaks_no_variables_on_either_exit
 
 scenario_finish

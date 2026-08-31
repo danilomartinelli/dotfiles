@@ -113,11 +113,19 @@ catalog_expand() {
 
   if [ "$#" -ne 0 ]; then
     printf 'catalog: expansion name has no replacement: %s\n' "$1" >&2
+    catalog_expand_unset
     return 1
   fi
 
   printf '%s\n' "$_catalog_expand_result"
 
+  catalog_expand_unset
+}
+
+# Both exits clear the same names. The refusal used to return before the unset,
+# so a caller that mispaired its arguments kept _catalog_expand_result — in a
+# module sourced by every installer and by the interactive shell's startup.
+catalog_expand_unset() {
   unset _catalog_expand_result _catalog_expand_token _catalog_expand_replacement \
     _catalog_expand_done _catalog_expand_rest
 }
