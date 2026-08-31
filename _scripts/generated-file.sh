@@ -28,9 +28,17 @@ generated_file_mode() {
 # the difference or write it. Under check the diff goes to stderr, because the
 # path alone does not tell you whether the drift was the payload or a stray
 # newline.
-# Usage: generated_file_sync <rendered> <stored> <display>
+#
+# The third argument is the root a reported path is shown relative to, not the
+# path itself. Both callers used to compute that string, against two different
+# roots, and both produced "README.md" — one for opencode/README.md and one for
+# the checkout's. A stale run named the same file twice and neither was the one
+# you had to look at. A path outside the root is reported whole, which is what a
+# fixture tree wants.
+# Usage: generated_file_sync <rendered> <stored> <root>
 generated_file_sync() {
-  local rendered=$1 stored=$2 display=$3
+  local rendered=$1 stored=$2 root=$3
+  local display=${stored#"$root"/}
 
   if [ -f "$stored" ] && cmp -s "$rendered" "$stored"; then
     return 0
@@ -38,7 +46,11 @@ generated_file_sync() {
 
   if [ "$GENERATED_FILE_MODE" = check ]; then
     printf 'stale: %s\n' "$display" >&2
-    diff -u "$stored" "$rendered" >&2 || true
+    # A payload that was never rendered has no stored half to diff against, and
+    # `diff` would say so on the same stream as the difference itself.
+    if [ -f "$stored" ]; then
+      diff -u "$stored" "$rendered" >&2 || true
+    fi
     GENERATED_FILE_STALE=$((GENERATED_FILE_STALE + 1))
     return 0
   fi

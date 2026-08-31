@@ -243,5 +243,5 @@ if [ "$check_only" = true ]; then
 else
   generated_file_mode write
 fi
-generated_file_sync "$rendered" "$readme" "${readme#"$repository_root/"}"
+generated_file_sync "$rendered" "$readme" "$repository_root"
 generated_file_verdict 'README software catalog is' _scripts/render-software-catalog

@@ -12,6 +12,9 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# Reported paths are relative to the checkout, not to the topic directory, so a
+# stale opencode/README.md is distinguishable from a stale checkout README.md.
+repository_root=$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)
 
 usage() {
   cat >&2 <<'EOF'
@@ -251,12 +254,6 @@ render_config() {
   ' "$shared_dir/opencode.jsonc"
 }
 
-# A payload is written only when it changes, so a no-op render leaves the
-# checkout untouched and --check has nothing to report.
-sync_payload() {
-  generated_file_sync "$1" "$2" "${2#"$topic_dir/"}"
-}
-
 validate_routing
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-opencode-profiles.XXXXXX")
@@ -269,10 +266,12 @@ else
 fi
 for profile in "${profiles[@]}"; do
   render_config "$profile" >"$work_dir/opencode.jsonc"
-  sync_payload "$work_dir/opencode.jsonc" \
-    "$topic_dir/profiles/$profile/opencode.jsonc"
-  sync_payload "$shared_dir/ocx.jsonc" "$topic_dir/profiles/$profile/ocx.jsonc"
-  sync_payload "$shared_dir/AGENTS.md" "$topic_dir/profiles/$profile/AGENTS.md"
+  generated_file_sync "$work_dir/opencode.jsonc" \
+    "$topic_dir/profiles/$profile/opencode.jsonc" "$repository_root"
+  generated_file_sync "$shared_dir/ocx.jsonc" \
+    "$topic_dir/profiles/$profile/ocx.jsonc" "$repository_root"
+  generated_file_sync "$shared_dir/AGENTS.md" \
+    "$topic_dir/profiles/$profile/AGENTS.md" "$repository_root"
 done
 
 # The routing table in the topic README is the same declaration in the shape a
@@ -280,7 +279,7 @@ done
 # payloads, with nothing holding the two together.
 markdown_render_blocks "$topic_dir/README.md" render_readme_block \
   >"$work_dir/README.md" || fail "cannot render $topic_dir/README.md"
-sync_payload "$work_dir/README.md" "$topic_dir/README.md"
+generated_file_sync "$work_dir/README.md" "$topic_dir/README.md" "$repository_root"
 
 generated_file_verdict 'OpenCode profile payloads are' \
   _scripts/render-opencode-profiles
