@@ -7,31 +7,17 @@ set -e
 
 installer_banner "configuring Aider"
 
-CONFIG_SOURCE="$TOPIC_DIR/aider.conf.yml.symlink"
-CONFIG_TARGET="$HOME/.aider.conf.yml"
-
-mkdir -p "$(dirname "$CONFIG_TARGET")"
-
-# Render the __DOTFILES_ROOT__ placeholder before linking. Aider is the only
-# tool that needs a real file (not a symlink) here because the symlink target
-# is also a `.symlink` file in the repo, so we must follow the chain and write
-# the resolved content once.
-if [ -L "$CONFIG_TARGET" ] && [ "$(readlink "$CONFIG_TARGET")" = "$CONFIG_SOURCE" ] && grep -q '__DOTFILES_ROOT__' "$CONFIG_SOURCE"; then
-  rendered=$(mktemp)
-  sed "s|__DOTFILES_ROOT__|$DOTFILES_ROOT|g" "$CONFIG_SOURCE" >"$rendered"
-  rm "$CONFIG_TARGET"
-  mv "$rendered" "$CONFIG_TARGET"
-  installer_success "Rendered __DOTFILES_ROOT__ in $CONFIG_TARGET"
-elif [ ! -e "$CONFIG_TARGET" ]; then
-  if grep -q '__DOTFILES_ROOT__' "$CONFIG_SOURCE"; then
-    rendered=$(mktemp)
-    sed "s|__DOTFILES_ROOT__|$DOTFILES_ROOT|g" "$CONFIG_SOURCE" >"$rendered"
-    mv "$rendered" "$CONFIG_TARGET"
-  else
-    ln -s "$CONFIG_SOURCE" "$CONFIG_TARGET"
-  fi
-  installer_success "Linked $CONFIG_TARGET -> $CONFIG_SOURCE"
-fi
+# Aider reads this from $HOME rather than $HOME/.config, so it links through the
+# linker directly instead of installer_link_tool_config.
+#
+# This topic used to render __DOTFILES_ROOT__ into the target and clear the old
+# path with its own `rm` — a removal ADR 0001 reserves for the linker, chosen by
+# a readlink comparison that re-derived the target classification the linker
+# already owns. d215f545 took the last placeholder out of the source, so the
+# rendering branch could no longer fire and the topic had been plain linking
+# through dead code ever since.
+installer_link_config --label "Aider config" \
+  "$TOPIC_DIR/aider.conf.yml.symlink" "$HOME/.aider.conf.yml"
 
 if command -v aider >/dev/null 2>&1; then
   installer_success "aider CLI available ($(aider --version 2>/dev/null))"
