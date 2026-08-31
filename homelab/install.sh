@@ -31,17 +31,17 @@ else
   installer_success "homelab repo present at $HOMELAB_REPO_DIR"
 fi
 
-# 2. Make sure an SSH key exists for talking to the VPS. Reuse the existing
-#    personal key if present; otherwise create one. Refuse to overwrite.
-if [ ! -e "$HOMELAB_SSH_KEY" ]; then
-  if command -v ssh-keygen >/dev/null 2>&1; then
-    ssh-keygen -t ed25519 -N "" -C "homelab-$(hostname -s)" -f "$HOMELAB_SSH_KEY"
-    installer_success "Generated $HOMELAB_SSH_KEY"
-  else
-    installer_warn "ssh-keygen not available; create $HOMELAB_SSH_KEY manually"
-  fi
-else
+# 2. Report whether a key exists for talking to the VPS. Creating one belongs
+#    to ssh-key-create, not here: this installer runs unattended on every `dot`,
+#    and the key it used to generate landed at the ssh topic's own default path
+#    with a forced empty passphrase. Having created it silently, it also made a
+#    later `ssh-key-create default` refuse. See
+#    docs/adr/0011-topic-installers-do-not-create-credentials.md.
+if [ -e "$HOMELAB_SSH_KEY" ]; then
   installer_note "homelab SSH key already at $HOMELAB_SSH_KEY"
+else
+  installer_note "no SSH key at $HOMELAB_SSH_KEY yet"
+  installer_note "create one with: ssh-key-create default"
 fi
 
 # 3. Append a config_local entry for the homelab host if it's missing. The

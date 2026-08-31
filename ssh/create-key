@@ -2,6 +2,12 @@
 
 set -eu
 
+# shellcheck source=_scripts/key-provisioning.sh
+# Resolved with builtins only: a key command must still be able to report a
+# missing generator when it is run with an empty PATH, which is how the
+# provisioning suites prove that guard. dirname is /usr/bin/dirname.
+. "$(CDPATH='' cd -P -- "${0%/*}/../_scripts" && pwd)/key-provisioning.sh"
+
 program_name=ssh-key-create
 
 usage() {
@@ -17,22 +23,10 @@ Examples:
 EOF
 }
 
-usage_error() {
-  echo "$program_name: $*" >&2
-  usage >&2
-  exit 2
-}
+key_handle_help "$program_name" usage "$@"
 
-case ${1:-} in
-  -h | --help)
-    [ "$#" -eq 1 ] || usage_error '--help does not accept additional arguments'
-    usage
-    exit 0
-    ;;
-esac
-
-[ "$#" -ge 1 ] || usage_error 'a key role is required'
-[ "$#" -le 2 ] || usage_error 'too many arguments'
+[ "$#" -ge 1 ] || key_usage_error "$program_name" usage 'a key role is required'
+[ "$#" -le 2 ] || key_usage_error "$program_name" usage 'too many arguments'
 
 role=$1
 case "$role" in
@@ -48,19 +42,16 @@ case "$role" in
     role_suffix=_work
     test_host=github-work
     ;;
-  *) usage_error "unknown key role: $role" ;;
+  *) key_usage_error "$program_name" usage "unknown key role: $role" ;;
 esac
 
 key_type=ed25519
 if [ "$#" -eq 2 ]; then
-  [ "$2" = --rsa ] || usage_error "unknown option: $2"
+  [ "$2" = --rsa ] || key_usage_error "$program_name" usage "unknown option: $2"
   key_type=rsa
 fi
 
-if ! command -v ssh-keygen >/dev/null 2>&1; then
-  echo "$program_name: ssh-keygen is required but was not found" >&2
-  exit 1
-fi
+key_require_generator "$program_name" ssh-keygen
 
 SSH_DIR=$HOME/.ssh
 if [ "$key_type" = rsa ]; then
@@ -72,10 +63,7 @@ fi
 key_path=$SSH_DIR/$key_name
 public_key_path=$key_path.pub
 
-if [ -e "$key_path" ] || [ -L "$key_path" ] || [ -e "$public_key_path" ] || [ -L "$public_key_path" ]; then
-  echo "$program_name: refusing to overwrite existing key material for $key_path" >&2
-  exit 1
-fi
+key_refuse_existing "$program_name" 'key material' "$key_path" "$public_key_path"
 
 git_email=
 if command -v git >/dev/null 2>&1; then
@@ -96,22 +84,18 @@ case "$role" in
   *) key_comment=$git_email ;;
 esac
 
-umask 077
-mkdir -p "$SSH_DIR"
-chmod 700 "$SSH_DIR"
+key_prepare_dir "$SSH_DIR"
+
+generate_ssh_key() {
+  if [ "$key_type" = rsa ]; then
+    ssh-keygen -t rsa -b 4096 -f "$key_path" -C "$key_comment"
+  else
+    ssh-keygen -t ed25519 -f "$key_path" -C "$key_comment"
+  fi
+}
 
 echo "› creating $role SSH key ($key_type)"
-keygen_status=0
-if [ "$key_type" = rsa ]; then
-  ssh-keygen -t rsa -b 4096 -f "$key_path" -C "$key_comment" || keygen_status=$?
-else
-  ssh-keygen -t ed25519 -f "$key_path" -C "$key_comment" || keygen_status=$?
-fi
-
-if [ "$keygen_status" -ne 0 ]; then
-  echo "$program_name: ssh-keygen failed for $key_path" >&2
-  exit "$keygen_status"
-fi
+key_run_generator "$program_name" ssh-keygen "$key_path" generate_ssh_key
 
 chmod 600 "$key_path"
 chmod 644 "$public_key_path"

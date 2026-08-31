@@ -2,6 +2,12 @@
 
 set -eu
 
+# shellcheck source=_scripts/key-provisioning.sh
+# Resolved with builtins only: a key command must still be able to report a
+# missing generator when it is run with an empty PATH, which is how the
+# provisioning suites prove that guard. dirname is /usr/bin/dirname.
+. "$(CDPATH='' cd -P -- "${0%/*}/../_scripts" && pwd)/key-provisioning.sh"
+
 program_name=sops-key-create
 
 usage() {
@@ -18,21 +24,9 @@ Examples:
 EOF
 }
 
-usage_error() {
-  echo "$program_name: $*" >&2
-  usage >&2
-  exit 2
-}
+key_handle_help "$program_name" usage "$@"
 
-case ${1:-} in
-  -h | --help)
-    [ "$#" -eq 1 ] || usage_error '--help does not accept additional arguments'
-    usage
-    exit 0
-    ;;
-esac
-
-[ "$#" -eq 1 ] || usage_error 'a key role is required'
+[ "$#" -eq 1 ] || key_usage_error "$program_name" usage 'a key role is required'
 
 role=$1
 case "$role" in
@@ -48,14 +42,10 @@ case "$role" in
     key_name=keys_work.txt
     recipient_name=recipient_work.txt
     ;;
-  *) usage_error "unknown key role: $role" ;;
+  *) key_usage_error "$program_name" usage "unknown key role: $role" ;;
 esac
 
-if ! command -v age-keygen >/dev/null 2>&1; then
-  echo "$program_name: age-keygen is required but was not found" >&2
-  echo "  Install with: brew install age" >&2
-  exit 1
-fi
+key_require_generator "$program_name" age-keygen 'brew install age'
 
 # Not XDG-derived, deliberately: this path must agree with the one sops/env.zsh
 # names in SOPS_AGE_KEY_FILE, or sops cannot find the identity created here.
@@ -64,29 +54,26 @@ age_dir=$HOME/.config/sops/age
 key_path=$age_dir/$key_name
 recipient_path=$age_dir/$recipient_name
 
-if [ -e "$key_path" ] || [ -L "$key_path" ]; then
-  echo "$program_name: refusing to overwrite existing key material for $key_path" >&2
-  exit 1
-fi
+key_refuse_existing "$program_name" 'key material' "$key_path"
+key_refuse_existing "$program_name" 'recipient file' "$recipient_path"
 
-if [ -e "$recipient_path" ] || [ -L "$recipient_path" ]; then
-  echo "$program_name: refusing to overwrite existing recipient file for $recipient_path" >&2
-  exit 1
-fi
+key_prepare_dir "$age_dir"
 
-umask 077
-mkdir -p "$age_dir"
-chmod 700 "$age_dir"
+# age-keygen prints the public key to stderr, so this captures both streams and
+# reports them itself when the generator fails.
+keygen_output=
+
+generate_age_key() {
+  keygen_status=0
+  keygen_output=$(age-keygen -o "$key_path" 2>&1) || keygen_status=$?
+  if [ "$keygen_status" -ne 0 ]; then
+    printf '%s\n' "$keygen_output" >&2
+    return "$keygen_status"
+  fi
+}
 
 echo "› creating $role age key for SOPS"
-keygen_status=0
-keygen_output=$(age-keygen -o "$key_path" 2>&1) || keygen_status=$?
-
-if [ "$keygen_status" -ne 0 ]; then
-  echo "$program_name: age-keygen failed for $key_path" >&2
-  printf '%s\n' "$keygen_output" >&2
-  exit "$keygen_status"
-fi
+key_run_generator "$program_name" age-keygen "$key_path" generate_age_key
 
 chmod 600 "$key_path"
 

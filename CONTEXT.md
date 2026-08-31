@@ -77,6 +77,21 @@ removes. Distinct from a generated target: both are written by the tool, but
 only a generated target is ours to destroy.
 _Avoid_: generated, generated state
 
+### Credentials
+
+**Key provisioning**:
+The creation of new key material, which only an explicit command performs. A
+topic installer may repair the directories and modes around existing keys and
+report that one is missing; it never generates one.
+_Avoid_: key generation, credential setup, key bootstrap
+
+**Key role**:
+The name a person selects to say which of a tool's keys they mean — `default`,
+`personal`, or `work` — and the only input that decides where the material
+lands. Distinct from the key type, which is how the key is generated rather
+than which key it is.
+_Avoid_: profile, identity name, key slot
+
 ### Application
 
 **Prerequisite topic**:

@@ -264,9 +264,12 @@ the same change as the public surface.
   appropriate system credential store.
 - Generated Git identity, SSH private keys, SOPS identities, kubeconfigs, auth
   receipts, OCX runtime state, and account identifiers are machine-private.
-- The SSH and SOPS installers may repair safe links, directories, and
-  permissions; their explicit credential commands are the only key-creation
-  paths in those subsystems.
+- `ssh-key-create` and `sops-key-create` are the only key-creation paths in the
+  repository. Any installer may repair safe links, directories, and
+  permissions, and may report that a key is missing by naming the command that
+  creates it; none runs a generator. They share the guards in
+  `_scripts/key-provisioning.sh`. See
+  `docs/adr/0011-topic-installers-do-not-create-credentials.md`.
 - Tracked Zed and OpenCode configuration must not contain plaintext credentials
   or pretend that settings interpolate `$VARIABLE` when they do not.
 - Resolve the exact target and confirm user authorization before destructive or

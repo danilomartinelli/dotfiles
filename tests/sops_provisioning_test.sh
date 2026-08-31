@@ -148,6 +148,35 @@ test_role_paths_and_no_overwrite() {
   assert_contains "$test_home/stderr.log" 'refusing to overwrite'
 }
 
+# sops/create-key has always propagated age-keygen's own status, and only the
+# ssh suite proved a generator failure did that. Two copies of one envelope let
+# the coverage diverge; one module means this behaviour is pinned on both sides.
+test_generator_failure_propagates_its_status() {
+  local failure_home status=0
+
+  failure_home=$(make_home)
+  write_fake_commands "$failure_home/fake-bin"
+  if (
+    cd "$TEST_ROOT" || exit 1
+    scenario_capture "$failure_home" env \
+      HOME="$failure_home" \
+      XDG_CONFIG_HOME="$failure_home/xdg-decoy" \
+      PATH="$failure_home/fake-bin:/usr/bin:/bin" \
+      AGE_KEYGEN_FAIL=7 \
+      "$REPOSITORY_ROOT/bin/sops-key-create" work
+  ); then
+    return 1
+  else
+    status=$?
+  fi
+
+  assert_equal 7 "$status" 'age-keygen status reaches the caller'
+  assert_contains "$failure_home/stderr.log" 'age-keygen failed'
+  assert_not_contains "$failure_home/stdout.log" '✓ created'
+  [[ ! -e $failure_home/.config/sops/age/recipient_work.txt ]] \
+    || scenario_fail 'a failed generator still produced a recipient file'
+}
+
 test_usage_and_missing_dependency() {
   local usage_home missing_home
 
@@ -174,5 +203,7 @@ scenario_run 'installer repairs permissions and never invents keys' test_install
 scenario_run 'installer hints when the default identity is missing' test_installer_hints_when_missing
 scenario_run 'default age identity creation writes key and recipient' test_default_key_creation
 scenario_run 'role paths are isolated and refuse overwrites' test_role_paths_and_no_overwrite
+scenario_run 'a failing generator propagates its own status' \
+  test_generator_failure_propagates_its_status
 scenario_run 'usage and missing age-keygen are explicit' test_usage_and_missing_dependency
 scenario_finish
