@@ -274,7 +274,10 @@ test_ios_check_rejects_a_same_version_unavailable_runtime() {
   invoke_mobile "$fixture" "FAKE_IOS_RUNTIMES=$unavailable_runtime" -- --check ios || status=$?
 
   assert_equal 1 "$status" 'unavailable iOS runtime status'
-  assert_contains "$fixture/stdout.log" 'matches iPhone SDK 26.5'
+  # 'matches iPhone SDK 26.5' occurs in the ready line too, so the verdict has
+  # to be asserted by the word that distinguishes them.
+  assert_contains "$fixture/stdout.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
+  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
   assert_not_contains "$fixture/events.log" 'xcodebuild '
 }
 
@@ -286,7 +289,8 @@ test_ios_check_rejects_a_different_version_stale_runtime() {
   invoke_mobile "$fixture" "FAKE_IOS_RUNTIMES=$stale_runtime" -- --check ios || status=$?
 
   assert_equal 1 "$status" 'stale iOS runtime status'
-  assert_contains "$fixture/stdout.log" 'matches iPhone SDK 26.5'
+  assert_contains "$fixture/stdout.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
+  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
   assert_not_contains "$fixture/events.log" 'xcodebuild '
 }
 
@@ -349,7 +353,30 @@ test_ios_install_selects_the_latest_compatible_download() {
 
   assert_contains "$fixture/events.log" 'xcodebuild -downloadPlatform iOS'
   assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_contains "$fixture/stdout.log" 'iOS: downloading the latest runtime'
   assert_contains "$fixture/stdout.log" 'iOS: ready'
+
+  # install used to carry a copy of check's body and then call check as well,
+  # so a successful download printed the incomplete verdict first and told the
+  # reader to run the command that was already running.
+  assert_not_contains "$fixture/stdout.log" 'iOS: incomplete'
+  assert_not_contains "$fixture/stdout.log" 'Next step: Run: mobile-setup ios'
+}
+
+# The readiness record is what install reads instead of re-observing, so the
+# observation runs once for a check and once more only when a download changed
+# what there is to observe.
+test_ios_observes_once_per_classification() {
+  local fixture
+  fixture=$(new_fixture)
+  : >"$fixture/home/.ios-runtime-ready"
+
+  invoke_mobile "$fixture" -- --check ios
+  assert_count "$fixture/events.log" 'xcrun simctl list runtimes' 1
+
+  fixture=$(new_fixture)
+  invoke_mobile "$fixture" FAKE_XCODEBUILD_INSTALL=1 -- ios
+  assert_count "$fixture/events.log" 'xcrun simctl list runtimes' 2
 }
 
 test_ios_install_reports_download_failure_without_cross_target_or_ready_state() {
@@ -411,6 +438,7 @@ test_android_classification_replaces_the_complete_named_snapshot() {
       printf "ready licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
       printf "ready avd_state=%s\n" "$ANDROID_AVD_STATE"
       printf "ready missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
+      printf "ready next_action=%s\n" "$ANDROID_NEXT_ACTION"
       if ! android_state_is_ready; then
         exit 1
       fi
@@ -422,6 +450,7 @@ test_android_classification_replaces_the_complete_named_snapshot() {
       printf "empty licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
       printf "empty avd_state=%s\n" "$ANDROID_AVD_STATE"
       printf "empty missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
+      printf "empty next_action=%s\n" "$ANDROID_NEXT_ACTION"
       if android_state_is_ready; then
         exit 1
       fi
@@ -433,6 +462,7 @@ test_android_classification_replaces_the_complete_named_snapshot() {
   assert_contains "$fixture/stdout.log" 'ready licenses_accepted=true'
   assert_contains "$fixture/stdout.log" 'ready avd_state=compatible'
   assert_contains "$fixture/stdout.log" 'ready missing_packages='
+  assert_contains "$fixture/stdout.log" 'ready next_action=none'
   assert_contains "$fixture/stdout.log" 'empty sdk_root_present=false'
   assert_contains "$fixture/stdout.log" 'empty sdkmanager_present=false'
   assert_contains "$fixture/stdout.log" 'empty avdmanager_present=false'
@@ -440,6 +470,7 @@ test_android_classification_replaces_the_complete_named_snapshot() {
   assert_contains "$fixture/stdout.log" 'empty avd_state=absent'
   assert_contains "$fixture/stdout.log" \
     'empty missing_packages=platform-tools,emulator,cmdline-tools;latest,platforms;android-36,build-tools;36.0.0,system-images;android-36;google_apis;arm64-v8a'
+  assert_contains "$fixture/stdout.log" 'empty next_action=manual-prerequisites'
 }
 
 test_android_freezes_resolved_paths_for_each_invocation() {
@@ -799,6 +830,8 @@ scenario_run 'target selection isolates the other platform' \
 scenario_run 'iOS install skips a matching runtime' test_ios_install_skips_a_matching_runtime
 scenario_run 'iOS install selects the compatible runtime download' \
   test_ios_install_selects_the_latest_compatible_download
+scenario_run 'iOS observes once per classification' \
+  test_ios_observes_once_per_classification
 scenario_run 'iOS install reports download failure without cross-target or ready state' \
   test_ios_install_reports_download_failure_without_cross_target_or_ready_state
 scenario_run 'Android install stops for manual prerequisites' \

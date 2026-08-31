@@ -20,6 +20,11 @@ ANDROID_AVDMANAGER_PRESENT=false
 ANDROID_LICENSES_ACCEPTED=false
 ANDROID_AVD_STATE=absent
 ANDROID_MISSING_PACKAGES=''
+# The action the conditions above permit. install_android switches on this once
+# instead of re-deriving the same conjunction from the six fields, which it did
+# three further times and got wrong the last time: the case it ran after the
+# readiness gate had an arm the gate has already ruled out.
+ANDROID_NEXT_ACTION=manual-prerequisites
 
 android_sdk_root() {
   printf '%s\n' "$HOME/Library/Android/sdk"
@@ -222,6 +227,28 @@ android_classify_state() {
   ANDROID_LICENSES_ACCEPTED=$next_licenses_accepted
   ANDROID_AVD_STATE=$next_avd_state
   ANDROID_MISSING_PACKAGES=$next_missing_packages
+  ANDROID_NEXT_ACTION=$(android_permitted_action)
+}
+
+# The one place that turns the conditions into what may happen next. Ordered by
+# what has to be true before the next thing can be: nothing can be installed
+# without the tools and the licenses, and an incompatible AVD stops the run
+# before any package work rather than after it.
+android_permitted_action() {
+  if [ "$ANDROID_SDK_ROOT_PRESENT" != true ] \
+    || [ "$ANDROID_SDKMANAGER_PRESENT" != true ] \
+    || [ "$ANDROID_AVDMANAGER_PRESENT" != true ] \
+    || [ "$ANDROID_LICENSES_ACCEPTED" != true ]; then
+    printf 'manual-prerequisites\n'
+  elif [ "$ANDROID_AVD_STATE" = incompatible ]; then
+    printf 'recover-avd\n'
+  elif [ -n "$ANDROID_MISSING_PACKAGES" ]; then
+    printf 'install-packages\n'
+  elif [ "$ANDROID_AVD_STATE" = absent ]; then
+    printf 'create-avd\n'
+  else
+    printf 'none\n'
+  fi
 }
 
 android_state_is_ready() {
@@ -231,15 +258,6 @@ android_state_is_ready() {
     && [ "$ANDROID_LICENSES_ACCEPTED" = true ] \
     && [ "$ANDROID_AVD_STATE" = compatible ] \
     && [ -z "$ANDROID_MISSING_PACKAGES" ]
-}
-
-android_state_is_ready_for_avd_creation() {
-  [ "$ANDROID_SDK_ROOT_PRESENT" = true ] \
-    && [ "$ANDROID_SDKMANAGER_PRESENT" = true ] \
-    && [ "$ANDROID_AVDMANAGER_PRESENT" = true ] \
-    && [ "$ANDROID_LICENSES_ACCEPTED" = true ] \
-    && [ -z "$ANDROID_MISSING_PACKAGES" ] \
-    && { [ "$ANDROID_AVD_STATE" = absent ] || [ "$ANDROID_AVD_STATE" = compatible ]; }
 }
 
 report_android_readiness() {
@@ -363,18 +381,18 @@ install_android() {
   fi
   report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
 
-  if [ "$ANDROID_SDK_ROOT_PRESENT" != true ] || [ "$ANDROID_SDKMANAGER_PRESENT" != true ] \
-    || [ "$ANDROID_AVDMANAGER_PRESENT" != true ] || [ "$ANDROID_LICENSES_ACCEPTED" != true ]; then
-    print_android_manual_prerequisites "$sdk_root" "$sdkmanager"
-    return 1
-  fi
+  case "$ANDROID_NEXT_ACTION" in
+    manual-prerequisites)
+      print_android_manual_prerequisites "$sdk_root" "$sdkmanager"
+      return 1
+      ;;
+    recover-avd)
+      refuse_incompatible_android_avd
+      return 1
+      ;;
+  esac
 
-  if [ "$ANDROID_AVD_STATE" = incompatible ]; then
-    refuse_incompatible_android_avd
-    return 1
-  fi
-
-  if [ -n "$ANDROID_MISSING_PACKAGES" ]; then
+  if [ "$ANDROID_NEXT_ACTION" = install-packages ]; then
     IFS=, read -r -a missing_packages <<<"$ANDROID_MISSING_PACKAGES"
     printf 'Android: installing missing packages:'
     for package_name in "${missing_packages[@]}"; do
@@ -392,29 +410,24 @@ install_android() {
     if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
       return 1
     fi
-    if ! android_state_is_ready_for_avd_creation; then
-      printf 'Error: Android package installation left the readiness snapshot incomplete.\n' >&2
-      report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
-      return 1
-    fi
+    case "$ANDROID_NEXT_ACTION" in
+      create-avd | none) ;;
+      *)
+        printf 'Error: Android package installation left the readiness snapshot incomplete.\n' >&2
+        report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
+        return 1
+        ;;
+    esac
   fi
 
-  if ! android_state_is_ready_for_avd_creation; then
-    printf 'Error: Android cannot create an AVD from the current readiness snapshot.\n' >&2
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
-    return 1
+  # Installing packages is the only step that can leave the AVD already usable,
+  # so this is the one place the run can end without creating one. Nothing
+  # re-tests the prerequisites here: the action the record permits was decided
+  # when the record was written.
+  if [ "$ANDROID_NEXT_ACTION" = none ]; then
+    printf 'Android: %s AVD is ready; skipping creation.\n' "$ANDROID_AVD_NAME"
+    return 0
   fi
-
-  case "$ANDROID_AVD_STATE" in
-    compatible)
-      printf 'Android: %s AVD is ready; skipping creation.\n' "$ANDROID_AVD_NAME"
-      return 0
-      ;;
-    incompatible)
-      refuse_incompatible_android_avd
-      return 1
-      ;;
-  esac
 
   if ! pixel_device=$(find_pixel_device "$avdmanager"); then
     return 1
