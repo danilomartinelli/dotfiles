@@ -17,7 +17,12 @@ ANDROID_PACKAGES=(
 # The observed conditions. These are this adapter's own detail, not the Mobile
 # Readiness record: several of them can fail at once, so the verdict names the
 # one action they permit and the report names each failure. Only
-# android_readiness writes them.
+# android_readiness writes them, and only after every probe has answered.
+#
+# They are meaningful only after a successful android_readiness. It opens the
+# record first, so a run that gives up before writing them leaves no verdict at
+# all rather than a stale one, and every caller stops on that. Zeroing them
+# instead would state that a condition failed when nothing observed it.
 ANDROID_SDK_ROOT_PRESENT=false
 ANDROID_SDKMANAGER_PRESENT=false
 ANDROID_AVDMANAGER_PRESENT=false
