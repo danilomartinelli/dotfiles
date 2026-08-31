@@ -81,9 +81,16 @@ done
 
 # Roster order is apply order in the installer, and rendering in the same order
 # keeps a diff of this script's output readable against one of the installer's.
-mapfile -t profiles < <(
-  awk -F'\t' '$1 == "profile" { print $2 }' "$roster"
-)
+# This is the roster's only reader here: the bare awk that used to stand in for
+# it skipped comment rows by accident, because "#profile" happens not to equal
+# "profile".
+profiles=()
+collect_profile_row() {
+  [ "$1" = profile ] || return 0
+  profiles+=("$2")
+  return 0
+}
+catalog_each_row "$roster" collect_profile_row
 [ "${#profiles[@]}" -gt 0 ] || fail "no profile rows in $roster"
 
 declare -A routing_seen=()
@@ -93,6 +100,9 @@ declare -A routing_seen=()
 # restated in each of those scans in a different index base from the jq pass.
 declare -A routing_cell_of=()
 declare -A routing_roles_of=()
+# The validated columns, flat, seven per row, in catalog order. They become the
+# routing records the payload renderer reads; nothing re-splits the file.
+routing_fields=()
 
 mapfile -t roles < <(jq -r '.agent | keys_unsorted[]' "$shared_dir/opencode.jsonc")
 [ "${#roles[@]}" -gt 0 ] \
@@ -134,6 +144,9 @@ validate_routing_row() {
 
   routing_cell_of["$profile/$role"]=$(compose_routing_cell "$model" "$variant" "$effort")
   routing_roles_of["$profile"]+=$role$'\n'
+  routing_fields+=(
+    "$profile" "$role" "$model" "$variant" "$temperature" "$effort" "$verbosity"
+  )
 }
 
 # A role's cell is its model, plus the one knob that distinguishes it: the
@@ -162,6 +175,7 @@ validate_routing() {
   routing_seen=()
   routing_cell_of=()
   routing_roles_of=()
+  routing_fields=()
   catalog_each_row "$routing" validate_routing_row
 
   # Extra and misspelled rows are already refused above, so what is left to
@@ -213,48 +227,61 @@ render_readme_block() {
   esac
 }
 
+# Turn the validated columns into one routing record per profile and role, so
+# the payload renderer reads .model and .variant rather than a second set of
+# column positions. The catalog used to be re-split inside jq, once per profile,
+# in a 0-based index base against this file's 1-based one; the "-" sentinel was
+# spelled in both. It is resolved here and never reaches jq.
+compose_routing_records() {
+  jq -n '
+    def named($key; $value): if $value == "-" then {} else {($key): $value} end;
+
+    [ range(0; ($ARGS.positional | length); 7) as $i
+      | {
+          profile: $ARGS.positional[$i],
+          role: $ARGS.positional[$i + 1],
+          options: (
+            {model: $ARGS.positional[$i + 2]}
+            + named("variant"; $ARGS.positional[$i + 3])
+            + (if $ARGS.positional[$i + 4] == "-" then {}
+               else {temperature: ($ARGS.positional[$i + 4] | tonumber)} end)
+            + named("reasoningEffort"; $ARGS.positional[$i + 5])
+            + named("textVerbosity"; $ARGS.positional[$i + 6])
+          )
+        }
+    ]
+    | group_by(.profile)
+    | map({
+        key: .[0].profile,
+        value: (map({key: .role, value: .options}) | from_entries)
+      })
+    | from_entries
+  ' --args "$@"
+}
+
 render_config() {
   local profile=$1
 
-  jq --indent 2 --arg profile "$profile" --rawfile routing "$routing" '
-    def routed($row; $index; $key):
-      if $row[$index] == "-" then {} else {($key): $row[$index]} end;
-
-    ($routing
-     | split("\n")
-     | map(select(length > 0 and (startswith("#") | not)) | split("\t"))
-     | map(select(.[0] == $profile))
-     | map({key: .[1], value: .})
-     | from_entries) as $routes
+  # The shared base wins over a routing record on any key both declare, which is
+  # why .value is added last.
+  jq --indent 2 --argjson routes "$routing_records" --arg profile "$profile" '
+    $routes[$profile] as $routed
     | {
         "$schema": .["$schema"],
-        model: $routes["default"][2],
-        small_model: $routes["small"][2]
+        model: $routed["default"].model,
+        small_model: $routed["small"].model
       }
       + (del(.["$schema"])
          | .agent = (
              .agent
              | to_entries
-             | map(
-                 $routes[.key] as $row
-                 | {
-                     key: .key,
-                     value: (
-                       {model: $row[2]}
-                       + routed($row; 3; "variant")
-                       + (if $row[4] == "-" then {}
-                          else {temperature: ($row[4] | tonumber)} end)
-                       + routed($row; 5; "reasoningEffort")
-                       + routed($row; 6; "textVerbosity")
-                       + .value
-                     )
-                   }
-               )
+             | map({key: .key, value: ($routed[.key] + .value)})
              | from_entries))
   ' "$shared_dir/opencode.jsonc"
 }
 
 validate_routing
+routing_records=$(compose_routing_records "${routing_fields[@]}")
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-opencode-profiles.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT
