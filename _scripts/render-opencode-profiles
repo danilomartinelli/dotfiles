@@ -60,6 +60,10 @@ fail() {
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/markdown-table.sh"
 
+# shellcheck source=_scripts/generated-file.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/generated-file.sh"
+
 topic_dir=$(CDPATH='' cd -P -- "$topic_dir" 2>/dev/null && pwd) \
   || fail "topic directory not found: $topic_dir"
 
@@ -250,22 +254,7 @@ render_config() {
 # A payload is written only when it changes, so a no-op render leaves the
 # checkout untouched and --check has nothing to report.
 sync_payload() {
-  local rendered=$1
-  local stored=$2
-
-  if [ -f "$stored" ] && cmp -s "$rendered" "$stored"; then
-    return 0
-  fi
-
-  if [ "$check_only" = true ]; then
-    printf 'stale: %s\n' "${stored#"$topic_dir/"}" >&2
-    stale=$((stale + 1))
-    return 0
-  fi
-
-  mkdir -p -- "$(dirname -- "$stored")"
-  cp -- "$rendered" "$stored"
-  printf '  → rendered %s\n' "${stored#"$topic_dir/"}"
+  generated_file_sync "$1" "$2" "${2#"$topic_dir/"}"
 }
 
 validate_routing
@@ -273,7 +262,11 @@ validate_routing
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-opencode-profiles.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT
 
-stale=0
+if [ "$check_only" = true ]; then
+  generated_file_mode check
+else
+  generated_file_mode write
+fi
 for profile in "${profiles[@]}"; do
   render_config "$profile" >"$work_dir/opencode.jsonc"
   sync_payload "$work_dir/opencode.jsonc" \
@@ -289,11 +282,5 @@ markdown_render_blocks "$topic_dir/README.md" render_readme_block \
   >"$work_dir/README.md" || fail "cannot render $topic_dir/README.md"
 sync_payload "$work_dir/README.md" "$topic_dir/README.md"
 
-if [ "$check_only" = true ]; then
-  if [ "$stale" -gt 0 ]; then
-    printf 'render-opencode-profiles: %d payload(s) out of date; run _scripts/render-opencode-profiles\n' \
-      "$stale" >&2
-    exit 1
-  fi
-  printf 'OpenCode profile payloads are up to date.\n'
-fi
+generated_file_verdict 'OpenCode profile payloads are' \
+  _scripts/render-opencode-profiles

@@ -58,6 +58,10 @@ fail() {
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/markdown-table.sh"
 
+# shellcheck source=_scripts/generated-file.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/generated-file.sh"
+
 repository_root=$(CDPATH='' cd -P -- "$repository_root" 2>/dev/null && pwd) \
   || fail "repository root not found: $repository_root"
 
@@ -69,15 +73,21 @@ for required in "$brewfile" "$mise_config" "$readme"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
 
+# The one awk helper every emitter below needs. It was written out four times,
+# which is three chances for the emitters to disagree about what surrounding
+# whitespace in a declaration means.
+AWK_TRIM='
+  function trim(value) {
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+    return value
+  }
+'
+
 # Every emitter writes tab-separated cells and stops on a declaration with no
 # description, because a blank cell in the rendered table would read as a
 # package nobody had to explain rather than one nobody did.
 emit_formula_rows() {
-  awk -F'\t' '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
+  awk -F'\t' "$AWK_TRIM"'
     /^brew / {
       rest = substr($0, index($0, "'"'"'") + 1)
       name = substr(rest, 1, index(rest, "'"'"'") - 1)
@@ -97,11 +107,7 @@ emit_formula_rows() {
 # Only a comment that opens a block counts: a stray cask under the file header
 # would otherwise be filed under a sentence of prose.
 emit_cask_rows() {
-  awk '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
+  awk "$AWK_TRIM"'
     /^#/ {
       pending = trim(substr($0, 2))
       next
@@ -145,11 +151,7 @@ emit_cask_rows() {
 }
 
 emit_mas_rows() {
-  awk '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
+  awk "$AWK_TRIM"'
     /^mas / {
       rest = substr($0, index($0, "'"'"'") + 1)
       name = substr(rest, 1, index(rest, "'"'"'") - 1)
@@ -172,11 +174,7 @@ emit_mas_rows() {
 # Versions are read from the declaration rather than restated, so a floating
 # "latest" and a pinned release are both reported as declared.
 emit_mise_rows() {
-  awk '
-    function trim(value) {
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-      return value
-    }
+  awk "$AWK_TRIM"'
     # Any section header ends [tools]. Naming only [settings] would keep
     # reading rows out of whatever section were inserted between them, and
     # tests/documentation_test.sh derives the same list by the same rule.
@@ -240,17 +238,10 @@ rendered=$work_dir/README.md
 markdown_render_blocks "$readme" render_block >"$rendered" \
   || fail "cannot render $readme"
 
-if cmp -s "$rendered" "$readme"; then
-  if [ "$check_only" = true ]; then
-    printf 'README software catalog is up to date.\n'
-  fi
-  exit 0
-fi
-
 if [ "$check_only" = true ]; then
-  diff -u "$readme" "$rendered" >&2 || true
-  fail 'README software catalog is out of date; run _scripts/render-software-catalog'
+  generated_file_mode check
+else
+  generated_file_mode write
 fi
-
-cp -- "$rendered" "$readme"
-printf '  → rendered %s\n' "${readme#"$repository_root/"}"
+generated_file_sync "$rendered" "$readme" "${readme#"$repository_root/"}"
+generated_file_verdict 'README software catalog is' _scripts/render-software-catalog
