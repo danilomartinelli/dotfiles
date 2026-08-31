@@ -29,8 +29,16 @@ owned='{}'
 # declared text, which is why it no longer needs to ask what JSON type the value
 # turned out to be: the old sub() ran on top-level strings only, so an
 # object-valued row was silently never expanded at all.
+#
+# Because the substitution lands inside JSON source text rather than inside a
+# decoded string, the checkout path is JSON-escaped first. APFS allows both `"`
+# and `\` in a path component, and either one spliced in raw would produce a
+# value jq cannot parse — the old sub() could not hit this because jq
+# re-serialized the string it had already decoded.
+DOTFILES_ROOT_JSON=$(jq -rn --arg root "$DOTFILES_ROOT" '$root | tojson[1:-1]')
+
 collect_setting() {
-  _setting_value=$(catalog_expand "$2" DOTFILES_ROOT "$DOTFILES_ROOT")
+  _setting_value=$(catalog_expand "$2" DOTFILES_ROOT "$DOTFILES_ROOT_JSON")
   owned=$(printf '%s' "$owned" | jq -c --arg key "$1" --argjson value "$_setting_value" \
     '.[$key] = $value')
   unset _setting_value

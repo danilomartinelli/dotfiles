@@ -84,6 +84,12 @@ catalog_each_row() {
 # Names apply left to right, so a replacement may contain a token a later name
 # expands. No replacement is rescanned for the name that produced it.
 #
+# A token ends where the name ends — there is no delimiter — so one honoured
+# name must not prefix another. Declaring HOME beside HOMEBREW_PREFIX would
+# rewrite `$HOMEBREW_PREFIX` as `<home>BREW_PREFIX` with no error. No catalog
+# declares such a pair; a catalog that needs one has to spell the longer name
+# first and is still wrong on the shorter, so the answer is a different name.
+#
 # Usage: catalog_expand <value> <NAME> <replacement> [<NAME> <replacement>...]
 catalog_expand() {
   _catalog_expand_result=$1

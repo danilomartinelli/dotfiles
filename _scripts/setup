@@ -133,12 +133,30 @@ setup_gitconfig() {
 # catalog_each_row: what changes here is where the classification comes from, not
 # which shape it has. See
 # docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md.
+# install_topics executes column 2 of every installer row, so a supplied catalog
+# decides what this run runs. An exported value survives into a real bootstrap,
+# and nothing else here would notice, so every path it names must be inside the
+# checkout. This is the same shape as the linker refusing an unattended removal
+# outside the paths it owns: the seam stays open and its blast radius does not.
+assert_catalog_is_local() {
+  local kind path
+
+  while IFS=$'\t' read -r kind path; do
+    [ "$kind" = installer ] || continue
+    case "$path" in
+      "$DOTFILES_ROOT"/*/install.sh) ;;
+      *) fail "declared topic catalog names an installer outside the checkout: $path" ;;
+    esac
+  done <<<"$1"
+}
+
 setup_catalog() {
   if [ "$CATALOG_CAPTURED" != true ]; then
     if [ -n "${DOTFILES_TOPIC_CATALOG:-}" ]; then
       [ -r "$DOTFILES_TOPIC_CATALOG" ] \
         || fail "topic catalog not readable: $DOTFILES_TOPIC_CATALOG"
       CATALOG_SNAPSHOT=$(cat -- "$DOTFILES_TOPIC_CATALOG") || return 1
+      assert_catalog_is_local "$CATALOG_SNAPSHOT" || return 1
     else
       CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
     fi

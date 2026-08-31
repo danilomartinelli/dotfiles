@@ -605,6 +605,30 @@ test_the_declared_catalog_decides_which_topics_run_and_in_what_order() {
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
 }
 
+# install_topics executes what the catalog names, so a supplied roster may only
+# name installers inside the checkout. An exported value reaches a real
+# bootstrap, and nothing else in the run would notice.
+test_a_declared_catalog_may_not_name_an_installer_outside_the_checkout() {
+  local fixture outsider
+
+  fixture=$(make_fixture)
+  outsider=$(scenario_tmpdir outsider)
+  mkdir -p "$outsider/evil"
+  scenario_write_executable "$outsider/evil/install.sh" <<EOF
+#!/bin/sh
+printf 'topic-evil\\n' >>"\$SCENARIO_EVENT_LOG"
+EOF
+  printf 'installer\t%s/evil/install.sh\n' "$outsider" >"$fixture/outside.tsv"
+
+  if invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/outside.tsv" \
+    "$fixture/_scripts/setup" bootstrap; then
+    return 1
+  fi
+
+  assert_contains "$fixture/stderr.log" 'names an installer outside the checkout'
+  assert_not_contains "$fixture/events.log" topic-evil
+}
+
 test_an_unreadable_declared_catalog_stops_the_run() {
   local fixture
 
@@ -652,6 +676,8 @@ scenario_run 'the declared catalog decides which topics run and in what order' \
   test_the_declared_catalog_decides_which_topics_run_and_in_what_order
 scenario_run 'an unreadable declared catalog stops the run' \
   test_an_unreadable_declared_catalog_stops_the_run
+scenario_run 'a declared catalog may not name an installer outside the checkout' \
+  test_a_declared_catalog_may_not_name_an_installer_outside_the_checkout
 scenario_run 'declared prerequisite topics run before the remainder' \
   test_prerequisite_topics_run_first
 scenario_run 'a declared prerequisite without an installer stops the run' \

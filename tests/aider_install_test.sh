@@ -25,33 +25,23 @@ aider_target() {
   printf '%s\n' "$1/home/.aider.conf.yml"
 }
 
-test_the_config_is_linked_from_the_checkout() {
+# The config is a *.symlink file, so link-dotfiles owns that target. A second
+# owner here would re-decide it under a different conflict policy than the one
+# `dot` chose moments earlier, so this topic must link nothing at all.
+test_the_installer_links_nothing() {
   local fixture target
   fixture=$(installer_fixture)
   target=$(aider_target "$fixture")
 
   invoke_aider "$fixture"
 
-  [ -L "$target" ] || scenario_fail 'expected the Aider config to be a symlink'
-  assert_equal "$SOURCE" "$(readlink "$target")" 'link points at the checkout'
-  assert_contains "$fixture/stdout.log" 'Aider config'
+  [ ! -e "$target" ] && [ ! -L "$target" ] \
+    || scenario_fail 'the Aider installer created a target link-dotfiles owns'
 }
 
-test_the_link_is_idempotent() {
-  local fixture target
-  fixture=$(installer_fixture)
-  target=$(aider_target "$fixture")
-
-  invoke_aider "$fixture"
-  invoke_aider "$fixture"
-
-  assert_equal "$SOURCE" "$(readlink "$target")" 'link survives a repeat run'
-  assert_contains "$fixture/stdout.log" 'already linked'
-}
-
-# The topic used to clear the target with its own `rm`, so an existing file was
-# destroyed without a backup. The linker's default policy keeps one.
-test_an_existing_file_is_backed_up_rather_than_destroyed() {
+# The precise regression: `dot` runs link-dotfiles with --batch skip, which is
+# honoured as preserve-existing. Nothing later in the run may move that file.
+test_a_preserved_file_survives_the_installer() {
   local fixture target
   fixture=$(installer_fixture)
   target=$(aider_target "$fixture")
@@ -60,26 +50,49 @@ test_an_existing_file_is_backed_up_rather_than_destroyed() {
 
   invoke_aider "$fixture"
 
-  [ -L "$target" ] || scenario_fail 'expected the target to be linked'
-  assert_equal 'hand written' "$(cat "$target.backup")" 'existing file backed up'
+  assert_equal 'hand written' "$(cat "$target")" 'preserved file untouched'
+  [ ! -e "$target.backup" ] \
+    || scenario_fail 'the installer backed up a file the run chose to preserve'
 }
 
-# The source carries no __DOTFILES_ROOT__, which is why the rendering branch this
-# installer used to run was unreachable. A placeholder returning to the source
-# would need that branch back, so this states the assumption the topic now makes.
+test_the_run_reports_the_cli_state() {
+  local fixture
+  fixture=$(installer_fixture)
+
+  invoke_aider "$fixture"
+
+  assert_contains "$fixture/stdout.log" 'Aider configured'
+}
+
+# The source carries no __DOTFILES_ROOT__, which is why the rendering this
+# installer used to perform was unreachable. A placeholder returning to the
+# source would need rendering back — and link-dotfiles cannot do it, so it would
+# have to become a real decision rather than a silent one.
 test_the_source_needs_no_checkout_substitution() {
   grep -q '__DOTFILES_ROOT__' "$SOURCE" \
     && scenario_fail 'the Aider source carries a placeholder but nothing renders it'
   return 0
 }
 
-scenario_run 'the config is linked from the checkout' \
-  test_the_config_is_linked_from_the_checkout
-scenario_run 'the link is idempotent' \
-  test_the_link_is_idempotent
-scenario_run 'an existing file is backed up rather than destroyed' \
-  test_an_existing_file_is_backed_up_rather_than_destroyed
+# link-dotfiles derives the target from the source name, so the two halves of
+# this arrangement have to agree on what that name produces.
+test_link_dotfiles_owns_the_expected_target() {
+  local derived
+  derived=$(basename "${SOURCE%.*}")
+
+  assert_equal '.aider.conf.yml' ".$derived" \
+    'link-dotfiles derives the target this topic deliberately leaves alone'
+}
+
+scenario_run 'the installer links nothing' \
+  test_the_installer_links_nothing
+scenario_run 'a preserved file survives the installer' \
+  test_a_preserved_file_survives_the_installer
+scenario_run 'the run reports the CLI state' \
+  test_the_run_reports_the_cli_state
 scenario_run 'the source needs no checkout substitution' \
   test_the_source_needs_no_checkout_substitution
+scenario_run 'link-dotfiles owns the expected target' \
+  test_link_dotfiles_owns_the_expected_target
 
 scenario_finish

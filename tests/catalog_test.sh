@@ -212,6 +212,31 @@ test_a_name_without_a_replacement_is_refused() {
 # catalog.sh is sourced by every installer and by the interactive shell's
 # startup, so neither exit from an expansion may leave a name behind. The
 # refusal used to return before its unset.
+# openchamber substitutes into JSON source text rather than into a decoded
+# string, so it JSON-escapes the checkout path first. APFS allows both `"` and
+# `\` in a path component, and either spliced in raw yields a value jq refuses.
+test_a_json_escaped_replacement_survives_argjson() {
+  local fixture
+  fixture=$(scenario_tmpdir expand-json)
+
+  cat >"$fixture/consumer.sh" <<'CONSUMER'
+#!/bin/sh
+set -e
+CONSUMER
+  printf '. "%s"\n' "$READER" >>"$fixture/consumer.sh"
+  cat >>"$fixture/consumer.sh" <<'CONSUMER'
+root='/Users/a"b\c/dotfiles'
+escaped=$(jq -rn --arg root "$root" '$root | tojson[1:-1]')
+value=$(catalog_expand '"$DOTFILES_ROOT/bin/opencode-profile"' DOTFILES_ROOT "$escaped")
+printf '%s' '{}' | jq -c --arg k binary --argjson value "$value" '.[$k] = $value'
+CONSUMER
+  chmod +x "$fixture/consumer.sh"
+  scenario_capture "$fixture" "$fixture/consumer.sh"
+
+  assert_contains "$fixture/stdout.log" \
+    '{"binary":"/Users/a\"b\\c/dotfiles/bin/opencode-profile"}'
+}
+
 test_expansion_leaks_no_variables_on_either_exit() {
   local fixture
   fixture=$(scenario_tmpdir expand-leak)
@@ -271,5 +296,7 @@ scenario_run 'a replacement containing a dollar is not rescanned' \
   test_a_replacement_containing_a_dollar_is_not_rescanned
 scenario_run 'expansion leaks no variables on either exit' \
   test_expansion_leaks_no_variables_on_either_exit
+scenario_run 'a JSON-escaped replacement survives argjson' \
+  test_a_json_escaped_replacement_survives_argjson
 
 scenario_finish

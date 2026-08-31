@@ -198,6 +198,12 @@ reach for `sed`, `${var//}`, or a jq `sub()` at a call site, and do not read a
 replacement out of the environment on the caller's behalf: passing it explicitly
 is what keeps `eval` out of a module every installer sources.
 
+A token ends where its name ends, so no honoured name may prefix another one in
+the same call. A value substituted into JSON source text rather than into a
+decoded string is escaped by its caller first, the way `openchamber/install.sh`
+escapes the checkout path: the module expands text and does not know the syntax
+the result lands in.
+
 A catalog that arrives as a command's stdout rather than a file is read
 directly by its consumer. `_scripts/topic-catalog` output is the only one, and
 `docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md` records
@@ -378,11 +384,13 @@ A second fixture needing either reads it from there rather than restating it.
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                               |
+| Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                               |
 | Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh` |
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                               |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                          |
+| Aider                                                           | `tests/aider_install_test.sh`                                                                                |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
