@@ -150,8 +150,12 @@ _Avoid_: mobile setup
 
 **Mobile Readiness**:
 The declared assessment of a selected Mobile Target’s required conditions and
-permitted next action.
-_Avoid_: environment status
+permitted next action. One record shape, filled by whichever Mobile Target was
+selected, and the only thing a caller reads: a target observes conditions and
+composes a verdict, but never prints one and never names the next step in the
+caller’s voice. Its permitted action is the single ready rule; `none` means
+ready.
+_Avoid_: environment status, snapshot
 
 **Mobile Target**:
 iOS, Android, or both selected for Mobile Provisioning.

@@ -14,17 +14,16 @@ ANDROID_PACKAGES=(
   "$ANDROID_SYSTEM_IMAGE"
 )
 
+# The observed conditions. These are this adapter's own detail, not the Mobile
+# Readiness record: several of them can fail at once, so the verdict names the
+# one action they permit and the report names each failure. Only
+# android_readiness writes them.
 ANDROID_SDK_ROOT_PRESENT=false
 ANDROID_SDKMANAGER_PRESENT=false
 ANDROID_AVDMANAGER_PRESENT=false
 ANDROID_LICENSES_ACCEPTED=false
 ANDROID_AVD_STATE=absent
 ANDROID_MISSING_PACKAGES=''
-# The action the conditions above permit. install_android switches on this once
-# instead of re-deriving the same conjunction from the six fields, which it did
-# three further times and got wrong the last time: the case it ran after the
-# readiness gate had an arm the gate has already ruled out.
-ANDROID_NEXT_ACTION=manual-prerequisites
 
 android_sdk_root() {
   printf '%s\n' "$HOME/Library/Android/sdk"
@@ -161,18 +160,18 @@ android_avd_state() {
   esac
 }
 
-print_android_missing_packages() {
+record_android_missing_packages() {
   local missing_packages=$1
   local -a package_names=()
   local package_name
+  local line='Android: incomplete — missing packages:'
 
-  printf 'Android: incomplete — missing packages:'
   IFS=, read -r -a package_names <<<"$missing_packages"
   for package_name in "${package_names[@]}"; do
-    printf ' %s' "$package_name"
+    line="$line $package_name"
   done
-  printf '\n'
-  print_next_step 'Run: mobile-setup android'
+  mobile_readiness_line "$line"
+  mobile_readiness_next_step 'Run: mobile-setup android'
 }
 
 print_android_manual_prerequisites() {
@@ -192,7 +191,10 @@ refuse_incompatible_android_avd() {
   return 1
 }
 
-android_classify_state() {
+# Observe every condition, decide what they permit, then compose the record.
+# The three resolved paths arrive as arguments and reach the report the same
+# way, so nothing threads a second copy of the triple by hand.
+android_readiness() {
   local sdk_root=$1
   local sdkmanager=$2
   local avdmanager=$3
@@ -203,12 +205,7 @@ android_classify_state() {
   local next_avd_state
   local next_missing_packages
 
-  ANDROID_SDK_ROOT_PRESENT=false
-  ANDROID_SDKMANAGER_PRESENT=false
-  ANDROID_AVDMANAGER_PRESENT=false
-  ANDROID_LICENSES_ACCEPTED=false
-  ANDROID_AVD_STATE=absent
-  ANDROID_MISSING_PACKAGES=''
+  mobile_readiness_begin android
 
   [ -d "$sdk_root" ] && next_sdk_root_present=true
   [ -x "$sdkmanager" ] && next_sdkmanager_present=true
@@ -227,13 +224,19 @@ android_classify_state() {
   ANDROID_LICENSES_ACCEPTED=$next_licenses_accepted
   ANDROID_AVD_STATE=$next_avd_state
   ANDROID_MISSING_PACKAGES=$next_missing_packages
-  ANDROID_NEXT_ACTION=$(android_permitted_action)
+
+  mobile_readiness_commit "$(android_permitted_action)"
+  compose_android_report "$sdk_root" "$sdkmanager" "$avdmanager"
 }
 
 # The one place that turns the conditions into what may happen next. Ordered by
 # what has to be true before the next thing can be: nothing can be installed
 # without the tools and the licenses, and an incompatible AVD stops the run
 # before any package work rather than after it.
+#
+# This is also the only ready rule. android_state_is_ready used to spell the
+# same conjunction a second way, and install_android asked in both dialects
+# inside one function body.
 android_permitted_action() {
   if [ "$ANDROID_SDK_ROOT_PRESENT" != true ] \
     || [ "$ANDROID_SDKMANAGER_PRESENT" != true ] \
@@ -251,67 +254,58 @@ android_permitted_action() {
   fi
 }
 
-android_state_is_ready() {
-  [ "$ANDROID_SDK_ROOT_PRESENT" = true ] \
-    && [ "$ANDROID_SDKMANAGER_PRESENT" = true ] \
-    && [ "$ANDROID_AVDMANAGER_PRESENT" = true ] \
-    && [ "$ANDROID_LICENSES_ACCEPTED" = true ] \
-    && [ "$ANDROID_AVD_STATE" = compatible ] \
-    && [ -z "$ANDROID_MISSING_PACKAGES" ]
-}
-
-report_android_readiness() {
+# Several conditions can fail at once and a person needs to see all of them, so
+# the report names each one while the record's action names the single thing
+# that happens next.
+compose_android_report() {
   local sdk_root=$1
   local sdkmanager=$2
   local avdmanager=$3
-  local failed=0
+
+  if mobile_readiness_is_ready; then
+    mobile_readiness_line \
+      "Android: ready — $ANDROID_AVD_NAME is configured for API 36 google_apis arm64-v8a."
+    return 0
+  fi
 
   if [ "$ANDROID_SDK_ROOT_PRESENT" != true ]; then
-    printf 'Android: incomplete — canonical SDK root is absent: %s\n' "$sdk_root"
-    failed=1
+    mobile_readiness_line \
+      "Android: incomplete — canonical SDK root is absent: $sdk_root"
   fi
 
   if [ "$ANDROID_SDKMANAGER_PRESENT" != true ] || [ "$ANDROID_AVDMANAGER_PRESENT" != true ]; then
-    printf 'Android: incomplete — SDK command-line tools are absent from %s.\n' "$sdk_root"
+    mobile_readiness_line \
+      "Android: incomplete — SDK command-line tools are absent from $sdk_root."
     if [ "$ANDROID_SDKMANAGER_PRESENT" != true ]; then
-      printf '  → sdkmanager expected at %s.\n' "$sdkmanager"
+      mobile_readiness_line "  → sdkmanager expected at $sdkmanager."
     fi
     if [ "$ANDROID_AVDMANAGER_PRESENT" != true ]; then
-      printf '  → avdmanager expected at %s.\n' "$avdmanager"
+      mobile_readiness_line "  → avdmanager expected at $avdmanager."
     fi
-    print_next_step 'Complete the Android Studio Setup Wizard and install Command-line Tools (latest), then run: mobile-setup android'
-    failed=1
+    mobile_readiness_next_step 'Complete the Android Studio Setup Wizard and install Command-line Tools (latest), then run: mobile-setup android'
   fi
 
   if [ "$ANDROID_LICENSES_ACCEPTED" != true ]; then
-    printf 'Android: incomplete — Android SDK licenses are not accepted at %s.\n' "$sdk_root"
-    print_next_step 'Accept Android SDK licenses manually, then run: mobile-setup android'
-    failed=1
+    mobile_readiness_line \
+      "Android: incomplete — Android SDK licenses are not accepted at $sdk_root."
+    mobile_readiness_next_step 'Accept Android SDK licenses manually, then run: mobile-setup android'
   fi
 
   if [ -n "$ANDROID_MISSING_PACKAGES" ]; then
-    print_android_missing_packages "$ANDROID_MISSING_PACKAGES"
-    failed=1
+    record_android_missing_packages "$ANDROID_MISSING_PACKAGES"
   fi
 
   case "$ANDROID_AVD_STATE" in
     absent)
-      printf 'Android: incomplete — %s AVD is absent.\n' "$ANDROID_AVD_NAME"
-      print_next_step 'Run: mobile-setup android'
-      failed=1
+      mobile_readiness_line "Android: incomplete — $ANDROID_AVD_NAME AVD is absent."
+      mobile_readiness_next_step 'Run: mobile-setup android'
       ;;
     incompatible)
-      printf 'Android: incomplete — %s AVD exists with incompatible state.\n' "$ANDROID_AVD_NAME"
-      print_next_step 'Recover the AVD manually without deleting existing state, then run: mobile-setup android'
-      failed=1
+      mobile_readiness_line \
+        "Android: incomplete — $ANDROID_AVD_NAME AVD exists with incompatible state."
+      mobile_readiness_next_step 'Recover the AVD manually without deleting existing state, then run: mobile-setup android'
       ;;
   esac
-
-  if [ "$failed" -eq 0 ]; then
-    printf 'Android: ready — %s is configured for API 36 google_apis arm64-v8a.\n' "$ANDROID_AVD_NAME"
-    return 0
-  fi
-  return 1
 }
 
 check_android() {
@@ -322,10 +316,10 @@ check_android() {
   sdk_root=$(android_sdk_root)
   sdkmanager=$(android_sdkmanager_path "$sdk_root")
   avdmanager=$(android_avdmanager_path "$sdk_root")
-  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+  if ! android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"; then
     return 1
   fi
-  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
+  mobile_readiness_report
 }
 
 find_pixel_device() {
@@ -370,18 +364,18 @@ install_android() {
   sdk_root=$(android_sdk_root)
   sdkmanager=$(android_sdkmanager_path "$sdk_root")
   avdmanager=$(android_avdmanager_path "$sdk_root")
-  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+  if ! android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"; then
     return 1
   fi
-  if android_state_is_ready; then
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
+  if mobile_readiness_is_ready; then
+    mobile_readiness_report
     printf 'Android: %s AVD is ready; required packages exist, skipping changes.\n' \
       "$ANDROID_AVD_NAME"
     return 0
   fi
-  report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
+  mobile_readiness_report || true
 
-  case "$ANDROID_NEXT_ACTION" in
+  case "$MOBILE_READINESS_ACTION" in
     manual-prerequisites)
       print_android_manual_prerequisites "$sdk_root" "$sdkmanager"
       return 1
@@ -392,7 +386,7 @@ install_android() {
       ;;
   esac
 
-  if [ "$ANDROID_NEXT_ACTION" = install-packages ]; then
+  if [ "$MOBILE_READINESS_ACTION" = install-packages ]; then
     IFS=, read -r -a missing_packages <<<"$ANDROID_MISSING_PACKAGES"
     printf 'Android: installing missing packages:'
     for package_name in "${missing_packages[@]}"; do
@@ -407,14 +401,14 @@ install_android() {
       return 1
     fi
 
-    if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+    if ! android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"; then
       return 1
     fi
-    case "$ANDROID_NEXT_ACTION" in
+    case "$MOBILE_READINESS_ACTION" in
       create-avd | none) ;;
       *)
         printf 'Error: Android package installation left the readiness snapshot incomplete.\n' >&2
-        report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
+        mobile_readiness_report || true
         return 1
         ;;
     esac
@@ -424,7 +418,7 @@ install_android() {
   # so this is the one place the run can end without creating one. Nothing
   # re-tests the prerequisites here: the action the record permits was decided
   # when the record was written.
-  if [ "$ANDROID_NEXT_ACTION" = none ]; then
+  if mobile_readiness_is_ready; then
     printf 'Android: %s AVD is ready; skipping creation.\n' "$ANDROID_AVD_NAME"
     return 0
   fi
@@ -448,13 +442,13 @@ install_android() {
     return 1
   fi
 
-  if ! android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"; then
+  if ! android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"; then
     return 1
   fi
-  if ! android_state_is_ready; then
+  if ! mobile_readiness_is_ready; then
     printf 'Error: Android created %s but its final readiness snapshot is incomplete.\n' \
       "$ANDROID_AVD_NAME" >&2
-    report_android_readiness "$sdk_root" "$sdkmanager" "$avdmanager" || true
+    mobile_readiness_report || true
     return 1
   fi
 

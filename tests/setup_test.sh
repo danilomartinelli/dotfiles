@@ -151,6 +151,8 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
   cp "$REPOSITORY_ROOT/_scripts/mobile-setup" "$fixture/_scripts/mobile-setup"
+  cp "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+    "$fixture/_scripts/mobile-setup-readiness.sh"
   cp "$REPOSITORY_ROOT/_scripts/mobile-setup-ios.sh" "$fixture/_scripts/mobile-setup-ios.sh"
   cp "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" "$fixture/_scripts/mobile-setup-android.sh"
   cp "$REPOSITORY_ROOT/android-studio/install.sh" "$fixture/android-studio/install.sh"

@@ -428,33 +428,36 @@ test_android_classification_replaces_the_complete_named_snapshot() {
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     bash -c '
       source "$1"
-      sdk_root=$2
+      source "$2"
+      sdk_root=$3
       sdkmanager="$sdk_root/cmdline-tools/latest/bin/sdkmanager"
       avdmanager="$sdk_root/cmdline-tools/latest/bin/avdmanager"
-      android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"
+      android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
       printf "ready sdk_root_present=%s\n" "$ANDROID_SDK_ROOT_PRESENT"
       printf "ready sdkmanager_present=%s\n" "$ANDROID_SDKMANAGER_PRESENT"
       printf "ready avdmanager_present=%s\n" "$ANDROID_AVDMANAGER_PRESENT"
       printf "ready licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
       printf "ready avd_state=%s\n" "$ANDROID_AVD_STATE"
       printf "ready missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
-      printf "ready next_action=%s\n" "$ANDROID_NEXT_ACTION"
-      if ! android_state_is_ready; then
+      printf "ready next_action=%s\n" "$MOBILE_READINESS_ACTION"
+      printf "ready target=%s\n" "$MOBILE_READINESS_TARGET"
+      if ! mobile_readiness_is_ready; then
         exit 1
       fi
       rm -rf "$sdk_root" "$HOME/.android/avd"
-      android_classify_state "$sdk_root" "$sdkmanager" "$avdmanager"
+      android_readiness "$sdk_root" "$sdkmanager" "$avdmanager"
       printf "empty sdk_root_present=%s\n" "$ANDROID_SDK_ROOT_PRESENT"
       printf "empty sdkmanager_present=%s\n" "$ANDROID_SDKMANAGER_PRESENT"
       printf "empty avdmanager_present=%s\n" "$ANDROID_AVDMANAGER_PRESENT"
       printf "empty licenses_accepted=%s\n" "$ANDROID_LICENSES_ACCEPTED"
       printf "empty avd_state=%s\n" "$ANDROID_AVD_STATE"
       printf "empty missing_packages=%s\n" "$ANDROID_MISSING_PACKAGES"
-      printf "empty next_action=%s\n" "$ANDROID_NEXT_ACTION"
-      if android_state_is_ready; then
+      printf "empty next_action=%s\n" "$MOBILE_READINESS_ACTION"
+      if mobile_readiness_is_ready; then
         exit 1
       fi
-    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" "$root"
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+    "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" "$root"
 
   assert_contains "$fixture/stdout.log" 'ready sdk_root_present=true'
   assert_contains "$fixture/stdout.log" 'ready sdkmanager_present=true'
@@ -463,6 +466,7 @@ test_android_classification_replaces_the_complete_named_snapshot() {
   assert_contains "$fixture/stdout.log" 'ready avd_state=compatible'
   assert_contains "$fixture/stdout.log" 'ready missing_packages='
   assert_contains "$fixture/stdout.log" 'ready next_action=none'
+  assert_contains "$fixture/stdout.log" 'ready target=android'
   assert_contains "$fixture/stdout.log" 'empty sdk_root_present=false'
   assert_contains "$fixture/stdout.log" 'empty sdkmanager_present=false'
   assert_contains "$fixture/stdout.log" 'empty avdmanager_present=false'
@@ -486,7 +490,7 @@ test_android_freezes_resolved_paths_for_each_invocation() {
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     bash -c '
       source "$1"
-      print_next_step() { :; }
+      source "$2"
       android_sdk_root() {
         printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
         printf "%s\\n" "$HOME/Library/Android/sdk"
@@ -500,7 +504,8 @@ test_android_freezes_resolved_paths_for_each_invocation() {
         printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
       }
       check_android
-    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh"
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+    "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh"
 
   assert_count "$fixture/events.log" 'resolve sdk_root' 1
   assert_count "$fixture/events.log" 'resolve sdkmanager' 1
@@ -520,7 +525,7 @@ test_android_freezes_resolved_paths_for_each_invocation() {
     FAKE_SDKMANAGER_INSTALL=1 \
     bash -c '
       source "$1"
-      print_next_step() { :; }
+      source "$2"
       android_sdk_root() {
         printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
         printf "%s\\n" "$HOME/Library/Android/sdk"
@@ -534,7 +539,8 @@ test_android_freezes_resolved_paths_for_each_invocation() {
         printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
       }
       install_android
-    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+    "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
 
   assert_equal 0 "$status" 'post-package-install with frozen Android paths status'
   assert_count "$fixture/events.log" 'resolve sdk_root' 1
@@ -548,7 +554,7 @@ test_android_freezes_resolved_paths_for_each_invocation() {
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     bash -c '
       source "$1"
-      print_next_step() { :; }
+      source "$2"
       android_sdk_root() {
         printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
         printf "%s\\n" "$HOME/Library/Android/sdk"
@@ -562,7 +568,8 @@ test_android_freezes_resolved_paths_for_each_invocation() {
         printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
       }
       install_android
-    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+    "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
 
   assert_equal 1 "$status" 'missing prerequisites with frozen Android paths status'
   assert_count "$fixture/events.log" 'resolve sdk_root' 1
@@ -812,6 +819,33 @@ test_shell_environment_uses_the_canonical_android_root() {
   assert_not_contains "$fixture/stdout.log" '/tools:'
 }
 
+# Both adapters used to call print_next_step, which only mobile-setup defined,
+# so sourcing either one and invoking it was broken until a caller supplied the
+# function. Filling a record instead of printing is what removed that, and this
+# is the property it bought: the record module is the adapter's only dependency.
+test_an_adapter_needs_only_the_record_module() {
+  local fixture target
+  fixture=$(new_fixture)
+
+  for target in ios android; do
+    # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+    scenario_capture "$fixture/$target" env \
+      HOME="$fixture/home" \
+      PATH="$fixture/fake-bin:/usr/bin:/bin" \
+      bash -c '
+        set -euo pipefail
+        source "$1"
+        source "$2"
+        "check_$3" || true
+        printf "target=%s action=%s\n" \
+          "$MOBILE_READINESS_TARGET" "$MOBILE_READINESS_ACTION"
+      ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
+      "$REPOSITORY_ROOT/_scripts/mobile-setup-$target.sh" "$target"
+
+    assert_contains "$fixture/$target/stdout.log" "target=$target action="
+  done
+}
+
 scenario_run 'usage and help have distinct statuses and streams' test_usage_and_help_are_distinct
 scenario_run 'local checks report incomplete state without provisioning' \
   test_check_is_local_and_reports_incomplete_targets
@@ -860,6 +894,8 @@ scenario_run 'Android package installation closes stdin' \
 scenario_run 'Android tools use Mise Java outside an initialized shell' \
   test_android_tools_use_mise_java_outside_an_initialized_shell
 scenario_run 'topic installers warn without provisioning' test_topic_installers_warn_without_provisioning
+scenario_run 'an adapter needs only the record module' \
+  test_an_adapter_needs_only_the_record_module
 scenario_run 'shell startup uses one canonical Android root' \
   test_shell_environment_uses_the_canonical_android_root
 scenario_finish

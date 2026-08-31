@@ -17,12 +17,13 @@ Usage: mobile-setup [--check] [ios|android|all]
 EOF
 }
 
-print_next_step() {
-  printf '  Next step: %s\n' "$1"
-}
-
 MOBILE_SETUP_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
+# The record both target adapters fill, and the only place one becomes output.
+# It is sourced first because both adapters compose into it.
+# shellcheck source=_scripts/mobile-setup-readiness.sh
+# shellcheck disable=SC1091
+. "$MOBILE_SETUP_DIR/mobile-setup-readiness.sh"
 # shellcheck source=_scripts/mobile-setup-ios.sh
 # shellcheck disable=SC1091
 . "$MOBILE_SETUP_DIR/mobile-setup-ios.sh"
