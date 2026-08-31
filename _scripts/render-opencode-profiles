@@ -80,6 +80,12 @@ mapfile -t profiles < <(
 [ "${#profiles[@]}" -gt 0 ] || fail "no profile rows in $roster"
 
 declare -A routing_seen=()
+# The routing table is read once, by the reader, during validation. These hold
+# what the README needs afterwards so nothing rescans the file: composing the
+# table used to fork one awk per role per profile, and the column positions were
+# restated in each of those scans in a different index base from the jq pass.
+declare -A routing_cell_of=()
+declare -A routing_roles_of=()
 
 mapfile -t roles < <(jq -r '.agent | keys_unsorted[]' "$shared_dir/opencode.jsonc")
 [ "${#roles[@]}" -gt 0 ] \
@@ -118,6 +124,27 @@ validate_routing_row() {
     - | [0-9] | [0-9].[0-9]*) ;;
     *) fail "$profile $role has a non-numeric temperature: $temperature" ;;
   esac
+
+  routing_cell_of["$profile/$role"]=$(compose_routing_cell "$model" "$variant" "$effort")
+  routing_roles_of["$profile"]+=$role$'\n'
+}
+
+# A role's cell is its model, plus the one knob that distinguishes it: the
+# variant when the provider takes one, otherwise the reasoning effort. Every
+# other column is a number the prose around this table does not discuss.
+compose_routing_cell() {
+  local model=$1 knob=$2 effort=$3
+
+  [ "$knob" != - ] || knob=$effort
+  [ "$knob" != - ] || knob=''
+
+  # shellcheck disable=SC2016 # The backticks are Markdown code spans, not
+  # command substitution: this composes a README table cell.
+  if [ -n "$knob" ]; then
+    printf '`%s` (`%s`)\n' "$model" "$knob"
+  else
+    printf '`%s`\n' "$model"
+  fi
 }
 
 validate_routing() {
@@ -126,40 +153,20 @@ validate_routing() {
   expected_roles=$(printf '%s\n' default small "${roles[@]}" | sort)
 
   routing_seen=()
+  routing_cell_of=()
+  routing_roles_of=()
   catalog_each_row "$routing" validate_routing_row
 
   # Extra and misspelled rows are already refused above, so what is left to
   # check is a role the shared base declares and this profile never routes.
   for profile in "${profiles[@]}"; do
-    declared=$(
-      awk -F'\t' -v profile="$profile" \
-        '$1 == profile { print $2 }' "$routing" | sort
-    )
+    declared=$(printf '%s' "${routing_roles_of["$profile"]:-}" | sort)
     missing=$(
       comm -13 <(printf '%s\n' "$declared") <(printf '%s\n' "$expected_roles") \
         | tr '\n' ' '
     )
     [ -z "$missing" ] || fail "$profile has no routing row for: ${missing% }"
   done
-}
-
-# A role's cell is its model, plus the one knob that distinguishes it: the
-# variant when the provider takes one, otherwise the reasoning effort. Every
-# other column is a number the prose around this table does not discuss.
-routing_cell() {
-  local profile=$1 role=$2
-
-  awk -F'\t' -v profile="$profile" -v role="$role" '
-    $1 == profile && $2 == role {
-      cell = "`" $3 "`"
-      knob = ($4 != "-") ? $4 : (($6 != "-") ? $6 : "")
-      if (knob != "") {
-        cell = cell " (`" knob "`)"
-      }
-      print cell
-      exit
-    }
-  ' "$routing"
 }
 
 # Roles read Default, Small, then the agents in the order the shared base
@@ -176,7 +183,7 @@ emit_routing_rows() {
 
     row=$label
     for profile in "${profiles[@]}"; do
-      row=$row$'\t'$(routing_cell "$profile" "$role")
+      row=$row$'\t'${routing_cell_of["$profile/$role"]:-}
     done
     printf '%s\n' "$row"
   done
