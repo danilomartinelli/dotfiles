@@ -9,6 +9,12 @@ CATALOG=${DOTFILES_MACOS_DEFAULTS_CATALOG:-$SCRIPT_DIR/defaults.tsv}
 # shellcheck source=_scripts/catalog.sh
 . "$SCRIPT_DIR/../_scripts/catalog.sh"
 
+# Printed in the installer vocabulary: setup runs these two under its own
+# phase reporting, and the steps below are items inside that phase.
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../_scripts/installer-output.sh"
+
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "Error: This script is only for macOS" >&2
   exit 1
@@ -70,9 +76,9 @@ show_library_folder() {
 
   if chflags nohidden "$HOME/Library" 2>/dev/null; then
     xattr -d com.apple.FinderInfo "$HOME/Library" 2>/dev/null || true
-    echo "  ✓ Library folder is now visible"
+    installer_item "Library folder is now visible"
   else
-    echo "  Warning: Failed to show Library folder" >&2
+    installer_warn "Failed to show Library folder"
   fi
 }
 
@@ -80,24 +86,24 @@ show_library_folder() {
 # confirmation dialog the first time; the script does not wait for it.
 set_default_browser() {
   if ! command -v defaultbrowser >/dev/null 2>&1; then
-    echo "  → defaultbrowser not installed yet; skipping default browser" >&2
+    installer_hint "defaultbrowser not installed yet; skipping default browser"
     return 0
   fi
   if defaultbrowser 2>/dev/null | grep -q '^\* *dia$'; then
-    echo "  ✓ Dia already the default browser"
+    installer_item "Dia already the default browser"
   elif defaultbrowser dia 2>/dev/null; then
-    echo "  ✓ Default browser set to Dia (confirm the macOS dialog)"
+    installer_item "Default browser set to Dia (confirm the macOS dialog)"
   else
-    echo "  Warning: could not set the default browser (is Dia installed?)" >&2
+    installer_warn "could not set the default browser (is Dia installed?)"
   fi
 }
 
 restart_services() {
-  echo "  → Restarting system services..."
+  installer_note "Restarting system services..."
   # cfprefsd is deliberately absent: killing it right after `defaults write`
   # can discard preferences still buffered in the daemon.
   killall Finder Dock SystemUIServer ControlCenter ControlStrip 2>/dev/null || true
-  echo "  ✓ Services restarted (log out to apply keyboard settings)"
+  installer_item "Services restarted (log out to apply keyboard settings)"
 }
 
 ensure_screenshot_dir

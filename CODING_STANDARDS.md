@@ -136,6 +136,7 @@ without updating adapters, tests, and user documentation in the same change.
 | `installer_link_tool_config` | Create a tool's configuration directory and link one file into it |
 | `installer_banner` | Print a phase heading to stdout |
 | `installer_success` | Print successful completion to stdout |
+| `installer_item` | Print one completed step inside a phase, indented under it |
 | `installer_note` | Print non-error detail to stdout |
 | `installer_warn` | Print a warning to stderr |
 | `installer_error` | Print an error to stderr |
@@ -150,6 +151,14 @@ outside that directory or under a policy other than the default.
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
 individual installers.
+
+The message helpers live in `_scripts/installer-output.sh`, which the preamble
+sources, so an installer reaches them the same way as everything else. A module
+an installer calls out to — `_scripts/link-config`, `_macos/set-defaults.sh`,
+`_macos/set-hostname.sh` — sources that file directly rather than carrying its
+own copy of the glyphs. `installer_success` closes the phase a banner opened and
+`installer_item` reports one step inside it; the indent is what distinguishes
+them, so a nested step uses `installer_item` rather than losing that level.
 
 Two modules resolve the checkout, and which one a file uses follows from how it
 is reached. A `bin/` adapter or a `*.zsh` startup file is reached through

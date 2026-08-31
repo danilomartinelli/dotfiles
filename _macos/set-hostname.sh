@@ -15,21 +15,28 @@
 
 set -e
 
+# Printed in the installer vocabulary: setup runs this under its own phase
+# reporting, and the steps below are items inside that phase.
+SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/../_scripts/installer-output.sh"
+
 # Validate scutil exists
 if ! command -v scutil >/dev/null 2>&1; then
-  echo "Error: scutil is required but not available." >&2
+  installer_error "scutil is required but not available."
   exit 1
 fi
 
 # Get current hostname
 if ! hostname=$(scutil --get LocalHostName 2>/dev/null); then
-  echo "Warning: Failed to get current hostname" >&2
+  installer_warn "Failed to get current hostname"
   exit 1
 fi
 
 # If hostname is empty, skip
 if [ -z "$hostname" ]; then
-  echo "Info: No hostname set, skipping" >&2
+  installer_note "No hostname set, skipping"
   exit 0
 fi
 
@@ -38,18 +45,18 @@ normal_hostname=$(echo "$hostname" | sed 's/-[0-9]*$//')
 
 # If our hostname was changed by macOS, change it back
 if [ "$normal_hostname" != "$hostname" ]; then
-  echo "  → Changing hostname from $hostname to $normal_hostname"
+  installer_note "Changing hostname from $hostname to $normal_hostname"
   if scutil --set LocalHostName "$normal_hostname" 2>/dev/null; then
     if scutil --set ComputerName "$normal_hostname" 2>/dev/null; then
-      echo "  ✓ Hostname updated successfully"
+      installer_item "Hostname updated successfully"
     else
-      echo "  Warning: Failed to set ComputerName" >&2
+      installer_warn "Failed to set ComputerName"
       exit 1
     fi
   else
-    echo "  Warning: Failed to set LocalHostName (may require admin privileges)" >&2
+    installer_warn "Failed to set LocalHostName (may require admin privileges)"
     exit 1
   fi
 else
-  echo "  ✓ Hostname is already normalized: $hostname"
+  installer_item "Hostname is already normalized: $hostname"
 fi

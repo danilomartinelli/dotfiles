@@ -5,6 +5,13 @@
 
 set -eu
 
+# The linker prints under the banner of whichever installer called it, so it
+# uses that vocabulary rather than a third copy of the glyphs. Resolved from
+# $0 because this file is always <checkout>/_scripts/link-config.
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$(CDPATH='' cd -P -- "${0%/*}" && pwd)/installer-output.sh"
+
 usage() {
   cat >&2 <<'EOF'
 Usage: link-config [--policy POLICY] [--label LABEL] <source> <target>
@@ -199,14 +206,14 @@ if [ "$status_only" = true ]; then
 fi
 
 if link_is_current; then
-  echo "  ✓ $label already linked"
+  installer_item "$label already linked"
   exit 0
 fi
 
 if [ -e "$target_path" ] || [ -L "$target_path" ]; then
   case "$policy" in
     preserve-existing)
-      echo "  → Existing $target_path kept (not overwriting local config)"
+      installer_note "Existing $target_path kept (not overwriting local config)"
       exit 0
       ;;
     replace-with-backup)
@@ -219,12 +226,12 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         # caller the link existed — see
         # docs/adr/0010-a-link-the-linker-could-not-make-is-a-failure.md.
         if [ -e "$backup" ] || [ -L "$backup" ]; then
-          echo "Error: $target_path and $backup exist; cannot link $label" >&2
-          echo "  → Move or remove $backup, then rerun" >&2
+          installer_error "$target_path and $backup exist; cannot link $label"
+          installer_hint "Move or remove $backup, then rerun"
           exit 1
         fi
         mv "$target_path" "$backup"
-        echo "  → Existing $label moved to $backup"
+        installer_note "Existing $label moved to $backup"
       else
         # Wrong symlink or other link target: replace in place.
         rm -f "$target_path"
@@ -235,7 +242,7 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         refuse_unsafe_generated_target
       fi
       rm -rf "$target_path"
-      echo "  → Replaced generated $label"
+      installer_note "Replaced generated $label"
       ;;
     # A person chose this at a prompt, or a caller was run with an explicit
     # batch instruction. Same destruction, same guard, different reason — and
@@ -246,15 +253,15 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         refuse_unsafe_generated_target
       fi
       rm -rf "$target_path"
-      echo "  → Replaced $label as confirmed"
+      installer_note "Replaced $label as confirmed"
       ;;
     numbered-backup)
       backup=$(next_backup_path "$target_path")
       mv "$target_path" "$backup"
-      echo "  → backed up $target_path to $backup"
+      installer_note "backed up $target_path to $backup"
       ;;
   esac
 fi
 
 ln -sfn "$source_path" "$target_path"
-echo "  ✓ $label linked"
+installer_item "$label linked"

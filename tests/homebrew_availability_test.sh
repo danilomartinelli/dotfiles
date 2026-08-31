@@ -35,6 +35,7 @@ new_fixture() {
   cp "$REPOSITORY_ROOT/homebrew/install.sh" "$FIXTURE/homebrew/install.sh"
   cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$FIXTURE/_scripts/installer-preamble.sh"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$FIXTURE/_scripts/catalog.sh"
+  cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$FIXTURE/_scripts/installer-output.sh"
 
   cat >"$BREW_TEMPLATE" <<'EOF'
 #!/bin/sh

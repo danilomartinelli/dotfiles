@@ -144,11 +144,15 @@ done < <(opencode_catalog_rows)
 
 # The coding standards are the canonical installer-authoring contract. They
 # must list every preamble helper so topics do not recreate shared behavior.
+# The progress vocabulary lives in its own module and reaches installers through
+# the preamble, so both files are read: an installer cannot tell which one
+# defined the helper it is calling, and neither can this contract.
 while IFS= read -r helper_name; do
   assert_documented_in "$CODING_STANDARDS" 'preamble helper' "$helper_name"
 done < <(
   sed -n 's/^\(installer_[a-z_]*\)() {$/\1/p' \
-    "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" | sort -u
+    "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" \
+    "$REPOSITORY_ROOT/_scripts/installer-output.sh" | sort -u
 )
 
 # Brewfile declares which third-party taps exist; homebrew/_bundle.sh declares

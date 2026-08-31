@@ -19,6 +19,7 @@ make_fixture() {
   mkdir -p "$fixture/_macos" "$fixture/_scripts" "$fixture/home/Library"
   cp "$REPOSITORY_ROOT/_macos/set-defaults.sh" "$fixture/_macos/set-defaults.sh"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
+  cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$fixture/_scripts/installer-output.sh"
   chmod +x "$fixture/_macos/set-defaults.sh"
   cat >"$fixture/_macos/defaults.tsv" <<'EOF'
 # test catalog

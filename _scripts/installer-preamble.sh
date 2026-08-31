@@ -28,6 +28,14 @@ unset _installer_anchor _installer_topic_dir _installer_dotfiles_root INSTALLER_
 # shellcheck source=_scripts/catalog.sh
 . "$DOTFILES_ROOT/_scripts/catalog.sh"
 
+# The progress vocabulary. Sourced rather than defined here so the modules an
+# installer calls out to — link-config, and the _macos scripts setup runs — can
+# print in the same voice without also taking checkout resolution, the run-once
+# marker directory, and file-type associations.
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/installer-output.sh"
+
 installer_require_darwin() {
   if [ "$(uname -s)" != "Darwin" ]; then
     exit 0
@@ -251,32 +259,6 @@ installer_link_tool_config() {
   installer_link_config --label "$2" \
     "$TOPIC_DIR/$3" "$_installer_link_dir/$3"
   unset _installer_link_dir
-}
-
-installer_banner() {
-  printf '› %s\n' "$*"
-}
-
-installer_success() {
-  printf '✓ %s\n' "$*"
-}
-
-installer_note() {
-  printf '  → %s\n' "$*"
-}
-
-installer_warn() {
-  printf 'Warning: %s\n' "$*" >&2
-}
-
-installer_error() {
-  printf 'Error: %s\n' "$*" >&2
-}
-
-# Actionable follow-up for the warning or error just emitted, so the whole
-# message stays on one stream. Use installer_note for stdout follow-ups.
-installer_hint() {
-  printf '  → %s\n' "$*" >&2
 }
 
 # Report an operational failure and stop the installer.

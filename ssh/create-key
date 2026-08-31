@@ -3,6 +3,7 @@
 set -eu
 
 # shellcheck source=_scripts/key-provisioning.sh
+# shellcheck disable=SC1091
 # Resolved with builtins only: a key command must still be able to report a
 # missing generator when it is run with an empty PATH, which is how the
 # provisioning suites prove that guard. dirname is /usr/bin/dirname.
