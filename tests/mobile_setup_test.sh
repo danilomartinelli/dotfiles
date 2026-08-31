@@ -89,6 +89,9 @@ if [ "${FAKE_SDKMANAGER_INSTALL:-0}" -eq 1 ] && [ -n "$sdk_root" ]; then
     esac
   done
 fi
+if [ "${FAKE_SDKMANAGER_REMOVE_LICENSE:-0}" -eq 1 ] && [ -n "$sdk_root" ]; then
+  rm -f "$sdk_root/licenses/android-sdk-license"
+fi
 if [ "${FAKE_SDKMANAGER_REJECT_STDIN:-0}" -eq 1 ]; then
   if IFS= read -r input; then
     printf 'sdkmanager read stdin: %s\n' "$input" >>"$SCENARIO_EVENT_LOG"
@@ -134,6 +137,9 @@ DEVICES
       >"$HOME/.android/avd/$avd_name.avd/config.ini"
     printf 'path=%s\n' "$HOME/.android/avd/$avd_name.avd" \
       >"$HOME/.android/avd/$avd_name.ini"
+    if [ "${FAKE_AVDMANAGER_REMOVE_PACKAGE:-0}" -eq 1 ]; then
+      rm -f "$HOME/Library/Android/sdk/platforms/android-36/android.jar"
+    fi
     ;;
 esac
 exit "${FAKE_AVDMANAGER_STATUS:-0}"
@@ -284,6 +290,27 @@ test_ios_check_rejects_a_different_version_stale_runtime() {
   assert_not_contains "$fixture/events.log" 'xcodebuild '
 }
 
+test_ios_observations_are_caller_owned() {
+  local fixture
+  fixture=$(new_fixture)
+  : >"$fixture/home/.ios-runtime-ready"
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    bash -c '
+      source "$1"
+      sdk_version=$(read_ios_sdk_version)
+      runtime_listing=$(read_ios_runtime_listing)
+      ios_runtime_is_available "$sdk_version" "$runtime_listing"
+      printf "sdk=%s\n%s\n" "$sdk_version" "$runtime_listing"
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-ios.sh"
+
+  assert_contains "$fixture/stdout.log" 'sdk=26.5'
+  assert_contains "$fixture/stdout.log" 'iOS 26.5 (26.5 - 23F77)'
+}
+
 test_target_selection_does_not_touch_the_other_platform() {
   local fixture
   fixture=$(new_fixture)
@@ -343,6 +370,103 @@ test_android_install_stops_for_manual_prerequisites() {
   assert_not_contains "$fixture/events.log" '--licenses'
 }
 
+test_android_freezes_resolved_paths_for_each_invocation() {
+  local fixture status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  write_android_avd "$fixture"
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    bash -c '
+      source "$1"
+      print_next_step() { :; }
+      android_sdk_root() {
+        printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s\\n" "$HOME/Library/Android/sdk"
+      }
+      android_sdkmanager_path() {
+        printf "resolve sdkmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/sdkmanager\\n" "$1"
+      }
+      android_avdmanager_path() {
+        printf "resolve avdmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
+      }
+      check_android
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh"
+
+  assert_count "$fixture/events.log" 'resolve sdk_root' 1
+  assert_count "$fixture/events.log" 'resolve sdkmanager' 1
+  assert_count "$fixture/events.log" 'resolve avdmanager' 1
+
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm -rf "$root/platforms/android-36" "$root/build-tools/36.0.0" \
+    "$root/system-images/android-36/google_apis/arm64-v8a"
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    FAKE_SDKMANAGER_INSTALL=1 \
+    bash -c '
+      source "$1"
+      print_next_step() { :; }
+      android_sdk_root() {
+        printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s\\n" "$HOME/Library/Android/sdk"
+      }
+      android_sdkmanager_path() {
+        printf "resolve sdkmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/sdkmanager\\n" "$1"
+      }
+      android_avdmanager_path() {
+        printf "resolve avdmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
+      }
+      install_android
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
+
+  assert_equal 0 "$status" 'post-package-install with frozen Android paths status'
+  assert_count "$fixture/events.log" 'resolve sdk_root' 1
+  assert_count "$fixture/events.log" 'resolve sdkmanager' 1
+  assert_count "$fixture/events.log" 'resolve avdmanager' 1
+
+  fixture=$(new_fixture)
+  # shellcheck disable=SC2016 # The command is evaluated by the child Bash process.
+  scenario_capture "$fixture" env \
+    HOME="$fixture/home" \
+    PATH="$fixture/fake-bin:/usr/bin:/bin" \
+    bash -c '
+      source "$1"
+      print_next_step() { :; }
+      android_sdk_root() {
+        printf "resolve sdk_root\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s\\n" "$HOME/Library/Android/sdk"
+      }
+      android_sdkmanager_path() {
+        printf "resolve sdkmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/sdkmanager\\n" "$1"
+      }
+      android_avdmanager_path() {
+        printf "resolve avdmanager\\n" >>"$SCENARIO_EVENT_LOG"
+        printf "%s/cmdline-tools/latest/bin/avdmanager\\n" "$1"
+      }
+      install_android
+    ' bash "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" || status=$?
+
+  assert_equal 1 "$status" 'missing prerequisites with frozen Android paths status'
+  assert_count "$fixture/events.log" 'resolve sdk_root' 1
+  assert_count "$fixture/events.log" 'resolve sdkmanager' 1
+  assert_count "$fixture/events.log" 'resolve avdmanager' 1
+}
+
 test_android_install_reconciles_only_missing_packages_and_creates_an_absent_avd() {
   local fixture root
   fixture=$(new_fixture)
@@ -394,6 +518,85 @@ test_android_install_refuses_to_overwrite_an_incompatible_avd() {
   assert_contains "$fixture/stderr.log" 'recovery'
   assert_not_contains "$fixture/events.log" 'avdmanager create'
   assert_equal "$config_before" "$config_after" 'incompatible AVD config'
+}
+
+test_android_install_refuses_incompatible_avd_before_missing_package_install() {
+  local fixture root config_before config_after status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm -rf "$root/platforms/android-36" "$root/build-tools/36.0.0" \
+    "$root/system-images/android-36/google_apis/arm64-v8a"
+  write_android_avd "$fixture" 'system-images/android-35/google_apis/arm64-v8a'
+  config_before=$(cat "$fixture/home/.android/avd/Pixel_API36.avd/config.ini")
+
+  invoke_mobile "$fixture" -- android || status=$?
+  config_after=$(cat "$fixture/home/.android/avd/Pixel_API36.avd/config.ini")
+
+  assert_equal 1 "$status" 'incompatible AVD with missing packages status'
+  assert_contains "$fixture/stdout.log" 'missing packages'
+  assert_contains "$fixture/stderr.log" 'refusing to overwrite'
+  assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_not_contains "$fixture/events.log" 'avdmanager create'
+  assert_equal "$config_before" "$config_after" \
+    'incompatible AVD with missing packages config'
+}
+
+test_android_install_rejects_an_unready_snapshot_after_package_install() {
+  local fixture root status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm -rf "$root/platforms/android-36" "$root/build-tools/36.0.0" \
+    "$root/system-images/android-36/google_apis/arm64-v8a"
+
+  invoke_mobile "$fixture" \
+    FAKE_SDKMANAGER_INSTALL=1 \
+    FAKE_SDKMANAGER_REMOVE_LICENSE=1 \
+    -- android || status=$?
+
+  assert_equal 1 "$status" 'unready post-package-install snapshot status'
+  assert_contains "$fixture/stderr.log" 'readiness snapshot incomplete'
+  assert_contains "$fixture/stdout.log" 'licenses are not accepted'
+  assert_not_contains "$fixture/events.log" 'avdmanager create'
+}
+
+test_android_install_requires_full_readiness_after_avd_creation() {
+  local fixture status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+
+  invoke_mobile "$fixture" FAKE_AVDMANAGER_REMOVE_PACKAGE=1 -- android || status=$?
+
+  assert_equal 1 "$status" 'unready post-AVD-creation snapshot status'
+  assert_contains "$fixture/stderr.log" \
+    'final readiness snapshot is incomplete'
+  assert_contains "$fixture/stdout.log" 'missing packages'
+  assert_contains "$fixture/events.log" 'avdmanager create'
+  [[ -f $fixture/home/.android/avd/Pixel_API36.avd/config.ini ]] \
+    || scenario_fail 'Android install did not retain the created AVD'
+}
+
+test_all_install_continues_after_an_ios_failure() {
+  local fixture root status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm -rf "$root/platforms/android-36" "$root/build-tools/36.0.0" \
+    "$root/system-images/android-36/google_apis/arm64-v8a"
+
+  invoke_mobile "$fixture" \
+    FAKE_XCODEBUILD_STATUS=1 \
+    FAKE_SDKMANAGER_INSTALL=1 \
+    -- all || status=$?
+
+  assert_equal 1 "$status" 'all aggregate status after iOS failure'
+  assert_before "$fixture/events.log" 'xcodebuild -downloadPlatform iOS' 'sdkmanager '
+  assert_contains "$fixture/events.log" 'avdmanager create'
 }
 
 test_android_install_reports_an_avdmanager_list_failure() {
@@ -517,6 +720,8 @@ scenario_run 'iOS checks reject a same-version unavailable runtime' \
   test_ios_check_rejects_a_same_version_unavailable_runtime
 scenario_run 'iOS checks reject a different-version stale runtime' \
   test_ios_check_rejects_a_different_version_stale_runtime
+scenario_run 'iOS observations remain caller-owned values' \
+  test_ios_observations_are_caller_owned
 scenario_run 'target selection isolates the other platform' \
   test_target_selection_does_not_touch_the_other_platform
 scenario_run 'iOS install skips a matching runtime' test_ios_install_skips_a_matching_runtime
@@ -524,11 +729,21 @@ scenario_run 'iOS install selects the compatible runtime download' \
   test_ios_install_selects_the_latest_compatible_download
 scenario_run 'Android install stops for manual prerequisites' \
   test_android_install_stops_for_manual_prerequisites
+scenario_run 'Android freezes resolved paths for each invocation' \
+  test_android_freezes_resolved_paths_for_each_invocation
 scenario_run 'Android install reconciles packages and creates an absent AVD' \
   test_android_install_reconciles_only_missing_packages_and_creates_an_absent_avd
 scenario_run 'Android install skips a compatible AVD' test_android_install_skips_a_compatible_avd
 scenario_run 'Android install protects incompatible AVD state' \
   test_android_install_refuses_to_overwrite_an_incompatible_avd
+scenario_run 'Android protects incompatible AVDs before package installation' \
+  test_android_install_refuses_incompatible_avd_before_missing_package_install
+scenario_run 'Android rejects an unready snapshot after package installation' \
+  test_android_install_rejects_an_unready_snapshot_after_package_install
+scenario_run 'Android requires full readiness after AVD creation' \
+  test_android_install_requires_full_readiness_after_avd_creation
+scenario_run 'all targets continue after an earlier target fails' \
+  test_all_install_continues_after_an_ios_failure
 scenario_run 'Android install reports an avdmanager list failure' \
   test_android_install_reports_an_avdmanager_list_failure
 scenario_run 'Android package installation closes stdin' \

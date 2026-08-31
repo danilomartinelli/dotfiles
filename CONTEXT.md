@@ -118,3 +118,17 @@ The capability an association claims. Never the one that claims everything,
 because a role macOS already maps elsewhere — the browser's hold on HTML —
 turns applying a default into a system prompt.
 _Avoid_: handler role, all, viewer/editor
+
+**Mobile Provisioning**:
+The Application that assesses and reconciles a machine’s native iOS and Android
+prerequisites.
+_Avoid_: mobile setup
+
+**Mobile Readiness**:
+The declared assessment of a selected Mobile Target’s required conditions and
+permitted next action.
+_Avoid_: environment status
+
+**Mobile Target**:
+iOS, Android, or both selected for Mobile Provisioning.
+_Avoid_: platform selector
