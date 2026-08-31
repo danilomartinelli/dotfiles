@@ -46,4 +46,6 @@ app	-	OrbStack	open once and complete the onboarding wizard
 app	-	Postman	sign in for workspace sync
 app	-	Spotify	sign in to your account
 app	-	WhatsApp	scan QR code to pair with your phone
+app	-	Xcode	complete first launch and accept its license manually, then run mobile-setup ios to install the latest compatible iOS Simulator runtime
+app	-	Android Studio	complete the Setup Wizard; install Android SDK Command-line Tools (latest), accept licenses manually, then run mobile-setup android
 shell	-	source ~/.zshrc	or open a new terminal tab

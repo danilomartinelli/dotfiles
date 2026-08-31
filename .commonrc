@@ -45,10 +45,6 @@ fi
 # GPG / SSH helpers for interactive terminals
 export GPG_TTY="${GPG_TTY:-$(tty 2>/dev/null)}"
 
-# Android / React Native (paths are extended in android-studio/path.zsh)
-export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-
 # Prefer OrbStack's Docker socket when present
 if [[ -z "${DOCKER_HOST:-}" && -S "$HOME/.orbstack/run/docker.sock" ]]; then
   export DOCKER_HOST="unix://$HOME/.orbstack/run/docker.sock"

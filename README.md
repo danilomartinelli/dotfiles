@@ -63,6 +63,11 @@ Bootstrap performs the complete first-machine workflow:
 1. Installs Homebrew and reconciles every declaration in `Brewfile`.
 1. Runs each discovered topic installer in deterministic order.
 
+The `xcode` and `android-studio` topic installers perform local-only mobile
+runtime checks during bootstrap and updates. Missing runtimes produce an
+actionable `mobile-setup` warning; normal setup never downloads runtimes,
+accepts licenses, opens an app, or boots a device.
+
 Existing destinations are never replaced silently. Interactive bootstrap lets
 you skip, overwrite, or back up a conflict. Topic installers remain
 non-interactive and select an explicit conflict policy: keep the existing file,
@@ -254,7 +259,8 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 
 Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
 Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
-SOPS directories, SSH, Workspace, Mise, Archiver associations, and the Dock.
+SOPS directories, SSH, Workspace, Mise, iOS Simulator and Android Emulator
+readiness, Archiver associations, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
 applied once so later manual changes survive: a Dock you rearranged and a
@@ -326,11 +332,44 @@ through their preferred Git subcommand form.
 | `e`                | `e [path]`: open a path or the current directory in `$EDITOR`                 |
 | `headers`          | `headers URL`: print HTTP response headers                                    |
 | `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                        |
+| `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators     |
 | `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                  |
 | `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary |
 | `set-defaults`     | Apply tracked macOS preferences                                               |
 | `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity               |
 | `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key             |
+
+### Mobile simulator provisioning
+
+`mobile-setup` is the explicit opt-in for heavy mobile runtime provisioning:
+
+```bash
+mobile-setup --check all
+mobile-setup ios
+mobile-setup android
+```
+
+`--check` is local-only and read-only. It exits successfully only when the
+selected target is ready. The default target is `all`; `ios` and `android`
+limit work to one platform.
+
+The iOS path reads the selected full Xcode's iPhone Simulator SDK and skips the
+download when an available matching runtime exists. Otherwise it asks Xcode for
+the latest compatible runtime with `xcodebuild -downloadPlatform iOS`. Rerun the
+check after an Xcode update.
+
+The Android path uses only `$HOME/Library/Android/sdk`, with `ANDROID_HOME`
+pointing at that root. It reconciles API 36 `google_apis` `arm64-v8a`, including
+`platform-tools`, `emulator`, `cmdline-tools;latest`,
+`platforms;android-36`, `build-tools;36.0.0`, and
+`system-images;android-36;google_apis;arm64-v8a`. It creates the default
+`Pixel_API36` AVD only when it is absent and selects an available Pixel hardware
+profile. An incompatible existing AVD is never overwritten or deleted; the
+command stops with a recovery instruction.
+
+Vendor first-launch/setup-wizard work and Apple or Android license acceptance
+remain manual. `mobile-setup` never pipes answers to license prompts, signs in,
+opens an app, or boots an emulator.
 
 ### Git utilities
 

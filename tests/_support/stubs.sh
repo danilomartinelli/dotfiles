@@ -34,6 +34,61 @@ printf '%s\n' "${FAKE_UNAME:-Darwin}"
 EOF
 }
 
+# The selected Xcode's Simulator SDK and runtime inventory. The default
+# runtime line is copied from the Xcode 26.6/iOS 26.5 output observed on the
+# development machine: available rows have no availability suffix.
+# Usage: stub_xcrun <bin-dir>
+stub_xcrun() {
+  _stub_write "$1/xcrun" <<'EOF'
+#!/bin/sh
+printf 'xcrun %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+case "$*" in
+  '--sdk iphonesimulator --show-sdk-version')
+    printf '%s\n' "${FAKE_IOS_SDK_VERSION:-26.5}"
+    ;;
+  'simctl list runtimes')
+    if [ -n "${FAKE_IOS_RUNTIMES+x}" ]; then
+      printf '%s\n' "$FAKE_IOS_RUNTIMES"
+    elif [ -f "$HOME/.ios-runtime-ready" ]; then
+      printf '%s\n' '== Runtimes =='
+      printf '%s\n' 'iOS 26.5 (26.5 - 23F77) - com.apple.CoreSimulator.SimRuntime.iOS-26-5'
+    fi
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+EOF
+}
+
+# Xcode's explicit platform download operation. It only records the call and,
+# when requested by a fixture, marks the fake runtime as installed.
+# Usage: stub_xcodebuild <bin-dir>
+stub_xcodebuild() {
+  _stub_write "$1/xcodebuild" <<'EOF'
+#!/bin/sh
+printf 'xcodebuild %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+if [ "$*" = '-downloadPlatform iOS' ] && [ "${FAKE_XCODEBUILD_INSTALL:-0}" -eq 1 ]; then
+  : >"$HOME/.ios-runtime-ready"
+fi
+exit "${FAKE_XCODEBUILD_STATUS:-0}"
+EOF
+}
+
+# Mise's Java lookup. The caller supplies the fixture path through
+# FAKE_MISE_JAVA_HOME so this never exposes a host installation to a test.
+# Usage: stub_mise <bin-dir>
+stub_mise() {
+  _stub_write "$1/mise" <<'EOF'
+#!/bin/sh
+if [ "$*" = 'where java' ]; then
+  printf '%s\n' "$FAKE_MISE_JAVA_HOME"
+  exit 0
+fi
+exit 1
+EOF
+}
+
 # Launch Services default-application assignment. FAIL_DUTI holds a
 # space-separated list of identifiers whose assignment fails, so one contract
 # covers both a single failing row and several.

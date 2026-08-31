@@ -359,6 +359,18 @@ test_the_shipped_catalog_prints_and_opens_nothing() {
   assert_empty "$fixture/open.log"
 }
 
+test_the_shipped_catalog_explains_manual_mobile_prerequisites() {
+  assert_contains "$SHIPPED_CATALOG" \
+    $'app\t-\tXcode\tcomplete first launch and accept its license manually'
+  assert_contains "$SHIPPED_CATALOG" \
+    $'app\t-\tAndroid Studio\tcomplete the Setup Wizard'
+  assert_contains "$SHIPPED_CATALOG" \
+    'install Android SDK Command-line Tools (latest), accept licenses manually'
+  assert_contains "$SHIPPED_CATALOG" 'run mobile-setup ios'
+  assert_contains "$SHIPPED_CATALOG" 'then run mobile-setup ios to install'
+  assert_contains "$SHIPPED_CATALOG" 'run mobile-setup android'
+}
+
 scenario_run 'each kind prints under its own section' \
   test_each_kind_prints_under_its_own_section
 scenario_run 'an empty section is omitted' test_an_empty_section_is_omitted
@@ -388,4 +400,6 @@ scenario_run 'the shipped catalog names the key roles the installers expect' \
   test_the_shipped_catalog_names_the_key_roles_the_installers_expect
 scenario_run 'the shipped catalog prints every section and opens nothing' \
   test_the_shipped_catalog_prints_and_opens_nothing
+scenario_run 'the shipped catalog explains manual mobile prerequisites' \
+  test_the_shipped_catalog_explains_manual_mobile_prerequisites
 scenario_finish

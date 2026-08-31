@@ -5,8 +5,10 @@ set -u
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPOSITORY_ROOT="$(cd "$TEST_DIR/.." && pwd -P)"
 # shellcheck source=tests/_support/shell-scenario.sh
+# shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
+# shellcheck disable=SC1091
 source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-setup-tests
 TEST_ROOT=$SCENARIO_ROOT
@@ -16,6 +18,8 @@ write_fixture_scripts() {
   fixture=$1
 
   stub_uname "$fixture/fake-bin"
+  stub_xcrun "$fixture/fake-bin"
+  stub_xcodebuild "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/git" <<'EOF'
 #!/bin/sh
@@ -116,8 +120,10 @@ make_fixture() {
     "$fixture/git" \
     "$fixture/sample" \
     "$fixture/sample/bundle.symlink" \
+    "$fixture/android-studio" \
     "$fixture/ssh" \
     "$fixture/bin" \
+    "$fixture/xcode" \
     "$fixture/fake-bin" \
     "$fixture/fake-prefix/bin" \
     "$fixture/home"
@@ -134,6 +140,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/_checklist.tsv" "$fixture/_scripts/_checklist.tsv"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
+  cp "$REPOSITORY_ROOT/bin/mobile-setup" "$fixture/bin/mobile-setup"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
   cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
   cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
@@ -142,6 +149,9 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
   cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
   cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
+  cp "$REPOSITORY_ROOT/_scripts/mobile-setup" "$fixture/_scripts/mobile-setup"
+  cp "$REPOSITORY_ROOT/android-studio/install.sh" "$fixture/android-studio/install.sh"
+  cp "$REPOSITORY_ROOT/xcode/install.sh" "$fixture/xcode/install.sh"
   chmod +x \
     "$fixture/_scripts/setup" \
     "$fixture/_scripts/bootstrap" \
@@ -150,12 +160,16 @@ make_fixture() {
     "$fixture/_scripts/link-dotfiles" \
     "$fixture/_scripts/link-config" \
     "$fixture/bin/dot" \
+    "$fixture/bin/mobile-setup" \
     "$fixture/bin/set-defaults" \
     "$fixture/dotfiles-root.symlink" \
     "$fixture/homebrew/_availability.sh" \
     "$fixture/homebrew/_bundle.sh" \
     "$fixture/homebrew/_maintenance.sh" \
-    "$fixture/ssh/install.sh"
+    "$fixture/ssh/install.sh" \
+    "$fixture/_scripts/mobile-setup" \
+    "$fixture/android-studio/install.sh" \
+    "$fixture/xcode/install.sh"
 
   printf '%s\n' '# local environment' >"$fixture/.localrc.example"
   printf '%s\n' '# Brewfile fixture' >"$fixture/Brewfile"
@@ -496,6 +510,7 @@ test_command_adapters() {
   local defaults_fixture
   local edit_fixture
   local edit_fixture_root
+  local mobile_fixture
 
   bootstrap_fixture=$(make_fixture)
   invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/bootstrap"
@@ -506,6 +521,7 @@ test_command_adapters() {
   invoke "$update_fixture" "$update_fixture/bin/dot"
   assert_contains "$update_fixture/stdout.log" 'setup update complete'
   assert_contains "$update_fixture/events.log" 'git -C'
+  assert_not_contains "$update_fixture/events.log" 'open '
 
   defaults_fixture=$(make_fixture)
   invoke "$defaults_fixture" "$defaults_fixture/bin/set-defaults"
@@ -517,6 +533,37 @@ test_command_adapters() {
   invoke "$edit_fixture" "$edit_fixture/bin/dot" --edit
   assert_contains "$edit_fixture/events.log" "editor $edit_fixture_root"
   assert_not_contains "$edit_fixture/events.log" 'git '
+
+  mobile_fixture=$(make_fixture)
+  invoke "$mobile_fixture" "$mobile_fixture/bin/mobile-setup" --help
+  assert_contains "$mobile_fixture/stdout.log" \
+    'Usage: mobile-setup [--check] [ios|android|all]'
+}
+
+test_mobile_checks_are_advisory_during_normal_setup() {
+  local fixture
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
+
+  assert_contains "$fixture/stderr.log" 'Run: mobile-setup ios'
+  assert_contains "$fixture/stderr.log" 'Run: mobile-setup android'
+  assert_not_contains "$fixture/events.log" 'xcodebuild '
+  assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_not_contains "$fixture/events.log" 'avdmanager '
+  assert_not_contains "$fixture/events.log" 'open '
+  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" update
+
+  assert_contains "$fixture/stderr.log" 'Run: mobile-setup ios'
+  assert_contains "$fixture/stderr.log" 'Run: mobile-setup android'
+  assert_not_contains "$fixture/events.log" 'xcodebuild '
+  assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_not_contains "$fixture/events.log" 'avdmanager '
+  assert_not_contains "$fixture/events.log" 'open '
+  assert_contains "$fixture/stdout.log" 'setup update complete'
 }
 
 test_prerequisite_topics_run_first() {
@@ -568,4 +615,6 @@ scenario_run 'critical failures stop the run' test_critical_failures_stop
 scenario_run 'bootstrap creates and links an interactive Git identity' test_interactive_git_identity
 scenario_run 'platform skips and fresh Homebrew discovery work' test_platform_and_fresh_homebrew
 scenario_run 'public commands adapt to the canonical modes' test_command_adapters
+scenario_run 'mobile checks remain advisory during normal setup' \
+  test_mobile_checks_are_advisory_during_normal_setup
 scenario_finish
