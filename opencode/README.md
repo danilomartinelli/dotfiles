@@ -107,33 +107,36 @@ and each profile contributes only the routing rows below.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                       | `go`                                  | `boost`                           |
-| ---------- | ------------------------------- | ------------------------------------- | --------------------------------- |
-| Default    | `openai/gpt-5.6-terra`          | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`              |
-| Small      | `openai/gpt-5.6-luna`           | `opencode-go/gpt-5.6-luna`            | `kimi-for-coding/k3`              |
-| Plan       | `openai/gpt-5.6-terra` (`high`) | `opencode-go/grok-4.6` (`xhigh`)      | `anthropic/claude-opus-5` (`max`) |
-| Build      | `openai/gpt-5.6-terra` (`high`) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)      |
-| Coder      | `openai/gpt-5.6-luna` (`high`)  | `opencode-go/kimi-k3` (`max`)         | `openai/gpt-5.6-luna` (`xhigh`)   |
-| Explore    | `openai/gpt-5.6-luna` (`low`)   | `opencode-go/gpt-5.6-luna` (`max`)    | `kimi-for-coding/k3` (`max`)      |
-| Researcher | `openai/gpt-5.6-sol` (`high`)   | `opencode-go/qwen3.8-max`             | `opencode-go/grok-4.6` (`xhigh`)  |
-| Scribe     | `openai/gpt-5.6-luna` (`low`)   | `opencode-go/minimax-m3` (`thinking`) | `minimax-coding-plan/MiniMax-M3`  |
-| Reviewer   | `openai/gpt-5.6-sol` (`high`)   | `opencode-go/deepseek-v4-pro` (`max`) | `zai-coding-plan/glm-5.3` (`max`) |
+| Role       | `regular`                         | `go`                                  | `boost`                               |
+| ---------- | --------------------------------- | ------------------------------------- | ------------------------------------- |
+| Default    | `openai/gpt-5.6-sol`              | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                  |
+| Small      | `openai/gpt-5.6-terra`            | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`                |
+| Plan       | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`xhigh`)        |
+| Build      | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`xhigh`)        |
+| Coder      | `openai/gpt-5.6-terra` (`xhigh`)  | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-fable-5-1` (`high`) |
+| Explore    | `openai/gpt-5.6-terra` (`medium`) | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`high`) |
+| Researcher | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`xhigh`)        |
+| Scribe     | `openai/gpt-5.6-luna` (`medium`)  | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra`                |
+| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`xhigh`)        |
 
 <!-- generated-end -->
 
-`go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
-has no cost ceiling: it combines direct Anthropic, OpenAI, Kimi, MiniMax, and
-Z.AI routes with OpenCode Go's Grok. Claude, Sol, Luna, Kimi, Grok, and
-GLM use their highest valid configured reasoning variants; MiniMax uses its
-provider default for the writing-focused `scribe` role.
+`regular` uses OpenAI's Sol for planning, building, research, and review, Terra
+for coding and exploration, and Luna for writing. `go` stays entirely on the
+OpenCode Go provider. `boost` is quality-first and has no cost ceiling: it uses
+Sol for planning, building, research, and review, Fable for coding, Haiku for
+exploration, and Terra for writing. Its Sol agents use `xhigh`, Fable and Haiku
+use `high`, and the writing-focused `scribe` uses the provider's default
+reasoning setting.
 
 ### Trusted project integrations
 
-The `regular` profile is intended for trusted projects. OCX excludes only
-`CLAUDE.md`, so project-level OpenCode configuration, MCP servers, and
-permissions remain available. Its researcher agent extends the global
-read-oriented `gh` policy with equivalent `glab` routes for repositories, merge
-requests, issues, releases, CI, search, and the API.
+The `regular`, `go`, and `boost` profiles are intended for trusted projects.
+Their OCX `exclude` lists are empty, so `CLAUDE.md` is no longer filtered out
+and project-level OpenCode configuration, MCP servers, and permissions remain
+available. The shared researcher policy extends the global read-oriented `gh`
+policy with equivalent `glab` routes for repositories, merge requests, issues,
+releases, CI, search, and the API.
 
 The profile `include` list stays empty because OCX already merges the trusted
 project's `AGENTS.md`, OpenCode configuration, and `.opencode/` payload. The
@@ -146,7 +149,8 @@ discovery, while `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` continues to omit
 The profile also declares Linear's remote MCP with `linear_*` tools allowed, and
 the server is enabled, so the first connection requires Linear authentication.
 Set `mcp.linear.enabled` to `false` in
-`opencode/profiles/regular/opencode.jsonc` to turn it off again.
+`opencode/profiles/_shared/opencode.jsonc` and run
+`_scripts/render-opencode-profiles` to turn it off for all managed profiles.
 
 Zed's ACP integration is separate from these interactive aliases and starts
 OpenCode through OCX with the `boost` profile explicitly.

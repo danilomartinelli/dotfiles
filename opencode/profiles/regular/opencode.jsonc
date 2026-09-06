@@ -1,39 +1,39 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openai/gpt-5.6-terra",
-  "small_model": "openai/gpt-5.6-luna",
+  "model": "openai/gpt-5.6-sol",
+  "small_model": "openai/gpt-5.6-terra",
   "permission": {
     "linear_*": "allow"
   },
   "agent": {
     "plan": {
-      "model": "openai/gpt-5.6-terra",
+      "model": "openai/gpt-5.6-sol",
       "temperature": 0.3,
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "textVerbosity": "low"
     },
     "build": {
-      "model": "openai/gpt-5.6-terra",
+      "model": "openai/gpt-5.6-sol",
       "temperature": 0.3,
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "textVerbosity": "low"
     },
     "coder": {
-      "model": "openai/gpt-5.6-luna",
+      "model": "openai/gpt-5.6-terra",
       "temperature": 0.2,
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "textVerbosity": "low"
     },
     "explore": {
-      "model": "openai/gpt-5.6-luna",
+      "model": "openai/gpt-5.6-terra",
       "temperature": 0.2,
-      "reasoningEffort": "low",
+      "reasoningEffort": "medium",
       "textVerbosity": "low"
     },
     "researcher": {
       "model": "openai/gpt-5.6-sol",
       "temperature": 0.4,
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "textVerbosity": "medium",
       "permission": {
         "bash": {
@@ -57,13 +57,13 @@
     "scribe": {
       "model": "openai/gpt-5.6-luna",
       "temperature": 1,
-      "reasoningEffort": "low",
+      "reasoningEffort": "medium",
       "textVerbosity": "high"
     },
     "reviewer": {
       "model": "openai/gpt-5.6-sol",
       "temperature": 0.1,
-      "reasoningEffort": "high",
+      "reasoningEffort": "xhigh",
       "textVerbosity": "medium"
     }
   },

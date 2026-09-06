@@ -252,15 +252,18 @@ test_tui_matches_terminal_theme_and_interaction_defaults() {
     || scenario_fail 'OpenCode TUI theme or interaction defaults are incorrect'
 }
 
-test_regular_profile_trusts_project_configuration() {
-  local ocx_config opencode_config
+test_profiles_trust_project_configuration() {
+  local profile ocx_config opencode_config
 
-  ocx_config=$REPOSITORY_ROOT/opencode/profiles/regular/ocx.jsonc
+  while IFS= read -r profile; do
+    ocx_config=$REPOSITORY_ROOT/opencode/profiles/$profile/ocx.jsonc
+
+    jsonc_to_json "$ocx_config" | jq -e \
+      '.exclude == [] and .include == []' >/dev/null \
+      || scenario_fail "$profile profile visibility policy is incorrect"
+  done < <(opencode_catalog_names profile)
+
   opencode_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
-
-  jsonc_to_json "$ocx_config" | jq -e \
-    '.exclude == ["**/CLAUDE.md"] and .include == []' >/dev/null \
-    || scenario_fail 'regular profile visibility policy is incorrect'
 
   jsonc_to_json "$opencode_config" | jq -e '
 		.permission["linear_*"] == "allow" and
@@ -370,29 +373,29 @@ test_specialized_profiles_route_models() {
 
   jsonc_to_json "$boost_config" | jq -e '
 		.model == "openai/gpt-5.6-sol" and
-		.small_model == "kimi-for-coding/k3" and
+		.small_model == "openai/gpt-5.6-terra" and
 		.agent.plan == {
-			"model": "anthropic/claude-opus-5",
-			"variant": "max"
+			"model": "openai/gpt-5.6-sol",
+			"variant": "xhigh"
 		} and
 		.agent.build == {
 			"model": "openai/gpt-5.6-sol",
-			"variant": "max"
-		} and
-		.agent.coder == {
-			"model": "openai/gpt-5.6-luna",
 			"variant": "xhigh"
 		} and
-		.agent.explore == {
-			"model": "kimi-for-coding/k3",
-			"variant": "max"
+		.agent.coder == {
+			"model": "anthropic/claude-fable-5-1",
+			"variant": "high"
 		} and
-		.agent.researcher.model == "opencode-go/grok-4.6" and
+		.agent.explore == {
+			"model": "anthropic/claude-haiku-4-5",
+			"variant": "high"
+		} and
+		.agent.researcher.model == "openai/gpt-5.6-sol" and
 		.agent.researcher.variant == "xhigh" and
-		.agent.scribe.model == "minimax-coding-plan/MiniMax-M3" and
+		.agent.scribe.model == "openai/gpt-5.6-terra" and
 		(.agent.scribe | has("variant") | not) and
-		.agent.reviewer.model == "zai-coding-plan/glm-5.3" and
-		.agent.reviewer.variant == "max" and
+		.agent.reviewer.model == "openai/gpt-5.6-sol" and
+		.agent.reviewer.variant == "xhigh" and
 		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)
 	' >/dev/null \
     || scenario_fail 'boost profile model routing is incorrect'
@@ -585,8 +588,8 @@ scenario_run 'OpenCode versions only the intended editable payload' \
   test_managed_payload_is_complete_and_runtime_payload_is_excluded
 scenario_run 'OpenCode TUI matches terminal theme and interaction defaults' \
   test_tui_matches_terminal_theme_and_interaction_defaults
-scenario_run 'OpenCode regular profile trusts project configuration' \
-  test_regular_profile_trusts_project_configuration
+scenario_run 'OpenCode profiles trust project configuration' \
+  test_profiles_trust_project_configuration
 scenario_run 'OpenCode profiles are composed from the shared base' \
   test_profile_payloads_are_composed_from_the_shared_base
 scenario_run 'OpenCode specialized profiles route models' \
