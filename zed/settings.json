@@ -55,15 +55,17 @@
     },
     "codex-acp": {
       "default_config_options": {
-        "reasoning_effort": "high"
+        "model": "gpt-6-astra",
+        "mode": "agent-full-access",
+        "reasoning_effort": "xhigh"
       },
       "type": "registry"
     },
     "claude-acp": {
       "default_config_options": {
-        "effort": "max",
+        "effort": "high",
         "mode": "bypassPermissions",
-        "model": "opus[1m]"
+        "model": "claude-fable-5-1[1m]"
       },
       "type": "registry"
     }

@@ -4,3 +4,6 @@ ADAPTER_ANCHOR=${(%):-%N}
 . "${${ADAPTER_ANCHOR:A}:h:h}/_scripts/adapter-checkout.sh" || return 1
 
 source "$DOTFILES_ROOT/zsh/_startup.zsh"
+
+# sentry
+fpath=("/Users/danilomartinelli/.local/share/zsh/site-functions" $fpath)
