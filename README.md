@@ -181,6 +181,7 @@ is its description. Run the renderer after changing a declaration;
 | `dockutil`                | Programmatic Dock configuration                                   |
 | `duti`                    | Default application associations                                  |
 | `eza`                     | Modern `ls` replacement                                           |
+| `fastlane`                | iOS and Android deployment automation                             |
 | `fd`                      | Modern `find` replacement                                         |
 | `fzf`                     | Command-line fuzzy finder                                         |
 | `gawk`                    | GNU awk                                                           |
@@ -242,7 +243,7 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 
 | Group                     | Homebrew casks                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `lens`, `linear`, `openchamber`, `postman`, `tableplus`, `zed`                 |
+| Development               | `android-studio`, `chatgpt`, `devin-cli`, `lens`, `linear`, `openchamber`, `postman`, `tableplus`, `zed`    |
 | Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                         |
 | Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
@@ -429,7 +430,7 @@ Arguments provided after an alias are passed to the expanded command.
 | Homelab                   | `hl`, `hlup`, `hldoctor`, `hllog`, `hlbootstrap`                                                                                     |
 | Docker                    | `d`, `dc`, `dps`, `dpsa`, `dimg`, `dex`, `dlog`, `dlogf`, `dctx`, `dcu`, `dcd`, `dcl`                                                |
 | tmux                      | `ta`, `tls`, `tn`, `tk`, `t`                                                                                                         |
-| Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`                                                       |
+| Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`, `fl`                                                 |
 | Tailscale                 | `ts`, `tsstatus`, `tsip`, `tsup`, `tsdown`, `tsping`                                                                                 |
 | SOPS                      | `sops-encrypt`, `sops-decrypt`, `sops-decrypt-inplace`, `sops-edit`, `sops-env`, `sops-run`                                          |
 | SSH                       | `sshclean`                                                                                                                           |

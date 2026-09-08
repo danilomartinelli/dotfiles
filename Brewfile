@@ -29,6 +29,7 @@ brew 'direnv'                       # Directory-specific environment loading
 brew 'dockutil'                     # Programmatic Dock configuration
 brew 'duti'                         # Default application associations
 brew 'eza'                          # Modern `ls` replacement
+brew 'fastlane'                     # iOS and Android deployment automation
 brew 'fd'                           # Modern `find` replacement
 brew 'fzf'                          # Command-line fuzzy finder
 brew 'gawk'                         # GNU awk
@@ -81,6 +82,7 @@ brew 'zsh-syntax-highlighting'      # Zsh command-line highlighting
 # Development
 cask 'android-studio'               # Android development IDE
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
+cask 'devin-cli'                    # Devin CLI: local coding agent with Cloud integration
 cask 'lens'                         # Kubernetes IDE
 cask 'linear'                       # Project management and issue tracking
 cask 'openchamber'                  # Desktop and web interface for OpenCode agents
