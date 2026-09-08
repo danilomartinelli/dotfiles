@@ -7,3 +7,6 @@ source "$DOTFILES_ROOT/zsh/_startup.zsh"
 
 # sentry
 fpath=("/Users/danilomartinelli/.local/share/zsh/site-functions" $fpath)
+
+# Added by Devin
+export PATH="/Users/danilomartinelli/.codeium/windsurf/bin:$PATH"
