@@ -24,10 +24,12 @@ DOCTOR=$REPOSITORY_ROOT/opencode/_doctor.sh
 # fixture PATH does not carry.
 FIXTURE_PATH_SUFFIX=/usr/bin:/bin:/usr/sbin
 
-# One session inside the retention window and one long past it, each with the
-# events and the sequence row the module reads. The schema is the subset of
-# OpenCode's that the module touches, with the foreign key that makes the
-# event log cascade the way the real one does.
+# Four sessions, each with the events and the sequence row the module reads:
+# one inside the retention window still owed a reply, one whose reply was cut
+# off before completion, one whose newest message is a completed reply, and one
+# long past the window. The schema is the subset of OpenCode's that the module
+# touches, with the foreign key that makes the event log cascade the way the
+# real one does and the message shape the finished-session rule inspects.
 make_fixture() {
   local fixture now recent stale
   fixture=$(installer_fixture opencode-doctor)
@@ -40,6 +42,12 @@ make_fixture() {
 
   sqlite3 "$fixture/data/opencode.db" <<EOF
 CREATE TABLE session (id text PRIMARY KEY, time_updated integer NOT NULL);
+CREATE TABLE message (
+  id text PRIMARY KEY,
+  session_id text NOT NULL,
+  time_created integer NOT NULL,
+  data text NOT NULL
+);
 CREATE TABLE event_sequence (aggregate_id text PRIMARY KEY, seq integer NOT NULL);
 CREATE TABLE event (
   id text PRIMARY KEY,
@@ -59,11 +67,25 @@ CREATE TABLE workspace (
   time_used integer NOT NULL
 );
 
-INSERT INTO session VALUES ('ses_recent', $recent), ('ses_stale', $stale);
-INSERT INTO event_sequence VALUES ('ses_recent', 2), ('ses_stale', 3);
+INSERT INTO session VALUES
+  ('ses_recent', $recent), ('ses_cut', $recent), ('ses_done', $recent),
+  ('ses_stale', $stale);
+INSERT INTO message VALUES
+  ('msg_r1', 'ses_recent', 1, '{"role":"assistant","time":{"created":1,"completed":2}}'),
+  ('msg_r2', 'ses_recent', 2, '{"role":"user","time":{"created":2}}'),
+  ('msg_c1', 'ses_cut', 1, '{"role":"user","time":{"created":1}}'),
+  ('msg_c2', 'ses_cut', 2, '{"role":"assistant","time":{"created":2}}'),
+  ('msg_d1', 'ses_done', 1, '{"role":"user","time":{"created":1}}'),
+  ('msg_d2', 'ses_done', 2, '{"role":"assistant","time":{"created":2,"completed":3}}'),
+  ('msg_s1', 'ses_stale', 1, '{"role":"user","time":{"created":1}}');
+INSERT INTO event_sequence VALUES
+  ('ses_recent', 2), ('ses_cut', 1), ('ses_done', 2), ('ses_stale', 3);
 INSERT INTO event VALUES
   ('evt_r1', 'ses_recent', 1, 'message.part.updated.1', '{}'),
   ('evt_r2', 'ses_recent', 2, 'message.part.updated.1', '{}'),
+  ('evt_c1', 'ses_cut', 1, 'message.part.updated.1', '{}'),
+  ('evt_d1', 'ses_done', 1, 'message.part.updated.1', '{}'),
+  ('evt_d2', 'ses_done', 2, 'message.part.updated.1', '{}'),
   ('evt_s1', 'ses_stale', 1, 'message.part.updated.1', '{}'),
   ('evt_s2', 'ses_stale', 2, 'message.part.updated.1', '{}'),
   ('evt_s3', 'ses_stale', 3, 'message.part.updated.1', '{}');
@@ -141,10 +163,11 @@ test_report_names_state_without_changing_it() {
   fixture=$(make_fixture)
   invoke_doctor "$fixture"
 
-  assert_contains "$fixture/stdout.log" 'replication events older than 7 days: 3'
+  assert_contains "$fixture/stdout.log" \
+    'prunable replication events (finished sessions, or idle for 7 days): 5'
   assert_contains "$fixture/stdout.log" 'wrk_lost'
   assert_not_contains "$fixture/stdout.log" 'wrk_live'
-  assert_equal '5' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
+  assert_equal '8' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events after a report'
   assert_equal '2' "$(count_rows "$fixture" 'SELECT count(*) FROM workspace;')" \
     'workspace rows after a report'
@@ -172,26 +195,44 @@ test_clean_config_directory_is_not_reported() {
   assert_empty "$fixture/stderr.log"
 }
 
-test_fix_prunes_only_events_past_the_window() {
+test_fix_prunes_finished_and_stale_sessions_only() {
   local fixture
   fixture=$(make_fixture)
   invoke_doctor "$fixture" --fix
 
-  assert_equal '2' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
+  assert_equal '3' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events kept after a repair'
   assert_equal '0' \
     "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_stale';")" \
     'stale events after a repair'
-  assert_contains "$fixture/stdout.log" 'pruned replication events older than 7 days'
+  assert_equal '0' \
+    "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_done';")" \
+    'events of a finished session after a repair'
+  assert_equal '2' \
+    "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_recent';")" \
+    'events of a session still owed a reply'
+  assert_equal '1' \
+    "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_cut';")" \
+    'events of a session whose reply was cut off'
+  assert_contains "$fixture/stdout.log" \
+    'pruned replication events of finished sessions and of sessions idle for 7 days'
 }
 
+# The window only protects unfinished sessions: widening it keeps the stale
+# one, and the finished one goes regardless.
 test_retention_window_is_selectable() {
   local fixture
   fixture=$(make_fixture)
   invoke_doctor "$fixture" --fix --days 60
 
-  assert_equal '5' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
+  assert_equal '6' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events kept by a wider window'
+  assert_equal '3' \
+    "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_stale';")" \
+    'stale events inside a wider window'
+  assert_equal '0' \
+    "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_done';")" \
+    'events of a finished session inside a wider window'
 }
 
 test_fix_removes_only_workspaces_whose_directory_is_gone() {
@@ -242,7 +283,7 @@ test_fix_refuses_while_the_database_is_held() {
   stop_process "$pid"
 
   assert_contains "$fixture/stderr.log" 'OpenCode is running and holds the database'
-  assert_equal '5' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
+  assert_equal '8' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events after a refused repair'
 }
 
@@ -252,8 +293,8 @@ test_repeat_repair_changes_nothing_further() {
   invoke_doctor "$fixture" --fix
   invoke_doctor "$fixture" --artifacts "$fixture/second" --fix
 
-  assert_contains "$fixture/second/stdout.log" 'no replication events past the retention window'
-  assert_equal '2' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
+  assert_contains "$fixture/second/stdout.log" 'no prunable replication events'
+  assert_equal '3' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events after a repeated repair'
   assert_equal '1' "$(count_rows "$fixture" 'SELECT count(*) FROM workspace;')" \
     'workspace rows after a repeated repair'
@@ -303,8 +344,8 @@ test_missing_database_is_an_operational_error() {
 scenario_run 'a report names state without changing it' test_report_names_state_without_changing_it
 scenario_run 'an untracked shadowing config is reported' test_untracked_shadowing_config_is_reported
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
-scenario_run 'a repair prunes only events past the window' test_fix_prunes_only_events_past_the_window
-scenario_run 'the retention window is selectable' test_retention_window_is_selectable
+scenario_run 'a repair prunes finished and stale sessions only' test_fix_prunes_finished_and_stale_sessions_only
+scenario_run 'the retention window protects only unfinished sessions' test_retention_window_is_selectable
 scenario_run 'a repair removes only workspaces whose directory is gone' test_fix_removes_only_workspaces_whose_directory_is_gone
 scenario_run 'a repair reaps a process left inside a worktree' test_fix_reaps_a_process_left_inside_a_worktree
 scenario_run 'a repair refuses while the database is held' test_fix_refuses_while_the_database_is_held

@@ -291,9 +291,13 @@ it. Four kinds of state accumulate there without an owner:
 The event log is the one that grows without bound. Every streaming update of a
 message part is stored as a fresh copy of the whole part, so one long session
 writes its own transcript back many times over; `message` and `part`, which
-hold what a session actually said, stay small beside it. Pruning removes
-replication history for sessions outside the retention window and leaves every
-transcript intact.
+hold what a session actually said, stay small beside it. Age alone does not
+find the weight: orchestration keeps every session it touches inside any
+sensible window. Pruning therefore removes the replication history of every
+finished session, one whose newest message is a completed assistant reply,
+regardless of age, and of every other session outside the retention window. A
+session still owed a reply, or whose reply was cut off, keeps its history for
+`--days` days. Every transcript stays intact either way.
 
 Reporting is the default because each repair deletes state no backup covers.
 Repairs refuse to run while OpenCode holds the database, so quit OpenChamber

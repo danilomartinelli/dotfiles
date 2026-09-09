@@ -9,7 +9,13 @@
 #     streaming update of a message part is stored as a fresh copy of the whole
 #     part, so one long session writes its own transcript back many times over.
 #     It reached 21 of this machine's 22 GB database while `message` and `part`,
-#     which hold what a session actually said, came to 1.6 GB together.
+#     which hold what a session actually said, came to 1.6 GB together. Age
+#     alone does not find it: orchestration keeps every session it touches
+#     inside any sensible window, and 825 of the 835 thousand events on this
+#     machine belonged to sessions updated in the last week. A session whose
+#     newest message is a completed assistant reply has nothing left to
+#     replicate, so its events are prunable at any age; only a session still
+#     waiting for or writing a reply keeps them, and only within the window.
 #   - A command an agent started inside a worktree outlives the session that
 #     started it. Four `bun` processes outlived their agent by three days and
 #     held four cores the whole time.
@@ -185,18 +191,34 @@ leaked_processes() {
   '
 }
 
-# Which sessions the retention window has left behind. `event_sequence` holds
-# one small row per session, so naming the aggregates there and matching them
-# through the event log's own index answers an exact count in a second or two
-# rather than scanning the 22 GB table the answer is about.
+# A session is finished when its newest message is an assistant reply that
+# reached completion. One the model never completed was interrupted and may be
+# resumed, and one whose newest message is a prompt is still owed a reply.
+#
+# The message index on (session_id, time_created) answers the newest-message
+# lookup per session without touching message bodies beyond that one row.
+FINISHED_SESSIONS="SELECT id FROM session AS finished
+  WHERE (SELECT json_extract(data, '\$.role') = 'assistant'
+           AND json_extract(data, '\$.time.completed') IS NOT NULL
+         FROM message WHERE session_id = finished.id
+         ORDER BY time_created DESC LIMIT 1)"
+
+# Which sessions still need their replication history: the unfinished ones
+# inside the retention window. Every other aggregate is prunable.
+# `event_sequence` holds one small row per session, so naming the aggregates
+# there and matching them through the event log's own index answers an exact
+# count in a second or two rather than scanning the 22 GB table the answer is
+# about.
 #
 # The sequence rows themselves stay. They are tiny, and keeping one means the
 # seq a session reached never restarts below a number some replica already saw.
-STALE_AGGREGATES="SELECT aggregate_id FROM event_sequence
-  WHERE aggregate_id NOT IN (SELECT id FROM session WHERE time_updated >= $CUTOFF_MS)"
+PRUNABLE_AGGREGATES="SELECT aggregate_id FROM event_sequence
+  WHERE aggregate_id NOT IN (
+    SELECT id FROM session
+    WHERE time_updated >= $CUTOFF_MS AND id NOT IN ($FINISHED_SESSIONS))"
 
 prunable_event_count() {
-  database_query "SELECT count(*) FROM event WHERE aggregate_id IN ($STALE_AGGREGATES);"
+  database_query "SELECT count(*) FROM event WHERE aggregate_id IN ($PRUNABLE_AGGREGATES);"
 }
 
 # A workspace row whose directory is gone describes nothing a session can be
@@ -252,7 +274,7 @@ report_database() {
   prunable=$(prunable_event_count)
 
   installer_note "database $(human_bytes "$database_bytes") at $DATABASE"
-  installer_note "replication events older than $RETENTION_DAYS days: $prunable"
+  installer_note "prunable replication events (finished sessions, or idle for $RETENTION_DAYS days): $prunable"
 }
 
 report_log() {
@@ -337,16 +359,16 @@ repair_processes() {
 repair_events() {
   prunable=$(prunable_event_count)
   if [ "$prunable" -eq 0 ]; then
-    installer_note 'no replication events past the retention window'
+    installer_note 'no prunable replication events'
     return 0
   fi
 
   before=$(file_bytes "$DATABASE")
-  sqlite3 "$DATABASE" "DELETE FROM event WHERE aggregate_id IN ($STALE_AGGREGATES);"
+  sqlite3 "$DATABASE" "DELETE FROM event WHERE aggregate_id IN ($PRUNABLE_AGGREGATES);"
   sqlite3 "$DATABASE" 'VACUUM;'
   after=$(file_bytes "$DATABASE")
 
-  installer_item "pruned replication events older than $RETENTION_DAYS days"
+  installer_item "pruned replication events of finished sessions and of sessions idle for $RETENTION_DAYS days"
   installer_item "database $(human_bytes "$before") to $(human_bytes "$after")"
 }
 
