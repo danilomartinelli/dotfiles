@@ -100,7 +100,7 @@ declare -A routing_seen=()
 # restated in each of those scans in a different index base from the jq pass.
 declare -A routing_cell_of=()
 declare -A routing_roles_of=()
-# The validated columns, flat, seven per row, in catalog order. They become the
+# The validated columns, flat, five per row, in catalog order. They become the
 # routing records the payload renderer reads; nothing re-splits the file.
 routing_fields=()
 
@@ -117,7 +117,14 @@ mapfile -t roles < <(jq -r '.agent | keys_unsorted[]' "$shared_dir/opencode.json
 # nothing about tabs, comments, or column counts.
 validate_routing_row() {
   local profile=$1 role=$2 model=$3
-  local variant=$4 temperature=$5 effort=$6 verbosity=$7
+  local variant=$4 temperature=$5
+
+  # The reader pads every row to seven, so a row still carrying the retired
+  # reasoningEffort and textVerbosity columns would be accepted and ignored.
+  # Refusing it is the point: those two names are provider options rather than
+  # agent keys, and rendering them produced valid JSON that did nothing.
+  [ -z "$6$7" ] \
+    || fail "routing row has columns past temperature: $profile $role"
 
   printf '%s\n' "${profiles[@]}" | grep -Fqx -- "$profile" \
     || fail "routing row names a profile with no roster entry: $profile"
@@ -132,7 +139,7 @@ validate_routing_row() {
 
   case $role in
     default | small)
-      [ "$variant$temperature$effort$verbosity" = '----' ] \
+      [ "$variant$temperature" = '--' ] \
         || fail "$profile $role takes a model only, not model options"
       ;;
   esac
@@ -142,20 +149,17 @@ validate_routing_row() {
     *) fail "$profile $role has a non-numeric temperature: $temperature" ;;
   esac
 
-  routing_cell_of["$profile/$role"]=$(compose_routing_cell "$model" "$variant" "$effort")
+  routing_cell_of["$profile/$role"]=$(compose_routing_cell "$model" "$variant")
   routing_roles_of["$profile"]+=$role$'\n'
-  routing_fields+=(
-    "$profile" "$role" "$model" "$variant" "$temperature" "$effort" "$verbosity"
-  )
+  routing_fields+=("$profile" "$role" "$model" "$variant" "$temperature")
 }
 
 # A role's cell is its model, plus the one knob that distinguishes it: the
-# variant when the provider takes one, otherwise the reasoning effort. Every
-# other column is a number the prose around this table does not discuss.
+# variant its provider publishes. Temperature is a number the prose around this
+# table does not discuss.
 compose_routing_cell() {
-  local model=$1 knob=$2 effort=$3
+  local model=$1 knob=$2
 
-  [ "$knob" != - ] || knob=$effort
   [ "$knob" != - ] || knob=''
 
   # shellcheck disable=SC2016 # The backticks are Markdown code spans, not
@@ -236,7 +240,7 @@ compose_routing_records() {
   jq -n '
     def named($key; $value): if $value == "-" then {} else {($key): $value} end;
 
-    [ range(0; ($ARGS.positional | length); 7) as $i
+    [ range(0; ($ARGS.positional | length); 5) as $i
       | {
           profile: $ARGS.positional[$i],
           role: $ARGS.positional[$i + 1],
@@ -245,8 +249,6 @@ compose_routing_records() {
             + named("variant"; $ARGS.positional[$i + 3])
             + (if $ARGS.positional[$i + 4] == "-" then {}
                else {temperature: ($ARGS.positional[$i + 4] | tonumber)} end)
-            + named("reasoningEffort"; $ARGS.positional[$i + 5])
-            + named("textVerbosity"; $ARGS.positional[$i + 6])
           )
         }
     ]

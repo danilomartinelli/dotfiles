@@ -105,29 +105,41 @@ at creation time. The layering therefore happens in this repository:
 the MCP servers, and the researcher's read-oriented GitLab policy exactly once,
 and each profile contributes only the routing rows below.
 
+The parenthesised value in each cell is a model **variant**, which is the only
+reasoning knob `AgentConfig` accepts and is published per model: check a value
+against `opencode models <provider> --verbose` before declaring it.
+`reasoningEffort` and `textVerbosity` are OpenAI provider option names rather
+than agent keys, and OpenCode drops an unknown agent key without a word, so the
+`regular` profile spent its early life declaring efforts that never applied.
+`opencode/profiles/_routing.tsv` no longer has columns for them and the renderer
+refuses a row that still carries any.
+
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                         | `go`                                  | `boost`                               |
-| ---------- | --------------------------------- | ------------------------------------- | ------------------------------------- |
-| Default    | `openai/gpt-5.6-sol`              | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                  |
-| Small      | `openai/gpt-5.6-terra`            | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`                |
-| Plan       | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`xhigh`)        |
-| Build      | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`xhigh`)        |
-| Coder      | `openai/gpt-5.6-terra` (`xhigh`)  | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-fable-5-1` (`high`) |
-| Explore    | `openai/gpt-5.6-terra` (`medium`) | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`high`) |
-| Researcher | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`xhigh`)        |
-| Scribe     | `openai/gpt-5.6-luna` (`medium`)  | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra`                |
-| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`)    | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`xhigh`)        |
+| Role       | `regular`                             | `go`                                  | `boost`                              |
+| ---------- | ------------------------------------- | ------------------------------------- | ------------------------------------ |
+| Default    | `openai/gpt-5.6-sol`                  | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                 |
+| Small      | `openai/gpt-5.6-terra`                | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`               |
+| Plan       | `openai/gpt-5.6-sol` (`high`)         | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`max`)         |
+| Build      | `openai/gpt-5.6-sol` (`high`)         | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)         |
+| Coder      | `anthropic/claude-fable-5-1` (`high`) | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-fable-5-1` (`max`) |
+| Explore    | `openai/gpt-5.6-luna` (`medium`)      | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`max`) |
+| Researcher | `openai/gpt-5.6-sol` (`xhigh`)        | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`max`)         |
+| Scribe     | `openai/gpt-5.6-luna` (`medium`)      | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra` (`max`)       |
+| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`)        | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`max`)         |
 
 <!-- generated-end -->
 
-`regular` uses OpenAI's Sol for planning, building, research, and review, Terra
-for coding and exploration, and Luna for writing. `go` stays entirely on the
-OpenCode Go provider. `boost` is quality-first and has no cost ceiling: it uses
-Sol for planning, building, research, and review, Fable for coding, Haiku for
-exploration, and Terra for writing. Its Sol agents use `xhigh`, Fable and Haiku
-use `high`, and the writing-focused `scribe` uses the provider's default
-reasoning setting.
+`regular` uses OpenAI's Sol for planning, building, research, and review, Fable
+for coding, and Luna for exploration and writing, with Terra as the small model.
+`go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
+has no cost ceiling: it uses Sol for planning, building, research, and review,
+Fable for coding, Haiku for exploration, and Terra for writing, and every one of
+those roles runs at `max`, the top of each model's published variant scale.
+That ceiling is what the profile is for. It had drifted into using `xhigh` and
+`high`, which left it tied with `regular` on coder, researcher, and reviewer
+once `regular` started applying its variants at all, so a profile whose whole
+purpose is spending more bought nothing on three of its seven roles.
 
 ### Trusted project integrations
 

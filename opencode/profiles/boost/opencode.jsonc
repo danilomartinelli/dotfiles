@@ -8,23 +8,23 @@
   "agent": {
     "plan": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh"
+      "variant": "max"
     },
     "build": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh"
+      "variant": "max"
     },
     "coder": {
       "model": "anthropic/claude-fable-5-1",
-      "variant": "high"
+      "variant": "max"
     },
     "explore": {
       "model": "anthropic/claude-haiku-4-5",
-      "variant": "high"
+      "variant": "max"
     },
     "researcher": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh",
+      "variant": "max",
       "temperature": 0.4,
       "permission": {
         "bash": {
@@ -47,11 +47,12 @@
     },
     "scribe": {
       "model": "openai/gpt-5.6-terra",
+      "variant": "max",
       "temperature": 1
     },
     "reviewer": {
       "model": "openai/gpt-5.6-sol",
-      "variant": "xhigh",
+      "variant": "max",
       "temperature": 0.1
     }
   },

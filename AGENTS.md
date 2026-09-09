@@ -198,8 +198,14 @@ gone, and an untracked global config shadowing a managed entry. Repairs need
 second cleanup path for that directory.
 
 Validate model IDs and variants against the current live
-`opencode models <provider> --verbose --pure` catalog. Variants are
-model-specific; do not invent a universal reasoning or performance option.
+`opencode models <provider> --verbose` catalog, run through
+`bin/opencode-profile` so the profile's providers are in scope. Do not add
+`--pure`: it drops every provider reached through the gateway, including the
+`anthropic` models two profiles route to, and then reports the provider as not
+found. Variants are model-specific; do not invent a universal reasoning or
+performance option, and remember that `variant` is the only reasoning knob
+`AgentConfig` accepts — `reasoningEffort` and `textVerbosity` are provider
+option names that OpenCode discards without a word.
 
 ### OpenChamber
 

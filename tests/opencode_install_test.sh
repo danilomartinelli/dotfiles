@@ -323,13 +323,60 @@ test_profile_payloads_are_composed_from_the_shared_base() {
   assert_fails_with_output 'unrouted agent' \
     'go has no routing row for: scribe' \
     "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
+
+  # A row carrying the retired reasoningEffort and textVerbosity columns still
+  # parses, because the reader pads every row to seven. Rendering it would put
+  # keys OpenCode ignores back into a payload, so the renderer refuses instead.
+  sed "s|^regular${TAB}plan${TAB}.*|regular${TAB}plan${TAB}openai/gpt-5.6-sol${TAB}high${TAB}0.3${TAB}xhigh${TAB}low|" \
+    "$stored.routing" >"$fixture/opencode/profiles/_routing.tsv"
+
+  assert_fails_with_output 'retired routing columns' \
+    'routing row has columns past temperature: regular plan' \
+    "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
 }
 
-test_specialized_profiles_route_models() {
-  local boost_config go_config
+test_profiles_route_models() {
+  local boost_config go_config regular_config
 
   go_config=$REPOSITORY_ROOT/opencode/profiles/go/opencode.jsonc
   boost_config=$REPOSITORY_ROOT/opencode/profiles/boost/opencode.jsonc
+  regular_config=$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc
+
+  # `variant` is the only reasoning knob AgentConfig declares. regular carried
+  # reasoningEffort and textVerbosity instead, which OpenCode dropped in
+  # silence, so this profile is held to the same shape as the other two.
+  jsonc_to_json "$regular_config" | jq -e '
+		.model == "openai/gpt-5.6-sol" and
+		.small_model == "openai/gpt-5.6-terra" and
+		.agent.plan == {
+			"model": "openai/gpt-5.6-sol",
+			"variant": "high",
+			"temperature": 0.3
+		} and
+		.agent.build == {
+			"model": "openai/gpt-5.6-sol",
+			"variant": "high",
+			"temperature": 0.3
+		} and
+		.agent.coder == {
+			"model": "anthropic/claude-fable-5-1",
+			"variant": "high",
+			"temperature": 0.2
+		} and
+		.agent.explore == {
+			"model": "openai/gpt-5.6-luna",
+			"variant": "medium",
+			"temperature": 0.2
+		} and
+		.agent.researcher.model == "openai/gpt-5.6-sol" and
+		.agent.researcher.variant == "xhigh" and
+		.agent.scribe.model == "openai/gpt-5.6-luna" and
+		.agent.scribe.variant == "medium" and
+		.agent.reviewer.model == "openai/gpt-5.6-sol" and
+		.agent.reviewer.variant == "xhigh" and
+		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)
+	' >/dev/null \
+    || scenario_fail 'regular profile model routing is incorrect'
 
   jsonc_to_json "$go_config" | jq -e '
 		[
@@ -376,29 +423,41 @@ test_specialized_profiles_route_models() {
 		.small_model == "openai/gpt-5.6-terra" and
 		.agent.plan == {
 			"model": "openai/gpt-5.6-sol",
-			"variant": "xhigh"
+			"variant": "max"
 		} and
 		.agent.build == {
 			"model": "openai/gpt-5.6-sol",
-			"variant": "xhigh"
+			"variant": "max"
 		} and
 		.agent.coder == {
 			"model": "anthropic/claude-fable-5-1",
-			"variant": "high"
+			"variant": "max"
 		} and
 		.agent.explore == {
 			"model": "anthropic/claude-haiku-4-5",
-			"variant": "high"
+			"variant": "max"
 		} and
 		.agent.researcher.model == "openai/gpt-5.6-sol" and
-		.agent.researcher.variant == "xhigh" and
+		.agent.researcher.variant == "max" and
 		.agent.scribe.model == "openai/gpt-5.6-terra" and
-		(.agent.scribe | has("variant") | not) and
+		.agent.scribe.variant == "max" and
 		.agent.reviewer.model == "openai/gpt-5.6-sol" and
-		.agent.reviewer.variant == "xhigh" and
+		.agent.reviewer.variant == "max" and
 		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)
 	' >/dev/null \
     || scenario_fail 'boost profile model routing is incorrect'
+
+  # The profile exists to spend more than regular, so a role where it does not
+  # is the failure this catches. Only default and small are shared on purpose.
+  jq -en \
+    --slurpfile boost <(jsonc_to_json "$boost_config") \
+    --slurpfile regular <(jsonc_to_json "$regular_config") '
+		($boost[0].agent | keys_unsorted) as $roles
+		| all($roles[]; . as $role
+			| ($boost[0].agent[$role] | {model, variant})
+			  != ($regular[0].agent[$role] | {model, variant}))
+	' >/dev/null \
+    || scenario_fail 'boost ties with regular on a role instead of outspending it'
 }
 
 test_catalog_declares_each_clone_source_before_its_clones() {
@@ -592,8 +651,8 @@ scenario_run 'OpenCode profiles trust project configuration' \
   test_profiles_trust_project_configuration
 scenario_run 'OpenCode profiles are composed from the shared base' \
   test_profile_payloads_are_composed_from_the_shared_base
-scenario_run 'OpenCode specialized profiles route models' \
-  test_specialized_profiles_route_models
+scenario_run 'OpenCode profiles route models through published variants' \
+  test_profiles_route_models
 scenario_run 'OpenCode catalog declares each clone source before its clones' \
   test_catalog_declares_each_clone_source_before_its_clones
 scenario_run 'OpenCode catalog support preserves the shared row contract' \
