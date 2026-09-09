@@ -362,6 +362,9 @@ backend = "npm:@agentclientprotocol/codex-acp"
 version = "2.1.266"
 backend = "npm:@anthropic-ai/claude-code"
 
+[tools."npm:@anthropic-ai/claude-code".options]
+npm_args = "--ignore-scripts=false"
+
 [[tools."npm:@colbymchenry/codegraph"]]
 version = "1.5.0"
 backend = "npm:@colbymchenry/codegraph"
