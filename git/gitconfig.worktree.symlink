@@ -1,0 +1,13 @@
+# Linked worktrees only. ~/.gitconfig pulls this in through an includeIf that
+# matches the gitdir every linked worktree gets, <repo>/.git/worktrees/<name>.
+#
+# git's fsmonitor daemon watches the working tree's root directory, and the
+# agent worktrees on this machine are created and deleted while it is running.
+# When the watched root disappears the daemon segfaults inside
+# root_dir_event_callback, and the socket it leaves behind is what makes the
+# next command in that repository fail with fsmonitor_ipc__send_query.
+#
+# Main working trees are stable and keep the daemon and its speedup. Only
+# linked worktrees, which are the disposable ones here, opt out.
+[core]
+        fsmonitor = false

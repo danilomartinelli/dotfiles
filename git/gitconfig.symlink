@@ -68,6 +68,13 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+# A linked worktree's gitdir is <repo>/.git/worktrees/<name>, which is what
+# this condition matches; a main working tree's never is. It has to sit below
+# [core] to override fsmonitor there, and above the machine-local include so
+# that file keeps the last word.
+[includeIf "gitdir:**/.git/worktrees/**"]
+        path = ~/.gitconfig.worktree
+
 # Machine-local/private config gets the last word: git keeps the LAST value
 # for single-valued options, so this include must stay at the bottom.
 [include]

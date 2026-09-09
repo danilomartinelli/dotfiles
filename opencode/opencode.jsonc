@@ -169,6 +169,23 @@
     }
   },
   "mcp": {
+    // Adopted from the ~/.config/opencode/opencode.json the AWS CLI wrote
+    // beside this file. OpenCode reads both spellings and merges them, so an
+    // untracked twin changes the running configuration without a diff. The
+    // proxy is fetched by uvx at run time and authenticates through the AWS
+    // CLI's own session; it reports itself unavailable until `aws login`
+    // refreshes an expired token.
+    "aws-mcp": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-proxy-for-aws@latest",
+        "https://aws-mcp.us-east-1.api.aws/mcp",
+        "--metadata",
+        "INSTALL_SOURCE=aws-cli"
+      ],
+      "enabled": true
+    },
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",

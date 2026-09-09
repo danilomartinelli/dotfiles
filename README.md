@@ -340,6 +340,7 @@ through their preferred Git subcommand form.
 | `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                        |
 | `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators     |
 | `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                  |
+| `opencode-doctor`  | `opencode-doctor [--fix] [--days n]`: report or repair OpenCode runtime state |
 | `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary |
 | `set-defaults`     | Apply tracked macOS preferences                                               |
 | `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity               |
@@ -514,17 +515,18 @@ de-duplicated.
 
 ### Configuration ownership
 
-| Configuration         | Installed location                    | Ownership rule                                                         |
-| --------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
-| Private environment   | `~/.localrc`                          | Generated locally, mode `600`, never committed                         |
-| Shared shell defaults | `.commonrc`                           | Tracked and secret-free                                                |
-| Git identity          | `git/gitconfig.local.symlink`         | Generated locally and gitignored                                       |
-| Private SSH hosts     | `~/.ssh/config_local`                 | Preserved by the tracked SSH config                                    |
-| SOPS age identities   | `~/.config/sops/age/`                 | Machine-private, mode `600`                                            |
-| Zed settings          | `~/.config/zed/settings.json`         | Tracked JSONC-compatible config, no plaintext credentials              |
-| OpenCode workspace    | `~/.config/opencode`                  | Split between dotfiles-owned links and OCX runtime state               |
-| Hermes state          | `~/.hermes`                           | Machine-local runtime state                                            |
-| OpenChamber settings  | `~/.config/openchamber/settings.json` | Catalogued keys merged in; relay keys and session state left untouched |
+| Configuration          | Installed location                    | Ownership rule                                                             |
+| ---------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| Private environment    | `~/.localrc`                          | Generated locally, mode `600`, never committed                             |
+| Shared shell defaults  | `.commonrc`                           | Tracked and secret-free                                                    |
+| Git identity           | `git/gitconfig.local.symlink`         | Generated locally and gitignored                                           |
+| Git worktree overrides | `~/.gitconfig.worktree`               | Tracked; applied only to linked worktrees, above the machine-local include |
+| Private SSH hosts      | `~/.ssh/config_local`                 | Preserved by the tracked SSH config                                        |
+| SOPS age identities    | `~/.config/sops/age/`                 | Machine-private, mode `600`                                                |
+| Zed settings           | `~/.config/zed/settings.json`         | Tracked JSONC-compatible config, no plaintext credentials                  |
+| OpenCode workspace     | `~/.config/opencode`                  | Split between dotfiles-owned links and OCX runtime state                   |
+| Hermes state           | `~/.hermes`                           | Machine-local runtime state                                                |
+| OpenChamber settings   | `~/.config/openchamber/settings.json` | Catalogued keys merged in; relay keys and session state left untouched     |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth

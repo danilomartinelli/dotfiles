@@ -189,6 +189,14 @@ change in all three guides:
 A new profile also needs its `oc:<name>` shortcut in `opencode/aliases.zsh`,
 which the same check enforces.
 
+`~/.local/share/opencode` is runtime state, not configuration, and OpenCode
+prunes none of it. `opencode/_doctor.sh`, reached through `opencode-doctor`,
+owns reporting and repairing it: the unbounded `event` replication log,
+processes left inside an agent worktree, `workspace` rows whose directory is
+gone, and an untracked global config shadowing a managed entry. Repairs need
+`--fix` and refuse to run while OpenCode holds the database. Do not add a
+second cleanup path for that directory.
+
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose --pure` catalog. Variants are
 model-specific; do not invent a universal reasoning or performance option.
@@ -295,7 +303,11 @@ Commit or push only when explicitly requested.
    ```
 
 If Git reports `fsmonitor_ipc__send_query` errors, repeat inspection with
-`-c core.fsmonitor=false`; do not reset or recreate the checkout.
+`-c core.fsmonitor=false`; do not reset or recreate the checkout. The usual
+source of those errors is a daemon that died with the worktree it watched, and
+`git/gitconfig.worktree.symlink` now keeps linked worktrees out of fsmonitor
+for that reason, so treat a recurrence in a main working tree as new
+information rather than the known case.
 
 ## Definition of done
 

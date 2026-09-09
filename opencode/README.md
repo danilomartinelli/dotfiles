@@ -253,6 +253,45 @@ Expected managed links are the global entries in the ownership table plus the
 `boost`, `regular`, and `go` profile directories, exactly as
 `opencode/_managed-entries.tsv` declares them.
 
+## Maintain the runtime state
+
+The configuration above is one half of what OpenCode leaves on a machine. The
+other half is its data directory, `~/.local/share/opencode`, and OpenCode
+prunes none of it. `opencode-doctor` reports that state and, with `--fix`,
+repairs it:
+
+```bash
+opencode-doctor
+opencode-doctor --fix
+opencode-doctor --fix --days 14
+```
+
+`opencode/_doctor.sh` owns the behavior and the command is a thin adapter over
+it. Four kinds of state accumulate there without an owner:
+
+| State                      | Why it accumulates                                                           |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| The `event` table          | An append-only replication log for remote workspaces, with no retention      |
+| Worktree processes         | A command an agent started outlives the session that started it              |
+| Stale `workspace` rows     | A row outlives its directory, and a retired adapter fails every server start |
+| An untracked global config | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`    |
+
+The event log is the one that grows without bound. Every streaming update of a
+message part is stored as a fresh copy of the whole part, so one long session
+writes its own transcript back many times over; `message` and `part`, which
+hold what a session actually said, stay small beside it. Pruning removes
+replication history for sessions outside the retention window and leaves every
+transcript intact.
+
+Reporting is the default because each repair deletes state no backup covers.
+Repairs refuse to run while OpenCode holds the database, so quit OpenChamber
+and any `opencode` session first. That precondition is also what makes reaping
+safe to state: a process still living inside an agent worktree while no
+OpenCode runs has no owner left.
+
+A shadowing configuration file is reported and never removed. Adopt what it
+declares into `opencode.jsonc`, then delete it by hand.
+
 ## Troubleshooting
 
 If `opencode` or `ocx` is missing, reconcile the Mise runtimes:
