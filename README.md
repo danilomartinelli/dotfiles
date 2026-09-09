@@ -295,7 +295,7 @@ deliberately.
 | `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
 | `java`                                      | `temurin-21`     | Java runtime                                    |
 | `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.223`        | Claude Code CLI                                 |
+| `npm:@anthropic-ai/claude-code`             | `2.1.266`        | Claude Code CLI                                 |
 | `npm:@agentclientprotocol/claude-agent-acp` | `0.65.0`         | Claude ACP agent                                |
 | `npm:@agentclientprotocol/codex-acp`        | `1.1.13`         | Codex ACP agent                                 |
 | `npm:@earendil-works/pi-coding-agent`       | `0.84.0`         | Pi coding agent                                 |

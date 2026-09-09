@@ -359,7 +359,7 @@ version = "1.1.13"
 backend = "npm:@agentclientprotocol/codex-acp"
 
 [[tools."npm:@anthropic-ai/claude-code"]]
-version = "2.1.223"
+version = "2.1.266"
 backend = "npm:@anthropic-ai/claude-code"
 
 [[tools."npm:@colbymchenry/codegraph"]]
