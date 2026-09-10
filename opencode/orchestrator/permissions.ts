@@ -9,6 +9,18 @@ export const readOnlyRoles = new Set([
 
 const writerRoles = new Set(["coder", "scribe"]);
 
+/** Shared by native role permissions and the runtime query guard. */
+export const mcpQueryTools = [
+  "context7_resolve-library-id",
+  "context7_query-docs",
+  "context7_resolve_library_id",
+  "context7_query_docs",
+  "exa_web_search_exa",
+  "exa_web_fetch_exa",
+  "exa_get_code_context_exa",
+  "gh_grep_searchGitHub",
+] as const;
+
 const queryTools = new Set([
   "read",
   "glob",
@@ -18,13 +30,7 @@ const queryTools = new Set([
   "webfetch",
   "websearch",
   "codesearch",
-  "context7_resolve-library-id",
-  "context7_query-docs",
-  "context7_resolve_library_id",
-  "context7_query_docs",
-  "exa_web_search_exa",
-  "exa_get_code_context_exa",
-  "gh_grep_searchGitHub",
+  ...mcpQueryTools,
 ]);
 
 interface Options {
@@ -338,18 +344,22 @@ const queryEnvironment: Record<string, string[]> = {
 
 function safeCommand(command: string): string {
   const tokens = words(command);
-  // Accept our exact safety prefix on replay, then revalidate the whole query.
-  // A prefix never grants access to a different executable or new arguments.
-  for (const [program, prefix] of Object.entries(queryEnvironment)) {
-    if (
-      tokens[prefix.length] === program &&
-      prefix.every((assignment, index) => tokens[index] === assignment)
-    ) {
-      tokens.splice(0, prefix.length);
-      break;
-    }
-  }
-  const [program, ...argv] = tokens;
+  let index = 0;
+  while (/^[a-zA-Z_][a-zA-Z0-9_]*=/.test(tokens[index] ?? "")) index++;
+  const [program, ...argv] = tokens.slice(index);
+  const environment = Object.hasOwn(queryEnvironment, program)
+    ? queryEnvironment[program]
+    : [];
+  // Accept only known safety values, regardless of order or omitted assignments.
+  // Always emit the complete environment and revalidate the executable/arguments.
+  if (
+    !tokens
+      .slice(0, index)
+      .every((assignment) => environment.includes(assignment))
+  )
+    denied(
+      "environment assignments must match the query's approved safety values",
+    );
   let normalized: string[];
   if (program === "command") {
     if (
@@ -375,9 +385,7 @@ function safeCommand(command: string): string {
     ];
   }
   // The CLIs can otherwise launch a user-configured pager despite read-only arguments.
-  return [...(queryEnvironment[program] ?? []), ...normalized.map(quote)].join(
-    " ",
-  );
+  return [...environment, ...normalized.map(quote)].join(" ");
 }
 
 /**

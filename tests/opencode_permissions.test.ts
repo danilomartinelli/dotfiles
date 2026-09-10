@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { rolePermissions } from "../opencode/orchestrator/prompts";
 import {
   assertReadOnlyTool,
+  mcpQueryTools,
   readOnlyRoles,
 } from "../opencode/orchestrator/permissions";
 
@@ -15,6 +16,53 @@ function query(command: string, role = "reviewer"): string {
 }
 
 describe("regular read-only tool boundary", () => {
+  test("read-only roles can fetch documentation through Exa", () => {
+    for (const role of readOnlyRoles) {
+      expect(() =>
+        assertReadOnlyTool(role, "exa_web_fetch_exa", {
+          urls: [
+            "https://www.postgresql.org/docs/current/functions-admin.html",
+          ],
+          maxCharacters: 6000,
+        }),
+      ).not.toThrow();
+    }
+  });
+
+  test("native MCP permissions and the argument guard share approved queries", () => {
+    for (const role of [...readOnlyRoles, "coder", "scribe"]) {
+      const permissions = rolePermissions(role);
+      const exposed = Object.keys(permissions).filter((name) =>
+        /^(context7|exa|gh_grep)_/.test(name),
+      );
+      expect(exposed.sort()).toEqual([...mcpQueryTools].sort());
+      for (const name of exposed) {
+        expect(permissions[name]).toBe("allow");
+        expect(() => assertReadOnlyTool(role, name, {})).not.toThrow();
+      }
+      for (const name of [
+        "exa_agent_run",
+        "exa_unknown_read",
+        "context7_execute",
+        "gh_grep_delete",
+      ]) {
+        expect(permissions[name] ?? permissions["*"]).toBe("deny");
+        if (readOnlyRoles.has(role))
+          expect(() => assertReadOnlyTool(role, name, {})).toThrow(
+            "Read-only policy:",
+          );
+      }
+    }
+    for (const args of [
+      { method: "POST" },
+      { body: "mutation" },
+      { headers: {} },
+    ])
+      expect(() =>
+        assertReadOnlyTool("build", "exa_web_fetch_exa", args),
+      ).toThrow("Read-only policy:");
+  });
+
   test("queries remain valid when their normalized commands are checked again", () => {
     for (const command of [
       "git rev-parse origin/topic-branch",
@@ -38,6 +86,64 @@ describe("regular read-only tool boundary", () => {
     }
   });
 
+  test("partial and reordered safe pager assignments normalize to the same tracker query", () => {
+    for (const [program, endpoint] of [
+      ["gh", "repos/example/project/pulls/12/comments"],
+      ["glab", "projects/example%2Fproject/merge_requests/12/notes"],
+    ]) {
+      const command = `'${program}' 'api' '${endpoint}'`;
+      const expected = query(command);
+      for (const prefix of [
+        "PAGER=cat GH_PAGER=cat",
+        "PAGER=cat GLAB_PAGER=cat",
+        "GH_PAGER=cat PAGER=cat",
+        "GLAB_PAGER=cat GH_PAGER=cat PAGER=cat",
+        "PAGER=cat",
+        "GH_PAGER=cat",
+        "GLAB_PAGER=cat",
+        "PAGER=cat PAGER=cat",
+      ]) {
+        for (const role of readOnlyRoles) {
+          const normalized = query(`${prefix} ${command}`, role);
+          expect(normalized).toBe(expected);
+          expect(query(normalized, role)).toBe(expected);
+        }
+      }
+    }
+  });
+
+  test("partial tracker prefixes still disable every configured pager at execution", () => {
+    const directory = mkdtempSync(join(tmpdir(), "opencode-tracker-query-"));
+    try {
+      for (const program of ["gh", "glab"]) {
+        writeFileSync(
+          join(directory, program),
+          '#!/bin/sh\nprintf "%s\\n" "$PAGER" "$GH_PAGER" "$GLAB_PAGER" "$@"\n',
+          { mode: 0o755 },
+        );
+        const endpoint =
+          program === "gh"
+            ? "repos/example/project/pulls/12/comments"
+            : "projects/12/merge_requests/34/notes";
+        const command = `PAGER=cat ${program === "gh" ? "GH" : "GLAB"}_PAGER=cat '${program}' 'api' '${endpoint}'`;
+        const result = Bun.spawnSync(["/bin/sh", "-c", query(command)], {
+          env: {
+            PATH: directory,
+            PAGER: "/unexpected-pager",
+            GH_PAGER: "/unexpected-pager",
+            GLAB_PAGER: "/unexpected-pager",
+          },
+        });
+        expect(result.exitCode, result.stderr.toString()).toBe(0);
+        expect(result.stdout.toString()).toBe(
+          `cat\ncat\ncat\napi\n${endpoint}\n`,
+        );
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   test("safety prefixes do not authorize mutations or arbitrary environments", () => {
     for (const command of [
       "GIT_NO_LAZY_FETCH=1 git reset --hard",
@@ -52,7 +158,16 @@ describe("regular read-only tool boundary", () => {
       "PAGER=sh GH_PAGER=cat GLAB_PAGER=cat gh pr list",
       "PAGER=cat GH_PAGER=sh GLAB_PAGER=cat gh pr list",
       "PAGER=cat GH_PAGER=cat GLAB_PAGER=sh glab mr list",
-      "PAGER=cat gh pr list",
+      "PAGER=cat GH_PAGER=cat gh api repos/o/r/issues/1 -X DELETE",
+      "PAGER=cat GLAB_PAGER=cat glab mr checkout 12",
+      "GH_PAGER=cat PAGER=sh gh pr list",
+      "PAGER=sh PAGER=cat gh pr list",
+      "PAGER=cat PAGER=sh gh pr list",
+      "PAGER='cat -n' gh pr list",
+      "PATH=/tmp PAGER=cat gh pr list",
+      "PAGER=cat sh -c 'gh pr list'",
+      "PAGER=cat constructor",
+      "PAGER=cat",
       "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat GH_HOST=example.invalid gh pr list",
       "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat gh pr list; touch /tmp/unsafe",
       "rg --no-config --pre sh needle README.md",

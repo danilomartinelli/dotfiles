@@ -1,3 +1,5 @@
+import { mcpQueryTools } from "./permissions";
+
 const tracker = `For repository, issue, PR or MR context, inspect git remote -v once and check command -v gh (GitHub) or command -v glab (GitLab).
 When the matching CLI exists, use its authenticated read commands/API before web access. Resolve the correct remote, repository and host;
 use --repo for a different repository and api --hostname for a self-hosted server. Reuse this discovery and pass it to delegated work.
@@ -110,9 +112,7 @@ export function rolePermissions(
     memory: "allow",
     memory_commit: root ? "allow" : "deny",
     webfetch: "allow",
-    "context7_*": "allow",
-    "exa_*": "allow",
-    "gh_grep_*": "allow",
+    ...Object.fromEntries(mcpQueryTools.map((name) => [name, "allow"])),
     "worktree_*": root ? "allow" : "deny",
   };
   // Projects can opt coder into their configured MCPs without overriding the

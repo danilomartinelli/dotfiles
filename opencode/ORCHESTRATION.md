@@ -55,8 +55,14 @@ boundary. Supported shell inspections reject mutation, command composition and
 external-program escapes. Repository and tracker queries discover the remote
 and matching `gh`/`glab` CLI before falling back to web access.
 Queries remain valid when the guard's normalized command is reused; each call
-revalidates its executable and arguments. Only the guard's exact safety
-environment prefixes are accepted.
+revalidates its executable and arguments. Leading environment assignments must
+use the query's approved safety values. Partial or reordered assignments are
+accepted and normalized to the complete safety environment before execution.
+
+The native role permissions and query guard share one explicit MCP tool list
+for Context7 documentation, Exa search/page retrieval and grep.app code search.
+Unknown tools are denied by default, including new tools under those server
+names; a server prefix alone does not authorize a query.
 
 Project scripts and runtime/package-manager commands belong to coder, even
 when a subcommand is named `docs` or `list`. The root includes necessary script

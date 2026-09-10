@@ -12,6 +12,12 @@ deterministic. See [the user guide](../README.md#models-and-roles) for the role
 roster and [the orchestration contract](../ORCHESTRATION.md) for workflow and
 permission rules.
 
+MCP query names are declared once in `permissions.ts` and used by both the
+native role permissions and the runtime guard. When a configured server changes
+its tools, inspect its live `tools/list` response and input schemas, then update
+the approved queries and isolated fixtures together. Do not infer capabilities
+from a server prefix or a `readOnlyHint` annotation alone.
+
 ## Lifecycle
 
 The project database under `~/.local/share/opencode/orchestrator/` contains

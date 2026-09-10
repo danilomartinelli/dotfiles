@@ -19,6 +19,40 @@ type ProviderRequest = {
   tools?: Array<{ name: string }>;
 };
 
+const mcpQueries = [
+  {
+    server: "context7",
+    name: "resolve-library-id",
+    arguments: { libraryName: "fixture", query: "Read fixture documentation" },
+  },
+  {
+    server: "context7",
+    name: "query-docs",
+    arguments: {
+      libraryId: "/example/fixture",
+      query: "Read fixture documentation",
+    },
+  },
+  {
+    server: "exa",
+    name: "web_search_exa",
+    arguments: {
+      query: "Fixture documentation",
+      objective: "Find the fixture guide",
+    },
+  },
+  {
+    server: "exa",
+    name: "web_fetch_exa",
+    arguments: { urls: ["https://example.invalid/guide"], maxCharacters: 6000 },
+  },
+  {
+    server: "gh_grep",
+    name: "searchGitHub",
+    arguments: { query: "fixture()" },
+  },
+];
+
 function latestDelegation(request: ProviderRequest) {
   for (const item of request.input.toReversed()) {
     if (
@@ -222,6 +256,11 @@ test("native OpenCode initializes deferred tools and preserves routing and write
   let mcpStarted = false;
   let mcpFinished = false;
   let mcpCalls = 0;
+  const mcpReadCalls: Array<{
+    server: string;
+    name: string;
+    arguments: unknown;
+  }> = [];
   let releaseMcp!: () => void;
   const mcpPending = new Promise<void>((resolve) => {
     releaseMcp = resolve;
@@ -230,13 +269,21 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     hostname: "127.0.0.1",
     port: 0,
     async fetch(request) {
-      if (new URL(request.url).pathname === "/mcp") {
+      const pathname = new URL(request.url).pathname;
+      const queryServer = pathname.match(
+        /^\/queries\/(context7|exa|gh_grep)$/,
+      )?.[1];
+      if (pathname === "/mcp" || queryServer) {
         if (request.method !== "POST")
           return new Response(null, { status: 405 });
         const body = (await request.json()) as {
           id?: number;
           method: string;
-          params?: { protocolVersion?: string };
+          params?: {
+            protocolVersion?: string;
+            name?: string;
+            arguments?: unknown;
+          };
         };
         if (body.id === undefined) return new Response(null, { status: 202 });
         let result: object;
@@ -248,16 +295,52 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           };
         } else if (body.method === "tools/list") {
           result = {
-            tools: [
-              {
-                name: "update_item",
-                description: "Wait for the isolated operation to finish.",
-                inputSchema: { type: "object", properties: {} },
-              },
-            ],
+            tools: queryServer
+              ? [
+                  ...mcpQueries
+                    .filter((query) => query.server === queryServer)
+                    .map((query) => ({
+                      name: query.name,
+                      description: "Read isolated fixture documentation.",
+                      annotations: { readOnlyHint: true },
+                      inputSchema: {
+                        type: "object",
+                        properties: Object.fromEntries(
+                          Object.entries(query.arguments).map(
+                            ([name, value]) => [
+                              name,
+                              Array.isArray(value)
+                                ? { type: "array", items: { type: "string" } }
+                                : { type: typeof value },
+                            ],
+                          ),
+                        ),
+                      },
+                    })),
+                  {
+                    name: "unknown_read",
+                    description:
+                      "An unapproved tool, even when advertised as read-only.",
+                    annotations: { readOnlyHint: true },
+                    inputSchema: { type: "object", properties: {} },
+                  },
+                ]
+              : [
+                  {
+                    name: "update_item",
+                    description: "Wait for the isolated operation to finish.",
+                    inputSchema: { type: "object", properties: {} },
+                  },
+                ],
           };
         } else if (body.method === "tools/call") {
-          if (++mcpCalls === 2) {
+          if (queryServer) {
+            mcpReadCalls.push({
+              server: queryServer,
+              name: body.params!.name!,
+              arguments: body.params!.arguments,
+            });
+          } else if (++mcpCalls === 2) {
             mcpStarted = true;
             await mcpPending;
             mcpFinished = true;
@@ -295,7 +378,14 @@ test("native OpenCode initializes deferred tools and preserves routing and write
         "git rev-parse --show-toplevel",
         "GIT_NO_LAZY_FETCH=1 'git' '--no-pager' '--no-optional-locks' '-c' 'core.fsmonitor=false' 'rev-parse' '--show-toplevel'",
       ].find((command) => !issued.has(command));
-      if (marker === "NATIVE_VALID_ROOT" && inspection) {
+      const mcpQuery = mcpQueries.find(
+        (query) => !issued.has(`${query.server}_${query.name}`),
+      );
+      if (marker === "NATIVE_VALID_ROOT" && mcpQuery) {
+        const name = `${mcpQuery.server}_${mcpQuery.name}`;
+        issued.add(name);
+        output = { name, arguments: mcpQuery.arguments };
+      } else if (marker === "NATIVE_VALID_ROOT" && inspection) {
         issued.add(inspection);
         output = {
           name: "bash",
@@ -562,6 +652,15 @@ export default async ctx => initializeFromConfig(async config => {
             enabled: false,
           },
           fixture: { type: "remote", url: `http://127.0.0.1:${mock.port}/mcp` },
+          ...Object.fromEntries(
+            ["context7", "exa", "gh_grep"].map((server) => [
+              server,
+              {
+                type: "remote",
+                url: `http://127.0.0.1:${mock.port}/queries/${server}`,
+              },
+            ]),
+          ),
         },
         agent: {
           coder: {
@@ -697,6 +796,13 @@ export default async ctx => initializeFromConfig(async config => {
     ]);
     for (const part of inspections)
       expect(part.state.output.trim()).toBe(await realpath(directory));
+    expect(mcpReadCalls).toEqual(mcpQueries);
+    for (const query of mcpQueries) {
+      const part = rootMessages
+        .flatMap((message: any) => message.parts)
+        .find((part: any) => part.tool === `${query.server}_${query.name}`);
+      expect(part?.state.status).toBe("completed");
+    }
     const child = await until(async () => {
       const sessions = await api("/session");
       return sessions.find((item: any) => item.parentID === session.id);
@@ -744,6 +850,9 @@ export default async ctx => initializeFromConfig(async config => {
     );
     expect(rootRequest?.model).toBe("gpt-5.6-sol");
     expect(rootRequest?.reasoning?.effort).toBe("xhigh");
+    expect(
+      rootRequest?.tools?.some((tool) => tool.name.endsWith("_unknown_read")),
+    ).toBe(false);
     expect(childRequest?.model).toBe("gpt-5.6-luna");
     expect(childRequest?.reasoning?.effort).toBe("high");
     expect(
