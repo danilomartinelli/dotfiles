@@ -19,7 +19,7 @@ regular	default	openai/gpt-5.6-sol	-	-
 regular	small	openai/gpt-5.6-terra	-	-
 regular	plan	openai/gpt-5.6-sol	high	0.3
 regular	build	openai/gpt-5.6-sol	high	0.3
-regular	coder	anthropic/claude-fable-5-1	high	0.2
+regular	coder	anthropic/claude-opus-5	high	0.2
 regular	explore	openai/gpt-5.6-luna	medium	0.2
 regular	researcher	openai/gpt-5.6-sol	xhigh	0.4
 regular	scribe	openai/gpt-5.6-luna	medium	1
@@ -37,7 +37,7 @@ boost	default	openai/gpt-5.6-sol	-	-
 boost	small	openai/gpt-5.6-terra	-	-
 boost	plan	openai/gpt-5.6-sol	max	-
 boost	build	openai/gpt-5.6-sol	max	-
-boost	coder	anthropic/claude-fable-5-1	max	-
+boost	coder	anthropic/claude-opus-5	max	-
 boost	explore	anthropic/claude-haiku-4-5	max	-
 boost	researcher	openai/gpt-5.6-sol	max	0.4
 boost	scribe	openai/gpt-5.6-terra	max	1

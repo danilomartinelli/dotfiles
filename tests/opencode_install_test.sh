@@ -359,7 +359,7 @@ test_profiles_route_models() {
 			"temperature": 0.3
 		} and
 		.agent.coder == {
-			"model": "anthropic/claude-fable-5-1",
+			"model": "anthropic/claude-opus-5",
 			"variant": "high",
 			"temperature": 0.2
 		} and
@@ -430,7 +430,7 @@ test_profiles_route_models() {
 			"variant": "max"
 		} and
 		.agent.coder == {
-			"model": "anthropic/claude-fable-5-1",
+			"model": "anthropic/claude-opus-5",
 			"variant": "max"
 		} and
 		.agent.explore == {

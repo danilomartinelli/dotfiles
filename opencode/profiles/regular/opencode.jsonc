@@ -17,7 +17,7 @@
       "temperature": 0.3
     },
     "coder": {
-      "model": "anthropic/claude-fable-5-1",
+      "model": "anthropic/claude-opus-5",
       "variant": "high",
       "temperature": 0.2
     },
