@@ -29,6 +29,9 @@ selection; delegations cannot override them. The routing source is
 1. Give each delegation one focus, a stable work-item identifier, relevant
    references, constraints and required verification. Writers receive explicit
    writable paths; read-only roles receive no ownership.
+   The native session's directory is the path base. A child in another project
+   keeps its lifecycle in the root project's journal. Resume and compaction
+   recover that association and the actual directory.
 1. Start one useful child. Add independent parallel focuses when needed, up to
    three active children per root. Writers require disjoint paths and agreed
    interfaces. Reviewers run after writers finish against the same snapshot.
@@ -58,6 +61,17 @@ Queries remain valid when the guard's normalized command is reused; each call
 revalidates its executable and arguments. Leading environment assignments must
 use the query's approved safety values. Partial or reordered assignments are
 accepted and normalized to the complete safety environment before execution.
+Single-quoted filters remain literal arguments; they cannot compose shell
+commands. Tracker APIs accept GET queries and a literal `Accept` header.
+`command -v NAME` can discover any literal executable name without running it.
+Git inspections include short log counts, revision comparisons, the current
+branch and source grep. Remote transports such as `ls-remote` require coder;
+read-only roles use tracker API queries for remote refs.
+
+File queries resolve relative paths against the native session directory.
+Missing paths report that directory and call for local rediscovery. The runtime
+does not infer another worktree path, redirect a file request or broaden native
+external-directory permissions.
 
 The native role permissions and query guard share one explicit MCP tool list
 for Context7 documentation, Exa search/page retrieval and grep.app code search.
@@ -100,7 +114,8 @@ without regenerating the summary or invalidating verified implementation work.
 ## Validation and maintenance
 
 Native OpenCode fixtures exercise role discovery, profile routing, project
-configuration, parallel delegation, resume, cancellation and permissions.
+configuration, parallel and cross-project delegation, resume, cancellation,
+path recovery and permissions.
 Memory fixtures cover direct storage, idempotent retries and the absence of
 automatic LLM subsessions. Installer fixtures cover integrity and preservation
 during migration.

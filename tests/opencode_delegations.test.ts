@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, writeFile, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
@@ -7,6 +7,7 @@ import {
   sourceVersion,
   type Request,
 } from "../opencode/orchestrator/delegations";
+import { SessionJournals } from "../opencode/orchestrator/session-journals";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
@@ -122,6 +123,94 @@ test("invalid roles and leaf recursion create no child", async () => {
     "Leaf sessions",
   );
   expect(f.created).toHaveLength(0);
+});
+
+test("cross-project hooks recover the root journal, retain reservations on cancel and resume the same child", async () => {
+  const f = await fixture();
+  const target = path.join(await realpath(f.directory), "other-project");
+  await mkdir(target);
+  const sessions: Record<string, any> = {
+    root: { id: "root", projectID: "root-project", directory: f.directory },
+    "child-1": {
+      id: "child-1",
+      parentID: "root",
+      projectID: "target-project",
+      directory: target,
+    },
+    unregistered: {
+      id: "unregistered",
+      parentID: "root",
+      projectID: "target-project",
+      directory: target,
+    },
+    grandchild: {
+      id: "grandchild",
+      parentID: "child-1",
+      projectID: "target-project",
+      directory: target,
+    },
+  };
+  f.client.session.get = async ({ path: { id } }: any) => ({
+    data: sessions[id],
+  });
+  const journalDirectory = path.join(f.directory, "journals");
+  function instance() {
+    const journals = new SessionJournals(
+      journalDirectory,
+      f.client as any,
+      routes,
+    );
+    cleanup.push(() => journals.close());
+    return journals;
+  }
+  const rootInstance = instance();
+  const manager = await rootInstance.forSession("root");
+  const request = f.request({
+    role: "scribe",
+    directory: target,
+    ownership: ["docs"],
+  });
+  const row = await manager.start("root", request);
+  manager.savePlan("root", "Keep the same documentation scope.");
+  const childInstance = instance();
+  expect(
+    (await childInstance.project("target-project")).forChild(row.child!),
+  ).toBeUndefined();
+  const childManager = await childInstance.forSession(row.child!);
+  expect(childManager.readPlan("root")).toBe(
+    "Keep the same documentation scope.",
+  );
+  expect(childManager.forChild(row.child!)?.ownership).toEqual([
+    path.join(target, "docs"),
+  ]);
+  childManager.toolStarted(row.child!, "write-docs");
+  expect((await manager.stop("root", row.id)).status).toBe("stopping");
+  await expect(manager.start("root", request)).rejects.toThrow("overlaps");
+  await childManager.toolFinished(row.child!, "write-docs");
+  expect(manager.get("root", row.id).status).toBe("cancelled");
+  const resumed = await manager.start("root", { ...request, resume: row.id });
+  expect(resumed.child).toBe(row.child);
+  expect(f.created).toHaveLength(1);
+  f.result(row.child!);
+  await childManager.complete(row.child!);
+  expect(manager.get("root", row.id).status).toBe("completed");
+  expect(manager.notifications("root")).toHaveLength(1);
+  expect(childManager.notifications("root")).toEqual([]);
+  await childInstance.close();
+  const recovered = await instance().forSession(row.child!);
+  expect(recovered.forChild(row.child!)?.result).toBe("Verified result");
+  expect(recovered.get("root", row.id).notified).toBe(true);
+  await expect(rootInstance.forSession("unregistered")).rejects.toThrow(
+    "no matching root delegation",
+  );
+  await expect(rootInstance.forSession("grandchild")).rejects.toThrow(
+    "Leaf sessions",
+  );
+  sessions["child-1"] = { ...sessions["child-1"], directory: f.directory };
+  await expect(instance().forSession(row.child!)).rejects.toThrow(
+    "no matching root delegation",
+  );
+  expect(f.created).toHaveLength(1);
 });
 
 test("support roles retain bounded delegation and their read or write capability", async () => {

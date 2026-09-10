@@ -11,13 +11,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   childRoles,
-  openDelegations,
   sourceVersion,
   writerRoles,
   type Routes,
 } from "./delegations";
 import { assertReadOnlyTool } from "./permissions";
 import { prompts, rolePermissions } from "./prompts";
+import { SessionJournals } from "./session-journals";
+import { directoryContext, prepareRead } from "./read-context";
 import { assertWriteTargets, writeTools } from "./write-targets";
 
 export async function regularHooks(ctx: PluginInput, declared: Config) {
@@ -39,24 +40,23 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       return [role, { model: agent.model, variant: agent.variant }];
     }),
   ) as Routes;
-  const manager = await openDelegations(
-    path.join(
-      os.homedir(),
-      ".local/share/opencode/orchestrator",
-      `${ctx.project.id}.sqlite`,
-    ),
+  const journals = new SessionJournals(
+    path.join(os.homedir(), ".local/share/opencode/orchestrator"),
     ctx.client,
     routes,
   );
+  const managerFor = (sessionID: string) => journals.forSession(sessionID);
   const roles = new Map<string, string>();
   let mcpServers: string[] = [];
   async function rootFor(sessionID: string) {
+    const manager = await managerFor(sessionID);
     const child = manager.forChild(sessionID);
     if (child) return child.root;
     await manager.assertRoot(sessionID);
     return sessionID;
   }
   async function resolveRole(sessionID: string): Promise<string> {
+    const manager = await managerFor(sessionID);
     const child = manager.forChild(sessionID);
     if (child) return child.role;
     if (roles.has(sessionID)) return roles.get(sessionID)!;
@@ -95,6 +95,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     "worktree_delete",
   ]);
   async function notifyRoot(root: string, rootDirectory: string) {
+    const manager = await managerFor(root);
     try {
       manager.assertSettled(root);
     } catch {
@@ -128,7 +129,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       manager.restoreNotifications(root, notices);
     }
   }
-  manager.onStopped = (row) => notifyRoot(row.root, row.rootDirectory);
+  journals.onStopped = (row) => notifyRoot(row.root, row.rootDirectory);
 
   const hooks: Hooks = {
     config: async (config) => {
@@ -223,6 +224,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           resume: tool.schema.string().optional(),
         },
         async execute(args, context) {
+          const manager = await managerFor(context.sessionID);
           await manager.recover(context.sessionID);
           return JSON.stringify(await manager.start(context.sessionID, args));
         },
@@ -232,6 +234,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           "Read delegation statuses and recorded routes; use after notifications, not polling.",
         args: {},
         async execute(_args, context) {
+          const manager = await managerFor(context.sessionID);
           const root = await rootFor(context.sessionID);
           await manager.recover(root);
           return JSON.stringify(
@@ -244,6 +247,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           "Read the retained result of a delegation in this root session. Running results never block.",
         args: { id: tool.schema.string() },
         async execute(args, context) {
+          const manager = await managerFor(context.sessionID);
           const root = await rootFor(context.sessionID);
           await manager.recover(root);
           return JSON.stringify(manager.get(root, args.id));
@@ -254,6 +258,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           "Abort a delegation, retaining its session and diagnostics. A stopping result is unconfirmed and still reserves its capacity/ownership.",
         args: { id: tool.schema.string() },
         async execute(args, context) {
+          const manager = await managerFor(context.sessionID);
           await manager.assertRoot(context.sessionID);
           return JSON.stringify(await manager.stop(context.sessionID, args.id));
         },
@@ -263,6 +268,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           "Hash current HEAD, staged/unstaged changes and untracked content after writers finish; bind reviewers to the returned source version.",
         args: { directory: tool.schema.string() },
         async execute(args, context) {
+          const manager = await managerFor(context.sessionID);
           await manager.assertRoot(context.sessionID);
           await manager.recover(context.sessionID);
           manager.assertSettled(context.sessionID);
@@ -274,6 +280,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           "Save a bounded Markdown plan for this root. Saving a plan never triggers a review.",
         args: { content: tool.schema.string().min(1).max(24000) },
         async execute(args, context) {
+          const manager = await managerFor(context.sessionID);
           await manager.assertRoot(context.sessionID);
           manager.savePlan(context.sessionID, args.content);
           return "Plan saved.";
@@ -283,11 +290,13 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         description: "Read this work item's saved plan.",
         args: {},
         async execute(_args, context) {
+          const manager = await managerFor(context.sessionID);
           return manager.readPlan(await rootFor(context.sessionID));
         },
       }),
     },
     "chat.message": async (input, output) => {
+      const manager = await managerFor(input.sessionID);
       const child = manager.forChild(input.sessionID);
       const role = child?.role ?? input.agent ?? output.message.agent;
       if (!role || !Object.hasOwn(routes, role))
@@ -326,6 +335,17 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         },
       });
       Reflect.deleteProperty(output.message, "variant");
+      if (child || !roles.has(input.sessionID))
+        output.parts.push({
+          id: `prt_${randomUUID().replaceAll("-", "")}`,
+          sessionID: input.sessionID,
+          messageID: output.message.id,
+          type: "text",
+          text: directoryContext(
+            (await journals.session(input.sessionID)).directory,
+          ),
+          synthetic: true,
+        });
       roles.set(input.sessionID, role);
       if (!child) {
         const session = await manager.assertRoot(input.sessionID);
@@ -356,6 +376,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       }
     },
     "chat.params": async (input, output) => {
+      const manager = await managerFor(input.sessionID);
       const child = manager.forChild(input.sessionID);
       const role =
         input.agent === "compaction"
@@ -378,6 +399,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       output.options.reasoningEffort = route.variant;
     },
     "tool.execute.before": async (input, output) => {
+      const manager = await managerFor(input.sessionID);
       const role = await resolveRole(input.sessionID);
       if (input.tool === "task")
         throw new Error(
@@ -422,20 +444,30 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         await assertWriteTargets(input.tool, output.args, child);
       }
       assertReadOnlyTool(role, input.tool, output.args);
+      await prepareRead(
+        input.tool,
+        output.args,
+        (await journals.session(input.sessionID)).directory,
+      );
       if ((writerRoles.has(role) && writeTools.has(input.tool)) || mcpExecution)
         manager.toolStarted(input.sessionID, input.callID);
     },
     "shell.env": async (input) => {
-      if (input.sessionID && input.callID)
+      if (input.sessionID && input.callID) {
+        const manager = await managerFor(input.sessionID);
         manager.toolStarted(input.sessionID, input.callID);
+      }
     },
     "tool.execute.after": async (input) => {
+      const manager = await managerFor(input.sessionID);
       await manager.toolFinished(input.sessionID, input.callID);
     },
     "experimental.session.compacting": async (input, output) => {
+      const manager = await managerFor(input.sessionID);
       const root = await rootFor(input.sessionID);
       await manager.recover(root);
       output.context.push(
+        directoryContext((await journals.session(input.sessionID)).directory),
         `Orchestration recovery:\n${manager.readPlan(root)}\n${JSON.stringify(manager.list(root).map(({ result, ...row }) => row))}\nRead retained results by delegation ID; resume only the same work item/role/focus. Do not recreate children after compaction.`,
       );
     },
@@ -448,12 +480,13 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         )
       )
         return;
+      const manager = await managerFor(event.properties.sessionID);
       const child = manager.forChild(event.properties.sessionID);
       if (!child) return;
       await manager.complete(child.child!);
       await notifyRoot(child.root, child.rootDirectory);
     },
-    dispose: async () => manager.close(),
+    dispose: async () => journals.close(),
   };
-  return { hooks, manager };
+  return { hooks, managerFor };
 }

@@ -25,7 +25,7 @@ const Orchestrator: Plugin = async (ctx) => {
     }
     const memory = await loadMemoryBaseline();
     const baseline = await memory.plugin(ctx);
-    const { hooks, manager } = await regularHooks(ctx, effective);
+    const { hooks, managerFor } = await regularHooks(ctx, effective);
     const memoryHooks = createRegularMemoryHooks(ctx, {
       baseline,
       storage: memory.storage,
@@ -38,6 +38,7 @@ const Orchestrator: Plugin = async (ctx) => {
         return !session.data.parentID;
       },
       async withConsolidation(sessionID, run) {
+        const manager = await managerFor(sessionID);
         await manager.recover(sessionID);
         return manager.consolidate(sessionID, run);
       },

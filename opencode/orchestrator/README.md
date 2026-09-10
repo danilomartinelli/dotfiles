@@ -2,7 +2,8 @@
 
 `index.ts` replaces the two upstream workspace/delegation hooks and the
 standalone memory plugin entry. `regular.ts` coordinates the authored
-workflow. `delegations.ts` owns its persisted lifecycle, `permissions.ts`
+workflow. `session-journals.ts` resolves native parent/project identities,
+`delegations.ts` owns the persisted lifecycle, `permissions.ts`
 enforces query capabilities, `prompts.ts` states role responsibilities, and
 `memory/` adapts the pinned memory storage without automatic extraction.
 
@@ -23,10 +24,16 @@ from a server prefix or a `readOnlyHint` annotation alone.
 The project database under `~/.local/share/opencode/orchestrator/` contains
 delegation records, routes, retained results and plans. It is separate from
 OpenCode's internal database and uses OpenCode's stable project ID across
-worktrees. No runtime data belongs in this repository.
+worktrees. A child in a different project still uses the root project's journal
+for ownership, tool acknowledgements, results, cancellation and recovery.
+Resolution checks the native parent and directory against the recorded child;
+an unregistered child cannot inherit a root's capabilities. Existing journals
+stay in place. No runtime data belongs in this repository.
 
-Reservations are atomic across processes. At most three children run per
-root. Writers in the same project cannot claim overlapping canonical paths,
+Reservations are atomic across processes using the same root project journal.
+Use one root to coordinate work spanning repositories; independent root projects
+do not share reservations. At most three children run per root.
+Writers sharing that journal cannot claim overlapping canonical paths,
 including across roots; reviewers and writers cannot overlap in the same
 worktree. Writers must honor ownership in shell commands too; the hook checks
 native edit/write/apply_patch targets (including move destinations), but does
@@ -57,6 +64,11 @@ MCP completion acknowledges the ledger and releases the reservation.
 
 Results remain readable after compaction. Notifications are batched when all
 children settle and continue the existing root session.
+The first root message, each delegated generation and compaction supply the
+native session directory. `read-context.ts` anchors relative file queries there
+and reports missing targets with rediscovery guidance. Existing external paths
+still go through OpenCode's native permissions; missing targets are never
+silently replaced by similarly named files.
 
 ## Memory
 

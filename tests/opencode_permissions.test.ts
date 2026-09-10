@@ -16,6 +16,73 @@ function query(command: string, role = "reviewer"): string {
 }
 
 describe("regular read-only tool boundary", () => {
+  test("common Git inspections and CLI discovery stay normalized and read-only", () => {
+    for (const command of [
+      "git log -1",
+      "git log -5 --oneline",
+      "git log -10",
+      "git log -30",
+      "git rev-list --left-right --count main...origin/main",
+      "git rev-list --parents -n 1 HEAD",
+      "git branch --show-current",
+      "git grep -n needle HEAD -- src",
+      "git show --find-renames HEAD",
+      ...["docker", "mise", "colima", "multipass", "sh"].map(
+        (cli) => `command -v ${cli}`,
+      ),
+    ]) {
+      for (const role of readOnlyRoles) {
+        const normalized = query(command, role);
+        expect(query(normalized, role)).toBe(normalized);
+      }
+    }
+  });
+
+  test("quoted API filters and Accept headers arrive as literal arguments", () => {
+    const directory = mkdtempSync(join(tmpdir(), "opencode-quoted-api-"));
+    try {
+      writeFileSync(
+        join(directory, "gh"),
+        "#!/bin/sh\nprintf '%s\\n' \"$@\"\n",
+        { mode: 0o755 },
+      );
+      const filter = '.files[] | select(.filename == "literal") | .patch';
+      const command = `gh api repos/example/project/pulls/1 --jq '${filter}' -H 'Accept: application/vnd.github+json'`;
+      const normalized = query(command);
+      expect(query(normalized)).toBe(normalized);
+      const result = Bun.spawnSync(["/bin/sh", "-c", normalized], {
+        env: { PATH: directory },
+      });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.toString().trim().split("\n")).toEqual([
+        "api",
+        "repos/example/project/pulls/1",
+        "--jq",
+        filter,
+        "-H",
+        "Accept: application/vnd.github+json",
+      ]);
+      for (const header of [
+        "--header 'Accept: application/vnd.github.diff'",
+        "--header='Accept: application/json'",
+      ]) {
+        expect(() =>
+          query(`gh api repos/example/project/pulls/1 ${header}`),
+        ).not.toThrow();
+      }
+      for (const literal of [
+        "'a; b & c > d'",
+        "'$(touch forbidden)'",
+        "'literal `command`'",
+        "'\\.literal'",
+      ]) {
+        const safe = query(`rg -F ${literal} README.md`);
+        expect(query(safe)).toBe(safe);
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
   test("read-only roles can fetch documentation through Exa", () => {
     for (const role of readOnlyRoles) {
       expect(() =>
@@ -193,7 +260,14 @@ describe("regular read-only tool boundary", () => {
     const directory = mkdtempSync(join(tmpdir(), "opencode-cli-discovery-"));
     const marker = join(directory, "executed");
     try {
-      for (const cli of ["gh", "glab"]) {
+      for (const cli of [
+        "gh",
+        "glab",
+        "docker",
+        "mise",
+        "colima",
+        "multipass",
+      ]) {
         const binary = join(directory, cli);
         writeFileSync(binary, '#!/bin/sh\ntouch "$MARKER"\n', { mode: 0o755 });
         for (const role of readOnlyRoles) {
@@ -339,7 +413,8 @@ describe("regular read-only tool boundary", () => {
       "git remote show origin",
       "git remote get-url --bad origin",
       "command gh issue close 12",
-      "command -v sh",
+      "command -v /bin/sh",
+      "command -v --help",
       "command -v gh glab",
       "git branch surprise",
       "git reset --hard",
@@ -362,6 +437,13 @@ describe("regular read-only tool boundary", () => {
       "gh api repos/o/r/issues -F title=created",
       "gh api repos/o/r/issues --input payload.json",
       "gh api repos/o/r/issues -H 'X-HTTP-Method-Override: DELETE'",
+      "gh api repos/o/r/issues --header 'Authorization: unsafe'",
+      "gh api repos/o/r/issues --header='X-HTTP-Method-Override: DELETE'",
+      'gh api repos/o/r/issues --jq "$(touch forbidden)"',
+      "git grep --open-files-in-pager=sh needle",
+      "git grep --textconv needle",
+      "git branch renamed",
+      "git rev-list --output=file HEAD",
       "gh api graphql --method GET",
       "gh api user --method GET",
       "gh api https://example.org/execute --method GET",
@@ -493,6 +575,12 @@ describe("regular read-only tool boundary", () => {
         "git diff",
         "git log -p -n1",
         "git show HEAD",
+        "git show --find-renames HEAD",
+        "git log -30 --oneline",
+        "git rev-list --left-right --count HEAD...HEAD",
+        "git rev-list --parents -n 1 HEAD",
+        "git branch --show-current",
+        "git grep -n before HEAD -- tracked.txt",
         "git blame tracked.txt",
         "rg after tracked.txt",
       ]) {

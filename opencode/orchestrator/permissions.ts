@@ -38,6 +38,7 @@ interface Options {
   values?: string;
   optional?: string;
   numeric?: string;
+  count?: boolean;
 }
 
 function denied(reason: string): never {
@@ -46,7 +47,7 @@ function denied(reason: string): never {
 
 /** One simple command, with quoting but no shell expansion or composition. */
 function words(command: string): string[] {
-  if (!command || /[\u0000-\u0008\u000a-\u001f\u007f;|&<>`$\\]/.test(command)) {
+  if (!command || /[\u0000-\u0008\u000a-\u001f\u007f]/.test(command)) {
     denied("use one query without shell operators, escapes, or substitutions");
   }
   const result: string[] = [];
@@ -56,6 +57,8 @@ function words(command: string): string[] {
   for (const character of command) {
     if (quote) {
       if (character === quote) quote = "";
+      else if (quote === '"' && /[`$\\]/.test(character))
+        denied("use single quotes for literal substitutions or escapes");
       else word += character;
       continue;
     }
@@ -67,7 +70,7 @@ function words(command: string): string[] {
       word = "";
       started = false;
     } else {
-      if (/[(){}\[\]*?!~#]/.test(character)) {
+      if (/[;|&<>`$\\(){}\[\]*?!~#]/.test(character)) {
         denied("quote literal arguments; shell expansion is unavailable");
       }
       word += character;
@@ -96,6 +99,7 @@ function options(argv: string[], spec: Options): string[] {
     const name = equals < 0 ? argument : argument.slice(0, equals);
     if (flags.has(name) && equals < 0) continue;
     if (optional.has(name)) continue;
+    if (spec.count && /^-[0-9]+$/.test(argument)) continue;
     if (values.has(name)) {
       if (equals >= 0) continue;
       if (++index >= argv.length) denied(`missing argument for ${name}`);
@@ -140,14 +144,30 @@ const gitQueries: Record<string, Options> = {
   log: {
     flags: `${diffFlags} ${logFlags}`,
     values: `${diffValues} ${logValues}`,
-    optional: "--decorate --color",
+    optional: "--decorate --color --find-renames --find-copies",
     numeric: "nU",
+    count: true,
   },
   show: {
     flags: `${diffFlags} ${logFlags}`,
     values: `${diffValues} ${logValues}`,
-    optional: "--decorate --color",
+    optional: "--decorate --color --find-renames --find-copies",
     numeric: "nU",
+    count: true,
+  },
+  "rev-list": {
+    flags:
+      "--count --left-right --left-only --right-only --parents --children --all --first-parent --no-merges --merges --reverse --boundary --cherry-pick --cherry-mark",
+    values: "--max-count -n --skip --since --until --min-parents --max-parents",
+    numeric: "n",
+    count: true,
+  },
+  grep: {
+    flags:
+      "--no-textconv -n --line-number -i --ignore-case -F --fixed-strings -E --extended-regexp -G --basic-regexp -P --perl-regexp -w --word-regexp -l --files-with-matches -L --files-without-match -c --count -h --no-filename -H --with-filename --cached --untracked --no-index --no-color --full-name",
+    values:
+      "-e -f -A -B -C --after-context --before-context --context --max-depth",
+    numeric: "ABC",
   },
   blame: {
     flags:
@@ -197,6 +217,16 @@ function safeGit(argv: string[]): string[] {
     "-c",
     "core.fsmonitor=false",
   ];
+  if (
+    query === "branch" &&
+    argv.length === index + 1 &&
+    argv[index] === "--show-current"
+  )
+    return ["git", ...safety, ...prefix, query, "--show-current"];
+  if (query === "ls-remote")
+    denied(
+      "remote transports may execute configured helpers; inspect remote refs with gh/glab GET queries or ask the root to assign the command to coder",
+    );
   if (query === "remote") {
     const args = argv.slice(index);
     if (
@@ -227,7 +257,7 @@ function safeGit(argv: string[]): string[] {
       ...prependOnce(["--no-ext-diff", "--no-textconv"], args),
     ];
   }
-  if (query === "blame") {
+  if (query === "blame" || query === "grep") {
     return [
       "git",
       ...safety,
@@ -268,17 +298,33 @@ const gitlabQueries = new Set([
 function safeApi(program: string, args: string[]): void {
   const positional = options(args, {
     flags: "--paginate --slurp --include -i --silent",
-    values: "--method -X --jq -q --hostname",
+    values: "--method -X --jq -q --hostname --header -H",
   });
   for (let index = 0; index < args.length; index++) {
-    if (args[index] === "--method" || args[index] === "-X") {
-      if (args[++index] !== "GET") denied("API calls must use GET");
-    } else if (
-      /^(--method|-X)=/.test(args[index]) &&
-      args[index].split("=")[1] !== "GET"
-    ) {
+    if (args[index] === "--") break;
+    const [name] = args[index].split("=");
+    if (
+      ![
+        "--method",
+        "-X",
+        "--jq",
+        "-q",
+        "--hostname",
+        "--header",
+        "-H",
+      ].includes(name)
+    )
+      continue;
+    const value = args[index].includes("=")
+      ? args[index].slice(name.length + 1)
+      : args[++index];
+    if (["--method", "-X"].includes(name) && value !== "GET")
       denied("API calls must use GET");
-    }
+    if (
+      ["--header", "-H"].includes(name) &&
+      !/^Accept:[ \t]*[a-zA-Z0-9!#$&^_.+*/;=, \t-]+$/i.test(value)
+    )
+      denied("API queries accept only a literal Accept representation header");
   }
   if (positional.length !== 1)
     denied("API query requires one explicit endpoint");
@@ -365,9 +411,11 @@ function safeCommand(command: string): string {
     if (
       argv.length !== 2 ||
       argv[0] !== "-v" ||
-      !["gh", "glab"].includes(argv[1])
+      !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*$/.test(argv[1])
     )
-      denied("CLI discovery accepts command -v gh or command -v glab");
+      denied(
+        "CLI discovery accepts command -v NAME with one literal executable name",
+      );
     normalized = [program, ...argv];
   } else if (program === "git") normalized = safeGit(argv);
   else if (program === "gh" || program === "glab")

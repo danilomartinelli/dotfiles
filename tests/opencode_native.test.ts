@@ -53,7 +53,7 @@ const mcpQueries = [
   },
 ];
 
-function latestDelegation(request: ProviderRequest) {
+function latestDelegation(request: ProviderRequest, role = "coder") {
   for (const item of request.input.toReversed()) {
     if (
       !item ||
@@ -63,7 +63,7 @@ function latestDelegation(request: ProviderRequest) {
       continue;
     try {
       const record = JSON.parse(Reflect.get(item, "output"));
-      if (record.id && record.role === "coder") return record;
+      if (record.id && record.role === role) return record;
     } catch {
       // Other tools return plain text rather than a delegation record.
     }
@@ -193,6 +193,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     throw new Error("Native integration requires the installed opencode CLI.");
   const root = await mkdtemp(join(tmpdir(), "opencode-native-"));
   const directory = join(root, "repository");
+  const targetDirectory = join(root, "second-repository");
   const sessionDirectory = join(directory, "packages/app/src");
   const nonGitDirectory = join(root, "outside/repository");
   const configDirectory = join(root, "config/opencode");
@@ -201,6 +202,8 @@ test("native OpenCode initializes deferred tools and preserves routing and write
   await mkdir(sessionDirectory, { recursive: true });
   await mkdir(join(directory, "src"));
   await writeFile(join(directory, "src/native.txt"), "before native patch\n");
+  await mkdir(join(targetDirectory, "docs"), { recursive: true });
+  await writeFile(join(targetDirectory, "docs/native.md"), "Before.\n");
   await mkdir(configDirectory, { recursive: true });
   for (const [base, name] of [
     [root, "global-fixture"],
@@ -381,7 +384,34 @@ test("native OpenCode initializes deferred tools and preserves routing and write
       const mcpQuery = mcpQueries.find(
         (query) => !issued.has(`${query.server}_${query.name}`),
       );
-      if (marker === "NATIVE_VALID_ROOT" && mcpQuery) {
+      const crossProject = input.includes("NATIVE_CROSS_RESUME")
+        ? "NATIVE_CROSS_RESUME"
+        : input.includes("NATIVE_CROSS_ROOT")
+          ? "NATIVE_CROSS_ROOT"
+          : undefined;
+      if (
+        body.model === "gpt-5.6-sol" &&
+        crossProject &&
+        !issued.has(crossProject)
+      ) {
+        issued.add(crossProject);
+        output = {
+          name: "delegate",
+          arguments: {
+            role: "scribe",
+            workItem: "cross-project-docs",
+            directory: targetDirectory,
+            ownership: ["docs/native.md"],
+            prompt:
+              crossProject === "NATIVE_CROSS_RESUME"
+                ? "NATIVE_SCRIBE_RESUME. Update the owned document to Resumed."
+                : "NATIVE_SCRIBE_CHILD. Update the owned document to Documented.",
+            ...(crossProject === "NATIVE_CROSS_RESUME"
+              ? { resume: latestDelegation(body, "scribe").id }
+              : {}),
+          },
+        };
+      } else if (marker === "NATIVE_VALID_ROOT" && mcpQuery) {
         const name = `${mcpQuery.server}_${mcpQuery.name}`;
         issued.add(name);
         output = { name, arguments: mcpQuery.arguments };
@@ -507,6 +537,44 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           },
         };
       }
+      const scribe = input.includes("NATIVE_SCRIBE_RESUME")
+        ? "NATIVE_SCRIBE_RESUME"
+        : "NATIVE_SCRIBE_CHILD";
+      if (
+        body.model === "gpt-5.6-luna" &&
+        input.includes(scribe) &&
+        !issued.has(scribe)
+      ) {
+        if (!issued.has(`${scribe}_MISSING`)) {
+          issued.add(`${scribe}_MISSING`);
+          output = {
+            name: "read",
+            arguments: {
+              filePath: join(root, "worktree/stale/docs/native.md"),
+            },
+          };
+        } else if (!issued.has(`${scribe}_READ`)) {
+          issued.add(`${scribe}_READ`);
+          output = { name: "read", arguments: { filePath: "docs/native.md" } };
+        } else if (!issued.has(`${scribe}_OWNERSHIP`)) {
+          issued.add(`${scribe}_OWNERSHIP`);
+          output = {
+            name: "apply_patch",
+            arguments: {
+              patchText:
+                "*** Begin Patch\n*** Add File: docs/unowned.md\n+Unexpected.\n*** End Patch",
+            },
+          };
+        } else {
+          issued.add(scribe);
+          output = {
+            name: "apply_patch",
+            arguments: {
+              patchText: `*** Begin Patch\n*** Update File: docs/native.md\n@@\n-${scribe === "NATIVE_SCRIBE_RESUME" ? "Documented." : "Before."}\n+${scribe === "NATIVE_SCRIBE_RESUME" ? "Resumed." : "Documented."}\n*** End Patch`,
+            },
+          };
+        }
+      }
       if (
         body.model === "gpt-5.6-luna" &&
         input.includes("NATIVE_CHILD_WORK") &&
@@ -557,6 +625,27 @@ test("native OpenCode initializes deferred tools and preserves routing and write
       env,
     });
     expect(commit.exitCode).toBe(0);
+    expect(
+      Bun.spawnSync(["git", "init", targetDirectory], { env }).exitCode,
+    ).toBe(0);
+    expect(
+      Bun.spawnSync(
+        [
+          "git",
+          "-C",
+          targetDirectory,
+          "-c",
+          "user.name=Fixture",
+          "-c",
+          "user.email=fixture@example.invalid",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "Separate project",
+        ],
+        { env },
+      ).exitCode,
+    ).toBe(0);
     const pluginUrl = new URL(
       "../opencode/orchestrator/regular.ts",
       import.meta.url,
@@ -578,7 +667,9 @@ export default async ctx => initializeFromConfig(async config => {
   const after = hooks["tool.execute.after"];
   hooks["tool.execute.after"] = async (input, output) => {
     if (input.tool === "apply_patch") {
-      const journal = new Database(${JSON.stringify(join(root, ".local/share/opencode/orchestrator"))} + "/" + ctx.project.id + ".sqlite", { readonly: true });
+      const child = (await ctx.client.session.get({ path: { id: input.sessionID } })).data;
+      const parent = (await ctx.client.session.get({ path: { id: child.parentID } })).data;
+      const journal = new Database(${JSON.stringify(join(root, ".local/share/opencode/orchestrator"))} + "/" + parent.projectID + ".sqlite", { readonly: true });
       try {
         const outstanding = journal.query("SELECT count(*) AS count FROM tool_calls WHERE id=? AND child=?").get(input.callID, input.sessionID);
         await Bun.write(${JSON.stringify(nativePatchJournal)}, JSON.stringify(outstanding));
@@ -1124,6 +1215,113 @@ export default async ctx => initializeFromConfig(async config => {
       await realpath(join(directory, "src")),
     ]);
     expect((await api("/session")).length).toBe(6);
+    const crossRoot = await api("/session", { title: "Cross-project fixture" });
+    await api(`/session/${crossRoot.id}/message`, {
+      agent: "build",
+      parts: [{ type: "text", text: "NATIVE_CROSS_ROOT" }],
+    });
+    function crossDelegation() {
+      const row = orchestration!
+        .query(
+          "SELECT record FROM delegations WHERE json_extract(record, '$.root')=?",
+        )
+        .get(crossRoot.id) as { record: string } | null;
+      return row ? JSON.parse(row.record) : undefined;
+    }
+    await until(async () => {
+      const row = crossDelegation();
+      return row && ["completed", "failed"].includes(row.status)
+        ? row
+        : undefined;
+    }, "cross-project scribe completion");
+    expect(crossDelegation().status, crossDelegation().result).toBe(
+      "completed",
+    );
+    await until(async () => {
+      const messages = await api(`/session/${crossRoot.id}/message`);
+      return messages.some((message: any) =>
+        message.parts.some(
+          (part: any) =>
+            part.type === "text" &&
+            part.text.includes(`Delegation results ready:\n`) &&
+            part.text.includes(crossDelegation().id),
+        ),
+      )
+        ? true
+        : undefined;
+    }, "cross-project notification on the existing root");
+    const scribeID = crossDelegation().child;
+    const scribeSession = await api(
+      `/session/${scribeID}`,
+      undefined,
+      targetDirectory,
+    );
+    expect(scribeSession.projectID).not.toBe(crossRoot.projectID);
+    expect(scribeSession.parentID).toBe(crossRoot.id);
+    expect(await Bun.file(join(targetDirectory, "docs/native.md")).text()).toBe(
+      "Documented.\n",
+    );
+    expect(await Bun.file(nativePatchJournal).json()).toEqual({ count: 1 });
+    expect(
+      await Bun.file(join(targetDirectory, "docs/unowned.md")).exists(),
+    ).toBe(false);
+    const scribeMessages = await api(
+      `/session/${scribeID}/message`,
+      undefined,
+      targetDirectory,
+    );
+    const scribeParts = scribeMessages.flatMap((message: any) => message.parts);
+    const canonicalTarget = await realpath(targetDirectory);
+    expect(
+      scribeParts.some(
+        (part: any) =>
+          part.tool === "read" &&
+          part.state.status === "error" &&
+          part.state.error.includes(`Session directory: ${canonicalTarget}`),
+      ),
+    ).toBe(true);
+    expect(
+      scribeParts.some(
+        (part: any) =>
+          part.tool === "read" &&
+          part.state.status === "completed" &&
+          part.state.output.includes("Before."),
+      ),
+    ).toBe(true);
+    expect(
+      scribeParts.some(
+        (part: any) =>
+          part.tool === "apply_patch" &&
+          part.state.status === "error" &&
+          part.state.error.includes("outside delegated file ownership"),
+      ),
+    ).toBe(true);
+    await api(
+      `/session/${scribeID}/summarize`,
+      { providerID: "openai", modelID: "gpt-5.6-luna", auto: false },
+      targetDirectory,
+    );
+    await api(`/session/${crossRoot.id}/message`, {
+      agent: "build",
+      parts: [{ type: "text", text: "NATIVE_CROSS_RESUME" }],
+    });
+    await until(
+      async () =>
+        crossDelegation().status === "completed" &&
+        issued.has("NATIVE_SCRIBE_RESUME")
+          ? true
+          : undefined,
+      "same cross-project child resumed",
+    );
+    expect(crossDelegation().child).toBe(scribeID);
+    expect(
+      (await api("/session", undefined, targetDirectory)).filter(
+        (item: any) => item.parentID === crossRoot.id,
+      ),
+    ).toHaveLength(1);
+    expect(await Bun.file(join(targetDirectory, "docs/native.md")).text()).toBe(
+      "Resumed.\n",
+    );
     expect(logs).not.toMatch(
       /service=bun|installing dependencies|registry\.npmjs\.org/i,
     );
