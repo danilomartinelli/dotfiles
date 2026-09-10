@@ -4,14 +4,10 @@
 # Row order is apply order: a clone source must precede the profiles that
 # clone it.
 
-entry	agents	-
-entry	commands	-
-entry	skills	-
-entry	tools	-
+entry	orchestrator	-
 entry	ocx.jsonc	-
 entry	opencode.jsonc	-
 entry	opencode-mem.jsonc	-
 entry	tui.jsonc	-
 profile	regular	-
-profile	go	regular
-profile	boost	regular
+profile	example	regular

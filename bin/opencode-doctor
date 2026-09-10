@@ -10,6 +10,7 @@
 #   opencode-doctor
 #   opencode-doctor --fix
 #   opencode-doctor --fix --days 14
+#   opencode-doctor --fix --days 0 --clear-logs
 
 set -e
 

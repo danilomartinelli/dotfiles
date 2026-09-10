@@ -330,21 +330,21 @@ through their preferred Git subcommand form.
 
 ### General utilities
 
-| Command            | Usage and purpose                                                             |
-| ------------------ | ----------------------------------------------------------------------------- |
-| `battery-status`   | Print the macOS battery indicator used by the prompt                          |
-| `dns-flush`        | Flush the macOS DNS cache with `sudo`                                         |
-| `dot`              | Run normal dotfiles maintenance                                               |
-| `e`                | `e [path]`: open a path or the current directory in `$EDITOR`                 |
-| `headers`          | `headers URL`: print HTTP response headers                                    |
-| `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                        |
-| `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators     |
-| `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                  |
-| `opencode-doctor`  | `opencode-doctor [--fix] [--days n]`: report or repair OpenCode runtime state |
-| `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary |
-| `set-defaults`     | Apply tracked macOS preferences                                               |
-| `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity               |
-| `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key             |
+| Command            | Usage and purpose                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| `battery-status`   | Print the macOS battery indicator used by the prompt                                         |
+| `dns-flush`        | Flush the macOS DNS cache with `sudo`                                                        |
+| `dot`              | Run normal dotfiles maintenance                                                              |
+| `e`                | `e [path]`: open a path or the current directory in `$EDITOR`                                |
+| `headers`          | `headers URL`: print HTTP response headers                                                   |
+| `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                                       |
+| `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators                    |
+| `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                                 |
+| `opencode-doctor`  | `opencode-doctor [--fix] [--days n] [--clear-logs]`: report or repair OpenCode runtime state |
+| `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary                |
+| `set-defaults`     | Apply tracked macOS preferences                                                              |
+| `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity                              |
+| `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key                            |
 
 ### Mobile simulator provisioning
 
@@ -449,7 +449,7 @@ Arguments provided after an alias are passed to the expanded command.
 | AWS CloudWatch/DynamoDB   | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery`                                                              |
 
 OpenCode is launched through OCX: `opencode` and `oc` use the `regular`
-profile selected by `OCX_PROFILE`; `oc:regular`, `oc:go`, and `oc:boost`
+profile selected by `OCX_PROFILE`; `oc:regular` and `oc:example`
 select a profile explicitly.
 
 ## How the repository works
@@ -539,23 +539,34 @@ account-specific state outside this repository.
 ### OpenCode and OCX
 
 OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
-the `kdco` registry and links the dotfiles-owned `agents/`, `commands/`,
-`skills/`, `tools/`, `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`,
-`tui.jsonc`, and the `regular`, `go`, and `boost` profile directories.
+the `kdco` registry and links the dotfiles-owned `orchestrator/`, `ocx.jsonc`,
+`opencode.jsonc`, `opencode-mem.jsonc`,
+`tui.jsonc`, and the `regular` and `example` profile directories.
 `opencode/_managed-entries.tsv` is the one catalog behind that list: the
 installer and both test suites read it rather than keeping their own copy, and
 a check keeps this paragraph agreeing with it. The managed TUI
 follows the terminal's Catppuccin Macchiato theme and keeps audible
 notifications disabled. OCX retains `.ocx`, generated `plugins`,
-`package.json`, `.gitignore`, and `profiles/default`.
+`package.json`, `.gitignore`, and `profiles/default`. The installer replaces
+retired registry workflow components through OCX, retains worktree/notification
+plugins, and installs the local orchestrator's pinned dependencies with Bun.
+OCX itself remains upstream; the orchestration plugin is authored here.
 
-The `regular` profile carries the active trusted-project model and MCP policy.
-OCX cannot layer one profile over another, so `opencode/profiles/_shared/`
-states that policy once and `opencode/profiles/_routing.tsv` states only what
-distinguishes each profile; `_scripts/render-opencode-profiles` composes the
-two into the three payloads the installer links. `go` routes every role through
-`opencode-go/*`; `boost` is the uncapped, quality-first route across several
-providers. The shell default remains `regular`.
+The `regular` profile carries the active trusted-project model routing.
+Global `opencode.jsonc` owns common plugins and research MCPs; each project
+declares additional integrations and explicit permissions.
+OCX cannot layer one profile over another. `opencode/profiles/_shared/`
+owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
+declares the models; `_scripts/render-opencode-profiles` composes the
+sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
+payloads the installer links. `regular` uses Sol/xhigh for plan/build and Luna/high for
+coder, reviewer, scribe, explore and researcher.
+The orchestrator assigns each delegation a focus, with bounded parallel work,
+resumable corrections and consolidated memory without auxiliary sessions.
+`example` has the same initial routing and demonstrates another profile.
+The shell default remains `regular`. Prompts prefer `gh`/`glab` after remote
+and CLI discovery. External home-level skills are not discovered automatically;
+project skills remain available.
 
 See [`opencode/README.md`](opencode/README.md) for per-role model routing,
 profile maintenance, ownership, verification, and troubleshooting.
@@ -567,10 +578,7 @@ apply configuration to the real Mac. Run every safe suite without maintaining
 a duplicated filename list:
 
 ```bash
-for test_path in tests/*_test.sh; do
-  "$test_path"
-done
-_scripts/test-checkout-root
+_scripts/test
 ```
 
 `tests/documentation_test.sh` ensures that every public `bin/` command, Zsh
@@ -590,20 +598,14 @@ git ls-files -z '*.zsh' | xargs -0 zsh -n
 while IFS= read -r -d '' markdown_path; do
   [ ! -f "$markdown_path" ] || mdformat --check "$markdown_path"
 done < <(
-  git ls-files -z --cached --others --exclude-standard -- \
-    '*.md' \
-    ':(exclude)opencode/agents/**' \
-    ':(exclude)opencode/commands/**' \
-    ':(exclude)opencode/skills/**' \
-    ':(exclude)opencode/tools/**'
+  git ls-files -z --cached --others --exclude-standard -- '*.md'
 )
 git diff --check
 ```
 
 The Mise-managed `mdformat` includes the GFM and frontmatter plugins required
-to preserve tables and skill metadata. OCX registry-backed Markdown is excluded
-because byte changes invalidate its receipt; `ocx verify` checks that payload
-instead.
+to preserve tables and skill metadata. OCX registry payloads live outside the
+checkout; validate their integrity separately with `ocx verify`.
 
 ## Extend the setup
 

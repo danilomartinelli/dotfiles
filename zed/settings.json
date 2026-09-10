@@ -45,7 +45,7 @@
         "ocx",
         "opencode",
         "-p",
-        "boost",
+        "regular",
         "--no-rename",
         "acp"
       ]

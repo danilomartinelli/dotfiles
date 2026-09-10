@@ -6,8 +6,9 @@
 # ocx.jsonc or opencode.jsonc, so every shared key has to be physically present
 # in every profile. The layering therefore happens here, before the payload
 # reaches ~/.config/opencode. profiles/_shared holds the policy each profile
-# shares, profiles/_routing.tsv holds the only thing that differs, and this
-# script composes the two into the directories opencode/install.sh links.
+# shares, profiles/_overrides holds profile-specific policy, and
+# profiles/_routing.tsv owns model selection. This script composes them into
+# the directories opencode/install.sh links.
 
 set -euo pipefail
 
@@ -72,6 +73,7 @@ topic_dir=$(CDPATH='' cd -P -- "$topic_dir" 2>/dev/null && pwd) \
 
 roster=$topic_dir/_managed-entries.tsv
 shared_dir=$topic_dir/profiles/_shared
+overrides_dir=$topic_dir/profiles/_overrides
 routing=$topic_dir/profiles/_routing.tsv
 
 for required in "$roster" "$routing" "$shared_dir/AGENTS.md" \
@@ -104,15 +106,58 @@ declare -A routing_roles_of=()
 # routing records the payload renderer reads; nothing re-splits the file.
 routing_fields=()
 
-mapfile -t roles < <(jq -r '.agent | keys_unsorted[]' "$shared_dir/opencode.jsonc")
-[ "${#roles[@]}" -gt 0 ] \
-  || fail "no agents declared in $shared_dir/opencode.jsonc"
+declare -A policy_of=()
+declare -A roles_of=()
+roles=()
 
-# The routing table and the shared base are two halves of one declaration, so
+# Models belong to the routing catalog even for roles introduced by a profile.
+# Refuse competing declarations rather than silently choosing one source.
+validate_policy() {
+  local source=$1
+
+  jq -e '
+    type == "object"
+    and ((.agent // {}) | type == "object")
+    and ([.agent[]? | type == "object"] | all)
+    and (has("model") or has("small_model") | not)
+    and ([.agent[]? | has("model") or has("variant") or has("temperature")
+          or has("reasoningEffort") or has("textVerbosity")] | any | not)
+  ' "$source" >/dev/null \
+    || fail "invalid policy or routing options outside _routing.tsv: $source"
+}
+
+compose_policies() {
+  local profile override role
+
+  validate_policy "$shared_dir/opencode.jsonc"
+  for profile in "${profiles[@]}"; do
+    override=$overrides_dir/$profile.jsonc
+    if [ -f "$override" ]; then
+      validate_policy "$override"
+      policy_of["$profile"]=$(jq -s '.[0] * .[1]' \
+        "$shared_dir/opencode.jsonc" "$override")
+    else
+      policy_of["$profile"]=$(cat "$shared_dir/opencode.jsonc")
+    fi
+    roles_of["$profile"]=$(jq -r '.agent | keys_unsorted[]' \
+      <<<"${policy_of["$profile"]}")
+    [ -n "${roles_of["$profile"]}" ] \
+      || fail "no agents declared for $profile"
+
+    # The README includes the union of roles, retaining declaration order.
+    while IFS= read -r role; do
+      if ! printf '%s\n' "${roles[@]}" | grep -Fqx -- "$role"; then
+        roles+=("$role")
+      fi
+    done <<<"${roles_of["$profile"]}"
+  done
+}
+
+# The routing table and composed policy are two halves of one declaration, so
 # they are checked against each other before anything is rendered. Both
 # directions matter: an unknown row is a typo, and a missing one would silently
 # render a profile that routes an agent nowhere.
-# One routing row, checked against the roster and the shared base. The reader
+# One routing row, checked against the roster and composed policy. The reader
 # delivers the row already split and padded, so this states the rules and
 # nothing about tabs, comments, or column counts.
 validate_routing_row() {
@@ -128,7 +173,7 @@ validate_routing_row() {
 
   printf '%s\n' "${profiles[@]}" | grep -Fqx -- "$profile" \
     || fail "routing row names a profile with no roster entry: $profile"
-  printf '%s\n' default small "${roles[@]}" | grep -Fqx -- "$role" \
+  printf '%s\n' default small "${roles_of["$profile"]}" | grep -Fqx -- "$role" \
     || fail "routing row names an undeclared agent: $profile $role"
   [ -z "${routing_seen["$profile/$role"]:-}" ] \
     || fail "duplicate routing row: $profile $role"
@@ -174,8 +219,6 @@ compose_routing_cell() {
 validate_routing() {
   local declared expected_roles missing profile
 
-  expected_roles=$(printf '%s\n' default small "${roles[@]}" | sort)
-
   routing_seen=()
   routing_cell_of=()
   routing_roles_of=()
@@ -183,8 +226,9 @@ validate_routing() {
   catalog_each_row "$routing" validate_routing_row
 
   # Extra and misspelled rows are already refused above, so what is left to
-  # check is a role the shared base declares and this profile never routes.
+  # check is a role the composed policy declares and this profile never routes.
   for profile in "${profiles[@]}"; do
+    expected_roles=$(printf '%s\n' default small "${roles_of["$profile"]}" | sort)
     declared=$(printf '%s' "${routing_roles_of["$profile"]:-}" | sort)
     missing=$(
       comm -13 <(printf '%s\n' "$declared") <(printf '%s\n' "$expected_roles") \
@@ -194,8 +238,7 @@ validate_routing() {
   done
 }
 
-# Roles read Default, Small, then the agents in the order the shared base
-# declares them, which is the order a person meets them in opencode.jsonc.
+# Roles read Default, Small, then agents in policy declaration order.
 emit_routing_rows() {
   local role label profile row
 
@@ -208,7 +251,7 @@ emit_routing_rows() {
 
     row=$label
     for profile in "${profiles[@]}"; do
-      row=$row$'\t'${routing_cell_of["$profile/$role"]:-}
+      row=$row$'\t'${routing_cell_of["$profile/$role"]:--}
     done
     printf '%s\n' "$row"
   done
@@ -264,8 +307,7 @@ compose_routing_records() {
 render_config() {
   local profile=$1
 
-  # The shared base wins over a routing record on any key both declare, which is
-  # why .value is added last.
+  # Policy is composed first; validated routing owns every model option.
   jq --indent 2 --argjson routes "$routing_records" --arg profile "$profile" '
     $routes[$profile] as $routed
     | {
@@ -279,9 +321,10 @@ render_config() {
              | to_entries
              | map({key: .key, value: ($routed[.key] + .value)})
              | from_entries))
-  ' "$shared_dir/opencode.jsonc"
+  ' <<<"${policy_of["$profile"]}"
 }
 
+compose_policies
 validate_routing
 routing_records=$(compose_routing_records "${routing_fields[@]}")
 

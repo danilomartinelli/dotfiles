@@ -45,7 +45,7 @@ test_formatter_policy_and_sandbox_paths() {
       "ocx",
       "opencode",
       "-p",
-      "boost",
+      "regular",
       "--no-rename",
       "acp"
     ]

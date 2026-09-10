@@ -1,269 +1,242 @@
 # OpenCode via OCX
 
-This topic installs the OpenCode CLI through Mise, uses OCX to assemble its
-global workspace, and keeps the editable parts of that workspace under version
-control.
-
-The active configuration directory is `~/.config/opencode`. The repository does
-not replace that directory as a whole: it links only the paths that should be
-reviewed and evolved in dotfiles while leaving generated OCX state local.
+OpenCode and OCX are upstream CLIs installed through Mise. Dotfiles authors the
+orchestration plugin and profile sources; it does not fork OCX. OCX assembles
+profiles and maintains the worktree and notification components.
 
 ## Ownership
 
-| Owner    | Paths in `~/.config/opencode`                          | Purpose                                                 |
-| -------- | ------------------------------------------------------ | ------------------------------------------------------- |
-| Dotfiles | `agents/`, `commands/`, `skills/`, `tools/`            | Editable workspace behavior installed by OCX            |
-| Dotfiles | `profiles/boost/`, `profiles/regular/`, `profiles/go/` | Versioned profile instructions and model configuration  |
-| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`    | Global OCX, OpenCode, and memory plugin configuration   |
-| Dotfiles | `tui.jsonc`                                            | TUI theme, interaction, and notification defaults       |
-| OCX      | `.ocx/`, `plugins/`                                    | Installation receipt and generated plugin code          |
-| OCX      | `package.json`, `.gitignore`                           | Generated runtime dependencies and ignore rules         |
-| OCX      | `profiles/default/`                                    | Initial generated profile; the shell does not select it |
+The installer links only the entries declared in `opencode/_managed-entries.tsv`
+into `~/.config/opencode`. It never replaces the whole configuration directory.
 
-Do not copy the OCX-owned paths into this repository. They change as OCX
-installs or updates components and are not intended for manual maintenance.
+| Owner    | Paths in `~/.config/opencode`                       | Purpose                                                   |
+| -------- | --------------------------------------------------- | --------------------------------------------------------- |
+| Dotfiles | `orchestrator/`                                     | Workflow, prompts, permissions and pinned memory adapter  |
+| Dotfiles | `profiles/regular/`, `profiles/example/`            | Rendered instructions and model routing                   |
+| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc` | Registry, common plugins/MCPs and memory storage settings |
+| Dotfiles | `tui.jsonc`                                         | Theme, interaction and notification defaults              |
+| OCX      | `.ocx/`, `plugins/`, `package.json`, `.gitignore`   | Component receipts, generated code and dependencies       |
+| OCX      | `profiles/default/`                                 | Internal initial profile; never selected by the shell     |
 
-`opencode/_managed-entries.tsv` is the catalog behind the dotfiles rows above.
-It declares every entry and profile the installer links, and both
-`tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
-expectations from it. Adding or removing a managed entry starts there.
-
-The three profile directories are rendered, not written by hand.
-`opencode/profiles/_shared/` holds the policy every profile shares and
-`opencode/profiles/_routing.tsv` holds the model routing that distinguishes
-them; `_scripts/render-opencode-profiles` composes the two into the payloads
-the installer links. Edit the sources and rerun the renderer rather than
-editing a profile directory.
+Registry payloads are no longer versioned. Do not copy runtime files or receipts
+into this repository. Keep retained components byte-intact and validate them with
+`ocx verify --cwd "$HOME/.config/opencode" --verbose`.
 
 ## Install or refresh
-
-Run the topic installer directly:
 
 ```bash
 opencode/install.sh
 ```
 
-Normal bootstrap and `dot` updates also run it. The installer:
+Bootstrap and `dot` also invoke this installer. It installs the orchestrator's
+frozen Bun dependencies without lifecycle scripts, initializes OCX, registers
+`https://registry.kdco.dev`, and ensures `kdco/worktree` and `kdco/notify` are
+installed with their shared `kdco-primitives` dependency.
 
-1. Requires the Mise-provided `opencode` and `ocx` commands.
-1. Initializes the global OCX configuration.
-1. Registers `https://registry.kdco.dev` as `kdco`.
-1. Installs the `kdco/workspace` component set when its receipt is absent.
-1. Links every entry declared in `opencode/_managed-entries.tsv` into
-   `~/.config/opencode`, replacing each generated target instead of backing it
-   up.
-1. Creates `regular`, clones `go` and `boost` from it with OCX, then replaces
-   each generated profile directory with its repository link. The clone copies
-   only `ocx.jsonc` and the link discards even that, so every byte OpenCode
-   reads comes from this repository.
+The upgrade migration removes the superseded workspace bundle, its old agent,
+command and philosophy payloads, and the competing workspace/background hooks
+through `ocx remove`. It preserves custom content and stops on modified payloads.
+Only components whose receipt paths are all absent may use `--force` to retire
+stale metadata; no surviving modified file is force-removed. This handles
+checkouts where the retired managed sources have already disappeared.
 
-Re-running the installer is supported. Once the workspace receipt exists, it
-does not reinstall the component bundle, so local edits exposed through the
-managed links are preserved. It refreshes the three managed profiles without
-replacing `.ocx`, `plugins`, `package.json`, `.gitignore`, or
-`profiles/default`.
+The installer then links the managed entries and refreshes `regular` and
+`example`. Retired `go`/`boost` links are removed only when they point exactly
+at this checkout's former sources; local directories and other links survive.
+Re-running the installer is supported and leaves session and memory data alone.
 
-Refreshing a profile calls `ocx profile remove` before `ocx profile add`, and
-after the first install that path is a symbolic link into this checkout. `ocx`
-removes a profile with a single recursive remove, which unlinks the link rather
-than descending into it, so the versioned payload behind it is untouched.
-Verified against `ocx` 2.0.15, the version `mise/config.toml` declares.
-Re-verify it when that version changes: a release that deleted a profile's
-contents would take repository files with it, and `configure_profile` would
-then have to stop calling `ocx profile remove` for an already-linked profile.
-`tests/opencode_install_test.sh` holds its `ocx` fake to the verified behaviour
-before any scenario points that fake at the checkout.
+Profile refresh uses `ocx profile remove`, followed by `ocx profile add` and the
+managed link. OCX 2.0.15 unlinks a profile symlink without descending into its
+source. Recheck this behavior before upgrading OCX; the installer fixtures model
+that verified behavior.
+
+Start a new OpenCode process to load changed hooks and prompts. An existing
+process keeps its loaded configuration; installation does not restart it.
 
 ## Use OpenCode
 
-Open a new Zsh session or run `reload!` after changing the shell files.
+Open a new Zsh session or run `reload!` after shell changes.
 
-| Command      | Result                                                        |
-| ------------ | ------------------------------------------------------------- |
-| `opencode`   | Run `ocx opencode` with the profile selected by `OCX_PROFILE` |
-| `oc`         | Short form of `opencode`                                      |
-| `oc:boost`   | Run the `boost` profile explicitly                            |
-| `oc:regular` | Run the `regular` profile explicitly                          |
-| `oc:go`      | Run the `go` profile explicitly                               |
+| Command      | Result                                |
+| ------------ | ------------------------------------- |
+| `opencode`   | Run `ocx opencode` with `OCX_PROFILE` |
+| `oc`         | Short form of `opencode`              |
+| `oc:regular` | Select `regular` explicitly           |
+| `oc:example` | Select `example` explicitly           |
 
-`opencode/env.zsh` exports `OCX_PROFILE=regular`, so `opencode` and `oc` use the
-`regular` profile by default. Explicit profile aliases pass `-p` and do not
-change that default.
+`opencode/env.zsh` declares the default `OCX_PROFILE=regular`. Zed's ACP also
+selects `regular`. OpenChamber uses `bin/opencode-profile`, which launches
+OpenCode directly with the chosen profile's `OPENCODE_CONFIG` layered over the
+global configuration.
 
-The managed TUI keeps OpenCode aligned with the terminal stack: Catppuccin
-Macchiato, `ctrl+x` as the leader, `ctrl+p` for the command list, accelerated
-mouse scrolling, a blinking block cursor, and notifications without sound.
-Plugins remain in `opencode.jsonc`, which is their single configuration owner.
+The TUI uses Catppuccin Macchiato, `ctrl+x` as leader, `ctrl+p` for commands,
+accelerated scrolling, a blinking block cursor and silent notifications.
 
-### Profile contract and model routing
-
-OCX has no profile inheritance. Nothing above a profile layers into its
-`ocx.jsonc` or `opencode.jsonc`, so every shared key has to be physically
-present in every profile, and `ocx profile add --clone` copies only `ocx.jsonc`
-at creation time. The layering therefore happens in this repository:
-`profiles/_shared/` states the instructions, the OCX policy, the permissions,
-the MCP servers, and the researcher's read-oriented GitLab policy exactly once,
-and each profile contributes only the routing rows below.
-
-The parenthesised value in each cell is a model **variant**, which is the only
-reasoning knob `AgentConfig` accepts and is published per model: check a value
-against `opencode models <provider> --verbose` before declaring it.
-`reasoningEffort` and `textVerbosity` are OpenAI provider option names rather
-than agent keys, and OpenCode drops an unknown agent key without a word, so the
-`regular` profile spent its early life declaring efforts that never applied.
-`opencode/profiles/_routing.tsv` no longer has columns for them and the renderer
-refuses a row that still carries any.
+### Models and roles
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                      | `go`                                  | `boost`                              |
-| ---------- | ------------------------------ | ------------------------------------- | ------------------------------------ |
-| Default    | `openai/gpt-5.6-sol`           | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                 |
-| Small      | `openai/gpt-5.6-luna`          | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`               |
-| Plan       | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`max`)         |
-| Build      | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)         |
-| Coder      | `openai/gpt-5.6-luna` (`high`) | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-opus-5` (`max`)    |
-| Explore    | `openai/gpt-5.6-luna` (`high`) | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`max`) |
-| Researcher | `openai/gpt-5.6-luna` (`high`) | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`max`)         |
-| Scribe     | `openai/gpt-5.6-luna` (`high`) | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra` (`max`)       |
-| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`max`)         |
+| Role       | `regular`                      | `example`                      |
+| ---------- | ------------------------------ | ------------------------------ |
+| Default    | `openai/gpt-5.6-sol`           | `openai/gpt-5.6-sol`           |
+| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          |
+| Plan       | `openai/gpt-5.6-sol` (`xhigh`) | `openai/gpt-5.6-sol` (`xhigh`) |
+| Build      | `openai/gpt-5.6-sol` (`xhigh`) | `openai/gpt-5.6-sol` (`xhigh`) |
+| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
 
 <!-- generated-end -->
 
-`regular` uses OpenAI's Sol for planning, building, research, and review, Opus
-for coding, and Luna for exploration and writing, with Terra as the small model.
-`go` stays entirely on the OpenCode Go provider. `boost` is quality-first and
-has no cost ceiling: it uses Sol for planning, building, research, and review,
-Opus for coding, Haiku for exploration, and Terra for writing, and every one of
-those roles runs at `max`, the top of each model's published variant scale.
-That ceiling is what the profile is for. It had drifted into using `xhigh` and
-`high`, which left it tied with `regular` on coder, researcher, and reviewer
-once `regular` started applying its variants at all, so a profile whose whole
-purpose is spending more bought nothing on three of its seven roles.
+`regular` is the active profile; `example` starts with identical routing and
+preserves the structure for future customization. Plan/build coordinates the
+work. Coder implements and verifies, reviewer checks a supplied focus, scribe
+writes documentation, explore investigates code and researcher retrieves
+external facts. Supporting roles are used when useful, not as mandatory stages.
 
-### Trusted project integrations
+A root runs at most three children with explicit focuses and non-overlapping
+writer ownership. Corrections resume the same child. Reviews use a source
+snapshot and have no fixed round count. Plan saves do not trigger reviews.
+Memory is consolidated in the root execution without auxiliary LLM sessions.
+See [runtime behavior and recovery](orchestrator/README.md) and the
+[orchestration contract](ORCHESTRATION.md).
 
-The `regular`, `go`, and `boost` profiles are intended for trusted projects.
-Their OCX `exclude` lists are empty, so `CLAUDE.md` is no longer filtered out
-and project-level OpenCode configuration, MCP servers, and permissions remain
-available. The shared researcher policy extends the global read-oriented `gh`
-policy with equivalent `glab` routes for repositories, merge requests, issues,
-releases, CI, search, and the API.
+### Repository and tracker access
 
-The profile `include` list stays empty because OCX already merges the trusted
-project's `AGENTS.md`, OpenCode configuration, and `.opencode/` payload. The
-shell keeps `OPENCODE_DISABLE_PROJECT_CONFIG=true` so the OpenCode child does
-not discover those sources a second time. It exports
-`OPENCODE_DISABLE_EXTERNAL_SKILLS=false` to retain compatible `.agents/skills`
-discovery, while `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` continues to omit
-`.claude/skills`.
+For repository, issue, PR or MR context, the prompts first inspect `git remote -v`
+and check `command -v gh` or `command -v glab`. They prefer the matching CLI,
+reuse that discovery in delegated work and use `--repo` or API `--hostname` when
+needed. Web access is the fallback for missing capabilities or inaccessible
+resources, or when explicitly requested by the user.
 
-The profile also declares Linear's remote MCP with `linear_*` tools allowed, and
-the server is enabled, so the first connection requires Linear authentication.
-Set `mcp.linear.enabled` to `false` in
-`opencode/profiles/_shared/opencode.jsonc` and run
-`_scripts/render-opencode-profiles` to turn it off for all managed profiles.
+The read-only runtime guard permits this discovery and supported Git/CLI query
+commands, including explicit GET APIs. It rejects mutations, shell composition
+and browser-opening flags. Publishing and other writes require existing user
+authorization and an appropriate writer delegation.
 
-Zed's ACP integration is separate from these interactive aliases and starts
-OpenCode through OCX with the `boost` profile explicitly.
+### Project integrations and skills
 
-## Edit the global workspace
+Global configuration contains the common research MCPs and plugins only.
+Additional integrations belong in the trusted project's OpenCode configuration.
+For example, a project can register an optional server and explicitly permit its
+tools for coder:
 
-Edit the repository source, not the link under `~/.config/opencode`:
+```json
+{
+  "mcp": {
+    "project_tracker": {
+      "type": "remote",
+      "url": "https://tracker.example.invalid/mcp"
+    }
+  },
+  "agent": {
+    "coder": {
+      "permission": {
+        "project_tracker_*": "allow",
+        "project_tracker_delete_item": "deny"
+      }
+    }
+  }
+}
+```
 
-- Agent prompts: `opencode/agents/`
-- Commands: `opencode/commands/`
-- Skills: `opencode/skills/`
-- Shared instructions: `opencode/tools/`
-- Global OCX registry: `opencode/ocx.jsonc`
-- Global OpenCode configuration: `opencode/opencode.jsonc`
-- OpenCode memory plugin configuration: `opencode/opencode-mem.jsonc`
-- Global TUI configuration: `opencode/tui.jsonc`
-- Shared profile policy: `opencode/profiles/_shared/`
-- Model routing: `opencode/profiles/_routing.tsv`
+Coder preserves explicit permissions for configured MCP namespaces; a server
+alone does not grant access. These permissions do not override native tool
+boundaries or authorize remote changes. Build/plan, reviewer, explore and
+researcher retain their reviewed read-only tool allowlist. Supporting a new MCP
+in those roles requires reviewing its query operations in the runtime.
 
-Changes are immediately visible through the symbolic links. Review the Git diff
-before keeping changes produced by an OCX component update.
+Automatic discovery of home-level `.agents/skills` and `.claude/skills` is off.
+The runtime adds `.agents/skills` from the current directory through the Git
+worktree root, including intermediate directories, while preserving explicit
+`skills.paths` and `skills.urls`. Outside Git, only the current directory is
+automatically added. Project `.opencode/skills`
+continues to work through normal configuration discovery. Other tools' global
+skill installations are untouched.
 
-## Edit or add a profile
+OCX profiles have empty `exclude` and `include` lists: OCX merges trusted project
+instructions/configuration itself. The shell sets
+`OPENCODE_DISABLE_PROJECT_CONFIG=true` to avoid duplicate discovery in that
+launch path. The direct GUI adapter overrides it to `false`, because there is
+no OCX project merge in that path. The adapter also passes
+`DOTFILES_OPENCODE_PROFILE_CONFIG` so the runtime restores the selected profile's
+models after project merging. Project integrations remain available without
+changing the declared model routes.
 
-A profile directory holds three rendered files:
+## Edit configuration or profiles
 
-- `AGENTS.md` and `ocx.jsonc`, copied from `profiles/_shared/`.
-- `opencode.jsonc`, composed from `profiles/_shared/opencode.jsonc` and the
-  profile's rows in `profiles/_routing.tsv`.
+Edit the owning source and use a new process to load the result:
 
-To change what every profile shares, edit `profiles/_shared/`. To change one
-profile's routing, edit its rows in `profiles/_routing.tsv`. Either way, render
-the result:
+| Concern                                    | Source                                         |
+| ------------------------------------------ | ---------------------------------------------- |
+| Common plugins and MCPs                    | `opencode/opencode.jsonc`                      |
+| Registry                                   | `opencode/ocx.jsonc`                           |
+| Memory storage/UI                          | `opencode/opencode-mem.jsonc`                  |
+| TUI                                        | `opencode/tui.jsonc`                           |
+| Workflow, prompts and permissions          | `opencode/orchestrator/`                       |
+| Shared profile instructions and OCX policy | `opencode/profiles/_shared/`                   |
+| Optional policy for one profile            | `opencode/profiles/_overrides/<profile>.jsonc` |
+| Models and variants                        | `opencode/profiles/_routing.tsv`               |
+
+The profile directories are generated. OCX has no profile inheritance and
+`--clone` copies only `ocx.jsonc`; the renderer composes shared policy, optional
+overrides and routing into each profile's three payloads:
 
 ```bash
 _scripts/render-opencode-profiles
+_scripts/render-opencode-profiles --check
 ```
 
-The routing table carries one row per profile and role, with `-` omitting a
-key. `default` and `small` name the profile's `model` and `small_model` and
-take a model only; the remaining roles are the agents declared in
-`profiles/_shared/opencode.jsonc`. The renderer refuses a row that names an
-unknown profile or agent, a duplicate row, a role the shared base declares and
-the profile never routes, and a non-numeric temperature.
+`default` and `small` rows declare `model` and `small_model`. Agent rows use the
+roles declared by the profile source. Model settings belong only in routing;
+overrides cannot introduce them. A new workflow role also needs a runtime
+contract. The renderer rejects unknown, duplicate or incomplete routes.
 
-To add another profile derived from the trusted-project baseline:
+`variant` is the supported agent reasoning knob. Validate each model and variant
+against `bin/opencode-profile models <provider> --verbose` without `--pure`.
+Provider options such as `reasoningEffort` are not agent configuration keys.
 
-1. Add its rows to `opencode/profiles/_routing.tsv`.
-1. Add a `profile` row to `opencode/_managed-entries.tsv` below the `regular`
-   row, naming `regular` as its clone source. The installer and both test
-   suites pick it up from there.
-1. Run `_scripts/render-opencode-profiles` to write the profile directory.
-1. Add its `oc:<name>` shortcut to `opencode/aliases.zsh` and document the
-   profile in this file, `README.md`, and `AGENTS.md`;
-   `tests/documentation_test.sh` fails until all four exist.
-1. Validate every model and variant against the live model catalog, run the
-   installer, and verify the resulting link.
+To add a profile:
 
-Nothing else is edited by hand: the shared instructions, OCX policy,
-permissions, and MCP configuration come from `profiles/_shared/` unchanged.
+1. Add routing rows and a `profile` row to `opencode/_managed-entries.tsv`, with
+   `regular` as its clone source.
+1. Render the profile and add its `oc:<name>` shortcut to `opencode/aliases.zsh`.
+1. Document the profile here, in `README.md` and in `AGENTS.md`.
+1. Validate its models, run the focused tests, install and verify its link.
 
-## Update OCX components
+## Update and verify
 
-Use OCX for component updates, then review any changes exposed through the
-managed links:
+Update retained registry components with OCX, then check their integrity:
 
 ```bash
 ocx update --all
-git diff -- opencode
-tests/opencode_install_test.sh
+opencode/install.sh
+ocx verify --cwd "$HOME/.config/opencode" --verbose
 ```
 
-Keep intended updates in the repository. Revert or correct unintended changes
-before the next dotfiles update.
-
-## Verify
-
-Run the focused suite:
+The local orchestrator and its pinned memory dependency have a separate
+[update procedure](orchestrator/README.md#dependencies-and-updates).
 
 ```bash
-tests/opencode_install_test.sh
+_scripts/test opencode_install
+_scripts/test opencode_orchestrator
+_scripts/test documentation
 ```
 
-It verifies the shell defaults and aliases, JSON and TUI configuration, that
-every profile still matches its composed result, exact model routing, payload
-ownership, exact link targets, repeat installation, preservation of runtime
-state, and receipt-aware workspace installation.
+Fixtures cover generated profiles, model routing, installed ownership, repeated
+migration, runtime preservation, delegation lifecycle, permissions and memory.
+Use `_scripts/test` for the complete safe suite after shared/security changes.
 
-`_scripts/render-opencode-profiles --check` reports the same drift on its own,
-naming each payload that no longer matches its sources.
-
-Inspect the live links when diagnosing a machine-specific issue:
+For a machine-specific link check:
 
 ```bash
 find "$HOME/.config/opencode" -maxdepth 2 -type l -print
 ocx profile list --global
 ```
 
-Expected managed links are the global entries in the ownership table plus the
-`boost`, `regular`, and `go` profile directories, exactly as
-`opencode/_managed-entries.tsv` declares them.
+Expected managed links come from `opencode/_managed-entries.tsv`.
 
 ## Maintain the runtime state
 
@@ -276,13 +249,15 @@ repairs it:
 opencode-doctor
 opencode-doctor --fix
 opencode-doctor --fix --days 14
+opencode-doctor --fix --days 0 --clear-logs
 ```
 
 `opencode/_doctor.sh` owns the behavior and the command is a thin adapter over
-it. Four kinds of state accumulate there without an owner:
+it. It reports and repairs the following state:
 
 | State                      | Why it accumulates                                                           |
 | -------------------------- | ---------------------------------------------------------------------------- |
+| Log files                  | CLI/plugin output and rotated logs                                           |
 | The `event` table          | An append-only replication log for remote workspaces, with no retention      |
 | Worktree processes         | A command an agent started outlives the session that started it              |
 | Stale `workspace` rows     | A row outlives its directory, and a retired adapter fails every server start |
@@ -297,7 +272,15 @@ sensible window. Pruning therefore removes the replication history of every
 finished session, one whose newest message is a completed assistant reply,
 regardless of age, and of every other session outside the retention window. A
 session still owed a reply, or whose reply was cut off, keeps its history for
-`--days` days. Every transcript stays intact either way.
+`--days` days. `--days 0` removes all replication events, including those from
+today, and compacts the database. Sessions, messages and memory data remain
+intact.
+
+Routine repair rotates the primary log when it exceeds 64 MiB. Add
+`--clear-logs` to delete regular `*.log` and numbered rotation files from the
+log directory regardless of age or size. Other files, subdirectories and
+symlinks are preserved; a symlinked log directory is refused. This option is
+read-only without `--fix`.
 
 Reporting is the default because each repair deletes state no backup covers.
 Repairs refuse to run while OpenCode holds the database, so quit OpenChamber

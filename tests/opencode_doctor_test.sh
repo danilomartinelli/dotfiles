@@ -5,8 +5,10 @@ set -u
 TEST_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
+# shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
+# shellcheck disable=SC1091
 source "$TEST_DIR/_support/stubs.sh"
 # shellcheck source=tests/_support/fixture.sh
 # shellcheck disable=SC1091
@@ -279,12 +281,62 @@ test_fix_refuses_while_the_database_is_held() {
     waited=$((waited + 1))
   done
 
-  assert_fails_with_status 1 invoke_doctor "$fixture" --fix
+  printf 'keep live log\n' >"$fixture/data/log/opencode.log"
+  assert_fails_with_status 1 invoke_doctor "$fixture" --fix --days 0 --clear-logs
   stop_process "$pid"
 
   assert_contains "$fixture/stderr.log" 'OpenCode is running and holds the database'
   assert_equal '8' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" \
     'events after a refused repair'
+  assert_contains "$fixture/data/log/opencode.log" 'keep live log'
+}
+
+test_zero_retention_and_log_clear_preserve_transcripts_and_other_files() {
+  local fixture before
+  fixture=$(make_fixture)
+  # Also cover timestamps in the current second or ahead of the local clock.
+  sqlite3 "$fixture/data/opencode.db" 'UPDATE session SET time_updated = 9999999999999;'
+  before=$(count_rows "$fixture" 'SELECT id, session_id, time_created, data FROM message ORDER BY id;')
+  printf 'today\n' >"$fixture/data/log/opencode.log"
+  printf 'rotation\n' >"$fixture/data/log/opencode.log.1"
+  printf 'plugin\n' >"$fixture/data/log/plugin.20260910.log"
+  printf 'unrelated\n' >"$fixture/data/log/keep.txt"
+  printf 'outside\n' >"$fixture/outside.log"
+  ln -s "$fixture/outside.log" "$fixture/data/log/linked.log"
+  mkdir "$fixture/data/log/directory.log"
+
+  invoke_doctor "$fixture" --days 0 --clear-logs
+  assert_equal '8' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" 'report preserves events'
+  assert_contains "$fixture/data/log/opencode.log" 'today'
+
+  invoke_doctor "$fixture" --fix --days 0 --clear-logs
+  assert_equal '0' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" 'all replication events removed'
+  assert_equal '4' "$(count_rows "$fixture" 'SELECT count(*) FROM session;')" 'sessions preserved'
+  assert_equal '4' "$(count_rows "$fixture" 'SELECT count(*) FROM event_sequence;')" 'replication counters preserved'
+  assert_equal "$before" "$(count_rows "$fixture" 'SELECT id, session_id, time_created, data FROM message ORDER BY id;')" 'transcripts unchanged'
+  assert_equal 'ok' "$(count_rows "$fixture" 'PRAGMA integrity_check;')" 'database remains valid'
+  [ ! -e "$fixture/data/log/opencode.log" ] || scenario_fail 'current log survived'
+  [ ! -e "$fixture/data/log/opencode.log.1" ] || scenario_fail 'rotated log survived'
+  [ ! -e "$fixture/data/log/plugin.20260910.log" ] || scenario_fail 'dated plugin log survived'
+  assert_contains "$fixture/data/log/keep.txt" 'unrelated'
+  assert_contains "$fixture/outside.log" 'outside'
+  [ -L "$fixture/data/log/linked.log" ] || scenario_fail 'log symlink was removed'
+  [ -d "$fixture/data/log/directory.log" ] || scenario_fail 'directory was removed'
+  assert_contains "$fixture/stdout.log" 'cleared 3 log file(s)'
+
+  invoke_doctor "$fixture" --fix --days 0 --clear-logs
+  assert_contains "$fixture/stdout.log" 'cleared 0 log file(s)'
+}
+
+test_log_clear_refuses_a_symlinked_directory() {
+  local fixture
+  fixture=$(make_fixture)
+  mv "$fixture/data/log" "$fixture/external-logs"
+  printf 'outside\n' >"$fixture/external-logs/opencode.log"
+  ln -s "$fixture/external-logs" "$fixture/data/log"
+  assert_fails_with_status 1 invoke_doctor "$fixture" --fix --days 0 --clear-logs
+  assert_contains "$fixture/external-logs/opencode.log" 'outside'
+  assert_equal '8' "$(count_rows "$fixture" 'SELECT count(*) FROM event;')" 'preflight refusal preserves events'
 }
 
 test_repeat_repair_changes_nothing_further() {
@@ -352,6 +404,8 @@ scenario_run 'a repair refuses while the database is held' test_fix_refuses_whil
 scenario_run 'a repeated repair changes nothing further' test_repeat_repair_changes_nothing_further
 scenario_run 'an oversized log is rotated' test_oversized_log_is_rotated
 scenario_run 'a small log is left alone' test_small_log_is_left_alone
+scenario_run 'zero retention and explicit log clearing preserve transcripts and unrelated files' test_zero_retention_and_log_clear_preserve_transcripts_and_other_files
+scenario_run 'log clearing refuses a symlinked directory before changing state' test_log_clear_refuses_a_symlinked_directory
 scenario_run 'an invalid retention window is a usage error' test_invalid_retention_is_a_usage_error
 scenario_run 'a missing database is an operational error' test_missing_database_is_an_operational_error
 scenario_finish

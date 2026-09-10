@@ -1,0 +1,14 @@
+# OCX workspace components replaced by the local orchestrator.
+# Columns: component, former payload (- for the bundle with no files).
+workspace	-
+plan-protocol	skills/plan-protocol/SKILL.md
+researcher	agents/researcher.md
+scribe	agents/scribe.md
+coder	agents/coder.md
+reviewer	agents/reviewer.md
+review	commands/review.md
+code-review	skills/code-review/SKILL.md
+plan-review	skills/plan-review/SKILL.md
+philosophy	tools/philosophy.md
+code-philosophy	skills/code-philosophy/SKILL.md
+frontend-philosophy	skills/frontend-philosophy/SKILL.md

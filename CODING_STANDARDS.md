@@ -119,29 +119,28 @@ without updating adapters, tests, and user documentation in the same change.
 - Topic installers source `_scripts/installer-preamble.sh` immediately after
   error-mode setup and use its shared interface:
 
-  | Helper                       | Contract                                                           |
-  | ---------------------------- | ------------------------------------------------------------------ |
-  | `installer_require_darwin`   | Skip successfully outside macOS                                    |
-  | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
-  | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
-  | `installer_optional_app`     | Warn and skip when an optional application is absent               |
-  | `installer_config_dir`       | Resolve a tool's configuration directory without creating it       |
-  | `installer_workspace_root`   | Resolve the Workspace root without creating it                     |
-  | `installer_skip_if_applied`  | Skip successfully when a run-once step has already been applied    |
-  | `installer_mark_applied`     | Record that a run-once step completed                              |
-  | `installer_claim_file_types` | Gate, apply, and record a topic's declared file-type associations  |
-
-| `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
-| `installer_link_config` | Delegate configuration linking to `_scripts/link-config` |
-| `installer_link_tool_config` | Create a tool's configuration directory and link one file into it |
-| `installer_banner` | Print a phase heading to stdout |
-| `installer_success` | Print successful completion to stdout |
-| `installer_item` | Print one completed step inside a phase, indented under it |
-| `installer_note` | Print non-error detail to stdout |
-| `installer_warn` | Print a warning to stderr |
-| `installer_error` | Print an error to stderr |
-| `installer_hint` | Continue a warning or error with an actionable stderr hint |
-| `installer_fail` | Print an error and stop the installer |
+  | Helper                         | Contract                                                            |
+  | ------------------------------ | ------------------------------------------------------------------- |
+  | `installer_require_darwin`     | Skip successfully outside macOS                                     |
+  | `installer_require_command`    | Stop with an actionable formula hint when a required CLI is absent  |
+  | `installer_optional_command`   | Warn and skip when an optional CLI is absent                        |
+  | `installer_optional_app`       | Warn and skip when an optional application is absent                |
+  | `installer_config_dir`         | Resolve a tool's configuration directory without creating it        |
+  | `installer_workspace_root`     | Resolve the Workspace root without creating it                      |
+  | `installer_skip_if_applied`    | Skip successfully when a run-once step has already been applied     |
+  | `installer_mark_applied`       | Record that a run-once step completed                               |
+  | `installer_claim_file_types`   | Gate, apply, and record a topic's declared file-type associations   |
+  | `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
+  | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
+  | `installer_link_tool_config`   | Create a tool's configuration directory and link one file into it   |
+  | `installer_banner`             | Print a phase heading to stdout                                     |
+  | `installer_success`            | Print successful completion to stdout                               |
+  | `installer_item`               | Print one completed step inside a phase, indented under it          |
+  | `installer_note`               | Print non-error detail to stdout                                    |
+  | `installer_warn`               | Print a warning to stderr                                           |
+  | `installer_error`              | Print an error to stderr                                            |
+  | `installer_hint`               | Continue a warning or error with an actionable stderr hint          |
+  | `installer_fail`               | Print an error and stop the installer                               |
 
 A topic that links a file into `$HOME/.config/<tool>` calls
 `installer_link_tool_config`, which resolves the directory, creates it, and
@@ -323,10 +322,8 @@ the dependent installer.
   narrate obvious syntax.
 - Keep `README.md` human-facing, `AGENTS.md` operational for agents, and this
   file normative. Detailed OpenCode procedures belong in `opencode/README.md`.
-- Do not format registry-backed Markdown under `opencode/agents/`,
-  `opencode/commands/`, `opencode/skills/`, or `opencode/tools/` independently.
-  Those files must remain byte-identical to their OCX receipt; update them with
-  OCX and validate integrity with `ocx verify`.
+- OCX registry payloads live outside the checkout. Update them through OCX
+  and validate integrity with `ocx verify`; do not vendor or reformat them.
 - Do not invent licenses, approvers, support channels, changelogs, or ownership
   beyond Danilo as the sole owner.
 
@@ -395,6 +392,7 @@ A second fixture needing either reads it from there rather than restating it.
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
+| OpenCode orchestration plugin                                   | `tests/opencode_orchestrator_test.sh`                                                                        |
 | OpenCode runtime state maintenance                              | `tests/opencode_doctor_test.sh`                                                                              |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 
@@ -424,12 +422,7 @@ git ls-files -z '*.zsh' | xargs -0 zsh -n
 while IFS= read -r -d '' markdown_path; do
   [ ! -f "$markdown_path" ] || mdformat --check "$markdown_path"
 done < <(
-  git ls-files -z --cached --others --exclude-standard -- \
-    '*.md' \
-    ':(exclude)opencode/agents/**' \
-    ':(exclude)opencode/commands/**' \
-    ':(exclude)opencode/skills/**' \
-    ':(exclude)opencode/tools/**'
+  git ls-files -z --cached --others --exclude-standard -- '*.md'
 )
 git diff --check
 ```

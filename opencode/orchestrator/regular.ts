@@ -1,0 +1,459 @@
+import {
+  tool,
+  type Config,
+  type Hooks,
+  type PluginInput,
+} from "@opencode-ai/plugin";
+import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  childRoles,
+  openDelegations,
+  sourceVersion,
+  writerRoles,
+  type Routes,
+} from "./delegations";
+import { assertReadOnlyTool } from "./permissions";
+import { prompts, rolePermissions } from "./prompts";
+import { assertWriteTargets, writeTools } from "./write-targets";
+
+export async function regularHooks(ctx: PluginInput, declared: Config) {
+  const profile = process.env.DOTFILES_OPENCODE_PROFILE_CONFIG;
+  if (profile) {
+    declared = (await import(pathToFileURL(profile).href)).default as Config;
+    if (!declared.model || !declared.small_model)
+      throw new Error(
+        "The selected profile must declare default and small models.",
+      );
+  }
+  const model = declared.model;
+  const smallModel = declared.small_model;
+  const routes = Object.fromEntries(
+    ["plan", "build", ...childRoles].map((role) => {
+      const agent = declared.agent?.[role];
+      if (!agent?.model || !agent.variant)
+        throw new Error(`Missing declared route: ${role}`);
+      return [role, { model: agent.model, variant: agent.variant }];
+    }),
+  ) as Routes;
+  const manager = await openDelegations(
+    path.join(
+      os.homedir(),
+      ".local/share/opencode/orchestrator",
+      `${ctx.project.id}.sqlite`,
+    ),
+    ctx.client,
+    routes,
+  );
+  const roles = new Map<string, string>();
+  let mcpServers: string[] = [];
+  async function rootFor(sessionID: string) {
+    const child = manager.forChild(sessionID);
+    if (child) return child.root;
+    await manager.assertRoot(sessionID);
+    return sessionID;
+  }
+  async function resolveRole(sessionID: string): Promise<string> {
+    const child = manager.forChild(sessionID);
+    if (child) return child.role;
+    if (roles.has(sessionID)) return roles.get(sessionID)!;
+    const result = await ctx.client.session.messages({
+      path: { id: sessionID },
+    });
+    if (result.error) throw new Error("Cannot resolve agent capabilities.");
+    const info = result.data?.at(-1)?.info;
+    // Native v1.18.23 assistants carry `agent`; the legacy SDK still declares `mode`.
+    const role =
+      info && "agent" in info
+        ? info.agent
+        : info?.role === "assistant"
+          ? info.mode
+          : undefined;
+    if (
+      !role ||
+      !Object.hasOwn(routes, role) ||
+      !["build", "plan"].includes(role)
+    )
+      throw new Error(
+        "Root sessions must use build/plan; enter child roles through delegate.",
+      );
+    return role;
+  }
+  const rootOnly = new Set([
+    "compress",
+    "delegate",
+    "delegation_cancel",
+    "review_snapshot",
+    "plan_save",
+    "memory_commit",
+    "todowrite",
+    "question",
+    "worktree_create",
+    "worktree_delete",
+  ]);
+  async function notifyRoot(root: string, rootDirectory: string) {
+    try {
+      manager.assertSettled(root);
+    } catch {
+      return;
+    }
+    const notices = manager.notifications(root);
+    if (!notices.length) return;
+    // One batch wakes the existing root; no metadata or notification session.
+    const role = await resolveRole(root);
+    const route = routes[role];
+    const [providerID, ...modelID] = route.model.split("/");
+    const body = {
+      agent: role,
+      model: { providerID, modelID: modelID.join("/") },
+      variant: route.variant,
+      parts: [
+        {
+          type: "text" as const,
+          text: `Delegation results ready:\n${notices.join("\n")}\nConsolidate the completed scope.`,
+        },
+      ],
+    };
+    try {
+      const response = await ctx.client.session.promptAsync({
+        path: { id: root },
+        query: { directory: rootDirectory },
+        body,
+      });
+      if (response.error) manager.restoreNotifications(root, notices);
+    } catch {
+      manager.restoreNotifications(root, notices);
+    }
+  }
+  manager.onStopped = (row) => notifyRoot(row.root, row.rootDirectory);
+
+  const hooks: Hooks = {
+    config: async (config) => {
+      config.model = model;
+      config.small_model = smallModel;
+      mcpServers = Object.keys(config.mcp ?? {});
+      // External discovery also scans ~/.agents. Keep project skills available
+      // explicitly while the launcher disables that global discovery.
+      const skillsConfig = config as Config & {
+        skills?: { paths?: string[]; urls?: string[] };
+      };
+      const directory = path.resolve(ctx.directory);
+      const worktree = path.resolve(ctx.worktree);
+      const relative = path.relative(worktree, directory);
+      // Non-Git instances use / as their worktree. They may load their own
+      // skills, but must not turn an ancestor home directory into project scope.
+      const bounded =
+        worktree !== path.parse(worktree).root &&
+        relative !== ".." &&
+        !relative.startsWith(`..${path.sep}`) &&
+        !path.isAbsolute(relative);
+      const projectSkills: string[] = [];
+      for (let current = directory; ; current = path.dirname(current)) {
+        const skills = path.join(current, ".agents/skills");
+        if (existsSync(skills)) projectSkills.push(skills);
+        if (!bounded || current === worktree) break;
+      }
+      skillsConfig.skills = {
+        ...skillsConfig.skills,
+        paths: [
+          ...new Set([...(skillsConfig.skills?.paths ?? []), ...projectSkills]),
+        ],
+      };
+      config.agent ??= {};
+      for (const role of new Set([
+        ...Object.keys(config.agent),
+        "general",
+        "explore",
+        "summary",
+        "title",
+      ])) {
+        if (!Object.hasOwn(routes, role) && role !== "compaction")
+          config.agent[role] = { disable: true };
+      }
+      for (const [role, route] of Object.entries(routes)) {
+        config.agent ??= {};
+        const agent = config.agent[role] ?? {};
+        config.agent[role] = {
+          ...agent,
+          ...route,
+          disable: false,
+          temperature: undefined,
+          prompt: prompts[role],
+          mode: role === "plan" || role === "build" ? "primary" : "subagent",
+          permission: rolePermissions(
+            role,
+            config.mcp,
+            config.permission,
+            agent.permission,
+          ) as NonNullable<typeof agent>["permission"],
+        };
+      }
+      config.permission = Object.assign({}, config.permission, {
+        task: "deny" as const,
+      });
+      // Core compaction inherits the current user's model when this internal
+      // agent has no model override. The parameter hook enforces that role's route.
+      config.agent ??= {};
+      config.agent.title = { disable: true };
+      config.agent.compaction = {
+        ...config.agent.compaction,
+        model: undefined,
+        variant: undefined,
+        mode: "subagent",
+        hidden: true,
+        permission: { "*": "deny" } as NonNullable<
+          NonNullable<Config["agent"]>[string]
+        >["permission"],
+      };
+    },
+    tool: {
+      delegate: tool({
+        description:
+          "Run a declared role asynchronously: coder implements/verifies, scribe documents, explore investigates code, researcher retrieves external facts, reviewer reviews a source snapshot. Supply one focus in prompt; maximum three active. Resume the same delegation ID for corrections. Coder/scribe require disjoint ownership; read-only roles require empty ownership; only reviewer needs review_snapshot. Models come from the profile.",
+        args: {
+          role: tool.schema.enum(childRoles),
+          workItem: tool.schema.string().min(1).max(200),
+          directory: tool.schema.string(),
+          ownership: tool.schema.array(tool.schema.string()).max(100),
+          prompt: tool.schema.string().min(1).max(24000),
+          sourceVersion: tool.schema.string().optional(),
+          resume: tool.schema.string().optional(),
+        },
+        async execute(args, context) {
+          await manager.recover(context.sessionID);
+          return JSON.stringify(await manager.start(context.sessionID, args));
+        },
+      }),
+      delegation_list: tool({
+        description:
+          "Read delegation statuses and recorded routes; use after notifications, not polling.",
+        args: {},
+        async execute(_args, context) {
+          const root = await rootFor(context.sessionID);
+          await manager.recover(root);
+          return JSON.stringify(
+            manager.list(root).map(({ result, ...row }) => row),
+          );
+        },
+      }),
+      delegation_read: tool({
+        description:
+          "Read the retained result of a delegation in this root session. Running results never block.",
+        args: { id: tool.schema.string() },
+        async execute(args, context) {
+          const root = await rootFor(context.sessionID);
+          await manager.recover(root);
+          return JSON.stringify(manager.get(root, args.id));
+        },
+      }),
+      delegation_cancel: tool({
+        description:
+          "Abort a delegation, retaining its session and diagnostics. A stopping result is unconfirmed and still reserves its capacity/ownership.",
+        args: { id: tool.schema.string() },
+        async execute(args, context) {
+          await manager.assertRoot(context.sessionID);
+          return JSON.stringify(await manager.stop(context.sessionID, args.id));
+        },
+      }),
+      review_snapshot: tool({
+        description:
+          "Hash current HEAD, staged/unstaged changes and untracked content after writers finish; bind reviewers to the returned source version.",
+        args: { directory: tool.schema.string() },
+        async execute(args, context) {
+          await manager.assertRoot(context.sessionID);
+          await manager.recover(context.sessionID);
+          manager.assertSettled(context.sessionID);
+          return sourceVersion(args.directory);
+        },
+      }),
+      plan_save: tool({
+        description:
+          "Save a bounded Markdown plan for this root. Saving a plan never triggers a review.",
+        args: { content: tool.schema.string().min(1).max(24000) },
+        async execute(args, context) {
+          await manager.assertRoot(context.sessionID);
+          manager.savePlan(context.sessionID, args.content);
+          return "Plan saved.";
+        },
+      }),
+      plan_read: tool({
+        description: "Read this work item's saved plan.",
+        args: {},
+        async execute(_args, context) {
+          return manager.readPlan(await rootFor(context.sessionID));
+        },
+      }),
+    },
+    "chat.message": async (input, output) => {
+      const child = manager.forChild(input.sessionID);
+      const role = child?.role ?? input.agent ?? output.message.agent;
+      if (!role || !Object.hasOwn(routes, role))
+        throw new Error(
+          "Select a role declared by the profile; the profile owns model routing.",
+        );
+      if (
+        child &&
+        (child.messageID !== output.message.id ||
+          !["starting", "running"].includes(child.status))
+      )
+        throw new Error(
+          "Resume this child through delegate; direct prompts cannot bypass its generation and ownership reservation.",
+        );
+      if (!child && !["build", "plan"].includes(role))
+        throw new Error(
+          "Root sessions must use build/plan; enter child roles through delegate.",
+        );
+      const route = routes[role];
+      if (
+        child &&
+        (child.route.model !== route.model ||
+          child.route.variant !== route.variant)
+      )
+        throw new Error(
+          "The profile route changed since this child started; finish/cancel it before creating a new delegation.",
+        );
+      const [providerID, ...modelID] = route.model.split("/");
+      // Plugin hooks receive the native message shape, despite the stale v1 SDK.
+      Object.assign(output.message, {
+        agent: role,
+        model: {
+          providerID,
+          modelID: modelID.join("/"),
+          variant: route.variant,
+        },
+      });
+      Reflect.deleteProperty(output.message, "variant");
+      roles.set(input.sessionID, role);
+      if (!child) {
+        const session = await manager.assertRoot(input.sessionID);
+        if (/^(New|Child) session - /.test(session.title)) {
+          const text = output.parts.find(
+            (part) => part.type === "text" && !part.synthetic,
+          );
+          if (text?.type === "text") {
+            const title = text.text.replace(/\s+/g, " ").trim().slice(0, 100);
+            if (title)
+              await ctx.client.session.update({
+                path: { id: input.sessionID },
+                body: { title },
+              });
+          }
+        }
+        await manager.recover(input.sessionID);
+        const notices = manager.notifications(input.sessionID);
+        if (notices.length)
+          output.parts.push({
+            id: `prt_${randomUUID().replaceAll("-", "")}`,
+            sessionID: input.sessionID,
+            messageID: output.message.id,
+            type: "text",
+            text: notices.join("\n"),
+            synthetic: true,
+          });
+      }
+    },
+    "chat.params": async (input, output) => {
+      const child = manager.forChild(input.sessionID);
+      const role =
+        input.agent === "compaction"
+          ? (child?.role ?? input.message.agent)
+          : input.agent;
+      if (child && role !== child.role)
+        throw new Error("The child cannot change its declared agent role.");
+      if (!child && !["build", "plan"].includes(role))
+        throw new Error(
+          "Only declared root roles and their internal compaction may request a model.",
+        );
+      const route = Object.hasOwn(routes, role) ? routes[role] : undefined;
+      if (
+        !route ||
+        `${input.model.providerID}/${input.model.id}` !== route.model
+      )
+        throw new Error(
+          "Effective model differs from the profile route; no request was sent.",
+        );
+      output.options.reasoningEffort = route.variant;
+    },
+    "tool.execute.before": async (input, output) => {
+      const role = await resolveRole(input.sessionID);
+      if (input.tool === "task")
+        throw new Error(
+          "Use delegate with a declared profile role; native task routing is disabled.",
+        );
+      if (rootOnly.has(input.tool)) {
+        if (role !== "plan" && role !== "build")
+          throw new Error("Only the root orchestrator can use this tool.");
+        await manager.assertRoot(input.sessionID);
+        return;
+      }
+      if (
+        [
+          "delegation_read",
+          "delegation_list",
+          "plan_read",
+          "todoread",
+        ].includes(input.tool)
+      )
+        return;
+      if (input.tool === "memory") {
+        if (
+          !["search", "list", "help", "profile"].includes(
+            output.args.mode ?? "help",
+          ) ||
+          output.args.content !== undefined
+        )
+          throw new Error(
+            "Memory is retrieval-only here; the root uses memory_commit for consolidated outcomes.",
+          );
+        return;
+      }
+      const child = manager.forChild(input.sessionID);
+      const mcpExecution =
+        role === "coder" &&
+        mcpServers.some((server) => input.tool.startsWith(`${server}_`));
+      if (writerRoles.has(role) && writeTools.has(input.tool)) {
+        if (!child)
+          throw new Error(
+            "Writer edits require a delegation with file ownership.",
+          );
+        await assertWriteTargets(input.tool, output.args, child);
+      }
+      assertReadOnlyTool(role, input.tool, output.args);
+      if ((writerRoles.has(role) && writeTools.has(input.tool)) || mcpExecution)
+        manager.toolStarted(input.sessionID, input.callID);
+    },
+    "shell.env": async (input) => {
+      if (input.sessionID && input.callID)
+        manager.toolStarted(input.sessionID, input.callID);
+    },
+    "tool.execute.after": async (input) => {
+      await manager.toolFinished(input.sessionID, input.callID);
+    },
+    "experimental.session.compacting": async (input, output) => {
+      const root = await rootFor(input.sessionID);
+      await manager.recover(root);
+      output.context.push(
+        `Orchestration recovery:\n${manager.readPlan(root)}\n${JSON.stringify(manager.list(root).map(({ result, ...row }) => row))}\nRead retained results by delegation ID; resume only the same work item/role/focus. Do not recreate children after compaction.`,
+      );
+    },
+    event: async ({ event }) => {
+      if (
+        event.type !== "session.idle" &&
+        !(
+          event.type === "session.status" &&
+          event.properties.status.type === "idle"
+        )
+      )
+        return;
+      const child = manager.forChild(event.properties.sessionID);
+      if (!child) return;
+      await manager.complete(child.child!);
+      await notifyRoot(child.root, child.rootDirectory);
+    },
+    dispose: async () => manager.close(),
+  };
+  return { hooks, manager };
+}

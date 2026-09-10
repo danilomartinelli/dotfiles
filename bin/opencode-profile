@@ -12,12 +12,12 @@
 # on stdout, which the host then reads as command output.
 #
 # OPENCODE_CONFIG merges over the global ~/.config/opencode/opencode.jsonc
-# instead of replacing it, so the permissions, agents, MCP servers, plugins,
-# and instructions declared there survive while the profile adds model routing.
+# instead of replacing it, retaining common MCP servers and plugins. Project
+# discovery stays enabled; the runtime pins routes from the selected profile.
 #
 # USAGE:
 #   opencode-profile [opencode arguments...]
-#   OCX_PROFILE=boost opencode-profile [opencode arguments...]
+#   OCX_PROFILE=example opencode-profile [opencode arguments...]
 
 set -eu
 
@@ -30,15 +30,20 @@ set -eu
 requested_profile=${OCX_PROFILE:-}
 # shellcheck disable=SC1091 # Loaded from the resolved dotfiles checkout.
 . "$DOTFILES_ROOT/opencode/env.zsh"
+# This adapter runs OpenCode directly: OCX has not merged project configuration.
+export OPENCODE_DISABLE_PROJECT_CONFIG=false
 if [ -n "$requested_profile" ]; then
   OCX_PROFILE=$requested_profile
   export OCX_PROFILE
 fi
 
+unset OPENCODE_CONFIG DOTFILES_OPENCODE_PROFILE_CONFIG
 profile_config=$HOME/.config/opencode/profiles/$OCX_PROFILE/opencode.jsonc
 if [ -f "$profile_config" ]; then
   OPENCODE_CONFIG=$profile_config
-  export OPENCODE_CONFIG
+  # The runtime restores this profile's routes after native project merging.
+  DOTFILES_OPENCODE_PROFILE_CONFIG=$profile_config
+  export OPENCODE_CONFIG DOTFILES_OPENCODE_PROFILE_CONFIG
 else
   printf 'opencode-profile: no configuration for profile %s; using the global one only\n' \
     "$OCX_PROFILE" >&2

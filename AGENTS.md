@@ -156,24 +156,29 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 `tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
 expectations from it. No code carries a second copy of the list.
 
-Dotfiles owns `agents/`, `commands/`, `skills/`, `tools/`, `ocx.jsonc`,
-`opencode.jsonc`, `opencode-mem.jsonc`, `tui.jsonc`, and the managed `regular`,
-`go`, and `boost` profiles. OCX owns `.ocx/`, `plugins/`, `package.json`,
-`.gitignore`, and `profiles/default/`; never copy or version those runtime
-paths.
+Dotfiles owns `orchestrator/`, `ocx.jsonc`, `opencode.jsonc`,
+`opencode-mem.jsonc`, `tui.jsonc`, and the managed `regular` and `example`
+profiles. OCX owns `.ocx/`, `plugins/`, `package.json`, `.gitignore`, and
+`profiles/default/`; never copy or version those runtime paths.
 
-The versioned `agents/`, `commands/`, `skills/`, and `tools/` payloads are
-registry content this repository tracks rather than authors. Nothing in the
-checkout records their provenance — they carry no checksum and there is no
-lock file — so `ocx verify --cwd ~/.config/opencode --verbose` is the only
-thing that can tell you they still match the registry. Update them through
-`ocx update`, do not reformat them independently, and require that verify to
-remain green.
+OCX remains upstream. `opencode/orchestrator/` is authored here, with pinned
+OpenCode SDK and memory dependencies. It owns prompts, permissions, delegation
+and direct memory capture. Project integrations stay project-local. Keep
+`scribe`, `explore` and `researcher` alongside `coder` and `reviewer`; assign
+specialized focuses in the delegation prompt instead of adding micro roles.
 
-The three profile directories are rendered, not authored. OCX has no profile
+The installer removes superseded registry components through `ocx remove`.
+Never load the original workspace/background hooks beside the replacement or
+edit OCX receipts. Only fully absent payloads may use the installer's narrowly
+validated metadata cleanup. Retained worktree/notification components require
+green `ocx verify --cwd ~/.config/opencode --verbose`. See `opencode/README.md`
+for migration and `opencode/orchestrator/README.md` for runtime recovery.
+
+The managed profile directories are rendered, not authored. OCX has no profile
 inheritance and `--clone` copies only `ocx.jsonc`, so shared policy lives in
 `opencode/profiles/_shared/`, routing lives in `opencode/profiles/_routing.tsv`,
-and `_scripts/render-opencode-profiles` composes both into the payloads the
+and optional profile policy lives in `opencode/profiles/_overrides/`.
+`_scripts/render-opencode-profiles` composes these into the payloads the
 installer links. Edit a source and rerun the renderer; never edit a profile
 directory directly. Adding a profile is a routing declaration plus a roster
 row, then the renderer.
@@ -200,9 +205,8 @@ second cleanup path for that directory.
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose` catalog, run through
 `bin/opencode-profile` so the profile's providers are in scope. Do not add
-`--pure`: it drops every provider reached through the gateway, including the
-`anthropic` models two profiles route to, and then reports the provider as not
-found. Variants are model-specific; do not invent a universal reasoning or
+`--pure`: it drops providers reached through the gateway and can report a
+configured provider as not found. Variants are model-specific; do not invent a universal reasoning or
 performance option, and remember that `variant` is the only reasoning knob
 `AgentConfig` accepts — `reasoningEffort` and `textVerbosity` are provider
 option names that OpenCode discards without a word.

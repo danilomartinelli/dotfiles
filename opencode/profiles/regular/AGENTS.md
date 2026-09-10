@@ -1,7 +1,9 @@
-# Profile Instructions
+# Profile instructions
 
-This profile inherits the repository's shared agents, commands, skills, tools,
-permission policy, and MCP configuration.
+The profile declares models and variants. The shared orchestration plugin owns
+role prompts, delegation and permission boundaries. Project instructions,
+integrations and skills belong in the trusted project configuration.
 
-Keep behavior-specific instructions here. Model routing belongs in
-`opencode.jsonc`; project-specific instructions remain in the project.
+Use the declared roles and reuse settled facts. Give each delegation one focus
+and a completion criterion; supporting roles are optional. Do not override the
+profile's model routing in a delegation.

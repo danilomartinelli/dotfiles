@@ -8,17 +8,12 @@
 #   - `event` is an append-only replication log for remote workspaces. Every
 #     streaming update of a message part is stored as a fresh copy of the whole
 #     part, so one long session writes its own transcript back many times over.
-#     It reached 21 of this machine's 22 GB database while `message` and `part`,
-#     which hold what a session actually said, came to 1.6 GB together. Age
-#     alone does not find it: orchestration keeps every session it touches
-#     inside any sensible window, and 825 of the 835 thousand events on this
-#     machine belonged to sessions updated in the last week. A session whose
+#     `message` and `part` retain the transcript independently. A session whose
 #     newest message is a completed assistant reply has nothing left to
 #     replicate, so its events are prunable at any age; only a session still
 #     waiting for or writing a reply keeps them, and only within the window.
 #   - A command an agent started inside a worktree outlives the session that
-#     started it. Four `bun` processes outlived their agent by three days and
-#     held four cores the whole time.
+#     started it.
 #   - A `workspace` row outlives the directory it describes, and a row written
 #     by an OCX component that is no longer installed fails every server start
 #     with "Unknown workspace adapter".
@@ -56,14 +51,17 @@ DATA_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/opencode
 CONFIG_DIR=$HOME/.config/opencode
 RETENTION_DAYS=7
 FIX=0
+CLEAR_LOGS=0
 
-# A log this size is worth one generation of rotation rather than unbounded
-# growth; the running total on this machine was 164 MB in a single file.
+# Keep one rotation of an oversized primary log during routine repairs.
 LOG_ROTATE_BYTES=67108864
 
 usage() {
   cat >&2 <<'EOF'
-Usage: opencode/_doctor.sh [--fix] [--days <n>] [--data-dir <dir>] [--config-dir <dir>]
+Usage: opencode/_doctor.sh [--fix] [--days <n>] [--clear-logs] [--data-dir <dir>] [--config-dir <dir>]
+
+--days 0       Prune all replication events, including today's; keep transcripts.
+--clear-logs   With --fix, delete log files and rotations regardless of age or size.
 EOF
 }
 
@@ -71,6 +69,10 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --fix)
       FIX=1
+      shift
+      ;;
+    --clear-logs)
+      CLEAR_LOGS=1
       shift
       ;;
     --days)
@@ -207,8 +209,7 @@ FINISHED_SESSIONS="SELECT id FROM session AS finished
 # inside the retention window. Every other aggregate is prunable.
 # `event_sequence` holds one small row per session, so naming the aggregates
 # there and matching them through the event log's own index answers an exact
-# count in a second or two rather than scanning the 22 GB table the answer is
-# about.
+# count without scanning the large event payloads.
 #
 # The sequence rows themselves stay. They are tiny, and keeping one means the
 # seq a session reached never restarts below a number some replica already saw.
@@ -216,6 +217,12 @@ PRUNABLE_AGGREGATES="SELECT aggregate_id FROM event_sequence
   WHERE aggregate_id NOT IN (
     SELECT id FROM session
     WHERE time_updated >= $CUTOFF_MS AND id NOT IN ($FINISHED_SESSIONS))"
+
+# Zero is an explicit full replication-log cleanup, including timestamps in
+# the current second or ahead of this machine's clock. Transcripts stay intact.
+if [ "$RETENTION_DAYS" -eq 0 ]; then
+  PRUNABLE_AGGREGATES='SELECT aggregate_id FROM event_sequence'
+fi
 
 prunable_event_count() {
   database_query "SELECT count(*) FROM event WHERE aggregate_id IN ($PRUNABLE_AGGREGATES);"
@@ -395,6 +402,19 @@ EOF
 }
 
 repair_log() {
+  if [ "$CLEAR_LOGS" -eq 1 ]; then
+    cleared=0
+    cleared_bytes=0
+    for log_path in "$DATA_DIR/log/"*.log "$DATA_DIR/log/"*.log.[0-9]*; do
+      [ -f "$log_path" ] && [ ! -L "$log_path" ] || continue
+      cleared_bytes=$((cleared_bytes + $(file_bytes "$log_path")))
+      rm -- "$log_path"
+      cleared=$((cleared + 1))
+    done
+    installer_item "cleared $cleared log file(s), $(human_bytes "$cleared_bytes")"
+    return 0
+  fi
+
   log_bytes=$(file_bytes "$LOG_FILE")
   [ "$log_bytes" -gt "$LOG_ROTATE_BYTES" ] || return 0
 
@@ -424,6 +444,10 @@ if [ "$FIX" -eq 0 ]; then
 fi
 
 require_stopped_opencode
+if [ "$CLEAR_LOGS" -eq 1 ] && [ -L "$DATA_DIR/log" ]; then
+  installer_error "refusing to clear a symlinked log directory: $DATA_DIR/log"
+  exit 1
+fi
 
 installer_banner 'repairing OpenCode runtime state'
 repair_processes
