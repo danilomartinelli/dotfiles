@@ -116,17 +116,17 @@ refuses a row that still carries any.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                          | `go`                                  | `boost`                              |
-| ---------- | ---------------------------------- | ------------------------------------- | ------------------------------------ |
-| Default    | `openai/gpt-5.6-sol`               | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                 |
-| Small      | `openai/gpt-5.6-terra`             | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`               |
-| Plan       | `openai/gpt-5.6-sol` (`high`)      | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`max`)         |
-| Build      | `openai/gpt-5.6-sol` (`high`)      | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)         |
-| Coder      | `anthropic/claude-opus-5` (`high`) | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-opus-5` (`max`)    |
-| Explore    | `openai/gpt-5.6-luna` (`medium`)   | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`max`) |
-| Researcher | `openai/gpt-5.6-sol` (`xhigh`)     | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`max`)         |
-| Scribe     | `openai/gpt-5.6-luna` (`medium`)   | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra` (`max`)       |
-| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`)     | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`max`)         |
+| Role       | `regular`                      | `go`                                  | `boost`                              |
+| ---------- | ------------------------------ | ------------------------------------- | ------------------------------------ |
+| Default    | `openai/gpt-5.6-sol`           | `opencode-go/grok-4.6`                | `openai/gpt-5.6-sol`                 |
+| Small      | `openai/gpt-5.6-luna`          | `opencode-go/gpt-5.6-luna`            | `openai/gpt-5.6-terra`               |
+| Plan       | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/grok-4.6` (`xhigh`)      | `openai/gpt-5.6-sol` (`max`)         |
+| Build      | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/glm-5.3` (`max`)         | `openai/gpt-5.6-sol` (`max`)         |
+| Coder      | `openai/gpt-5.6-luna` (`high`) | `opencode-go/kimi-k3` (`max`)         | `anthropic/claude-opus-5` (`max`)    |
+| Explore    | `openai/gpt-5.6-luna` (`high`) | `opencode-go/gpt-5.6-luna` (`max`)    | `anthropic/claude-haiku-4-5` (`max`) |
+| Researcher | `openai/gpt-5.6-luna` (`high`) | `opencode-go/qwen3.8-max`             | `openai/gpt-5.6-sol` (`max`)         |
+| Scribe     | `openai/gpt-5.6-luna` (`high`) | `opencode-go/minimax-m3` (`thinking`) | `openai/gpt-5.6-terra` (`max`)       |
+| Reviewer   | `openai/gpt-5.6-sol` (`xhigh`) | `opencode-go/deepseek-v4-pro` (`max`) | `openai/gpt-5.6-sol` (`max`)         |
 
 <!-- generated-end -->
 

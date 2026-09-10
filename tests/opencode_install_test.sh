@@ -347,31 +347,31 @@ test_profiles_route_models() {
   # silence, so this profile is held to the same shape as the other two.
   jsonc_to_json "$regular_config" | jq -e '
 		.model == "openai/gpt-5.6-sol" and
-		.small_model == "openai/gpt-5.6-terra" and
+		.small_model == "openai/gpt-5.6-luna" and
 		.agent.plan == {
 			"model": "openai/gpt-5.6-sol",
-			"variant": "high",
+			"variant": "xhigh",
 			"temperature": 0.3
 		} and
 		.agent.build == {
 			"model": "openai/gpt-5.6-sol",
-			"variant": "high",
+			"variant": "xhigh",
 			"temperature": 0.3
 		} and
 		.agent.coder == {
-			"model": "anthropic/claude-opus-5",
+			"model": "openai/gpt-5.6-luna",
 			"variant": "high",
 			"temperature": 0.2
 		} and
 		.agent.explore == {
 			"model": "openai/gpt-5.6-luna",
-			"variant": "medium",
+			"variant": "high",
 			"temperature": 0.2
 		} and
-		.agent.researcher.model == "openai/gpt-5.6-sol" and
-		.agent.researcher.variant == "xhigh" and
+		.agent.researcher.model == "openai/gpt-5.6-luna" and
+		.agent.researcher.variant == "high" and
 		.agent.scribe.model == "openai/gpt-5.6-luna" and
-		.agent.scribe.variant == "medium" and
+		.agent.scribe.variant == "high" and
 		.agent.reviewer.model == "openai/gpt-5.6-sol" and
 		.agent.reviewer.variant == "xhigh" and
 		([.agent[] | (has("reasoningEffort") or has("textVerbosity"))] | any | not)

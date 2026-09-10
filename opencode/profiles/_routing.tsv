@@ -16,13 +16,13 @@
 # spelling that renders valid JSON and no behavior.
 
 regular	default	openai/gpt-5.6-sol	-	-
-regular	small	openai/gpt-5.6-terra	-	-
-regular	plan	openai/gpt-5.6-sol	high	0.3
-regular	build	openai/gpt-5.6-sol	high	0.3
-regular	coder	anthropic/claude-opus-5	high	0.2
-regular	explore	openai/gpt-5.6-luna	medium	0.2
-regular	researcher	openai/gpt-5.6-sol	xhigh	0.4
-regular	scribe	openai/gpt-5.6-luna	medium	1
+regular	small	openai/gpt-5.6-luna	-	-
+regular	plan	openai/gpt-5.6-sol	xhigh	0.3
+regular	build	openai/gpt-5.6-sol	xhigh	0.3
+regular	coder	openai/gpt-5.6-luna	high	0.2
+regular	explore	openai/gpt-5.6-luna	high	0.2
+regular	researcher	openai/gpt-5.6-luna	high	0.4
+regular	scribe	openai/gpt-5.6-luna	high	1
 regular	reviewer	openai/gpt-5.6-sol	xhigh	0.1
 go	default	opencode-go/grok-4.6	-	-
 go	small	opencode-go/gpt-5.6-luna	-	-
