@@ -41,7 +41,7 @@ sidebarProjectSortOrder	"manual"
 sidebarSessionGroupingMode	"by-worktree"
 sidebarShowRecentSection	true
 mobileKeyboardMode	"native"
-usageSelectedModels	{"claude":["Fable"]}
+usageSelectedModels	{"claude":["Opus"]}
 
 # Desktop host
 desktopKeepAwakeEnabled	true

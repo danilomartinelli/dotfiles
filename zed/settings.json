@@ -65,7 +65,7 @@
       "default_config_options": {
         "effort": "high",
         "mode": "bypassPermissions",
-        "model": "claude-fable-5-1[1m]"
+        "model": "claude-opus-5[1m]"
       },
       "type": "registry"
     }
