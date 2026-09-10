@@ -291,7 +291,20 @@ test("native OpenCode initializes deferred tools and preserves routing and write
       let output: Parameters<typeof responseEvents>[1] = {
         text: "Verified fixture result.",
       };
-      if (input.includes("NATIVE_REVIEW_ROOT")) {
+      const inspection = [
+        "git rev-parse --show-toplevel",
+        "GIT_NO_LAZY_FETCH=1 'git' '--no-pager' '--no-optional-locks' '-c' 'core.fsmonitor=false' 'rev-parse' '--show-toplevel'",
+      ].find((command) => !issued.has(command));
+      if (marker === "NATIVE_VALID_ROOT" && inspection) {
+        issued.add(inspection);
+        output = {
+          name: "bash",
+          arguments: {
+            command: inspection,
+            description: "Inspect the checkout from the read-only root",
+          },
+        };
+      } else if (input.includes("NATIVE_REVIEW_ROOT")) {
         if (!issued.has("review-snapshot")) {
           issued.add("review-snapshot");
           output = { name: "review_snapshot", arguments: { directory } };
@@ -674,6 +687,16 @@ export default async ctx => initializeFromConfig(async config => {
     });
     if (result.info?.error)
       throw new Error(JSON.stringify(result.info.error) + "\n" + logs);
+    const rootMessages = await api(`/session/${session.id}/message`);
+    const inspections = rootMessages
+      .flatMap((message: any) => message.parts)
+      .filter((part: any) => part.type === "tool" && part.tool === "bash");
+    expect(inspections.map((part: any) => part.state.status)).toEqual([
+      "completed",
+      "completed",
+    ]);
+    for (const part of inspections)
+      expect(part.state.output.trim()).toBe(await realpath(directory));
     const child = await until(async () => {
       const sessions = await api("/session");
       return sessions.find((item: any) => item.parentID === session.id);

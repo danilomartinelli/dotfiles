@@ -15,6 +15,65 @@ function query(command: string, role = "reviewer"): string {
 }
 
 describe("regular read-only tool boundary", () => {
+  test("queries remain valid when their normalized commands are checked again", () => {
+    for (const command of [
+      "git rev-parse origin/topic-branch",
+      "git -C '/tmp/repo with spaces' remote get-url origin",
+      "git diff --stat",
+      "git diff --src-prefix --no-ext-diff -- README.md",
+      "git log --format=--no-textconv -n1",
+      "git show HEAD -- --no-textconv",
+      "git blame README.md",
+      "gh api repos/example/project/pulls/12/comments --paginate",
+      "glab api projects/example%2Fproject/merge_requests/12",
+      "rg -n needle README.md",
+      "rg -e --no-config README.md",
+      "rg --files -g '*.ts'",
+      `rg -F "someone's name" README.md`,
+    ]) {
+      const normalized = query(command);
+      for (const role of readOnlyRoles) {
+        expect(query(normalized, role), command).toBe(normalized);
+      }
+    }
+  });
+
+  test("safety prefixes do not authorize mutations or arbitrary environments", () => {
+    for (const command of [
+      "GIT_NO_LAZY_FETCH=1 git reset --hard",
+      "GIT_NO_LAZY_FETCH=1 git -c core.fsmonitor=/tmp/unsafe status",
+      "GIT_NO_LAZY_FETCH=1 git diff --ext-diff",
+      "GIT_NO_LAZY_FETCH=0 git status",
+      "GIT_NO_LAZY_FETCH=1 GH_PAGER=cat git status",
+      "GIT_NO_LAZY_FETCH=1 sh -c 'git status'",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat gh api repos/o/r/issues/1 -X DELETE",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat glab mr checkout 12",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat git status",
+      "PAGER=sh GH_PAGER=cat GLAB_PAGER=cat gh pr list",
+      "PAGER=cat GH_PAGER=sh GLAB_PAGER=cat gh pr list",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=sh glab mr list",
+      "PAGER=cat gh pr list",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat GH_HOST=example.invalid gh pr list",
+      "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat gh pr list; touch /tmp/unsafe",
+      "rg --no-config --pre sh needle README.md",
+    ]) {
+      for (const role of readOnlyRoles)
+        expect(() => query(command, role), command).toThrow(
+          "Read-only policy:",
+        );
+    }
+  });
+
+  test("project scripts require coder even when named as inspections", () => {
+    for (const command of ["bun docs list", "npm run docs", "npx docs list"]) {
+      for (const role of readOnlyRoles)
+        expect(() => query(command, role)).toThrow(
+          "Project scripts and verification belong to coder via the root",
+        );
+      expect(query(command, "coder")).toBe(command);
+    }
+  });
+
   test("CLI discovery reports availability without executing the CLI", () => {
     const directory = mkdtempSync(join(tmpdir(), "opencode-cli-discovery-"));
     const marker = join(directory, "executed");
@@ -322,7 +381,7 @@ describe("regular read-only tool boundary", () => {
         "git blame tracked.txt",
         "rg after tracked.txt",
       ]) {
-        const output = run(["sh", "-c", query(command)]);
+        const output = run(["sh", "-c", query(query(command))]);
         expect(output).not.toBe("");
         expect(existsSync(marker), command).toBe(false);
       }

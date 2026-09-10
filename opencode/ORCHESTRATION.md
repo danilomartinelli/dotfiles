@@ -33,6 +33,10 @@ selection; delegations cannot override them. The routing source is
    three active children per root. Writers require disjoint paths and agreed
    interfaces. Reviewers run after writers finish against the same snapshot.
 1. Collect results through notifications and retained delegation records.
+   When only active children remain to be awaited, give one concise progress
+   update and end the current response. The task stays pending; the runtime
+   resumes the same root session after all children terminate. Do not wait
+   through shell sleeps, repeated status/file checks or another delegation.
    Resume the same delegation for corrections to its work item and focus.
 1. Consolidate duplicate findings. A blocker identifies a violated contract,
    a reachable failure and precise evidence. Review output omits praise, empty
@@ -50,6 +54,15 @@ Build/plan, reviewer, explore and researcher have a read-only tool and argument
 boundary. Supported shell inspections reject mutation, command composition and
 external-program escapes. Repository and tracker queries discover the remote
 and matching `gh`/`glab` CLI before falling back to web access.
+Queries remain valid when the guard's normalized command is reused; each call
+revalidates its executable and arguments. Only the guard's exact safety
+environment prefixes are accepted.
+
+Project scripts and runtime/package-manager commands belong to coder, even
+when a subcommand is named `docs` or `list`. The root includes necessary script
+execution in a relevant coder delegation; read-only leaves return that need
+to the root. A policy rejection calls for a supported tool or role, without
+repeated attempts using wrappers or alternate command spellings.
 
 Coder and scribe native writes are checked against canonical owned paths.
 Coder must respect that ownership in shell commands too; scribe has no shell

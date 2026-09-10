@@ -106,6 +106,12 @@ function options(argv: string[], spec: Options): string[] {
   return positional;
 }
 
+function prependOnce(prefix: string[], argv: string[]): string[] {
+  return prefix.every((argument, index) => argv[index] === argument)
+    ? argv
+    : [...prefix, ...argv];
+}
+
 const diffFlags =
   "--stat --numstat --shortstat --name-only --name-status --check --summary --patch -p --no-patch -s --raw --binary --full-index --no-color --exit-code --quiet --no-renames --no-ext-diff --no-textconv --ignore-all-space -w --ignore-space-change -b --ignore-space-at-eol --ignore-blank-lines";
 const diffValues = "--unified -U --diff-filter --src-prefix --dst-prefix";
@@ -212,13 +218,17 @@ function safeGit(argv: string[]): string[] {
       ...safety,
       ...prefix,
       query,
-      "--no-ext-diff",
-      "--no-textconv",
-      ...args,
+      ...prependOnce(["--no-ext-diff", "--no-textconv"], args),
     ];
   }
   if (query === "blame") {
-    return ["git", ...safety, ...prefix, query, "--no-textconv", ...args];
+    return [
+      "git",
+      ...safety,
+      ...prefix,
+      query,
+      ...prependOnce(["--no-textconv"], args),
+    ];
   }
   return ["git", ...safety, ...prefix, query, ...args];
 }
@@ -309,7 +319,7 @@ const fileQueries: Record<string, Options> = {
   wc: { flags: "-c -l -m -w" },
   rg: {
     flags:
-      "--files --hidden --no-ignore --no-ignore-vcs --line-number -n --files-with-matches -l --files-without-match --ignore-case -i --smart-case -S --fixed-strings -F --word-regexp -w --line-regexp -x --count -c --count-matches --only-matching -o --quiet -q --no-heading --heading --with-filename -H --no-filename -I --no-messages --pcre2 -P --multiline -U --stats",
+      "--no-config --files --hidden --no-ignore --no-ignore-vcs --line-number -n --files-with-matches -l --files-without-match --ignore-case -i --smart-case -S --fixed-strings -F --word-regexp -w --line-regexp -x --count -c --count-matches --only-matching -o --quiet -q --no-heading --heading --with-filename -H --no-filename -I --no-messages --pcre2 -P --multiline -U --stats",
     values:
       "--regexp -e --glob -g --iglob --type -t --type-not -T --after-context -A --before-context -B --context -C --max-count -m --max-depth --max-filesize --sort --sortr --encoding",
     numeric: "ABCm",
@@ -320,8 +330,26 @@ function quote(argument: string): string {
   return `'${argument.replaceAll("'", "'\"'\"'")}'`;
 }
 
+const queryEnvironment: Record<string, string[]> = {
+  git: ["GIT_NO_LAZY_FETCH=1"],
+  gh: ["PAGER=cat", "GH_PAGER=cat", "GLAB_PAGER=cat"],
+  glab: ["PAGER=cat", "GH_PAGER=cat", "GLAB_PAGER=cat"],
+};
+
 function safeCommand(command: string): string {
-  const [program, ...argv] = words(command);
+  const tokens = words(command);
+  // Accept our exact safety prefix on replay, then revalidate the whole query.
+  // A prefix never grants access to a different executable or new arguments.
+  for (const [program, prefix] of Object.entries(queryEnvironment)) {
+    if (
+      tokens[prefix.length] === program &&
+      prefix.every((assignment, index) => tokens[index] === assignment)
+    ) {
+      tokens.splice(0, prefix.length);
+      break;
+    }
+  }
+  const [program, ...argv] = tokens;
   let normalized: string[];
   if (program === "command") {
     if (
@@ -336,20 +364,20 @@ function safeCommand(command: string): string {
     normalized = safeTracker(program, argv);
   else {
     if (!Object.hasOwn(fileQueries, program))
-      denied("executable is not an approved query; use native reading tools");
+      denied(
+        "executable is not an approved query; use read/glob/grep for files. Project scripts and verification belong to coder via the root; do not retry with shell wrappers or alternate spellings",
+      );
     const spec = fileQueries[program];
     options(argv, spec);
-    normalized =
-      program === "rg" ? [program, "--no-config", ...argv] : [program, ...argv];
+    normalized = [
+      program,
+      ...(program === "rg" ? prependOnce(["--no-config"], argv) : argv),
+    ];
   }
   // The CLIs can otherwise launch a user-configured pager despite read-only arguments.
-  const environment =
-    program === "git"
-      ? "GIT_NO_LAZY_FETCH=1 "
-      : program === "gh" || program === "glab"
-        ? "PAGER=cat GH_PAGER=cat GLAB_PAGER=cat "
-        : "";
-  return environment + normalized.map(quote).join(" ");
+  return [...(queryEnvironment[program] ?? []), ...normalized.map(quote)].join(
+    " ",
+  );
 }
 
 /**
