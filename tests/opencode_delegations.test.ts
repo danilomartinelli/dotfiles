@@ -27,7 +27,7 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
-async function fixture(timeoutMs = 900_000) {
+async function fixture(timeoutMs?: number) {
   const directory = await mkdtemp(
     path.join(tmpdir(), "orchestrator-delegations-"),
   );

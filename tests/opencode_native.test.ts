@@ -751,7 +751,7 @@ export default async ctx => initializeFromConfig(async config => {
   hooks["tool.execute.before"] = async (input, output) => {
     await before?.(input, output);
     if (input.tool === "bash" && output.args.description === "NATIVE_TIMEOUT_TRIGGER") {
-      // Exercise the real deadline stop/abort path without waiting fifteen minutes.
+      // Exercise the real deadline stop/abort path without waiting for the full deadline.
       setTimeout(async () => {
         const manager = await managerFor(input.sessionID);
         const row = manager.forChild(input.sessionID);

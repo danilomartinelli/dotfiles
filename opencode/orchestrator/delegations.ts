@@ -167,7 +167,7 @@ export class Delegations {
     filename: string,
     private client: Client,
     private routes: Routes,
-    private timeoutMs = 15 * 60_000,
+    private timeoutMs = 30 * 60_000,
     private snapshot = sourceVersion,
   ) {
     this.db = new Database(filename, { create: true });

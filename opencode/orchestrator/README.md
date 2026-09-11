@@ -48,7 +48,9 @@ result; a completed tool-call step does not release ownership. A source
 snapshot includes HEAD, tracked changes and untracked content; a changed
 snapshot invalidates the review verdict.
 
-Cancellation and the 15-minute deadline call OpenCode's abort API, verify the
+Each new or resumed delegation receives a 30-minute deadline. Existing executions
+keep their recorded deadline, including after a process restart.
+Cancellation and deadline expiry call OpenCode's abort API, verify the
 session identity and wait for actual native tool completion acknowledgments.
 Rejected tools can skip OpenCode's completion hook; their persisted error
 records reconcile the ledger during normal completion and stopping alike.
