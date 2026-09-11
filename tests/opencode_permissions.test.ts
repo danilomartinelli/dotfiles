@@ -16,6 +16,69 @@ function query(command: string, role = "reviewer"): string {
 }
 
 describe("regular read-only tool boundary", () => {
+  test("tracker help is available without executing the documented operation", () => {
+    for (const command of [
+      "PAGER=cat GH_PAGER=cat 'gh' 'help' 'api'",
+      "gh api --help",
+      "gh --help",
+      "gh help formatting",
+      "gh pr view -h",
+      "gh run download --help",
+      "gh help run download",
+      "glab help api",
+      "glab api --help",
+      "glab ci artifact --help",
+      "glab help",
+    ]) {
+      for (const role of readOnlyRoles) {
+        const normalized = query(command, role);
+        expect(query(normalized, role)).toBe(normalized);
+      }
+    }
+  });
+
+  test("help cannot authorize aliases, extensions, execution flags or shell composition", () => {
+    for (const command of [
+      "gh custom-alias --help",
+      "glab custom-extension --help",
+      "gh extension exec custom --help",
+      "gh help api --web",
+      "gh help api --method POST",
+      "gh run download -- --help",
+      "gh help 'api; touch marker'",
+      "gh api --help; touch marker",
+      "glab api --help | tee marker",
+      "gh help api > marker",
+      "gh help api --jq 'env'",
+    ]) {
+      for (const role of readOnlyRoles)
+        expect(() => query(command, role), command).toThrow(
+          "Read-only policy:",
+        );
+    }
+    expect(query("gh run download 123 --dir artifacts", "coder")).toBe(
+      "gh run download 123 --dir artifacts",
+    );
+  });
+
+  test("shell composition and artifact writes explain the supported next action", () => {
+    for (const role of readOnlyRoles) {
+      expect(() => query("git remote -v; command -v gh", role)).toThrow(
+        "separate tool calls",
+      );
+      expect(() =>
+        query(
+          "gh api repos/example/project/actions/artifacts/123/zip | tee /tmp/artifact.zip | wc -c",
+          role,
+        ),
+      ).toThrow("coder");
+      expect(() =>
+        query("gh run download 123 --dir /tmp/artifacts", role),
+      ).toThrow("coder");
+      expect(() => query("gh api", role)).toThrow("gh help api");
+    }
+  });
+
   test("common Git inspections and CLI discovery stay normalized and read-only", () => {
     for (const command of [
       "git log -1",

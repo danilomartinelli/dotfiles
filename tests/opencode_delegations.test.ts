@@ -359,6 +359,37 @@ test("deadline aborts execution without deleting or restarting the child", async
   expect(f.created).toHaveLength(1);
 });
 
+test("deadline reconciles rejected tools and notifies the root without another user message", async () => {
+  const f = await fixture(30);
+  const notifications: string[] = [];
+  f.manager.onStopped = async (row) => {
+    notifications.push(row.status);
+  };
+  const row = await f.manager.start("root", f.request());
+  f.manager.toolStarted(row.child!, "rejected-patch");
+  f.messages.get(row.child!)!.push({
+    info: { id: "tool-step", role: "assistant" },
+    parts: [
+      {
+        type: "tool",
+        callID: "rejected-patch",
+        tool: "apply_patch",
+        state: {
+          status: "error",
+          error: "Patch verification failed",
+          time: { end: Date.now() },
+        },
+      },
+    ],
+  });
+  await new Promise((done) => setTimeout(done, 65));
+  await f.manager.complete(row.child!); // Native idle event following abort.
+  expect(f.manager.get("root", row.id).status).toBe("timed_out");
+  expect(notifications).toEqual(["timed_out"]);
+  expect(f.aborts).toEqual([row.child!]);
+  expect(f.created).toHaveLength(1);
+});
+
 test("cancellation during creation aborts the child before prompting", async () => {
   const f = await fixture();
   const gate = deferred<any>();

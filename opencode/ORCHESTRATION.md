@@ -38,7 +38,11 @@ selection; delegations cannot override them. The routing source is
 1. Collect results through notifications and retained delegation records.
    When only active children remain to be awaited, give one concise progress
    update and end the current response. The task stays pending; the runtime
-   resumes the same root session after all children terminate. Do not wait
+   batches successful results after children terminate and wakes the same root
+   on failures, timeouts or pending stops. After confirmed termination, inspect
+   partial work and resume the same delegation within existing authorization;
+   a child failure alone does not require another user message. A pending stop
+   retains ownership while independent work can continue. Do not wait
    through shell sleeps, repeated status/file checks or another delegation.
    Resume the same delegation for corrections to its work item and focus.
 1. Consolidate duplicate findings. A blocker identifies a violated contract,
@@ -63,6 +67,11 @@ use the query's approved safety values. Partial or reordered assignments are
 accepted and normalized to the complete safety environment before execution.
 Single-quoted filters remain literal arguments; they cannot compose shell
 commands. Tracker APIs accept GET queries and a literal `Accept` header.
+Built-in tracker help is available through `gh help api`, `glab help api` and
+trailing `--help`/`-h` on supported tracker topics. Independent queries use
+separate tool calls; filters use the CLI's `--jq` option. Downloading/extracting
+artifacts or saving output belongs to coder with an owned destination, preferably
+as part of existing relevant work. Reviewers receive the resulting evidence.
 `command -v NAME` can discover any literal executable name without running it.
 Git inspections include short log counts, revision comparisons, the current
 branch and source grep. Remote transports such as `ls-remote` require coder;

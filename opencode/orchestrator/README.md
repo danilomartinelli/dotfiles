@@ -50,6 +50,9 @@ snapshot invalidates the review verdict.
 
 Cancellation and the 15-minute deadline call OpenCode's abort API, verify the
 session identity and wait for actual native tool completion acknowledgments.
+Rejected tools can skip OpenCode's completion hook; their persisted error
+records reconcile the ledger during normal completion and stopping alike.
+Only actual tool errors count: an `interrupted` placeholder retains its reservation.
 The API's idle/interrupted state alone is insufficient: shell cleanup can
 continue after it. Missing acknowledgments stay `stopping`, retain the
 reservation and report the diagnostic. Recovery inspects existing sessions; it never starts replacement
@@ -62,8 +65,14 @@ later responds. Inspect the remote operation and confirm termination before
 explicit reconciliation; a returned abort or elapsed time is not proof. Normal
 MCP completion acknowledges the ledger and releases the reservation.
 
-Results remain readable after compaction. Notifications are batched when all
-children settle and continue the existing root session.
+Results remain readable after compaction. Successful results are batched when all
+children settle. Failures, timeouts and pending stops wake the existing root even
+while siblings remain active. A pending stop is reported once, then terminal
+status receives its own notice after acknowledgments arrive. Notification claims
+include the generation and status so a failed delivery cannot rearm an older
+resume. These notifications create no extra session and never release ownership.
+The root inspects partial work and resumes the same terminal delegation within
+existing authorization; an unresolved stop allows only independent work.
 The first root message, each delegated generation and compaction supply the
 native session directory. `read-context.ts` anchors relative file queries there
 and reports missing targets with rediscovery guidance. Existing external paths

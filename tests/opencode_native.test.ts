@@ -607,6 +607,72 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           },
         };
       }
+      if (
+        body.model === "gpt-5.6-sol" &&
+        input.includes("NATIVE_TIMEOUT_ROOT")
+      ) {
+        if (!issued.has("timeout-start")) {
+          issued.add("timeout-start");
+          output = {
+            name: "delegate",
+            arguments: {
+              role: "coder",
+              workItem: "timeout-recovery",
+              directory: targetDirectory,
+              ownership: ["docs/native.md"],
+              prompt:
+                "NATIVE_TIMEOUT_CHILD. Verify the remaining document scope.",
+            },
+          };
+        } else if (input.includes("timed_out")) {
+          if (!issued.has("timeout-read")) {
+            issued.add("timeout-read");
+            output = {
+              name: "delegation_read",
+              arguments: { id: latestDelegation(body).id },
+            };
+          } else if (!issued.has("timeout-resume")) {
+            issued.add("timeout-resume");
+            output = {
+              name: "delegate",
+              arguments: {
+                role: "coder",
+                workItem: "timeout-recovery",
+                directory: targetDirectory,
+                ownership: ["docs/native.md"],
+                resume: latestDelegation(body).id,
+                prompt:
+                  "NATIVE_TIMEOUT_RESUMED. Return the verified remaining scope.",
+              },
+            };
+          }
+        }
+      }
+      if (
+        body.model === "gpt-5.6-luna" &&
+        input.includes("NATIVE_TIMEOUT_CHILD") &&
+        !input.includes("NATIVE_TIMEOUT_RESUMED")
+      ) {
+        if (!issued.has("timeout-patch")) {
+          issued.add("timeout-patch");
+          output = {
+            name: "apply_patch",
+            arguments: {
+              patchText:
+                "*** Begin Patch\n*** Update File: docs/native.md\n@@\n-Content that does not exist.\n+Unexpected.\n*** End Patch",
+            },
+          };
+        } else if (!issued.has("timeout-bash")) {
+          issued.add("timeout-bash");
+          output = {
+            name: "bash",
+            arguments: {
+              command: "sleep 30",
+              description: "NATIVE_TIMEOUT_TRIGGER",
+            },
+          };
+        }
+      }
       return new Response(responseEvents(body.model, output), {
         headers: { "Content-Type": "text/event-stream" },
       });
@@ -680,7 +746,19 @@ test("native OpenCode initializes deferred tools and preserves routing and write
 import { regularHooks } from ${JSON.stringify(pluginUrl)};
 import { initializeFromConfig } from ${JSON.stringify(hooksUrl)};
 export default async ctx => initializeFromConfig(async config => {
-  const { hooks } = await regularHooks(ctx, config);
+  const { hooks, managerFor } = await regularHooks(ctx, config);
+  const before = hooks["tool.execute.before"];
+  hooks["tool.execute.before"] = async (input, output) => {
+    await before?.(input, output);
+    if (input.tool === "bash" && output.args.description === "NATIVE_TIMEOUT_TRIGGER") {
+      // Exercise the real deadline stop/abort path without waiting fifteen minutes.
+      setTimeout(async () => {
+        const manager = await managerFor(input.sessionID);
+        const row = manager.forChild(input.sessionID);
+        await manager.stop(row.root, row.id, "timed_out", "Delegation exceeded its deadline.");
+      }, 50);
+    }
+  };
   const after = hooks["tool.execute.after"];
   hooks["tool.execute.after"] = async (input, output) => {
     if (input.tool === "apply_patch") {
@@ -1413,6 +1491,62 @@ process.stdin.on('end', () => process.exit(0));
     expect(await Bun.file(join(targetDirectory, "docs/native.md")).text()).toBe(
       "Resumed.\n",
     );
+
+    const timeoutRoot = await api("/session", {
+      title: "Automatic timeout recovery fixture",
+    });
+    await api(`/session/${timeoutRoot.id}/message`, {
+      agent: "build",
+      parts: [{ type: "text", text: "NATIVE_TIMEOUT_ROOT" }],
+    });
+    function timeoutDelegation() {
+      const row = orchestration!
+        .query(
+          "SELECT record FROM delegations WHERE json_extract(record, '$.root')=?",
+        )
+        .get(timeoutRoot.id) as { record: string } | null;
+      return row ? JSON.parse(row.record) : undefined;
+    }
+    await until(
+      async () =>
+        issued.has("timeout-resume") &&
+        timeoutDelegation()?.status === "completed"
+          ? true
+          : undefined,
+      "automatic root notification and same-child resume after timeout with a rejected patch",
+    );
+    const timeoutRow = timeoutDelegation();
+    const timeoutMessages = await api(
+      `/session/${timeoutRow.child}/message`,
+      undefined,
+      targetDirectory,
+    );
+    const timeoutParts = timeoutMessages.flatMap(
+      (message: any) => message.parts,
+    );
+    expect(
+      timeoutParts.some(
+        (part: any) =>
+          part.tool === "apply_patch" &&
+          part.state.error?.includes("Failed to find expected lines"),
+      ),
+    ).toBe(true);
+    expect(
+      timeoutMessages.filter((message: any) => message.info.role === "user"),
+    ).toHaveLength(2);
+    expect(
+      (await api("/session", undefined, targetDirectory)).filter(
+        (item: any) => item.parentID === timeoutRoot.id,
+      ),
+    ).toHaveLength(1);
+    expect(await Bun.file(join(targetDirectory, "docs/native.md")).text()).toBe(
+      "Resumed.\n",
+    );
+    expect(
+      orchestration!
+        .query("SELECT count(*) AS count FROM tool_calls WHERE child=?")
+        .get(timeoutRow.child),
+    ).toEqual({ count: 0 });
     expect(logs).not.toMatch(
       /service=bun|installing dependencies|registry\.npmjs\.org/i,
     );

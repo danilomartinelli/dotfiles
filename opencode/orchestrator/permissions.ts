@@ -50,7 +50,9 @@ function denied(reason: string): never {
 /** One simple command, with quoting but no shell expansion or composition. */
 function words(command: string): string[] {
   if (!command || /[\u0000-\u0008\u000a-\u001f\u007f]/.test(command)) {
-    denied("use one query without shell operators, escapes, or substitutions");
+    denied(
+      "use separate tool calls for queries; shell operators, escapes and substitutions are unavailable",
+    );
   }
   const result: string[] = [];
   let word = "";
@@ -72,6 +74,14 @@ function words(command: string): string[] {
       word = "";
       started = false;
     } else {
+      if (/[;&]/.test(character))
+        denied(
+          "command composition is unavailable; use separate tool calls for independent queries",
+        );
+      if (/[|<>]/.test(character))
+        denied(
+          "pipes and redirection are unavailable; use --jq or separate tool calls for queries. Saving or extracting artifacts belongs to coder with an owned destination",
+        );
       if (/[;|&<>`$\\(){}\[\]*?!~#]/.test(character)) {
         denied("quote literal arguments; shell expansion is unavailable");
       }
@@ -329,7 +339,9 @@ function safeApi(program: string, args: string[]): void {
       denied("API queries accept only a literal Accept representation header");
   }
   if (positional.length !== 1)
-    denied("API query requires one explicit endpoint");
+    denied(
+      `API query requires one explicit endpoint; use ${program} help api for usage`,
+    );
   const endpoint = positional[0].replace(/^\//, "");
   const path = endpoint.split("?")[0];
   if (path.includes("..") || !/^[a-zA-Z0-9_./%:@-]+$/.test(path)) {
@@ -347,11 +359,42 @@ function safeApi(program: string, args: string[]): void {
 }
 
 function safeTracker(program: string, argv: string[]): string[] {
+  const queries = program === "gh" ? githubQueries : gitlabQueries;
+  const help =
+    argv[0] === "help"
+      ? argv.slice(1)
+      : ["--help", "-h"].includes(argv.at(-1) ?? "")
+        ? argv.slice(0, -1)
+        : undefined;
+  if (help) {
+    const topics = new Set([
+      "api",
+      "release",
+      "environment",
+      "formatting",
+      "exit-codes",
+      "reference",
+      ...Array.from(queries, (query) => query.split(" ")[0]),
+    ]);
+    if (
+      help.some((word) => !/^[a-z][a-z0-9-]*$/.test(word)) ||
+      (help.length && !topics.has(help[0]))
+    )
+      denied(
+        "help accepts literal built-in tracker topics without execution arguments or flags",
+      );
+    // Canonical help never invokes the documented operation or a custom alias/extension.
+    return [program, "help", ...help];
+  }
+  const query = argv.slice(0, 2).join(" ");
+  if (["run download", "release download", "ci artifact"].includes(query))
+    denied(
+      "artifact download/extraction writes local files; the root assigns it to coder with an owned destination, preferably in existing relevant work",
+    );
   if (argv[0] === "api") {
     safeApi(program, argv.slice(1));
   } else {
-    const query = argv.slice(0, 2).join(" ");
-    if (!(program === "gh" ? githubQueries : gitlabQueries).has(query)) {
+    if (!queries.has(query)) {
       denied("tracker command is not an approved query");
     }
     options(argv.slice(2), {

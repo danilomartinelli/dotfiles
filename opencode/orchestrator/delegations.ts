@@ -45,6 +45,10 @@ export type Delegation = {
   notified: boolean;
   stopState?: "cancelled" | "timed_out" | "failed";
   abortAcknowledged?: boolean;
+  stoppingNotified?: boolean;
+};
+type Notification = Pick<Delegation, "id" | "messageID" | "status"> & {
+  text: string;
 };
 export type Request = {
   role: string;
@@ -236,7 +240,10 @@ export class Delegations {
       .query("DELETE FROM tool_calls WHERE id=? AND child=?")
       .run(callID, child);
     const row = this.forChild(child);
-    if (row?.status === "stopping") await this.finishStop(row);
+    if (row?.status === "stopping") {
+      if (this.outstanding(row)) await this.complete(child);
+      else await this.finishStop(row);
+    }
   }
   private outstanding(row: Delegation) {
     return Number(
@@ -561,7 +568,7 @@ export class Delegations {
       if (response.error || response.data !== true)
         throw new Error("Execution abort was not acknowledged.");
       row.abortAcknowledged = true;
-      row.result = `${reason} Abort acknowledged; waiting for native tool completion acknowledgments.`;
+      row.result = `${reason} Abort acknowledged.`;
     } catch (error) {
       row.result = `${reason} ${error}`;
     }
@@ -570,7 +577,23 @@ export class Delegations {
       this.save(row);
     clearTimeout(this.timers.get(id));
     this.timers.delete(id);
-    await this.finishStop(this.get(root, id));
+    try {
+      const stopped = this.get(root, id);
+      if (row.child && this.outstanding(stopped))
+        await this.complete(row.child);
+      else await this.finishStop(stopped);
+    } finally {
+      const pending = this.get(root, id);
+      if (
+        pending.messageID === row.messageID &&
+        pending.status === "stopping" &&
+        pending.stoppingNotified === undefined
+      ) {
+        pending.stoppingNotified = false;
+        this.save(pending);
+        await this.onStopped?.(pending);
+      }
+    }
     return this.get(root, id);
   }
 
@@ -585,10 +608,6 @@ export class Delegations {
       (value) => value.child === child && active.has(value.status),
     );
     if (!row) return;
-    if (row.status === "stopping") {
-      await this.finishStop(row);
-      return;
-    }
     const messages = data(
       await this.client.session.messages({
         path: { id: child },
@@ -612,6 +631,12 @@ export class Delegations {
             )
             .run(part.callID, child, row.messageID);
       }
+    // Rejected tools do not reach tool.execute.after. Reconcile them before
+    // checking a stop, while retaining interrupted calls without a real ack.
+    if (row.status === "stopping") {
+      await this.finishStop(row);
+      return;
+    }
     if (this.outstanding(row)) return;
     const promptIndex = messages.findIndex(
       (message) =>
@@ -684,28 +709,49 @@ export class Delegations {
       else this.arm(current);
     }
   }
-  notifications(root: string): string[] {
+  notifications(root: string, batchSuccess = false): Notification[] {
     return this.db
-      .transaction(() =>
-        this.list(root)
-          .filter((row) => !active.has(row.status) && !row.notified)
+      .transaction(() => {
+        const rows = this.list(root);
+        const waiting =
+          batchSuccess && rows.some((row) => active.has(row.status));
+        return rows
+          .filter((row) =>
+            row.status === "stopping"
+              ? row.stoppingNotified === false
+              : !active.has(row.status) &&
+                !row.notified &&
+                (!waiting ||
+                  row.status === "failed" ||
+                  row.status === "timed_out"),
+          )
           .map((row) => {
-            row.notified = true;
+            if (row.status === "stopping") row.stoppingNotified = true;
+            else row.notified = true;
             this.save(row);
-            return `${row.id}: ${row.role} ${row.status} (${row.route.model}/${row.route.variant}); use delegation_read for evidence.`;
-          }),
-      )
+            return {
+              id: row.id,
+              messageID: row.messageID,
+              status: row.status,
+              text: `${row.id}: ${row.role} ${row.status} (${row.route.model}/${row.route.variant}); use delegation_read for evidence.`,
+            };
+          });
+      })
       .immediate();
   }
-  restoreNotifications(root: string, notices: string[]) {
+  restoreNotifications(root: string, notices: Notification[]) {
     this.db
       .transaction(() => {
         for (const notice of notices) {
-          const row = this.get(root, notice.split(":", 1)[0]);
-          if (!active.has(row.status)) {
-            row.notified = false;
-            this.save(row);
-          }
+          const row = this.get(root, notice.id);
+          if (
+            row.messageID !== notice.messageID ||
+            row.status !== notice.status
+          )
+            continue;
+          if (row.status === "stopping") row.stoppingNotified = false;
+          else row.notified = false;
+          this.save(row);
         }
       })
       .immediate();

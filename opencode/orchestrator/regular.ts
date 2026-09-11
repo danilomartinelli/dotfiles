@@ -99,29 +99,24 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
   ]);
   async function notifyRoot(root: string, rootDirectory: string) {
     const manager = await managerFor(root);
-    try {
-      manager.assertSettled(root);
-    } catch {
-      return;
-    }
-    const notices = manager.notifications(root);
+    const notices = manager.notifications(root, true);
     if (!notices.length) return;
     // One batch wakes the existing root; no metadata or notification session.
-    const role = await resolveRole(root);
-    const route = routes[role];
-    const [providerID, ...modelID] = route.model.split("/");
-    const body = {
-      agent: role,
-      model: { providerID, modelID: modelID.join("/") },
-      variant: route.variant,
-      parts: [
-        {
-          type: "text" as const,
-          text: `Delegation results ready:\n${notices.join("\n")}\nConsolidate the completed scope.`,
-        },
-      ],
-    };
     try {
+      const role = await resolveRole(root);
+      const route = routes[role];
+      const [providerID, ...modelID] = route.model.split("/");
+      const body = {
+        agent: role,
+        model: { providerID, modelID: modelID.join("/") },
+        variant: route.variant,
+        parts: [
+          {
+            type: "text" as const,
+            text: `Delegation results ready:\n${notices.map((notice) => notice.text).join("\n")}\nRead the records and continue authorized work. Respect stopping reservations; resume terminal failures on the same delegation.`,
+          },
+        ],
+      };
       const response = await ctx.client.session.promptAsync({
         path: { id: root },
         query: { directory: rootDirectory },
@@ -388,7 +383,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
             sessionID: input.sessionID,
             messageID: output.message.id,
             type: "text",
-            text: notices.join("\n"),
+            text: notices.map((notice) => notice.text).join("\n"),
             synthetic: true,
           });
       }
