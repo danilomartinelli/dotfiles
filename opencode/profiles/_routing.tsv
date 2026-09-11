@@ -8,29 +8,24 @@
 # must agree in both directions: a missing or unknown role stops the render.
 # The default and small rows carry a model only.
 #
-# `variant` is the only reasoning knob OpenCode's AgentConfig accepts, and every
-# model publishes its own set, so validate a value against the live
-# `opencode models <provider> --verbose` catalog. Two further columns,
-# reasoningEffort and textVerbosity, used to sit at the end of every row. They
-# are OpenAI provider option names rather than agent keys, so OpenCode accepted
-# them in silence and applied nothing; they were removed rather than left as a
-# spelling that renders valid JSON and no behavior.
+# `variant` is the reasoning knob in OpenCode's AgentConfig. Validate each
+# model and variant with `bin/opencode-profile models <provider> --verbose`.
 
-regular	default	openai/gpt-5.6-sol	-	-
-regular	small	openai/gpt-5.6-luna	-	-
-regular	plan	openai/gpt-5.6-sol	xhigh	-
-regular	build	openai/gpt-5.6-sol	xhigh	-
-regular	coder	openai/gpt-5.6-luna	high	-
-regular	explore	openai/gpt-5.6-luna	high	-
-regular	researcher	openai/gpt-5.6-luna	high	-
-regular	scribe	openai/gpt-5.6-luna	high	-
-regular	reviewer	openai/gpt-5.6-luna	high	-
-example	default	openai/gpt-5.6-sol	-	-
-example	small	openai/gpt-5.6-luna	-	-
-example	plan	openai/gpt-5.6-sol	xhigh	-
-example	build	openai/gpt-5.6-sol	xhigh	-
-example	coder	openai/gpt-5.6-luna	high	-
-example	explore	openai/gpt-5.6-luna	high	-
-example	researcher	openai/gpt-5.6-luna	high	-
-example	scribe	openai/gpt-5.6-luna	high	-
-example	reviewer	openai/gpt-5.6-luna	high	-
+regular	default	openai/gpt-6-astra	-	-
+regular	small	openai/gpt-5.6-luna-fast	-	-
+regular	plan	openai/gpt-6-astra	xhigh	-
+regular	build	openai/gpt-6-astra	xhigh	-
+regular	coder	openai/gpt-5.6-luna-fast	high	-
+regular	explore	openai/gpt-5.6-luna-fast	high	-
+regular	researcher	openai/gpt-5.6-luna-fast	high	-
+regular	scribe	openai/gpt-5.6-luna-fast	high	-
+regular	reviewer	openai/gpt-5.6-luna-fast	high	-
+example	default	openai/gpt-6-astra	-	-
+example	small	openai/gpt-5.6-luna-fast	-	-
+example	plan	openai/gpt-6-astra	xhigh	-
+example	build	openai/gpt-6-astra	xhigh	-
+example	coder	openai/gpt-5.6-luna-fast	high	-
+example	explore	openai/gpt-5.6-luna-fast	high	-
+example	researcher	openai/gpt-5.6-luna-fast	high	-
+example	scribe	openai/gpt-5.6-luna-fast	high	-
+example	reviewer	openai/gpt-5.6-luna-fast	high	-

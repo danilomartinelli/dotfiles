@@ -33,17 +33,13 @@ frozen Bun dependencies without lifecycle scripts, initializes OCX, registers
 `https://registry.kdco.dev`, and ensures `kdco/worktree` and `kdco/notify` are
 installed with their shared `kdco-primitives` dependency.
 
-The upgrade migration removes the superseded workspace bundle, its old agent,
-command and philosophy payloads, and the competing workspace/background hooks
-through `ocx remove`. It preserves custom content and stops on modified payloads.
-Only components whose receipt paths are all absent may use `--force` to retire
-stale metadata; no surviving modified file is force-removed. This handles
-checkouts where the retired managed sources have already disappeared.
+The installer links the managed entries and refreshes `regular` and `example`.
+Custom profiles and payloads remain untouched. Re-running the installer is
+supported and leaves session and memory data alone.
 
-The installer then links the managed entries and refreshes `regular` and
-`example`. Retired `go`/`boost` links are removed only when they point exactly
-at this checkout's former sources; local directories and other links survive.
-Re-running the installer is supported and leaves session and memory data alone.
+The installer refuses activation when workspace/background orchestration hooks
+are present. Resolve those components through OCX before installing; the
+installer does not migrate or force-remove existing components.
 
 Profile refresh uses `ocx profile remove`, followed by `ocx profile add` and the
 managed link. OCX 2.0.15 unlinks a profile symlink without descending into its
@@ -76,19 +72,23 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                      | `example`                      |
-| ---------- | ------------------------------ | ------------------------------ |
-| Default    | `openai/gpt-5.6-sol`           | `openai/gpt-5.6-sol`           |
-| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          |
-| Plan       | `openai/gpt-5.6-sol` (`xhigh`) | `openai/gpt-5.6-sol` (`xhigh`) |
-| Build      | `openai/gpt-5.6-sol` (`xhigh`) | `openai/gpt-5.6-sol` (`xhigh`) |
-| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Role       | `regular`                           | `example`                           |
+| ---------- | ----------------------------------- | ----------------------------------- |
+| Default    | `openai/gpt-6-astra`                | `openai/gpt-6-astra`                |
+| Small      | `openai/gpt-5.6-luna-fast`          | `openai/gpt-5.6-luna-fast`          |
+| Plan       | `openai/gpt-6-astra` (`xhigh`)      | `openai/gpt-6-astra` (`xhigh`)      |
+| Build      | `openai/gpt-6-astra` (`xhigh`)      | `openai/gpt-6-astra` (`xhigh`)      |
+| Coder      | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Explore    | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Researcher | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Reviewer   | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
 
 <!-- generated-end -->
+
+`gpt-5.6-luna-fast` is the provider's alias for `gpt-5.6-luna` with
+`serviceTier: priority`. Fast service and reasoning effort are independent:
+supporting agents still use `high`, while plan/build use Astra with `xhigh`.
 
 `regular` is the active profile; `example` starts with identical routing and
 preserves the structure for future customization. Plan/build coordinates the
@@ -263,8 +263,8 @@ _scripts/test opencode_orchestrator
 _scripts/test documentation
 ```
 
-Fixtures cover generated profiles, model routing, installed ownership, repeated
-migration, runtime preservation, delegation lifecycle, permissions and memory.
+Fixtures cover generated profiles, model routing, installed ownership,
+idempotent installation, conflict rejection, delegation lifecycle, permissions and memory.
 Use `_scripts/test` for the complete safe suite after shared/security changes.
 
 For a machine-specific link check:

@@ -547,9 +547,9 @@ installer and both test suites read it rather than keeping their own copy, and
 a check keeps this paragraph agreeing with it. The managed TUI
 follows the terminal's Catppuccin Macchiato theme and keeps audible
 notifications disabled. OCX retains `.ocx`, generated `plugins`,
-`package.json`, `.gitignore`, and `profiles/default`. The installer replaces
-retired registry workflow components through OCX, retains worktree/notification
-plugins, and installs the local orchestrator's pinned dependencies with Bun.
+`package.json`, `.gitignore`, and `profiles/default`. The installer provisions
+worktree/notification plugins and installs the local orchestrator's pinned
+dependencies with Bun.
 OCX itself remains upstream; the orchestration plugin is authored here.
 
 The `regular` profile carries the active trusted-project model routing.
@@ -559,7 +559,7 @@ OCX cannot layer one profile over another. `opencode/profiles/_shared/`
 owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
 declares the models; `_scripts/render-opencode-profiles` composes the
 sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
-payloads the installer links. `regular` uses Sol/xhigh for plan/build and Luna/high for
+payloads the installer links. `regular` uses Astra/xhigh for plan/build and Luna Fast/high for
 coder, reviewer, scribe, explore and researcher.
 The orchestrator assigns each delegation a focus, with bounded parallel work,
 resumable corrections and consolidated memory without auxiliary sessions.

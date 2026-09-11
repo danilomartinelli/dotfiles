@@ -142,8 +142,8 @@ path recovery, native LSP and MCP permissions. CodeGraph fixtures exercise the
 installed CLI/MCP, Git-root selection, worktrees, concurrent initialization and
 preservation of existing indices and Git data.
 Memory fixtures cover direct storage, idempotent retries and the absence of
-automatic LLM subsessions. Installer fixtures cover integrity and preservation
-during migration.
+automatic LLM subsessions. Installer fixtures cover repeated installation,
+competing-hook rejection and preservation of custom configuration.
 
 Run the focused checks from [the OpenCode guide](README.md#update-and-verify).
 [The runtime guide](orchestrator/README.md) owns lifecycle details, storage

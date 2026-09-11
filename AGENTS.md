@@ -167,12 +167,11 @@ and direct memory capture. Project integrations stay project-local. Keep
 `scribe`, `explore` and `researcher` alongside `coder` and `reviewer`; assign
 specialized focuses in the delegation prompt instead of adding micro roles.
 
-The installer removes superseded registry components through `ocx remove`.
-Never load the original workspace/background hooks beside the replacement or
-edit OCX receipts. Only fully absent payloads may use the installer's narrowly
-validated metadata cleanup. Retained worktree/notification components require
-green `ocx verify --cwd ~/.config/opencode --verbose`. See `opencode/README.md`
-for migration and `opencode/orchestrator/README.md` for runtime recovery.
+The installer provisions worktree/notification components and rejects competing
+orchestration hooks before activation. Manage registry components through OCX
+and keep `ocx verify --cwd ~/.config/opencode --verbose` green; never edit its
+receipts. See `opencode/README.md` for installation and
+`opencode/orchestrator/README.md` for runtime recovery.
 
 The managed profile directories are rendered, not authored. OCX has no profile
 inheritance and `--clone` copies only `ocx.jsonc`, so shared policy lives in

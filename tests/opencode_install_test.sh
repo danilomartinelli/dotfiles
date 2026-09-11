@@ -20,10 +20,6 @@ scenario_init dotfiles-opencode-install-tests
 
 TAB=$'\t'
 
-write_retired_fixture_row() {
-  printf '  "%s": "%s",\n' "$1" "$2"
-}
-
 make_fake_clis() {
   local home=$1
   local fake_bin=$home/fake-bin
@@ -31,11 +27,6 @@ make_fake_clis() {
   mkdir -p "$fake_bin"
   ln -s "$(command -v bun)" "$fake_bin/real-bun"
   stub_uname "$fake_bin"
-  {
-    printf '{\n'
-    catalog_each_row "$REPOSITORY_ROOT/opencode/_retired-components.tsv" write_retired_fixture_row
-    printf '}\n'
-  } >"$fake_bin/retired.jsonc"
 
   scenario_write_executable "$fake_bin/opencode" <<'EOF'
 #!/bin/sh
@@ -66,7 +57,6 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import retired from "./retired.jsonc";
 const args = process.argv.slice(2);
 const config = path.join(process.env.HOME, ".config/opencode");
 const receiptPath = path.join(config, ".ocx/receipt.jsonc");
@@ -83,7 +73,7 @@ const add = (name, files) => {
   if (receipt.installed[key]) return;
   const entries = files.map((file) => {
     const target = path.join(config, file);
-    const contents = file.startsWith("plugins/") ? `runtime plugin ${name}\n` : `registry payload ${name}\n`;
+    const contents = `runtime plugin ${name}\n`;
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, contents);
     return { path: file, hash: hash(contents) };
@@ -96,13 +86,7 @@ if (args[0] === "init") {
 } else if (args[0] === "add") {
   if (!args.includes("--global")) fail("missing --global", 2);
   const names = args.slice(1).filter((name) => name !== "--global");
-  if (names.includes("kdco/workspace")) {
-    for (const [name, file] of Object.entries(retired)) add(name, file === "-" ? [] : [file]);
-    for (const name of ["workspace-plugin", "background-agents"]) add(name, [`plugins/${name}.ts`]);
-    names.push("kdco/worktree", "kdco/notify");
-  }
   for (const name of names) {
-    if (name === "kdco/workspace") continue;
     if (!["kdco/worktree", "kdco/notify"].includes(name)) fail("unexpected component", 2);
     add(name.slice(5), [`plugins/${name.slice(5)}.ts`]);
     add("kdco-primitives", ["plugins/kdco-primitives/index.ts"]);
@@ -111,28 +95,6 @@ if (args[0] === "init") {
   for (const [file, contents] of [["package.json", '{"dependencies":{}}\n'], [".gitignore", "node_modules\n"], ["opencode.jsonc", "{}\n"]]) {
     if (!fs.existsSync(path.join(config, file))) fs.writeFileSync(path.join(config, file), contents);
   }
-} else if (args[0] === "remove") {
-  const cwd = args.indexOf("--cwd");
-  if (cwd < 2 || args[cwd + 1] !== config) fail("unexpected remove cwd", 2);
-  const force = args.includes("--force");
-  const keys = args.slice(1, cwd).map((ref) => Object.keys(receipt.installed).find((key) => key === ref || key.includes(`::${ref}@`)));
-  if (keys.some((key) => !key)) fail("component not installed", 66);
-  const targets = [];
-  for (const key of keys) {
-    if (process.env.STUB_OCX_REMOVE_FAIL === "true") fail("modified original plugin; removal refused");
-    for (const file of receipt.installed[key].files) {
-      const target = path.join(config, file.path);
-      let actual;
-      try { actual = fs.realpathSync(target); }
-      catch (error) { if (!["ENOENT", "ENOTDIR"].includes(error.code)) throw error; }
-      if (actual && !actual.startsWith(`${fs.realpathSync(config)}${path.sep}`)) fail("Security violation: path escapes project directory");
-      if (!force && (!actual || hash(fs.readFileSync(actual)) !== file.hash)) fail(`modified or missing payload: ${file.path}`);
-      if (actual) targets.push(actual);
-    }
-  }
-  for (const target of targets) fs.unlinkSync(target);
-  for (const key of keys) delete receipt.installed[key];
-  save();
 } else if (args[0] === "profile") {
   const target = path.join(config, "profiles", args[2]);
   if (args[1] === "remove") {
@@ -306,7 +268,7 @@ test_managed_payload_is_complete_and_runtime_payload_is_excluded() {
 
   for managed_path in agents commands skills tools plugins .ocx package.json .gitignore; do
     [[ ! -e $REPOSITORY_ROOT/opencode/$managed_path ]] \
-      || scenario_fail "runtime or legacy OpenCode payload is versioned: $managed_path"
+      || scenario_fail "OCX runtime payload is versioned: $managed_path"
   done
 
   # Versioned content with no catalog row would never be linked, so the
@@ -404,13 +366,12 @@ test_profile_payloads_are_composed_from_the_shared_base() {
     'example has no routing row for: reviewer' \
     "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
 
-  # A row carrying the retired reasoningEffort and textVerbosity columns still
-  # parses, because the reader pads every row to seven. Rendering it would put
-  # keys OpenCode ignores back into a payload, so the renderer refuses instead.
-  sed "s|^regular${TAB}plan${TAB}.*|regular${TAB}plan${TAB}openai/gpt-5.6-sol${TAB}high${TAB}0.3${TAB}xhigh${TAB}low|" \
+  # The catalog reader pads rows to seven columns. Routing supports five and
+  # must reject extra options instead of silently accepting ignored keys.
+  sed "s|^regular${TAB}plan${TAB}.*|regular${TAB}plan${TAB}openai/gpt-6-astra${TAB}high${TAB}0.3${TAB}xhigh${TAB}low|" \
     "$stored.routing" >"$fixture/opencode/profiles/_routing.tsv"
 
-  assert_fails_with_output 'retired routing columns' \
+  assert_fails_with_output 'unsupported routing columns' \
     'routing row has columns past temperature: regular plan' \
     "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check "$fixture/opencode"
 }
@@ -426,7 +387,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
   printf '{"permission":{"project_*":"ask"}}\n' >"$override"
   "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" "$fixture/opencode" \
     >/dev/null || return 1
-  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna"' \
+  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna-fast"' \
     "$fixture/opencode/profiles/regular/opencode.jsonc" >/dev/null \
     || scenario_fail 'regular override did not merge with shared policy'
 
@@ -443,7 +404,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
 
   cp "$REPOSITORY_ROOT/opencode/profiles/_routing.tsv" \
     "$fixture/opencode/profiles/_routing.tsv"
-  printf 'example\tunknown-role\topenai/gpt-5.6-luna\thigh\t-\n' \
+  printf 'example\tunknown-role\topenai/gpt-5.6-luna-fast\thigh\t-\n' \
     >>"$fixture/opencode/profiles/_routing.tsv"
   assert_fails_with_output 'undeclared agent' \
     'routing row names an undeclared agent: example unknown-role' \
@@ -474,17 +435,17 @@ test_profiles_route_models() {
   while IFS= read -r profile; do
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" | jq -e '
-      .model == "openai/gpt-5.6-sol" and
-      .small_model == "openai/gpt-5.6-luna" and
+      .model == "openai/gpt-6-astra" and
+      .small_model == "openai/gpt-5.6-luna-fast" and
       .lsp == true and
       .agent == {
-        "plan": {"model": "openai/gpt-5.6-sol", "variant": "xhigh"},
-        "build": {"model": "openai/gpt-5.6-sol", "variant": "xhigh"},
-        "coder": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "explore": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "researcher": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "scribe": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "reviewer": {"model": "openai/gpt-5.6-luna", "variant": "high"}
+        "plan": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
+        "build": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
+        "coder": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
+        "explore": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
+        "researcher": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
+        "scribe": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
+        "reviewer": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"}
       }
     ' >/dev/null \
       || scenario_fail "$profile profile model routing is incorrect"
@@ -672,18 +633,13 @@ test_installer_links_only_dotfiles_owned_entries() {
       || scenario_fail "OCX runtime entry was linked: $runtime_path"
   done
 
-  assert_contains "$config_dir/plugins/worktree.ts" 'runtime plugin worktree'
-  assert_contains "$config_dir/plugins/notify.ts" 'runtime plugin notify'
+  assert_minimal_ocx_runtime "$config_dir"
   [[ ! -e $config_dir/plugins/workspace-plugin.ts &&
     ! -e $config_dir/plugins/background-agents.ts ]] \
     || scenario_fail 'installer left competing orchestration plugins installed'
-  assert_not_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
   assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/worktree@'
   assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/notify@'
-  assert_not_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace-plugin@'
-  assert_not_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/background-agents@'
   assert_contains "$home/events.log" 'ocx add kdco/worktree kdco/notify --global'
-  assert_not_contains "$home/events.log" 'ocx add kdco/workspace'
   assert_not_contains "$home/events.log" 'ocx remove kdco/'
   assert_before "$home/events.log" \
     "bun install --frozen-lockfile --ignore-scripts --cwd $REPOSITORY_ROOT/opencode/orchestrator" \
@@ -701,8 +657,6 @@ test_installer_links_only_dotfiles_owned_entries() {
 
   assert_contains "$config_dir/plugins/worktree.ts" 'runtime plugin worktree'
   assert_contains "$config_dir/plugins/notify.ts" 'runtime plugin notify'
-  assert_not_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace@'
-  assert_not_contains "$home/events.log" 'ocx add kdco/workspace'
   assert_not_contains "$home/events.log" 'ocx remove kdco/'
 }
 
@@ -733,7 +687,7 @@ test_installer_preserves_activation_when_dependencies_fail() {
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir/plugins"
   printf 'existing activation\n' >"$config_dir/opencode.jsonc"
-  printf 'existing plugin\n' >"$config_dir/plugins/workspace-plugin.ts"
+  printf 'existing plugin\n' >"$config_dir/plugins/notify.ts"
 
   assert_fails_with_output 'failed dependency install' \
     'fixture dependency installation failed' \
@@ -741,145 +695,74 @@ test_installer_preserves_activation_when_dependencies_fail() {
     SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
 
   assert_contains "$config_dir/opencode.jsonc" 'existing activation'
-  assert_contains "$config_dir/plugins/workspace-plugin.ts" 'existing plugin'
+  assert_contains "$config_dir/plugins/notify.ts" 'existing plugin'
   assert_not_contains "$home/events.log" 'ocx '
   [[ ! -e $config_dir/orchestrator ]] \
     || scenario_fail 'installer activated orchestrator after dependency failure'
 }
 
-test_installer_preserves_modified_original_plugins() {
-  local fake_bin home config_dir
+test_installer_refuses_competing_plugins() {
+  local fake_bin home config_dir plugin shape
 
-  home=$(scenario_tmpdir modified-plugin)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  printf 'existing activation\n' >"$config_dir/opencode.jsonc"
-  printf 'modified original\n' >"$config_dir/plugins/workspace-plugin.ts"
+  for plugin in workspace-plugin background-agents; do
+    for shape in file symlink; do
+      home=$(scenario_tmpdir "competing-$plugin-$shape")
+      fake_bin=$(make_fake_clis "$home")
+      config_dir=$home/.config/opencode
+      mkdir -p "$config_dir/plugins"
+      : >"$home/events.log"
+      printf 'existing activation\n' >"$config_dir/opencode.jsonc"
+      if [[ $shape == file ]]; then
+        printf 'existing hook\n' >"$config_dir/plugins/$plugin.ts"
+      else
+        ln -s "$home/missing-hook.ts" "$config_dir/plugins/$plugin.ts"
+      fi
 
-  assert_fails_with_output 'modified original plugin' \
-    'modified original plugin; removal refused' \
-    env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" STUB_OCX_REMOVE_FAIL=true \
-    SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
+      assert_fails_with_output 'competing orchestration hook' \
+        'OpenCode plugin conflicts with orchestrator' \
+        env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
+        SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
 
-  assert_contains "$config_dir/opencode.jsonc" 'existing activation'
-  assert_contains "$config_dir/plugins/workspace-plugin.ts" 'modified original'
-  assert_contains "$config_dir/plugins/background-agents.ts" 'runtime plugin'
-  assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/workspace-plugin@'
-  assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/background-agents@'
-  assert_not_contains "$home/events.log" 'ocx profile remove'
-  assert_not_contains "$home/events.log" '--force'
-  [[ ! -e $config_dir/orchestrator ]] \
-    || scenario_fail 'installer activated orchestrator after migration refusal'
+      assert_contains "$config_dir/opencode.jsonc" 'existing activation'
+      if [[ $shape == file ]]; then
+        assert_contains "$config_dir/plugins/$plugin.ts" 'existing hook'
+      else
+        assert_link_target "$home/missing-hook.ts" "$config_dir/plugins/$plugin.ts" 'competing hook'
+      fi
+      assert_not_contains "$home/events.log" 'ocx '
+      assert_not_contains "$home/events.log" 'bun install'
+      [[ ! -e $config_dir/orchestrator ]] \
+        || scenario_fail 'installer activated orchestrator alongside a competing hook'
+    done
+  done
 }
 
-test_installer_removes_only_receipted_original_plugins() {
-  local fake_bin home config_dir
-
-  home=$(scenario_tmpdir single-component)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" remove kdco/workspace-plugin --cwd "$config_dir"
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_contains "$home/events.log" \
-    "ocx remove kdco/background-agents --cwd $config_dir"
-  assert_not_contains "$home/events.log" 'ocx remove kdco/workspace-plugin'
-  assert_catalog_links "$config_dir" 'partial migration'
-}
-
-test_installer_refuses_untracked_competing_plugins() {
-  local fake_bin home config_dir
-
-  home=$(scenario_tmpdir untracked-plugin)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" remove kdco/workspace-plugin --cwd "$config_dir"
-  printf 'untracked plugin\n' >"$config_dir/plugins/workspace-plugin.ts"
-  printf 'existing activation\n' >"$config_dir/opencode.jsonc"
-
-  assert_fails_with_output 'untracked competing plugin' \
-    'Untracked OpenCode plugin conflicts with orchestrator' \
-    env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_contains "$config_dir/plugins/workspace-plugin.ts" 'untracked plugin'
-  assert_contains "$config_dir/plugins/background-agents.ts" 'runtime plugin'
-  assert_contains "$config_dir/opencode.jsonc" 'existing activation'
-  assert_not_contains "$home/events.log" 'ocx remove kdco/background-agents'
-  [[ ! -e $config_dir/orchestrator ]] \
-    || scenario_fail 'installer activated orchestrator alongside an untracked plugin'
-}
-
-test_installer_removes_only_retired_managed_profile_links() {
-  local fake_bin home profiles
-
-  home=$(scenario_tmpdir retired-profiles)
-  fake_bin=$(make_fake_clis "$home")
-  profiles=$home/.config/opencode/profiles
-  mkdir -p "$profiles/default" "$profiles/custom"
-  printf 'OCX default state\n' >"$profiles/default/keep.marker"
-  printf 'custom profile state\n' >"$profiles/custom/keep.marker"
-  ln -s "$REPOSITORY_ROOT/opencode/profiles/go" "$profiles/go"
-  ln -s "$REPOSITORY_ROOT/opencode/profiles/boost" "$profiles/boost"
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  [[ ! -e $profiles/go && ! -L $profiles/go &&
-    ! -e $profiles/boost && ! -L $profiles/boost ]] \
-    || scenario_fail 'installer kept retired dotfiles profile links'
-  assert_contains "$profiles/default/keep.marker" 'OCX default state'
-  assert_contains "$profiles/custom/keep.marker" 'custom profile state'
-  assert_catalog_links "$home/.config/opencode" 'retired profile migration'
-  assert_not_contains "$home/events.log" 'ocx profile remove go'
-  assert_not_contains "$home/events.log" 'ocx profile remove boost'
-  assert_not_contains "$home/events.log" 'ocx profile remove default'
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_not_contains "$home/stdout.log" 'removed retired OpenCode'
-  assert_contains "$profiles/default/keep.marker" 'OCX default state'
-  assert_contains "$profiles/custom/keep.marker" 'custom profile state'
-  assert_catalog_links "$home/.config/opencode" 'retired profile migration rerun'
-}
-
-test_installer_preserves_local_profiles_with_retired_names() {
+test_installer_preserves_local_profiles() {
   local fake_bin home profiles custom_source
 
-  home=$(scenario_tmpdir local-retired-profiles)
+  home=$(scenario_tmpdir local-profiles)
   fake_bin=$(make_fake_clis "$home")
   profiles=$home/.config/opencode/profiles
-  custom_source=$home/custom-boost
-  mkdir -p "$profiles/go" "$profiles/default" "$custom_source"
-  printf 'local go state\n' >"$profiles/go/keep.marker"
-  printf 'custom boost state\n' >"$custom_source/keep.marker"
+  custom_source=$home/custom-linked
+  mkdir -p "$profiles/custom" "$profiles/default" "$custom_source"
+  printf 'local custom state\n' >"$profiles/custom/keep.marker"
+  printf 'custom linked state\n' >"$custom_source/keep.marker"
   printf 'OCX default state\n' >"$profiles/default/keep.marker"
-  ln -s "$custom_source" "$profiles/boost"
+  ln -s "$custom_source" "$profiles/linked"
 
   scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
   scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
     "$REPOSITORY_ROOT/opencode/install.sh"
 
-  [[ -d $profiles/go && ! -L $profiles/go ]] \
-    || scenario_fail 'installer replaced a local profile named go'
-  assert_contains "$profiles/go/keep.marker" 'local go state'
-  assert_link_target "$custom_source" "$profiles/boost" 'custom boost profile'
-  assert_contains "$custom_source/keep.marker" 'custom boost state'
+  [[ -d $profiles/custom && ! -L $profiles/custom ]] \
+    || scenario_fail 'installer replaced a local profile named custom'
+  assert_contains "$profiles/custom/keep.marker" 'local custom state'
+  assert_link_target "$custom_source" "$profiles/linked" 'custom linked profile'
+  assert_contains "$custom_source/keep.marker" 'custom linked state'
   assert_contains "$profiles/default/keep.marker" 'OCX default state'
-  assert_not_contains "$home/events.log" 'ocx profile remove go'
-  assert_not_contains "$home/events.log" 'ocx profile remove boost'
+  assert_not_contains "$home/events.log" 'ocx profile remove custom'
+  assert_not_contains "$home/events.log" 'ocx profile remove linked'
   assert_not_contains "$home/events.log" 'ocx profile remove default'
 }
 
@@ -894,100 +777,10 @@ assert_minimal_ocx_runtime() {
   assert_contains "$config_dir/plugins/kdco-primitives/index.ts" 'runtime plugin kdco-primitives'
 }
 
-test_installer_removes_missing_legacy_payload_receipts() {
-  local home fake_bin config_dir directory
-
-  home=$(scenario_tmpdir missing-legacy)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  for directory in agents commands skills tools; do
-    rm -r -- "${config_dir:?}/$directory"
-    ln -s "$REPOSITORY_ROOT/opencode/$directory" "$config_dir/$directory"
-  done
-  # Real receipts are JSONC: keep comments and a trailing comma in this case.
-  sed '1s/{/{\/\/ fixture comment/' "$config_dir/.ocx/receipt.jsonc" \
-    | sed '$s/}/,}/' >"$home/receipt.jsonc"
-  mv "$home/receipt.jsonc" "$config_dir/.ocx/receipt.jsonc"
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_minimal_ocx_runtime "$config_dir"
-  assert_contains "$home/events.log" '--force'
-  assert_not_contains "$home/events.log" 'ocx add kdco/workspace'
-  for directory in agents commands skills tools; do
-    [[ ! -e $config_dir/$directory && ! -L $config_dir/$directory ]] \
-      || scenario_fail "installer kept retired managed link: $directory"
-  done
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-  assert_minimal_ocx_runtime "$config_dir"
-  assert_not_contains "$home/events.log" 'ocx remove'
-  assert_not_contains "$home/events.log" 'ocx add kdco/'
-}
-
-test_installer_removes_intact_legacy_payloads_and_preserves_custom_files() {
-  local home fake_bin config_dir directory
-
-  home=$(scenario_tmpdir intact-legacy)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  for directory in agents commands skills tools; do
-    printf 'custom content\n' >"$config_dir/$directory/keep.md"
-  done
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-
-  assert_minimal_ocx_runtime "$config_dir"
-  assert_not_contains "$home/events.log" '--force'
-  for directory in agents commands skills tools; do
-    assert_contains "$config_dir/$directory/keep.md" 'custom content'
-    [[ ! -L $config_dir/$directory ]] \
-      || scenario_fail "installer replaced custom directory: $directory"
-  done
-  [[ ! -e $config_dir/agents/coder.md && ! -e $config_dir/commands/review.md ]] \
-    || scenario_fail 'installer kept retired registry payloads'
-}
-
-test_installer_materializes_only_exact_legacy_links() {
-  local home fake_bin config_dir checkout directory
-
-  home=$(scenario_tmpdir linked-legacy)
-  fake_bin=$(make_fake_clis "$home")
-  config_dir=$home/.config/opencode
-  checkout=$home/checkout
-  copy_opencode_fixture "$checkout/opencode"
-  cp -R "$REPOSITORY_ROOT/_scripts" "$checkout/_scripts"
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" add kdco/workspace --global
-  for directory in agents commands skills tools; do
-    mv "$config_dir/$directory" "$checkout/opencode/$directory"
-    printf 'custom linked content\n' >"$checkout/opencode/$directory/keep.md"
-    ln -s "$checkout/opencode/$directory" "$config_dir/$directory"
-  done
-
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$checkout/opencode/install.sh"
-
-  assert_minimal_ocx_runtime "$config_dir"
-  assert_not_contains "$home/events.log" '--force'
-  assert_contains "$checkout/opencode/agents/coder.md" 'registry payload coder'
-  for directory in agents commands skills tools; do
-    assert_contains "$config_dir/$directory/keep.md" 'custom linked content'
-    [[ ! -L $config_dir/$directory ]] \
-      || scenario_fail "installer kept an external managed link: $directory"
-  done
-}
-
-test_installer_preserves_custom_legacy_directories_and_links() {
+test_installer_preserves_custom_payloads() {
   local home fake_bin config_dir
 
-  home=$(scenario_tmpdir custom-legacy)
+  home=$(scenario_tmpdir custom-payloads)
   fake_bin=$(make_fake_clis "$home")
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir/agents" "$home/custom-skills"
@@ -1004,47 +797,6 @@ test_installer_preserves_custom_legacy_directories_and_links() {
   assert_link_target "$home/custom-skills" "$config_dir/skills" 'custom skills'
   assert_contains "$home/custom-skills/keep.md" 'custom skill'
   assert_not_contains "$home/events.log" 'ocx remove'
-}
-
-test_installer_refuses_modified_or_partially_missing_legacy_components() {
-  local home fake_bin config_dir mode
-
-  for mode in modified partially-missing external-link; do
-    home=$(scenario_tmpdir "legacy-$mode")
-    fake_bin=$(make_fake_clis "$home")
-    config_dir=$home/.config/opencode
-    scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-      "$fake_bin/ocx" add kdco/workspace --global
-    printf 'existing activation\n' >"$config_dir/opencode.jsonc"
-    case "$mode" in
-      modified)
-        printf 'customized coder\n' >"$config_dir/agents/coder.md"
-        ;;
-      partially-missing)
-        jq '(.installed[] | select(.name == "coder")).files += [{"path":"agents/extra.md","hash":"absent"}]' \
-          "$config_dir/.ocx/receipt.jsonc" >"$home/receipt.jsonc"
-        mv "$home/receipt.jsonc" "$config_dir/.ocx/receipt.jsonc"
-        ;;
-      external-link)
-        mv "$config_dir/agents" "$home/custom-agents"
-        ln -s "$home/custom-agents" "$config_dir/agents"
-        ;;
-    esac
-
-    assert_fails_with_status 1 scenario_capture "$home" \
-      env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-      "$REPOSITORY_ROOT/opencode/install.sh"
-
-    assert_contains "$config_dir/opencode.jsonc" 'existing activation'
-    assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/coder@'
-    assert_not_contains "$home/events.log" '--force'
-    assert_not_contains "$home/events.log" 'ocx profile remove'
-    if [[ $mode == modified ]]; then
-      assert_contains "$config_dir/agents/coder.md" 'customized coder'
-    else
-      assert_contains "$config_dir/agents/coder.md" 'registry payload coder'
-    fi
-  done
 }
 
 scenario_run 'OpenCode shell defaults to the regular OCX profile' \
@@ -1077,26 +829,12 @@ scenario_run 'OpenCode installer adds a missing profile on an existing installat
   test_installer_adds_a_missing_profile_on_existing_installation
 scenario_run 'OpenCode installer preserves activation when dependency installation fails' \
   test_installer_preserves_activation_when_dependencies_fail
-scenario_run 'OpenCode installer preserves modified original plugins on migration refusal' \
-  test_installer_preserves_modified_original_plugins
-scenario_run 'OpenCode installer removes only receipted original plugins' \
-  test_installer_removes_only_receipted_original_plugins
-scenario_run 'OpenCode installer refuses untracked competing plugins' \
-  test_installer_refuses_untracked_competing_plugins
-scenario_run 'OpenCode installer retires only its exact go and boost profile links' \
-  test_installer_removes_only_retired_managed_profile_links
-scenario_run 'OpenCode installer preserves local profiles with retired names' \
-  test_installer_preserves_local_profiles_with_retired_names
-scenario_run 'OpenCode installer retires missing payload receipts and dangling links idempotently' \
-  test_installer_removes_missing_legacy_payload_receipts
-scenario_run 'OpenCode installer removes intact legacy payloads and preserves custom files' \
-  test_installer_removes_intact_legacy_payloads_and_preserves_custom_files
-scenario_run 'OpenCode installer materializes only exact managed legacy links' \
-  test_installer_materializes_only_exact_legacy_links
-scenario_run 'OpenCode installer preserves custom legacy directories, files and links' \
-  test_installer_preserves_custom_legacy_directories_and_links
-scenario_run 'OpenCode installer refuses modified, partial or external legacy components' \
-  test_installer_refuses_modified_or_partially_missing_legacy_components
+scenario_run 'OpenCode installer refuses competing hooks before changing activation' \
+  test_installer_refuses_competing_plugins
+scenario_run 'OpenCode installer preserves unmanaged profiles and their links' \
+  test_installer_preserves_local_profiles
+scenario_run 'OpenCode installer preserves custom directories, files and links' \
+  test_installer_preserves_custom_payloads
 
 scenario_run 'OpenCode GUI adapter loads project configuration and preserves profile routing' \
   test_gui_adapter_preserves_project_loading_and_pins_selected_profile_routes

@@ -143,9 +143,8 @@ the memory version without checking its schema, exports and transaction seam.
 
 For a dependency update, review the release and internal storage interfaces,
 update through Bun, review the lockfile and rerun native, lifecycle and memory
-fixtures. The installer removes retired components through OCX, preserving modified files.
-It can force receipt cleanup only after proving all recorded payloads absent.
-Worktree and notification components remain under OCX ownership.
+fixtures. Worktree and notification components remain under OCX ownership;
+validate their integrity with `ocx verify` after updates.
 
 ```bash
 bun install --frozen-lockfile --ignore-scripts --cwd opencode/orchestrator

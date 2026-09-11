@@ -14,11 +14,11 @@ afterEach(async () => {
   for (const run of cleanup.splice(0).reverse()) await run();
 });
 const routes = {
-  coder: { model: "openai/gpt-5.6-luna", variant: "high" },
-  reviewer: { model: "openai/gpt-5.6-luna", variant: "high" },
-  scribe: { model: "openai/gpt-5.6-luna", variant: "high" },
-  explore: { model: "openai/gpt-5.6-luna", variant: "high" },
-  researcher: { model: "openai/gpt-5.6-luna", variant: "high" },
+  coder: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
+  reviewer: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
+  scribe: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
+  explore: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
+  researcher: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
 };
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -224,7 +224,7 @@ test("support roles retain bounded delegation and their read or write capability
       f.request({ role, ownership: [] }),
     );
     expect(row.route).toEqual({
-      model: "openai/gpt-5.6-luna",
+      model: "openai/gpt-5.6-luna-fast",
       variant: "high",
     });
     expect(row.sourceVersion).toBeUndefined();
@@ -273,7 +273,7 @@ test("bounded parallel roles use explicit routes without metadata sessions", asy
   expect(
     f.requests.every(
       (request) =>
-        request.body.model.modelID === "gpt-5.6-luna" &&
+        request.body.model.modelID === "gpt-5.6-luna-fast" &&
         request.body.variant === "high",
     ),
   ).toBe(true);

@@ -43,7 +43,7 @@ opencode_catalog_has() {
   local wanted_kind=$1
   local wanted_name=$2
 
-  opencode_catalog_names "$wanted_kind" | grep -Fqx -- "$wanted_name"
+  opencode_catalog_names "$wanted_kind" | grep -Fx -- "$wanted_name" >/dev/null
 }
 
 # An entry is a directory or a file according to its repository source, so the

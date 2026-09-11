@@ -60,7 +60,9 @@ async function fixture(run: (f: any) => Promise<void>) {
       ].map((role) => [
         role,
         {
-          model: `openai/gpt-5.6-${["build", "plan"].includes(role) ? "sol" : "luna"}`,
+          model: ["build", "plan"].includes(role)
+            ? "openai/gpt-6-astra"
+            : "openai/gpt-5.6-luna-fast",
           variant: ["build", "plan"].includes(role) ? "xhigh" : "high",
         },
       ]),
@@ -115,7 +117,7 @@ test("a pending stop wakes the existing root once and preserves ownership until 
     expect(notices()[0].body.parts[0].text).toContain("stopping");
     expect(notices()[0].body.model).toEqual({
       providerID: "openai",
-      modelID: "gpt-5.6-sol",
+      modelID: "gpt-6-astra",
     });
     expect(notices()[0].body.variant).toBe("xhigh");
     expect(f.manager.get("root", sibling.id).status).toBe("running");

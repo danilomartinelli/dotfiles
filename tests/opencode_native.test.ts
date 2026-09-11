@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 type ProviderRequest = {
   model: string;
   reasoning?: { effort?: string };
+  service_tier?: string;
   input: unknown[];
   tools?: Array<{ name: string }>;
 };
@@ -396,7 +397,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           ? "NATIVE_CROSS_ROOT"
           : undefined;
       if (
-        body.model === "gpt-5.6-sol" &&
+        body.model === "gpt-6-astra" &&
         crossProject &&
         !issued.has(crossProject)
       ) {
@@ -501,7 +502,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           },
         };
       } else if (
-        body.model === "gpt-5.6-sol" &&
+        body.model === "gpt-6-astra" &&
         ["NATIVE_CANCEL_ROOT", "NATIVE_MCP_CANCEL_ROOT"].includes(
           marker ?? "",
         ) &&
@@ -608,7 +609,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
         };
       }
       if (
-        body.model === "gpt-5.6-sol" &&
+        body.model === "gpt-6-astra" &&
         input.includes("NATIVE_TIMEOUT_ROOT")
       ) {
         if (!issued.has("timeout-start")) {
@@ -835,8 +836,8 @@ process.stdin.on('end', () => process.exit(0));
       profileConfig,
       `// The direct adapter's routing source is independent of project overrides.\n${JSON.stringify(
         {
-          model: "openai/gpt-5.6-sol",
-          small_model: "openai/gpt-5.6-luna",
+          model: "openai/gpt-6-astra",
+          small_model: "openai/gpt-5.6-luna-fast",
           lsp: true,
           agent: Object.fromEntries(
             [
@@ -850,7 +851,9 @@ process.stdin.on('end', () => process.exit(0));
             ].map((role) => [
               role,
               {
-                model: `openai/gpt-5.6-${["build", "plan"].includes(role) ? "sol" : "luna"}`,
+                model: ["build", "plan"].includes(role)
+                  ? "openai/gpt-6-astra"
+                  : "openai/gpt-5.6-luna-fast",
                 variant: ["build", "plan"].includes(role) ? "xhigh" : "high",
               },
             ]),
@@ -861,8 +864,8 @@ process.stdin.on('end', () => process.exit(0));
     await writeFile(
       join(directory, "opencode.json"),
       JSON.stringify({
-        model: "openai/gpt-5.6-luna",
-        small_model: "openai/gpt-5.6-sol",
+        model: "openai/gpt-5.6-luna-fast",
+        small_model: "openai/gpt-6-astra",
         skills: { paths: [explicitSkills], urls: [] },
         lsp: {
           fixture: {
@@ -889,7 +892,7 @@ process.stdin.on('end', () => process.exit(0));
         },
         agent: {
           coder: {
-            model: "openai/gpt-5.6-sol",
+            model: "openai/gpt-6-astra",
             variant: "low",
             permission: { "project_*": "allow", "fixture_*": "allow" },
           },
@@ -916,10 +919,14 @@ process.stdin.on('end', () => process.exit(0));
               apiKey: "fixture-key",
             },
             models: Object.fromEntries(
-              ["gpt-5.6-sol", "gpt-5.6-luna"].map((id) => [
+              ["gpt-6-astra", "gpt-5.6-luna-fast"].map((id) => [
                 id,
                 {
+                  id: id === "gpt-5.6-luna-fast" ? "gpt-5.6-luna" : id,
                   name: id,
+                  options: id.endsWith("-fast")
+                    ? { serviceTier: "priority" }
+                    : {},
                   reasoning: true,
                   toolcall: true,
                   limit: { context: 200000, output: 8000 },
@@ -1001,9 +1008,9 @@ process.stdin.on('end', () => process.exit(0));
       nonGitSkills.some((skill: any) => skill.name === "global-fixture"),
     ).toBe(false);
     const configured = await api("/config");
-    expect(configured.model).toBe("openai/gpt-5.6-sol");
-    expect(configured.small_model).toBe("openai/gpt-5.6-luna");
-    expect(configured.agent.coder.model).toBe("openai/gpt-5.6-luna");
+    expect(configured.model).toBe("openai/gpt-6-astra");
+    expect(configured.small_model).toBe("openai/gpt-5.6-luna-fast");
+    expect(configured.agent.coder.model).toBe("openai/gpt-5.6-luna-fast");
     expect(configured.agent.coder.variant).toBe("high");
     expect(configured.skills.paths).toContain(explicitSkills);
     expect(configured.skills.urls).toEqual([]);
@@ -1012,7 +1019,11 @@ process.stdin.on('end', () => process.exit(0));
     expect(configured.agent.reviewer.permission["project_*"]).toBeUndefined();
     const result = await api(`/session/${session.id}/message`, {
       agent: "build",
-      model: { providerID: "openai", modelID: "gpt-5.6-luna", variant: "low" },
+      model: {
+        providerID: "openai",
+        modelID: "gpt-5.6-luna-fast",
+        variant: "low",
+      },
       parts: [{ type: "text", text: "NATIVE_VALID_ROOT" }],
     });
     if (result.info?.error)
@@ -1105,16 +1116,17 @@ process.stdin.on('end', () => process.exit(0));
     );
     const childRequest = requests.find((request) =>
       JSON.stringify(request.input).includes(
-        "Declared route: coder = openai/gpt-5.6-luna/high.",
+        "Declared route: coder = openai/gpt-5.6-luna-fast/high.",
       ),
     );
-    expect(rootRequest?.model).toBe("gpt-5.6-sol");
+    expect(rootRequest?.model).toBe("gpt-6-astra");
     expect(rootRequest?.reasoning?.effort).toBe("xhigh");
     expect(
       rootRequest?.tools?.some((tool) => tool.name.endsWith("_unknown_read")),
     ).toBe(false);
     expect(childRequest?.model).toBe("gpt-5.6-luna");
     expect(childRequest?.reasoning?.effort).toBe("high");
+    expect(childRequest?.service_tier).toBe("priority");
     expect(
       childMessages.find((message: any) => message.info.role === "user").info
         .agent,
@@ -1198,14 +1210,14 @@ process.stdin.on('end', () => process.exit(0));
     const beforeRootCompaction = requests.length;
     await api(`/session/${bad.id}/summarize`, {
       providerID: "openai",
-      modelID: "gpt-5.6-sol",
+      modelID: "gpt-6-astra",
     });
     const rootCompaction = requests.slice(beforeRootCompaction);
     expect(rootCompaction.length).toBeGreaterThan(0);
     expect(
       rootCompaction.every(
         (request) =>
-          request.model === "gpt-5.6-sol" &&
+          request.model === "gpt-6-astra" &&
           request.reasoning?.effort === "xhigh",
       ),
     ).toBe(true);
@@ -1219,7 +1231,7 @@ process.stdin.on('end', () => process.exit(0));
     const beforeChildCompaction = requests.length;
     await api(`/session/${child.id}/summarize`, {
       providerID: "openai",
-      modelID: "gpt-5.6-luna",
+      modelID: "gpt-5.6-luna-fast",
     });
     const childCompaction = requests.slice(beforeChildCompaction);
     expect(childCompaction.length).toBeGreaterThan(0);
@@ -1227,7 +1239,8 @@ process.stdin.on('end', () => process.exit(0));
       childCompaction.every(
         (request) =>
           request.model === "gpt-5.6-luna" &&
-          request.reasoning?.effort === "high",
+          request.reasoning?.effort === "high" &&
+          request.service_tier === "priority",
       ),
     ).toBe(true);
     const childSummary = (await api(`/session/${child.id}/message`)).find(
@@ -1304,7 +1317,7 @@ process.stdin.on('end', () => process.exit(0));
       reviews().every(
         (row: any) =>
           row.role === "reviewer" &&
-          row.route.model === "openai/gpt-5.6-luna" &&
+          row.route.model === "openai/gpt-5.6-luna-fast" &&
           row.route.variant === "high",
       ),
     ).toBe(true);
@@ -1320,7 +1333,8 @@ process.stdin.on('end', () => process.exit(0));
       reviewRequests.every(
         (request) =>
           request.model === "gpt-5.6-luna" &&
-          request.reasoning?.effort === "high",
+          request.reasoning?.effort === "high" &&
+          request.service_tier === "priority",
       ),
     ).toBe(true);
     expect((await api("/session")).length).toBe(6);
@@ -1467,7 +1481,7 @@ process.stdin.on('end', () => process.exit(0));
     ).toBe(true);
     await api(
       `/session/${scribeID}/summarize`,
-      { providerID: "openai", modelID: "gpt-5.6-luna", auto: false },
+      { providerID: "openai", modelID: "gpt-5.6-luna-fast", auto: false },
       targetDirectory,
     );
     await api(`/session/${crossRoot.id}/message`, {
