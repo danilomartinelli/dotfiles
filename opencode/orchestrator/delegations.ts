@@ -5,6 +5,7 @@ import { mkdir, readFile, readlink, realpath, lstat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { PluginInput } from "@opencode-ai/plugin";
+import { artifactPath, prepareArtifacts } from "./artifacts";
 
 const exec = promisify(execFile);
 export const childRoles = [
@@ -37,6 +38,7 @@ export type Delegation = {
   workItem: string;
   directory: string;
   ownership: string[];
+  artifacts?: string;
   sourceVersion?: string;
   status: State;
   started: number;
@@ -94,11 +96,18 @@ export async function canonical(filename: string, links = 0): Promise<string> {
 }
 
 export function overlaps(a: string, b: string): boolean {
+  a = directoryOwnership(a);
+  b = directoryOwnership(b);
   return (
     a === b ||
     a.startsWith(`${b}${path.sep}`) ||
     b.startsWith(`${a}${path.sep}`)
   );
+}
+
+/** A directory already owns its descendants; support the common trailing /** spelling. */
+export function directoryOwnership(file: string): string {
+  return file.endsWith("/**") ? file.slice(0, -3) || "/" : file;
 }
 
 /** Includes unstaged, staged and untracked content; never executes diff helpers. */
@@ -134,19 +143,48 @@ export async function sourceVersion(directory: string): Promise<string> {
   ]);
   const hash = createHash("sha256").update(head).update(diff);
   const files = untracked.split("\0").filter(Boolean).sort();
-  if (files.length > 1000)
-    throw new Error(
-      "Review snapshot exceeds 1000 untracked files; narrow/clean the worktree first.",
-    );
+  const entries: Array<{
+    file: string;
+    info: Awaited<ReturnType<typeof lstat>>;
+  }> = [];
+  const groups = new Map<string, { count: number; bytes: number }>();
   let bytes = 0;
-  for (const file of files) {
+  // Bound diagnostic metadata too; huge trees never trigger unbounded file reads.
+  for (const file of files.slice(0, 10_000)) {
     const full = path.join(directory, file);
     const info = await lstat(full);
     bytes += info.size;
-    if ((!info.isFile() && !info.isSymbolicLink()) || bytes > 16 * 1024 * 1024)
+    if (!info.isFile() && !info.isSymbolicLink())
       throw new Error(
-        "Review snapshot contains unsupported or oversized untracked content.",
+        `Review snapshot cannot hash unsupported file type at ${JSON.stringify(file)}. Preserve evidence and inspect that path before retrying.`,
       );
+    entries.push({ file, info });
+    const group = file.includes("/") ? `${file.split("/")[0]}/` : file;
+    const total = groups.get(group) ?? { count: 0, bytes: 0 };
+    total.count++;
+    total.bytes += info.size;
+    groups.set(group, total);
+  }
+  if (files.length > 1000 || bytes > 16 * 1024 * 1024) {
+    const mib = (size: number) => `${(size / 1024 / 1024).toFixed(2)} MiB`;
+    const largest = [...groups]
+      .sort((a, b) => b[1].bytes - a[1].bytes || b[1].count - a[1].count)
+      .slice(0, 5);
+    throw new Error(
+      [
+        `Review snapshot limit: ${files.length} untracked files (limit 1000); ${mib(bytes)} (limit 16 MiB).`,
+        files.length > entries.length
+          ? `Size and groups sample the first ${entries.length} files only.`
+          : "",
+        `Largest paths: ${largest.map(([name, total]) => `${JSON.stringify(name)}: ${total.count} files, ${mib(total.bytes)}`).join("; ")}.`,
+        "Preserve evidence. Resume the owning coder to move only generated artifacts into its provided artifact directory inside this checkout, verify the copy, and update evidence references. Keep new source files visible to Git; do not delete evidence or ignore source to satisfy this limit.",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+  }
+  for (const { file, info } of entries) {
+    const full = path.join(directory, file);
     hash
       .update(file)
       .update("\0")
@@ -319,6 +357,18 @@ export class Delegations {
       this.consolidations.delete(root);
     }
   }
+  assertReviewReady(directory: string) {
+    const writer = this.all().find(
+      (row) =>
+        active.has(row.status) &&
+        writerRoles.has(row.role) &&
+        overlaps(directory, row.directory),
+    );
+    if (writer)
+      throw new Error(
+        `Review a stable version after writers finish. Delegation ${writer.id} (${writer.role}, ${writer.status}) still reserves ${writer.directory}; collect its completion notification before retrying.`,
+      );
+  }
   async start(root: string, request: Request): Promise<Delegation> {
     if (this.consolidations.size)
       throw new Error(
@@ -338,7 +388,14 @@ export class Delegations {
       throw new Error("Delegation directory must be absolute.");
     const directory = await realpath(request.directory);
     const ownership = await Promise.all(
-      request.ownership.map((file) => canonical(path.resolve(directory, file))),
+      request.ownership.map((file) => {
+        const owner = directoryOwnership(file);
+        if (!owner.trim() || /[*?\[\]{}]/.test(owner))
+          throw new Error(
+            "Ownership accepts literal paths, not glob patterns. Supply a directory to own its descendants (a trailing /** is accepted).",
+          );
+        return canonical(path.resolve(directory, owner));
+      }),
     );
     if (
       ownership.some(
@@ -348,7 +405,7 @@ export class Delegations {
       )
     )
       throw new Error(
-        "File ownership must stay inside the delegation directory.",
+        "File ownership must stay inside the delegation directory. Use the coder's provided artifact directory for generated evidence; external destinations need a separate delegation in that directory.",
       );
     const writer = writerRoles.has(request.role);
     const reviewer = request.role === "reviewer";
@@ -358,13 +415,18 @@ export class Delegations {
       throw new Error(
         "Read-only roles need empty ownership; put the investigation or review scope in the prompt.",
       );
+    const id = request.resume ?? randomUUID();
+    const artifacts =
+      request.role === "coder" ? await artifactPath(directory, id) : undefined;
+    if (artifacts) ownership.push(artifacts);
+    if (reviewer) this.assertReviewReady(directory);
     if (
       reviewer &&
       (!request.sourceVersion ||
         request.sourceVersion !== (await this.snapshot(directory)))
     )
       throw new Error(
-        "Review requires a current review_snapshot source version.",
+        "Review requires a current review_snapshot source version. Obtain a new snapshot after writers finish and pass its full return value verbatim to every reviewer of that version.",
       );
 
     const row = this.db
@@ -374,17 +436,26 @@ export class Delegations {
             "Finish memory consolidation before starting another delegation.",
           );
         const old = request.resume ? this.get(root, request.resume) : undefined;
+        if (old && active.has(old.status))
+          throw new Error(
+            `Delegation ${old.id} is ${old.status}; resume requires confirmed terminal status. Use its completion notification; a stopping child still reserves its files.`,
+          );
         if (
           old &&
-          (active.has(old.status) ||
-            old.workItem !== request.workItem ||
+          (old.workItem !== request.workItem ||
             old.role !== request.role ||
-            old.directory !== directory ||
-            JSON.stringify(old.route) !==
-              JSON.stringify(this.routes[request.role]))
+            old.directory !== directory)
         )
           throw new Error(
-            "Resume requires a terminal session with the same work item, role, directory and declared route.",
+            `Resume requires the same work item, role and directory. Read delegation ${old.id} and reuse its recorded fields exactly.`,
+          );
+        if (
+          old &&
+          JSON.stringify(old.route) !==
+            JSON.stringify(this.routes[request.role])
+        )
+          throw new Error(
+            `The profile route changed from ${old.route.model}/${old.route.variant} to ${this.routes[request.role].model}/${this.routes[request.role].variant}. This terminal child cannot switch routes; start a new delegation for the remaining work with the current profile.`,
           );
         const running = this.all().filter((item) => active.has(item.status));
         if (running.filter((item) => item.root === root).length >= 3)
@@ -408,7 +479,7 @@ export class Delegations {
             );
         }
         const next: Delegation = {
-          id: old?.id ?? randomUUID(),
+          id,
           child: old?.child,
           root,
           rootDirectory: rootSession.directory,
@@ -418,6 +489,7 @@ export class Delegations {
           workItem: request.workItem,
           directory,
           ownership,
+          artifacts,
           sourceVersion: request.sourceVersion,
           status: "starting",
           started: Date.now(),
@@ -430,6 +502,7 @@ export class Delegations {
       .immediate();
 
     try {
+      if (row.artifacts) await prepareArtifacts(directory, row.artifacts);
       if (!row.child) {
         const child = data(
           await this.client.session.create({
@@ -467,6 +540,9 @@ export class Delegations {
               `Work item: ${row.workItem}. Directory: ${directory}.`,
               `Declared route: ${row.role} = ${row.route.model}/${row.route.variant}.`,
               `File ownership: ${ownership.join(", ") || "read-only"}.`,
+              row.artifacts
+                ? `Artifact directory: ${row.artifacts}. Store generated logs, downloads, screenshots and diagnostic scripts here. It is owned by this coder, ignored by Git and retained across resumes; keep source/docs outside it. Preserve evidence and return its paths; do not clean it automatically.`
+                : "",
               row.sourceVersion
                 ? `Review source version: ${row.sourceVersion}.`
                 : "",

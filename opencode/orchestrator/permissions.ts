@@ -229,12 +229,31 @@ function safeGit(argv: string[]): string[] {
     "-c",
     "core.fsmonitor=false",
   ];
-  if (
-    query === "branch" &&
-    argv.length === index + 1 &&
-    argv[index] === "--show-current"
-  )
-    return ["git", ...safety, ...prefix, query, "--show-current"];
+  if (query === "branch") {
+    const args = argv.slice(index);
+    if (args.length === 1 && args[0] === "--show-current")
+      return ["git", ...safety, ...prefix, query, ...args];
+    const positional = options(args, {
+      flags: "--list --all -a --remotes -r --no-color --verbose -v -vv",
+      values: "--format --sort",
+    });
+    if (
+      positional.length &&
+      !args
+        .slice(0, args.indexOf("--") < 0 ? args.length : args.indexOf("--"))
+        .includes("--list")
+    )
+      denied(
+        "branch inspection requires --list before name filters; branch creation and mutation belong to coder",
+      );
+    return [
+      "git",
+      ...safety,
+      ...prefix,
+      query,
+      ...prependOnce(["--list"], args),
+    ];
+  }
   if (query === "ls-remote")
     denied(
       "remote transports may execute configured helpers; inspect remote refs with gh/glab GET queries or ask the root to assign the command to coder",
@@ -310,7 +329,7 @@ const gitlabQueries = new Set([
 function safeApi(program: string, args: string[]): void {
   const positional = options(args, {
     flags: "--paginate --slurp --include -i --silent",
-    values: "--method -X --jq -q --hostname --header -H",
+    values: `--method -X --jq -q --hostname --header -H${program === "glab" ? " --output" : ""}`,
   });
   for (let index = 0; index < args.length; index++) {
     if (args[index] === "--") break;
@@ -324,6 +343,7 @@ function safeApi(program: string, args: string[]): void {
         "--hostname",
         "--header",
         "-H",
+        "--output",
       ].includes(name)
     )
       continue;
@@ -332,6 +352,10 @@ function safeApi(program: string, args: string[]): void {
       : args[++index];
     if (["--method", "-X"].includes(name) && value !== "GET")
       denied("API calls must use GET");
+    if (name === "--output" && !["json", "ndjson"].includes(value))
+      denied(
+        "glab API --output accepts json or ndjson formatting, not a file destination",
+      );
     if (
       ["--header", "-H"].includes(name) &&
       !/^Accept:[ \t]*[a-zA-Z0-9!#$&^_.+*/;=, \t-]+$/i.test(value)
@@ -401,7 +425,8 @@ function safeTracker(program: string, argv: string[]): string[] {
       flags:
         "--comments --commits --files --patch --name-only --watch=false --checks --log --log-failed --verbose --all --closed --opened --merged --draft --ready --no-color",
       values:
-        "--repo -R --json --jq -q --limit -L --state -s --label -l --author --assignee -a --search -S --base -B --head -H --branch -b --workflow -w --event -e --status --job -j --page --per-page -P --output -F --sort --order --owner --language --filename --extension --match",
+        "--repo -R --json --jq -q --limit -L --state -s --label -l --author --assignee -a --search -S --base -B --head -H --branch -b --workflow -w --event -e --status --job -j --page --per-page -P --output -F --sort --order --owner --language --filename --extension --match" +
+        (program === "glab" ? " --source-branch --target-branch" : ""),
     });
   }
   return [program, ...argv];

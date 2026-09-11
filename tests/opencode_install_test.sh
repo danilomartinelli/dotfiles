@@ -189,7 +189,7 @@ test_gui_adapter_preserves_project_loading_and_pins_selected_profile_routes() {
   fixture=$(scenario_tmpdir gui-adapter)
   checkout=$fixture/checkout
   home=$fixture/home
-  mkdir -p "$checkout/bin" "$checkout/_scripts" "$checkout/homebrew" "$checkout/opencode" "$fixture/brew/bin" "$home"
+  mkdir -p "$checkout/bin" "$checkout/_scripts" "$checkout/homebrew" "$checkout/opencode" "$fixture/brew/bin" "$fixture/brew/tools" "$home"
   cp "$REPOSITORY_ROOT/bin/opencode-profile" "$checkout/bin/"
   cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$checkout/_scripts/"
   cp "$REPOSITORY_ROOT/opencode/env.zsh" "$checkout/opencode/"
@@ -204,24 +204,42 @@ printf '%s\n' "$FIXTURE_BREW"
 EOF
   scenario_write_executable "$fixture/brew/bin/mise" <<'EOF'
 #!/bin/sh
-[ "$*" = 'which opencode' ] || exit 1
-printf '%s\n' "$FIXTURE_BREW/bin/opencode"
+case "$1" in
+  which)
+    [ "$*" = 'which opencode' ] || exit 1
+    printf '%s\n' "$FIXTURE_BREW/bin/opencode"
+    ;;
+  exec)
+    [ "$2 $3" = '--no-deps --' ] || exit 1
+    shift 3
+    PATH="$FIXTURE_BREW/tools:$PATH"
+    export PATH
+    exec "$@"
+    ;;
+  *) exit 1 ;;
+esac
+EOF
+  scenario_write_executable "$fixture/brew/tools/codegraph" <<'EOF'
+#!/bin/sh
+exit 0
 EOF
   scenario_write_executable "$fixture/brew/bin/opencode" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|${OPENCODE_CONFIG:-absent}|${DOTFILES_OPENCODE_PROFILE_CONFIG:-absent}"
 printf 'args:%s\n' "$*"
 printf 'lsp:%s\n' "$OPENCODE_EXPERIMENTAL_LSP_TOOL"
+printf 'mcp:%s\n' "$(command -v codegraph)"
 EOF
   for selected in regular example; do
     mkdir -p "$home/.config/opencode/profiles/$selected"
     printf '{}\n' >"$home/.config/opencode/profiles/$selected/opencode.jsonc"
     scenario_capture "$fixture" env HOME="$home" OCX_PROFILE="$selected" \
-      FIXTURE_CHECKOUT="$checkout" FIXTURE_BREW="$fixture/brew" \
+      FIXTURE_CHECKOUT="$checkout" FIXTURE_BREW="$fixture/brew" PATH=/usr/bin:/bin \
       "$checkout/bin/opencode-profile" --version
     assert_contains "$fixture/stdout.log" "false|true|$home/.config/opencode/profiles/$selected/opencode.jsonc|$home/.config/opencode/profiles/$selected/opencode.jsonc"
     assert_contains "$fixture/stdout.log" 'args:--version'
     assert_contains "$fixture/stdout.log" 'lsp:true'
+    assert_contains "$fixture/stdout.log" "mcp:$fixture/brew/tools/codegraph"
   done
   scenario_capture "$fixture" env HOME="$home" OCX_PROFILE=missing \
     OPENCODE_CONFIG=stale DOTFILES_OPENCODE_PROFILE_CONFIG=stale \
@@ -387,7 +405,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
   printf '{"permission":{"project_*":"ask"}}\n' >"$override"
   "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" "$fixture/opencode" \
     >/dev/null || return 1
-  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna-fast"' \
+  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna"' \
     "$fixture/opencode/profiles/regular/opencode.jsonc" >/dev/null \
     || scenario_fail 'regular override did not merge with shared policy'
 
@@ -404,7 +422,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
 
   cp "$REPOSITORY_ROOT/opencode/profiles/_routing.tsv" \
     "$fixture/opencode/profiles/_routing.tsv"
-  printf 'example\tunknown-role\topenai/gpt-5.6-luna-fast\thigh\t-\n' \
+  printf 'example\tunknown-role\topenai/gpt-5.6-luna\thigh\t-\n' \
     >>"$fixture/opencode/profiles/_routing.tsv"
   assert_fails_with_output 'undeclared agent' \
     'routing row names an undeclared agent: example unknown-role' \
@@ -436,16 +454,16 @@ test_profiles_route_models() {
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" | jq -e '
       .model == "openai/gpt-6-astra" and
-      .small_model == "openai/gpt-5.6-luna-fast" and
+      .small_model == "openai/gpt-5.6-luna" and
       .lsp == true and
       .agent == {
-        "plan": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
-        "build": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
-        "coder": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "explore": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "researcher": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "scribe": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "reviewer": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"}
+        "plan": {"model": "openai/gpt-6-astra", "variant": "max"},
+        "build": {"model": "openai/gpt-6-astra", "variant": "max"},
+        "coder": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "explore": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "researcher": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "scribe": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "reviewer": {"model": "openai/gpt-5.6-luna", "variant": "high"}
       }
     ' >/dev/null \
       || scenario_fail "$profile profile model routing is incorrect"

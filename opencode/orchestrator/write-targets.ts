@@ -1,5 +1,5 @@
 import path from "node:path";
-import { canonical } from "./delegations";
+import { canonical, directoryOwnership } from "./delegations";
 
 export const writeTools = new Set(["edit", "write", "apply_patch"]);
 
@@ -41,9 +41,13 @@ export async function assertWriteTargets(
     const target = await canonical(path.resolve(child.directory, filename));
     if (
       !child.ownership.some(
-        (owner) => target === owner || target.startsWith(`${owner}${path.sep}`),
+        (owner) =>
+          target === directoryOwnership(owner) ||
+          target.startsWith(`${directoryOwnership(owner)}${path.sep}`),
       )
     )
-      throw new Error("Write target is outside delegated file ownership.");
+      throw new Error(
+        `Write target is outside delegated file ownership: ${target}. Return the needed path to the root for a scoped resume; changing tool or path spelling does not extend ownership.`,
+      );
   }
 }

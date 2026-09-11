@@ -3,7 +3,7 @@
 `index.ts` replaces the two upstream workspace/delegation hooks and the
 standalone memory plugin entry. `regular.ts` coordinates the authored
 workflow. `session-journals.ts` resolves native parent/project identities,
-`delegations.ts` owns the persisted lifecycle, `permissions.ts`
+`delegations.ts` owns the persisted lifecycle, `artifacts.ts` prepares coder evidence storage, `permissions.ts`
 enforces query capabilities, `prompts.ts` states role responsibilities, and
 `memory/` adapts the pinned memory storage without automatic extraction.
 
@@ -42,11 +42,11 @@ Read-only roles have a fail-closed tool/argument guard. Explicitly enabled
 coder MCP calls join the same execution ledger as native writes and shell calls.
 
 Only the root build/plan may create, resume or cancel a child. Resume keeps its
-role, directory, work item and route. A generation ID protects resumed work
+role, directory, work item and route. If a profile update changes that route,
+finish the old execution before starting a new delegation for the remaining work.
+A generation ID protects resumed work
 from delayed completion events. Terminal status requires a final assistant
-result; a completed tool-call step does not release ownership. A source
-snapshot includes HEAD, tracked changes and untracked content; a changed
-snapshot invalidates the review verdict.
+result; a completed tool-call step does not release ownership.
 
 Each new or resumed delegation receives a 30-minute deadline. Existing executions
 keep their recorded deadline, including after a process restart.
@@ -80,6 +80,38 @@ native session directory. `read-context.ts` anchors relative file queries there
 and reports missing targets with rediscovery guidance. Existing external paths
 still go through OpenCode's native permissions; missing targets are never
 silently replaced by similarly named files.
+
+## Artifacts and review snapshots
+
+Each coder in a Git checkout receives
+`.opencode-artifacts/<delegation-id>/` inside its delegation directory. The
+runtime reserves that path alongside its explicit writable scope, prepares it
+before prompting the child and reuses it on resume. Other writers need their
+own disjoint paths. Directory ownership includes descendants; a trailing `/**`
+is normalized to that directory, while other glob patterns are rejected before
+creating a child.
+
+The artifact directory has its own managed `.gitignore`. The runtime preserves
+the project's ignore files, refuses symlinks and tracked artifact content, and
+keeps unrelated files in the parent directory visible to Git. Use this directory
+for generated logs, screenshots, downloads and diagnostic scripts; source and
+deliverable documentation remain in their normal paths. Artifacts are retained
+after completion and cancellation. Removal requires authorization; no automatic
+cleanup or external-directory write access is granted.
+
+`review_snapshot` waits for writers affecting that checkout, including pending
+stops. Read-only investigations and writers in unrelated checkouts do not block
+it. The snapshot hashes HEAD, tracked changes and non-ignored untracked content;
+a changed snapshot invalidates the review verdict. Pass the full returned value
+unchanged to every reviewer of that version.
+
+Untracked source is bounded at 1,000 files and 16 MiB. Limit errors report file
+count, size and the largest paths; metadata samples at most 10,000 files. They
+preserve all files. For generated evidence left elsewhere, resume its owning
+coder to verify and relocate it into its artifact directory, then update
+references and retry. Keep actual source visible to Git. Ignored evidence is
+outside the source hash: reviewers must report which evidence they used and
+material verification gaps, and its owner must preserve it during review.
 
 ## Code navigation
 

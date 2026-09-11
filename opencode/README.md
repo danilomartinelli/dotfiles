@@ -63,7 +63,10 @@ Open a new Zsh session or run `reload!` after shell changes.
 `opencode/env.zsh` declares the default `OCX_PROFILE=regular`. Zed's ACP also
 selects `regular`. OpenChamber uses `bin/opencode-profile`, which launches
 OpenCode directly with the chosen profile's `OPENCODE_CONFIG` layered over the
-global configuration.
+global configuration. The adapter supplies the Mise tool environment and
+Homebrew paths to OpenCode and its MCP/LSP/shell subprocesses, including when
+the desktop app starts without a login-shell `PATH`. It skips automatic
+dependency preparation; installation remains part of the normal Mise setup.
 
 The TUI uses Catppuccin Macchiato, `ctrl+x` as leader, `ctrl+p` for commands,
 accelerated scrolling, a blinking block cursor and silent notifications.
@@ -72,23 +75,22 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                           | `example`                           |
-| ---------- | ----------------------------------- | ----------------------------------- |
-| Default    | `openai/gpt-6-astra`                | `openai/gpt-6-astra`                |
-| Small      | `openai/gpt-5.6-luna-fast`          | `openai/gpt-5.6-luna-fast`          |
-| Plan       | `openai/gpt-6-astra` (`xhigh`)      | `openai/gpt-6-astra` (`xhigh`)      |
-| Build      | `openai/gpt-6-astra` (`xhigh`)      | `openai/gpt-6-astra` (`xhigh`)      |
-| Coder      | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Explore    | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Researcher | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Reviewer   | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Role       | `regular`                      | `example`                      |
+| ---------- | ------------------------------ | ------------------------------ |
+| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           |
+| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          |
+| Plan       | `openai/gpt-6-astra` (`max`)   | `openai/gpt-6-astra` (`max`)   |
+| Build      | `openai/gpt-6-astra` (`max`)   | `openai/gpt-6-astra` (`max`)   |
+| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
 
 <!-- generated-end -->
 
-`gpt-5.6-luna-fast` is the provider's alias for `gpt-5.6-luna` with
-`serviceTier: priority`. Fast service and reasoning effort are independent:
-supporting agents still use `high`, while plan/build use Astra with `xhigh`.
+Supporting agents use `openai/gpt-5.6-luna` with `high`; `small_model` uses
+the same standard model.
 
 `regular` is the active profile; `example` starts with identical routing and
 preserves the structure for future customization. Plan/build coordinates the
@@ -100,6 +102,8 @@ A root runs at most three children with explicit focuses and non-overlapping
 writer ownership. Corrections resume the same child. Reviews use a source
 snapshot and have no fixed round count. Plan saves do not trigger reviews.
 Memory is consolidated in the root execution without auxiliary LLM sessions.
+Git coders receive a retained, ignored artifact directory inside their checkout
+for diagnostics and downloads; see [artifacts and snapshots](orchestrator/README.md#artifacts-and-review-snapshots).
 See [runtime behavior and recovery](orchestrator/README.md) and the
 [orchestration contract](ORCHESTRATION.md).
 

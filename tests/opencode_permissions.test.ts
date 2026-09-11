@@ -88,6 +88,10 @@ describe("regular read-only tool boundary", () => {
       "git rev-list --left-right --count main...origin/main",
       "git rev-list --parents -n 1 HEAD",
       "git branch --show-current",
+      "git branch --all --no-color",
+      "git branch --list 'feature/*' --all",
+      "glab mr list --source-branch feature/example --target-branch main --all",
+      "glab api projects/123/merge_requests/1/discussions --paginate --output ndjson",
       "git grep -n needle HEAD -- src",
       "git show --find-renames HEAD",
       ...["docker", "mise", "colima", "multipass", "sh"].map(
@@ -99,6 +103,19 @@ describe("regular read-only tool boundary", () => {
         expect(query(normalized, role)).toBe(normalized);
       }
     }
+  });
+
+  test("branch listing cannot create branches and API formatting cannot write files", () => {
+    for (const command of [
+      "git branch feature/new",
+      "git branch --all feature/new",
+      "git branch -D feature/old",
+      "git branch --list --force feature/new",
+      "glab api projects/123 --output /tmp/output.json",
+      "glab api projects/123 --output ndjson --method POST",
+      "gh api repos/example/project --output ndjson",
+    ])
+      expect(() => query(command), command).toThrow("Read-only policy:");
   });
 
   test("quoted API filters and Accept headers arrive as literal arguments", () => {

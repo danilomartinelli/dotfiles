@@ -32,6 +32,11 @@ selection; delegations cannot override them. The routing source is
    The native session's directory is the path base. A child in another project
    keeps its lifecycle in the root project's journal. Resume and compaction
    recover that association and the actual directory.
+   In Git checkouts, coder also receives a private, ignored artifact directory
+   inside its writable scope. Preserve generated evidence there and keep source
+   and deliverable documentation in their normal paths. See
+   [artifacts and snapshots](orchestrator/README.md#artifacts-and-review-snapshots)
+   for limits and recovery.
 1. Start one useful child. Add independent parallel focuses when needed, up to
    three active children per root. Writers require disjoint paths and agreed
    interfaces. Reviewers run after writers finish against the same snapshot.
@@ -74,7 +79,8 @@ artifacts or saving output belongs to coder with an owned destination, preferabl
 as part of existing relevant work. Reviewers receive the resulting evidence.
 `command -v NAME` can discover any literal executable name without running it.
 Git inspections include short log counts, revision comparisons, the current
-branch and source grep. Remote transports such as `ls-remote` require coder;
+branch, branch listings and source grep. GitLab queries also support MR branch
+filters and API `json`/`ndjson` output formatting. Remote transports such as `ls-remote` require coder;
 read-only roles use tracker API queries for remote refs.
 
 File queries resolve relative paths against the native session directory.

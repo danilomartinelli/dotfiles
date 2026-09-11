@@ -1,5 +1,12 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdtemp, rm, mkdir, writeFile, realpath } from "node:fs/promises";
+import {
+  mkdtemp,
+  rm,
+  mkdir,
+  writeFile,
+  realpath,
+  symlink,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
@@ -8,17 +15,18 @@ import {
   type Request,
 } from "../opencode/orchestrator/delegations";
 import { SessionJournals } from "../opencode/orchestrator/session-journals";
+import { assertWriteTargets } from "../opencode/orchestrator/write-targets";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
   for (const run of cleanup.splice(0).reverse()) await run();
 });
 const routes = {
-  coder: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
-  reviewer: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
-  scribe: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
-  explore: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
-  researcher: { model: "openai/gpt-5.6-luna-fast", variant: "high" },
+  coder: { model: "openai/gpt-5.6-luna", variant: "high" },
+  reviewer: { model: "openai/gpt-5.6-luna", variant: "high" },
+  scribe: { model: "openai/gpt-5.6-luna", variant: "high" },
+  explore: { model: "openai/gpt-5.6-luna", variant: "high" },
+  researcher: { model: "openai/gpt-5.6-luna", variant: "high" },
 };
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -71,7 +79,7 @@ async function fixture(timeoutMs?: number) {
   const manager = new Delegations(
     filename,
     client as any,
-    routes,
+    structuredClone(routes),
     timeoutMs,
     async () => snapshot,
   );
@@ -224,7 +232,7 @@ test("support roles retain bounded delegation and their read or write capability
       f.request({ role, ownership: [] }),
     );
     expect(row.route).toEqual({
-      model: "openai/gpt-5.6-luna-fast",
+      model: "openai/gpt-5.6-luna",
       variant: "high",
     });
     expect(row.sourceVersion).toBeUndefined();
@@ -273,7 +281,7 @@ test("bounded parallel roles use explicit routes without metadata sessions", asy
   expect(
     f.requests.every(
       (request) =>
-        request.body.model.modelID === "gpt-5.6-luna-fast" &&
+        request.body.model.modelID === "gpt-5.6-luna" &&
         request.body.variant === "high",
     ),
   ).toBe(true);
@@ -496,7 +504,7 @@ test("memory consolidation excludes new work and releases its reservation after 
   expect(f.created).toHaveLength(1);
 });
 
-test("snapshot includes staged, unstaged and untracked content", async () => {
+async function gitFixture() {
   const f = await fixture();
   const git = (...args: string[]) => {
     const result = Bun.spawnSync(["git", ...args], {
@@ -512,18 +520,216 @@ test("snapshot includes staged, unstaged and untracked content", async () => {
       },
     });
     expect(result.exitCode).toBe(0);
+    return result.stdout.toString().trim();
   };
   git("init");
+  git("config", "core.excludesFile", "/dev/null");
   await writeFile(path.join(f.directory, ".gitignore"), "state.sqlite*\n");
   await writeFile(path.join(f.directory, "tracked"), "one");
   git("add", ".");
   git("commit", "-m", "Fixture");
+  return { ...f, git };
+}
+
+test("snapshot includes staged, unstaged and untracked content", async () => {
+  const f = await gitFixture();
   const one = await sourceVersion(f.directory);
   await writeFile(path.join(f.directory, "tracked"), "two");
   const two = await sourceVersion(f.directory);
   expect(two).not.toBe(one);
-  git("add", "tracked");
+  f.git("add", "tracked");
   expect(await sourceVersion(f.directory)).toBe(two);
   await writeFile(path.join(f.directory, "new"), "three");
   expect(await sourceVersion(f.directory)).not.toBe(two);
+});
+
+test("coder artifacts survive resume without counting toward source snapshots", async () => {
+  const f = await gitFixture();
+  const row = await f.manager.start("root", f.request());
+  expect(row.artifacts).toBeString();
+  expect(row.ownership).toContain(row.artifacts!);
+  expect(f.requests[0].body.parts[0].text).toContain(row.artifacts!);
+  const baseline = await sourceVersion(f.directory);
+  await Promise.all(
+    Array.from({ length: 1001 }, (_, index) =>
+      writeFile(path.join(row.artifacts!, `${index}.log`), "diagnostic\n"),
+    ),
+  );
+  await writeFile(
+    path.join(row.artifacts!, "large.bin"),
+    new Uint8Array(17 * 1024 * 1024),
+  );
+  expect(await sourceVersion(f.directory)).toBe(baseline);
+  await assertWriteTargets(
+    "write",
+    { filePath: path.join(row.artifacts!, "result.txt") },
+    row,
+  );
+  await writeFile(
+    path.join(f.directory, "new-source.ts"),
+    "export const value = 1;\n",
+  );
+  expect(await sourceVersion(f.directory)).not.toBe(baseline);
+  const sibling = await f.manager.start(
+    "root",
+    f.request({ ownership: ["other-src"], workItem: "other" }),
+  );
+  expect(sibling.artifacts).not.toBe(row.artifacts);
+  await expect(
+    assertWriteTargets(
+      "write",
+      { filePath: path.join(row.artifacts!, "result.txt") },
+      sibling,
+    ),
+  ).rejects.toThrow("outside delegated");
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  const resumed = await f.manager.start("root", f.request({ resume: row.id }));
+  expect(resumed.artifacts).toBe(row.artifacts);
+  expect(await Bun.file(path.join(row.artifacts!, "1000.log")).text()).toBe(
+    "diagnostic\n",
+  );
+  expect(await Bun.file(path.join(f.directory, ".gitignore")).text()).toBe(
+    "state.sqlite*\n",
+  );
+});
+
+test("artifact preparation rejects symlinks without claiming external paths or starting a child", async () => {
+  const f = await gitFixture();
+  const external = await mkdtemp(
+    path.join(tmpdir(), "external-artifact-fixture-"),
+  );
+  cleanup.push(() => rm(external, { recursive: true, force: true }));
+  await symlink(external, path.join(f.directory, ".opencode-artifacts"));
+  await expect(f.manager.start("root", f.request())).rejects.toThrow(
+    "real directory",
+  );
+  expect(f.created).toHaveLength(0);
+  expect(await Bun.file(path.join(external, ".gitignore")).exists()).toBe(
+    false,
+  );
+});
+
+test("snapshot limits explain counts, bytes and responsible paths while preserving evidence", async () => {
+  const f = await gitFixture();
+  await mkdir(path.join(f.directory, ".tmp"));
+  await Promise.all(
+    Array.from({ length: 1001 }, (_, index) =>
+      writeFile(path.join(f.directory, ".tmp", `${index}.log`), "diagnostic\n"),
+    ),
+  );
+  await expect(sourceVersion(f.directory)).rejects.toThrow(
+    "1001 untracked files",
+  );
+  await expect(sourceVersion(f.directory)).rejects.toThrow('".tmp/"');
+  await expect(sourceVersion(f.directory)).rejects.toThrow("Preserve evidence");
+  expect(await Bun.file(path.join(f.directory, ".tmp/1000.log")).text()).toBe(
+    "diagnostic\n",
+  );
+  const large = await gitFixture();
+  await writeFile(
+    path.join(large.directory, "capture.bin"),
+    new Uint8Array(17 * 1024 * 1024),
+  );
+  await expect(sourceVersion(large.directory)).rejects.toThrow("17.00 MiB");
+  await expect(sourceVersion(large.directory)).rejects.toThrow("capture.bin");
+});
+
+test("recursive directory ownership permits intended writes and reserves the whole directory", async () => {
+  const f = await fixture();
+  const row = await f.manager.start(
+    "root",
+    f.request({ ownership: ["src/**"] }),
+  );
+  expect(row.ownership).toContain(
+    path.join(await realpath(f.directory), "src"),
+  );
+  await assertWriteTargets("write", { filePath: "src/nested/file.ts" }, row);
+  await expect(
+    f.manager.start("other-root", f.request({ ownership: ["src/nested"] })),
+  ).rejects.toThrow("overlaps");
+  await expect(
+    f.manager.start("root", f.request({ ownership: ["lib/*.ts"] })),
+  ).rejects.toThrow("literal paths");
+});
+
+test("review preparation waits for writers in that checkout and identifies their reservations", async () => {
+  const f = await fixture();
+  await f.manager.start("root", f.request({ role: "explore", ownership: [] }));
+  expect(() => f.manager.assertReviewReady(f.directory)).not.toThrow();
+  const writer = await f.manager.start("root", f.request());
+  expect(() => f.manager.assertReviewReady(writer.directory)).toThrow(
+    writer.id,
+  );
+  expect(() =>
+    f.manager.assertReviewReady(path.join(writer.directory, "nested")),
+  ).toThrow("writers finish");
+  expect(() =>
+    f.manager.assertReviewReady(`${writer.directory}-other`),
+  ).not.toThrow();
+  await f.manager.stop("root", writer.id);
+  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+  expect(() => f.manager.assertSettled("root")).toThrow("active delegations");
+});
+
+test("resume errors distinguish active execution, mismatched identity and profile changes", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  await expect(
+    f.manager.start("root", f.request({ resume: row.id })),
+  ).rejects.toThrow("confirmed terminal status");
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  await expect(
+    f.manager.start(
+      "root",
+      f.request({ resume: row.id, workItem: "different" }),
+    ),
+  ).rejects.toThrow("recorded fields exactly");
+  const updated = new Delegations(f.filename, f.client as any, {
+    ...routes,
+    coder: { ...routes.coder, variant: "medium" },
+  });
+  try {
+    await expect(
+      updated.start("root", f.request({ resume: row.id })),
+    ).rejects.toThrow("profile route changed");
+    expect(f.created).toHaveLength(1);
+  } finally {
+    updated.close();
+  }
+});
+
+test("artifact storage preserves unrelated source and refuses tracked artifacts or a replaced marker", async () => {
+  const f = await gitFixture();
+  await mkdir(path.join(f.directory, ".opencode-artifacts"));
+  await writeFile(
+    path.join(f.directory, ".opencode-artifacts", "user-source.ts"),
+    "source\n",
+  );
+  const row = await f.manager.start("root", f.request());
+  expect(f.git("ls-files", "--others", "--exclude-standard")).toContain(
+    "user-source.ts",
+  );
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  await writeFile(path.join(row.artifacts!, "proof.txt"), "keep\n");
+  f.git("add", "-f", path.join(row.artifacts!, "proof.txt"));
+  await expect(
+    f.manager.start("root", f.request({ resume: row.id })),
+  ).rejects.toThrow("tracked files");
+  expect(await Bun.file(path.join(row.artifacts!, "proof.txt")).text()).toBe(
+    "keep\n",
+  );
+  const other = await gitFixture();
+  const second = await other.manager.start("root", other.request());
+  other.result(second.child!);
+  await other.manager.complete(second.child!);
+  await writeFile(path.join(second.artifacts!, ".gitignore"), "custom rule\n");
+  await expect(
+    other.manager.start("root", other.request({ resume: second.id })),
+  ).rejects.toThrow("managed marker");
+  expect(
+    await Bun.file(path.join(second.artifacts!, ".gitignore")).text(),
+  ).toBe("custom rule\n");
 });

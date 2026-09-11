@@ -37,8 +37,6 @@ test("installed CodeGraph initializes the checkout and exposes its approved MCP 
       'export function ignoredFixture() { return "not indexed"; }\n',
     );
     const projects = new CodeGraphProjects(env, 60_000);
-    const prepared = await projects.prepare(directory);
-    if (!prepared.ready) throw new Error(prepared.notice);
     const printed = Bun.spawnSync(
       [binary, "install", "--print-config", "opencode"],
       { env, cwd: directory },
@@ -54,7 +52,7 @@ test("installed CodeGraph initializes the checkout and exposes its approved MCP 
       generated.mcp.codegraph.command,
     );
     expect(declared.mcp.codegraph.type).toEqual(generated.mcp.codegraph.type);
-    server = Bun.spawn([binary, "serve", "--mcp", "--no-watch"], {
+    server = Bun.spawn([binary, ...declared.mcp.codegraph.command.slice(1)], {
       env,
       cwd: directory,
       stdin: "pipe",
@@ -116,6 +114,10 @@ test("installed CodeGraph initializes the checkout and exposes its approved MCP 
     expect(listing.tools[0].inputSchema.properties.projectPath.type).toBe(
       "string",
     );
+    // OpenCode starts MCP before the first chat hook initializes this checkout.
+    // A fresh checkout must expose the tool and pick up its new index live.
+    const prepared = await projects.prepare(directory);
+    if (!prepared.ready) throw new Error(prepared.notice);
     const args: Record<string, unknown> = { query: "greeting" };
     await projects.query(args, directory);
     const result = await request("tools/call", {

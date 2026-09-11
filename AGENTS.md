@@ -221,6 +221,10 @@ arrives without displacing the permissions, agents, MCP servers, and plugins
 declared globally. `ocx opencode` cannot fill the slot: it consumes `-h`, `-v`,
 and `--version` itself and prints its profile banner on stdout.
 
+The adapter runs the resolved binary through `mise exec --no-deps` and includes
+Homebrew paths so native MCP/LSP/shell children can find declared CLIs without
+a login shell. Preserve argument forwarding and clean version/help output.
+
 `~/.config/openchamber/settings.json` is merged key by key from
 `openchamber/_settings.tsv`, never linked or copied whole. The same file holds
 `relayEncryptionKey`, `relaySigningKey`, security-scoped bookmarks, and session

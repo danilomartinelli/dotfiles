@@ -6,6 +6,7 @@ import {
 } from "@opencode-ai/plugin";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -214,7 +215,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     tool: {
       delegate: tool({
         description:
-          "Run a declared role asynchronously: coder implements/verifies, scribe documents, explore investigates code, researcher retrieves external facts, reviewer reviews a source snapshot. Supply one focus in prompt; maximum three active. Resume the same delegation ID for corrections. Coder/scribe require disjoint ownership; read-only roles require empty ownership; only reviewer needs review_snapshot. Models come from the profile.",
+          "Run a declared role asynchronously: coder implements/verifies, scribe documents, explore investigates code, researcher retrieves external facts, reviewer reviews a source snapshot. Supply one focus in prompt; maximum three active. Resume the same delegation ID for corrections. Coder/scribe require disjoint ownership using literal files/directories inside directory; read-only roles require empty ownership. In Git checkouts, coder receives its own ignored artifact directory and ownership automatically. Only reviewer needs review_snapshot. Models come from the profile.",
         args: {
           role: tool.schema.enum(childRoles),
           workItem: tool.schema.string().min(1).max(200),
@@ -272,9 +273,10 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           const manager = await managerFor(context.sessionID);
           await manager.assertRoot(context.sessionID);
           await manager.recover(context.sessionID);
-          manager.assertSettled(context.sessionID);
-          if (codegraphEnabled) await codegraph.prepare(args.directory);
-          return sourceVersion(args.directory);
+          const directory = await realpath(args.directory);
+          manager.assertReviewReady(directory);
+          if (codegraphEnabled) await codegraph.prepare(directory);
+          return sourceVersion(directory);
         },
       }),
       plan_save: tool({

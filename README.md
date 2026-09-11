@@ -559,7 +559,7 @@ OCX cannot layer one profile over another. `opencode/profiles/_shared/`
 owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
 declares the models; `_scripts/render-opencode-profiles` composes the
 sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
-payloads the installer links. `regular` uses Astra/xhigh for plan/build and Luna Fast/high for
+payloads the installer links. `regular` uses Astra/max for plan/build and Luna/high for
 coder, reviewer, scribe, explore and researcher.
 The orchestrator assigns each delegation a focus, with bounded parallel work,
 resumable corrections and consolidated memory without auxiliary sessions.

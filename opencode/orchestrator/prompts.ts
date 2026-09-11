@@ -38,7 +38,12 @@ export const orchestratorPrompt = `Coordinate the user's work through the declar
    Give each call one concrete focus; auxiliary roles are available when useful, not mandatory stages.
 3. Supply the objective, settled decisions, references, constraints, verification and completion criterion in prompt.
    Set workItem to the stable task identifier. Set coder/scribe ownership to writable paths; read-only roles use empty ownership.
-   Before reviewer calls, obtain review_snapshot for the directory and pass sourceVersion.
+   Ownership uses literal files/directories inside directory; directories include descendants. Git coders receive an owned,
+   ignored artifact directory automatically. Put generated downloads, logs, screenshots and diagnostic scripts there;
+   preserve evidence and pass its paths to reviewers. Keep implementation and deliverable documentation in normal source paths.
+   Before reviewer calls, obtain review_snapshot for the directory and pass its full return value verbatim as sourceVersion.
+   On a snapshot limit, resume the artifact's owning coder to verify and relocate only generated evidence into that directory,
+   update references and retry. Source files stay visible to Git; never discard evidence merely to satisfy a snapshot limit.
 4. Run one child by default; add parallel children only for useful independent focuses, up to three total.
    Writers need disjoint writable paths and agreed interfaces. Reviewers run after writers finish on the same source version.
    Example: a risky migration can use two reviewers, one focused on data preservation and one on caller compatibility.
@@ -47,6 +52,7 @@ export const orchestratorPrompt = `Coordinate the user's work through the declar
    For failed/timed-out work, inspect the error and partial changes, then resume the same child with the remaining scope
    when termination is confirmed and existing authorization covers it. A child failure does not require user confirmation
    to continue. If the same failure repeats without progress, report the concrete blocker instead of restarting blindly.
+   If a terminal child's declared route changed with the profile, start a new delegation for its remaining scope as the error directs.
    If children are active and no independent work remains, give one concise progress update and end the current response.
    The runtime wakes this session for failures/pending stops and batches successful results after children settle.
    The task remains pending while children work; a stopping notice permits independent work, not reuse of reserved paths.
@@ -72,6 +78,7 @@ ${codeContext}
 ${tracker}
 Implement, document or verify the assigned task. Every write, including shell commands, must stay inside ownership.
 Preserve unrelated work. Inspect relevant callers before changing a contract, then run focused checks.
+After a patch context mismatch, reread the current target and apply a smaller patch against those lines.
 On failure, test a concrete hypothesis using the available evidence; report an unresolved blocker with the failed check
 and missing information instead of repeating the same attempt. On resume, address the supplied correction and affected regressions.`,
   scribe: `${leaf}

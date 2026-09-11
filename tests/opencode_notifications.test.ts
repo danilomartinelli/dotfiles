@@ -1,5 +1,5 @@
 import { expect, test, spyOn } from "bun:test";
-import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { regularHooks } from "../opencode/orchestrator/regular";
@@ -62,8 +62,8 @@ async function fixture(run: (f: any) => Promise<void>) {
         {
           model: ["build", "plan"].includes(role)
             ? "openai/gpt-6-astra"
-            : "openai/gpt-5.6-luna-fast",
-          variant: ["build", "plan"].includes(role) ? "xhigh" : "high",
+            : "openai/gpt-5.6-luna",
+          variant: ["build", "plan"].includes(role) ? "max" : "high",
         },
       ]),
     );
@@ -74,6 +74,8 @@ async function fixture(run: (f: any) => Promise<void>) {
     hooks = runtime.hooks;
     const manager = await runtime.managerFor("root");
     await run({
+      hooks,
+      directory,
       manager,
       messages,
       requests,
@@ -100,6 +102,43 @@ async function fixture(run: (f: any) => Promise<void>) {
   }
 }
 
+test("the review snapshot tool allows read-only children while enforcing writer reservations", async () => {
+  await fixture(async ({ hooks, directory, manager, request }: any) => {
+    const git = (...args: string[]) => {
+      const result = Bun.spawnSync(["git", ...args], {
+        cwd: directory,
+        env: {
+          ...process.env,
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_NAME: "Fixture",
+          GIT_AUTHOR_EMAIL: "fixture@example.invalid",
+          GIT_COMMITTER_NAME: "Fixture",
+          GIT_COMMITTER_EMAIL: "fixture@example.invalid",
+        },
+      });
+      expect(result.exitCode).toBe(0);
+    };
+    git("init");
+    git("config", "core.excludesFile", "/dev/null");
+    await writeFile(path.join(directory, ".gitignore"), ".local/\n");
+    git("add", ".gitignore");
+    git("commit", "-m", "Fixture");
+    await manager.start("root", {
+      ...request("investigate"),
+      role: "explore",
+      ownership: [],
+    });
+    const snapshot = () =>
+      hooks.tool.review_snapshot.execute({ directory }, { sessionID: "root" });
+    expect(await snapshot()).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+    const writer = await manager.start("root", request("implement"));
+    await expect(snapshot()).rejects.toThrow(writer.id);
+    await manager.stop("root", writer.id);
+    expect(await snapshot()).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+  });
+});
+
 test("a pending stop wakes the existing root once and preserves ownership until acknowledgement", () =>
   fixture(async (f) => {
     const row = await f.manager.start("root", f.request("first"));
@@ -119,7 +158,7 @@ test("a pending stop wakes the existing root once and preserves ownership until 
       providerID: "openai",
       modelID: "gpt-6-astra",
     });
-    expect(notices()[0].body.variant).toBe("xhigh");
+    expect(notices()[0].body.variant).toBe("max");
     expect(f.manager.get("root", sibling.id).status).toBe("running");
     await expect(
       f.manager.start("root", { ...f.request("first"), resume: row.id }),

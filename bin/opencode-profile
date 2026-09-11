@@ -63,4 +63,9 @@ if [ -z "$opencode_binary" ] || [ ! -x "$opencode_binary" ]; then
   exit 1
 fi
 
-exec "$opencode_binary" "$@"
+# GUI hosts inherit no login-shell PATH. Mise supplies the configured runtimes
+# and package CLIs to OpenCode's MCP/LSP/shell children; Homebrew supplies system
+# CLIs. Keep the resolved OpenCode binary and pass its arguments unchanged.
+PATH="$brew_prefix/bin:$brew_prefix/sbin:$PATH"
+export PATH
+exec "$mise_binary" exec --no-deps -- "$opencode_binary" "$@"
