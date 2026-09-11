@@ -204,10 +204,10 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
   output=$(env HOME="$home" /bin/zsh -f -c \
-    'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS"' \
+    'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS|$OPENCODE_EXPERIMENTAL_LSP_TOOL"' \
     zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
 
-  assert_equal 'regular|true|true|true|true' "$output" \
+  assert_equal 'regular|true|true|true|true|true' "$output" \
     'OpenCode shell environment'
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
@@ -249,6 +249,7 @@ EOF
 #!/bin/sh
 printf '%s\n' "$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|${OPENCODE_CONFIG:-absent}|${DOTFILES_OPENCODE_PROFILE_CONFIG:-absent}"
 printf 'args:%s\n' "$*"
+printf 'lsp:%s\n' "$OPENCODE_EXPERIMENTAL_LSP_TOOL"
 EOF
   for selected in regular example; do
     mkdir -p "$home/.config/opencode/profiles/$selected"
@@ -258,6 +259,7 @@ EOF
       "$checkout/bin/opencode-profile" --version
     assert_contains "$fixture/stdout.log" "false|true|$home/.config/opencode/profiles/$selected/opencode.jsonc|$home/.config/opencode/profiles/$selected/opencode.jsonc"
     assert_contains "$fixture/stdout.log" 'args:--version'
+    assert_contains "$fixture/stdout.log" 'lsp:true'
   done
   scenario_capture "$fixture" env HOME="$home" OCX_PROFILE=missing \
     OPENCODE_CONFIG=stale DOTFILES_OPENCODE_PROFILE_CONFIG=stale \
@@ -364,8 +366,11 @@ test_profiles_trust_project_configuration() {
 
   opencode_config=$REPOSITORY_ROOT/opencode/opencode.jsonc
   jsonc_to_json "$opencode_config" | jq -e '
-    (.mcp | keys) == ["context7", "exa", "gh_grep"] and
-    all(.mcp[]; .enabled == true)
+    (.mcp | keys) == ["codegraph", "context7", "exa", "gh_grep"] and
+    all(.mcp[]; .enabled == true) and
+    .mcp.codegraph.type == "local" and
+    .mcp.codegraph.command == ["codegraph", "serve", "--mcp"] and
+    .mcp.codegraph.environment.CODEGRAPH_TELEMETRY == "0"
   ' >/dev/null \
     || scenario_fail 'global research MCP defaults are incorrect'
 }
@@ -471,6 +476,7 @@ test_profiles_route_models() {
     jsonc_to_json "$config" | jq -e '
       .model == "openai/gpt-5.6-sol" and
       .small_model == "openai/gpt-5.6-luna" and
+      .lsp == true and
       .agent == {
         "plan": {"model": "openai/gpt-5.6-sol", "variant": "xhigh"},
         "build": {"model": "openai/gpt-5.6-sol", "variant": "xhigh"},

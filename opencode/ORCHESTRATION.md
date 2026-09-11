@@ -74,9 +74,23 @@ does not infer another worktree path, redirect a file request or broaden native
 external-directory permissions.
 
 The native role permissions and query guard share one explicit MCP tool list
-for Context7 documentation, Exa search/page retrieval and grep.app code search.
+for CodeGraph exploration, Context7 documentation, Exa search/page retrieval and
+grep.app code search.
 Unknown tools are denied by default, including new tools under those server
 names; a server prefix alone does not authorize a query.
+
+Native LSP navigation is enabled in the profiles and permitted for every role.
+CodeGraph queries select the session's actual Git checkout explicitly, including
+linked worktrees. Prompts use these tools when they answer the current question;
+file reads remain available for unsupported languages or stale index results.
+
+The fixed CodeGraph startup hook is authorized local index maintenance: it
+initializes a missing `.codegraph/` directory once and adds a project ignore
+only when Git does not already ignore it. This narrow setup can run before
+agent work, including planning, without granting shell writes to read-only
+roles. It completes before review snapshots and creates no LLM sessions.
+See [code navigation](README.md#code-navigation-lsp-and-codegraph) for opt-out,
+concurrency and recovery behavior.
 
 Project scripts and runtime/package-manager commands belong to coder, even
 when a subcommand is named `docs` or `list`. The root includes necessary script
@@ -115,7 +129,9 @@ without regenerating the summary or invalidating verified implementation work.
 
 Native OpenCode fixtures exercise role discovery, profile routing, project
 configuration, parallel and cross-project delegation, resume, cancellation,
-path recovery and permissions.
+path recovery, native LSP and MCP permissions. CodeGraph fixtures exercise the
+installed CLI/MCP, Git-root selection, worktrees, concurrent initialization and
+preservation of existing indices and Git data.
 Memory fixtures cover direct storage, idempotent retries and the absence of
 automatic LLM subsessions. Installer fixtures cover integrity and preservation
 during migration.

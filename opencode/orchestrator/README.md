@@ -70,6 +70,36 @@ and reports missing targets with rediscovery guidance. Existing external paths
 still go through OpenCode's native permissions; missing targets are never
 silently replaced by similarly named files.
 
+## Code navigation
+
+`read-context.ts` also anchors native LSP file paths. The profile enables
+language servers; the launcher exposes the experimental tool; role permissions
+and the query guard allow its navigation operations. These are separate gates.
+
+`codegraph.ts` owns the fixed Git-project startup hook and CodeGraph query
+targeting. It runs only while the CodeGraph MCP is enabled. First messages and
+review snapshots await preparation; queries also check it before reaching the
+MCP. Preparation resolves the native session directory through Git, independently
+of the runtime's main worktree. Explicit query paths outside that checkout are
+rejected instead of falling back to another index.
+
+A process shares one preparation promise per canonical checkout. Atomic
+directory creation claims a missing index across processes; the pinned CLI
+accepts that empty directory. Existing directories never trigger automatic
+initialization, even when incomplete. Initialization uses a closed stdin and
+three-minute timeout. Failure is retained for the process lifetime and partial
+data remains available for explicit repair. Another process that observes an
+incomplete index falls back to file/LSP queries; start a new process after the
+index is ready. There are no Git commit hooks, background LLM requests or new
+delegation roles for indexing.
+
+Git ignore checks honor global excludes before appending a root-only project
+pattern. The hook refuses index/ignore symlinks and reports tracked index files
+without untracking them. MCP auto-sync may update the local index while agents
+query it; the read-only boundary protects source edits. The
+[user guide](../README.md#code-navigation-lsp-and-codegraph) owns installation,
+opt-out and recovery instructions.
+
 ## Memory
 
 The regular adapter retains the baseline UI and read tool, but drops the

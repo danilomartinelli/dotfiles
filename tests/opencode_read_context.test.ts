@@ -16,6 +16,9 @@ test("file queries anchor relative paths and recover missing worktrees without r
     const read = { filePath: "README.md" };
     await prepareRead("read", read, directory);
     expect(read.filePath).toBe(path.join(directory, "README.md"));
+    const lsp = { filePath: "README.md", operation: "hover" };
+    await prepareRead("lsp", lsp, directory);
+    expect(lsp.filePath).toBe(read.filePath);
     for (const tool of ["glob", "grep", "list"]) {
       const args: Record<string, unknown> = { pattern: "README*" };
       await prepareRead(tool, args, directory);

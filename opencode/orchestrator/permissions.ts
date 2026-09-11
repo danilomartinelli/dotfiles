@@ -11,6 +11,7 @@ const writerRoles = new Set(["coder", "scribe"]);
 
 /** Shared by native role permissions and the runtime query guard. */
 export const mcpQueryTools = [
+  "codegraph_codegraph_explore",
   "context7_resolve-library-id",
   "context7_query-docs",
   "context7_resolve_library_id",
@@ -30,6 +31,7 @@ const queryTools = new Set([
   "webfetch",
   "websearch",
   "codesearch",
+  "lsp",
   ...mcpQueryTools,
 ]);
 
@@ -456,6 +458,21 @@ export function assertReadOnlyTool(
     return;
   }
   if (!queryTools.has(tool)) denied(`${role} cannot execute ${tool}`);
+  if (
+    tool === "lsp" &&
+    ![
+      "goToDefinition",
+      "findReferences",
+      "hover",
+      "documentSymbol",
+      "workspaceSymbol",
+      "goToImplementation",
+      "prepareCallHierarchy",
+      "incomingCalls",
+      "outgoingCalls",
+    ].includes(String(args.operation))
+  )
+    denied("LSP permits navigation and symbol queries only");
   if (
     args.method !== undefined &&
     !["GET", "HEAD"].includes(String(args.method))

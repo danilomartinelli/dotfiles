@@ -21,6 +21,11 @@ type ProviderRequest = {
 
 const mcpQueries = [
   {
+    server: "codegraph",
+    name: "codegraph_explore",
+    arguments: { query: "native", projectPath: "." },
+  },
+  {
     server: "context7",
     name: "resolve-library-id",
     arguments: { libraryName: "fixture", query: "Read fixture documentation" },
@@ -246,6 +251,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     OPENCODE_DISABLE_EXTERNAL_SKILLS: "true",
     OPENCODE_DISABLE_CLAUDE_CODE: "true",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "true",
+    OPENCODE_EXPERIMENTAL_LSP_TOOL: "true",
     OPENCODE_DISABLE_SHARE: "true",
     OPENCODE_DISABLE_FFF: "true",
     OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
@@ -274,7 +280,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     async fetch(request) {
       const pathname = new URL(request.url).pathname;
       const queryServer = pathname.match(
-        /^\/queries\/(context7|exa|gh_grep)$/,
+        /^\/queries\/(codegraph|context7|exa|gh_grep)$/,
       )?.[1];
       if (pathname === "/mcp" || queryServer) {
         if (request.method !== "POST")
@@ -422,6 +428,17 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           arguments: {
             command: inspection,
             description: "Inspect the checkout from the read-only root",
+          },
+        };
+      } else if (marker === "NATIVE_VALID_ROOT" && !issued.has("lsp")) {
+        issued.add("lsp");
+        output = {
+          name: "lsp",
+          arguments: {
+            operation: "hover",
+            filePath: "src/native.txt",
+            line: 1,
+            character: 1,
           },
         };
       } else if (input.includes("NATIVE_REVIEW_ROOT")) {
@@ -704,12 +721,45 @@ export default async ctx => initializeFromConfig(async config => {
       join(configDirectory, "package.json"),
       JSON.stringify({ dependencies: { "@opencode-ai/plugin": "1.18.23" } }),
     );
+    const lspServer = join(root, "lsp-fixture.cjs");
+    await writeFile(
+      lspServer,
+      `
+let buffer = Buffer.alloc(0);
+function send(message) {
+  const body = JSON.stringify(message);
+  process.stdout.write('Content-Length: ' + Buffer.byteLength(body) + '\\r\\n\\r\\n' + body);
+}
+process.stdin.on('data', chunk => {
+  buffer = Buffer.concat([buffer, chunk]);
+  while (true) {
+    const boundary = buffer.indexOf('\\r\\n\\r\\n');
+    if (boundary < 0) return;
+    const size = Number(/Content-Length: (\\d+)/i.exec(buffer.subarray(0, boundary).toString())[1]);
+    if (buffer.length < boundary + 4 + size) return;
+    const message = JSON.parse(buffer.subarray(boundary + 4, boundary + 4 + size).toString());
+    buffer = buffer.subarray(boundary + 4 + size);
+    if (message.id !== undefined) send({ jsonrpc: '2.0', id: message.id, result:
+      message.method === 'initialize' ? { capabilities: { hoverProvider: true, textDocumentSync: 1 } } :
+      message.method === 'textDocument/hover' ? { contents: { kind: 'plaintext', value: 'Fixture hover verified: ' + message.params.textDocument.uri } } : null });
+    if (message.method === 'exit') process.exit(0);
+  }
+});
+process.stdin.on('end', () => process.exit(0));
+`,
+    );
+    // Pre-existing indices keep this native fixture independent of the real indexer.
+    for (const checkout of [directory, targetDirectory]) {
+      await mkdir(join(checkout, ".codegraph"));
+      await writeFile(join(checkout, ".codegraph/codegraph.db"), "fixture");
+    }
     await writeFile(
       profileConfig,
       `// The direct adapter's routing source is independent of project overrides.\n${JSON.stringify(
         {
           model: "openai/gpt-5.6-sol",
           small_model: "openai/gpt-5.6-luna",
+          lsp: true,
           agent: Object.fromEntries(
             [
               "build",
@@ -736,6 +786,12 @@ export default async ctx => initializeFromConfig(async config => {
         model: "openai/gpt-5.6-luna",
         small_model: "openai/gpt-5.6-sol",
         skills: { paths: [explicitSkills], urls: [] },
+        lsp: {
+          fixture: {
+            command: [process.execPath, lspServer],
+            extensions: [".txt"],
+          },
+        },
         mcp: {
           project: {
             type: "remote",
@@ -767,6 +823,12 @@ export default async ctx => initializeFromConfig(async config => {
       JSON.stringify({
         $schema: "https://opencode.ai/config.json",
         plugin: [plugin],
+        mcp: {
+          codegraph: {
+            type: "remote",
+            url: `http://127.0.0.1:${mock.port}/queries/codegraph`,
+          },
+        },
         enabled_providers: ["openai"],
         provider: {
           openai: {
@@ -878,6 +940,14 @@ export default async ctx => initializeFromConfig(async config => {
     if (result.info?.error)
       throw new Error(JSON.stringify(result.info.error) + "\n" + logs);
     const rootMessages = await api(`/session/${session.id}/message`);
+    const failedQuery = rootMessages
+      .flatMap((message: any) => message.parts)
+      .find(
+        (part: any) =>
+          ["lsp", "codegraph_codegraph_explore"].includes(part.tool) &&
+          part.state.status === "error",
+      );
+    if (failedQuery) throw new Error(JSON.stringify(failedQuery.state));
     const inspections = rootMessages
       .flatMap((message: any) => message.parts)
       .filter((part: any) => part.type === "tool" && part.tool === "bash");
@@ -887,7 +957,28 @@ export default async ctx => initializeFromConfig(async config => {
     ]);
     for (const part of inspections)
       expect(part.state.output.trim()).toBe(await realpath(directory));
-    expect(mcpReadCalls).toEqual(mcpQueries);
+    const canonicalDirectory = await realpath(directory);
+    expect(mcpReadCalls).toEqual(
+      mcpQueries.map((query) =>
+        query.server === "codegraph"
+          ? {
+              ...query,
+              arguments: {
+                ...query.arguments,
+                projectPath: canonicalDirectory,
+              },
+            }
+          : query,
+      ),
+    );
+    const lspPart = rootMessages
+      .flatMap((message: any) => message.parts)
+      .find((part: any) => part.tool === "lsp");
+    expect(lspPart?.state.status).toBe("completed");
+    expect(lspPart?.state.output).toContain("Fixture hover verified");
+    expect(lspPart?.state.output).toContain(
+      join(canonicalDirectory, "src/native.txt"),
+    );
     for (const query of mcpQueries) {
       const part = rootMessages
         .flatMap((message: any) => message.parts)

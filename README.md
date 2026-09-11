@@ -553,7 +553,7 @@ plugins, and installs the local orchestrator's pinned dependencies with Bun.
 OCX itself remains upstream; the orchestration plugin is authored here.
 
 The `regular` profile carries the active trusted-project model routing.
-Global `opencode.jsonc` owns common plugins and research MCPs; each project
+Global `opencode.jsonc` owns common plugins, CodeGraph and research MCPs; each project
 declares additional integrations and explicit permissions.
 OCX cannot layer one profile over another. `opencode/profiles/_shared/`
 owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
@@ -567,6 +567,10 @@ resumable corrections and consolidated memory without auxiliary sessions.
 The shell default remains `regular`. Prompts prefer `gh`/`glab` after remote
 and CLI discovery. External home-level skills are not discovered automatically;
 project skills remain available.
+Both profiles enable native LSP queries. CodeGraph initializes missing indices
+once per Git checkout and keeps `.codegraph/` ignored, without auxiliary LLM
+sessions. See the [code navigation guide](opencode/README.md#code-navigation-lsp-and-codegraph)
+for setup, project opt-out and recovery.
 
 See [`opencode/README.md`](opencode/README.md) for per-role model routing,
 profile maintenance, ownership, verification, and troubleshooting.

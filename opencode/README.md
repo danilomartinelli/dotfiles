@@ -116,9 +116,43 @@ commands, including explicit GET APIs. It rejects mutations, shell composition
 and browser-opening flags. Publishing and other writes require existing user
 authorization and an appropriate writer delegation.
 
+### Code navigation: LSP and CodeGraph
+
+Both profiles enable native language servers through `lsp: true` in the shared
+profile source. `opencode/env.zsh` exports `OPENCODE_EXPERIMENTAL_LSP_TOOL=true`
+for both OCX and the direct GUI adapter. The orchestrator permits the native
+`lsp` tool for definitions, references, hover, symbols and call hierarchy.
+Server availability still depends on the language and its project dependencies;
+OpenCode starts applicable servers on demand. See the
+[native LSP guide](https://opencode.ai/docs/lsp/).
+
+CodeGraph is already declared through Mise. The common MCP configuration runs
+`codegraph serve --mcp`, matching `codegraph install --print-config opencode`.
+This declaration replaces running the interactive installer against managed
+configuration. Its sole default tool, `codegraph_codegraph_explore`, is allowed
+for all seven roles. The MCP and automatic initialization disable CodeGraph
+telemetry. CodeGraph answers structural questions across files; LSP supplies
+precise language queries. Prompts choose the relevant tool and verify stale or
+conflicting results against current source.
+
+On the first session message in a Git checkout, the runtime runs `codegraph init`
+only when `.codegraph/` is absent. Nested directories resolve to their checkout
+root; linked worktrees get independent indices. Existing directories are
+preserved. The initial request waits for initialization, with a three-minute
+limit, and concurrent sessions share the work without LLM subsessions. A project
+can opt out of both the hook and MCP with `mcp.codegraph.enabled: false`.
+
+The hook respects Git's global ignore. If a ready or newly created index is not
+ignored, it appends `/.codegraph/` to the checkout's `.gitignore`, preserving
+existing content. Tracked index files and symlinks require explicit repair;
+the hook never untracks or deletes them. An interrupted or failed initialization
+leaves its directory intact and reports a fallback to file/LSP queries. Inspect
+that directory and repair it explicitly with the CodeGraph CLI before starting
+a new OpenCode process; retries never launch automatically.
+
 ### Project integrations and skills
 
-Global configuration contains the common research MCPs and plugins only.
+Global configuration contains CodeGraph, the common research MCPs and plugins.
 Additional integrations belong in the trusted project's OpenCode configuration.
 For example, a project can register an optional server and explicitly permit its
 tools for coder:

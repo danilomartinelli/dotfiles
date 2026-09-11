@@ -20,6 +20,7 @@ import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
 import { assertWriteTargets, writeTools } from "./write-targets";
+import { CodeGraphProjects } from "./codegraph";
 
 export async function regularHooks(ctx: PluginInput, declared: Config) {
   const profile = process.env.DOTFILES_OPENCODE_PROFILE_CONFIG;
@@ -47,6 +48,8 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
   );
   const managerFor = (sessionID: string) => journals.forSession(sessionID);
   const roles = new Map<string, string>();
+  const codegraph = new CodeGraphProjects();
+  let codegraphEnabled = false;
   let mcpServers: string[] = [];
   async function rootFor(sessionID: string) {
     const manager = await managerFor(sessionID);
@@ -136,6 +139,9 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       config.model = model;
       config.small_model = smallModel;
       mcpServers = Object.keys(config.mcp ?? {});
+      codegraphEnabled = Boolean(
+        config.mcp?.codegraph && config.mcp.codegraph.enabled !== false,
+      );
       // External discovery also scans ~/.agents. Keep project skills available
       // explicitly while the launcher disables that global discovery.
       const skillsConfig = config as Config & {
@@ -272,6 +278,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           await manager.assertRoot(context.sessionID);
           await manager.recover(context.sessionID);
           manager.assertSettled(context.sessionID);
+          if (codegraphEnabled) await codegraph.prepare(args.directory);
           return sourceVersion(args.directory);
         },
       }),
@@ -341,9 +348,20 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           sessionID: input.sessionID,
           messageID: output.message.id,
           type: "text",
-          text: directoryContext(
-            (await journals.session(input.sessionID)).directory,
-          ),
+          text: [
+            directoryContext(
+              (await journals.session(input.sessionID)).directory,
+            ),
+            codegraphEnabled
+              ? (
+                  await codegraph.prepare(
+                    (await journals.session(input.sessionID)).directory,
+                  )
+                ).notice
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
           synthetic: true,
         });
       roles.set(input.sessionID, role);
@@ -444,6 +462,11 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         await assertWriteTargets(input.tool, output.args, child);
       }
       assertReadOnlyTool(role, input.tool, output.args);
+      if (input.tool === "codegraph_codegraph_explore")
+        await codegraph.query(
+          output.args,
+          (await journals.session(input.sessionID)).directory,
+        );
       await prepareRead(
         input.tool,
         output.args,

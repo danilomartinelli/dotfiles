@@ -12,7 +12,7 @@ export async function prepareRead(
   directory: string,
 ) {
   const field =
-    tool === "read"
+    tool === "read" || tool === "lsp"
       ? "filePath"
       : ["glob", "grep", "list"].includes(tool)
         ? "path"

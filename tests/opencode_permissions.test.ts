@@ -100,7 +100,7 @@ describe("regular read-only tool boundary", () => {
     for (const role of [...readOnlyRoles, "coder", "scribe"]) {
       const permissions = rolePermissions(role);
       const exposed = Object.keys(permissions).filter((name) =>
-        /^(context7|exa|gh_grep)_/.test(name),
+        /^(codegraph|context7|exa|gh_grep)_/.test(name),
       );
       expect(exposed.sort()).toEqual([...mcpQueryTools].sort());
       for (const name of exposed) {
@@ -112,6 +112,8 @@ describe("regular read-only tool boundary", () => {
         "exa_unknown_read",
         "context7_execute",
         "gh_grep_delete",
+        "codegraph_init",
+        "codegraph_unknown_read",
       ]) {
         expect(permissions[name] ?? permissions["*"]).toBe("deny");
         if (readOnlyRoles.has(role))
@@ -128,6 +130,44 @@ describe("regular read-only tool boundary", () => {
       expect(() =>
         assertReadOnlyTool("build", "exa_web_fetch_exa", args),
       ).toThrow("Read-only policy:");
+  });
+
+  test("LSP exposes navigation to every role while read-only roles reject other operations", () => {
+    for (const role of [
+      "build",
+      "plan",
+      "coder",
+      "scribe",
+      "reviewer",
+      "explore",
+      "researcher",
+    ])
+      expect(rolePermissions(role).lsp).toBe("allow");
+    for (const role of ["build", "plan", "reviewer", "explore", "researcher"]) {
+      for (const operation of [
+        "goToDefinition",
+        "findReferences",
+        "hover",
+        "documentSymbol",
+        "workspaceSymbol",
+        "goToImplementation",
+        "prepareCallHierarchy",
+        "incomingCalls",
+        "outgoingCalls",
+      ])
+        expect(() =>
+          assertReadOnlyTool(role, "lsp", {
+            operation,
+            filePath: "src/app.ts",
+            line: 1,
+            character: 1,
+          }),
+        ).not.toThrow();
+      for (const operation of ["rename", "executeCommand", "format", undefined])
+        expect(() => assertReadOnlyTool(role, "lsp", { operation })).toThrow(
+          "LSP permits navigation",
+        );
+    }
   });
 
   test("queries remain valid when their normalized commands are checked again", () => {
