@@ -403,7 +403,7 @@ test("test_wrong_baseline_version_is_rejected_before_plugin_execution", async ()
   await mkdir(join(root, "dist"));
   await writeFile(
     join(root, "package.json"),
-    JSON.stringify({ name: "opencode-mem", version: "2.26.0" }),
+    JSON.stringify({ name: "opencode-mem", version: "2.25.0" }),
   );
   await writeFile(
     join(root, "dist/plugin.js"),
@@ -411,7 +411,7 @@ test("test_wrong_baseline_version_is_rejected_before_plugin_execution", async ()
   );
   await expect(
     loadMemoryBaseline(join(root, "dist/plugin.js")),
-  ).rejects.toThrow("requires opencode-mem 2.25.0");
+  ).rejects.toThrow("requires opencode-mem 2.26.0");
 });
 
 test("test_pinned_storage_roundtrips_through_existing_memory_client_in_isolated_home", async () => {

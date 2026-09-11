@@ -68,7 +68,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     });
     if (result.error) throw new Error("Cannot resolve agent capabilities.");
     const info = result.data?.at(-1)?.info;
-    // Native v1.18.23 assistants carry `agent`; the legacy SDK still declares `mode`.
+    // Native v1.18.30 assistants carry `agent`; the legacy SDK still declares `mode`.
     const role =
       info && "agent" in info
         ? info.agent

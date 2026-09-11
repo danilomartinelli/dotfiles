@@ -684,7 +684,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
   const logTasks: Promise<void>[] = [];
   try {
     const version = Bun.spawnSync({ cmd: [binary, "--version"], env });
-    expect(version.stdout.toString().trim()).toBe("1.18.23");
+    expect(version.stdout.toString().trim()).toBe("1.18.30");
     const git = Bun.spawnSync({
       cmd: ["git", "init", directory],
       env,
@@ -797,7 +797,7 @@ export default async ctx => initializeFromConfig(async config => {
     );
     await writeFile(
       join(configDirectory, "package.json"),
-      JSON.stringify({ dependencies: { "@opencode-ai/plugin": "1.18.23" } }),
+      JSON.stringify({ dependencies: { "@opencode-ai/plugin": "1.18.30" } }),
     );
     const lspServer = join(root, "lsp-fixture.cjs");
     await writeFile(

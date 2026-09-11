@@ -150,6 +150,10 @@ leaves its directory intact and reports a fallback to file/LSP queries. Inspect
 that directory and repair it explicitly with the CodeGraph CLI before starting
 a new OpenCode process; retries never launch automatically.
 
+After upgrading CodeGraph, run `codegraph status` in each project. If it reports
+an outdated index, run `codegraph index` there to refresh existing data. The
+startup hook only creates missing indices; it does not rebuild existing ones.
+
 ### Project integrations and skills
 
 Global configuration contains CodeGraph, the common research MCPs and plugins.

@@ -60,7 +60,7 @@ continue after it. Missing acknowledgments stay `stopping`, retain the
 reservation and report the diagnostic. Recovery inspects existing sessions; it never starts replacement
 children. A creation interrupted before its child ID was recorded needs
 session inspection and explicit reconciliation; no speculative restart occurs.
-For remote MCP calls, OpenCode 1.18.23 forwards abort to the client. That can
+For remote MCP calls, OpenCode 1.18.30 forwards abort to the client. That can
 reject the local promise before the server finishes, suppressing the native
 completion hook. A cancelled MCP call then remains `stopping` even if the server
 later responds. Inspect the remote operation and confirm termination before
@@ -136,8 +136,8 @@ The root reports the failure without generating another summary.
 
 ## Dependencies and updates
 
-`package.json` and `bun.lock` pin dependencies, including OpenCode Mem 2.25.0
-and the SDK matching OpenCode 1.18.23. The private memory storage adapter checks
+`package.json` and `bun.lock` pin dependencies, including OpenCode Mem 2.26.0
+and the SDK matching OpenCode 1.18.30. The private memory storage adapter checks
 the exact package version before importing its internal modules. Do not update
 the memory version without checking its schema, exports and transaction seam.
 

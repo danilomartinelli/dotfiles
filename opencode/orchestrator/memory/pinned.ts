@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { MemoryStorage, Transaction } from "./store.ts";
 
-export const MEMORY_BASELINE_VERSION = "2.25.0";
+export const MEMORY_BASELINE_VERSION = "2.26.0";
 
 /** The private storage seam is intentionally version-checked before any import with side effects. */
 export async function loadMemoryBaseline(
