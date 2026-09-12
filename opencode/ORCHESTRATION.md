@@ -116,6 +116,10 @@ repeated attempts using wrappers or alternate command spellings.
 Coder and scribe native writes are checked against canonical owned paths.
 Coder must respect that ownership in shell commands too; scribe has no shell
 execution. The runtime is not an operating-system sandbox for writer commands.
+A writer pipeline that runs a non-terminating command and redirects into an
+uncapped file is rejected before execution; cap the bytes, discard the stream,
+or bound the file size. See
+[the shell redirect bound](orchestrator/README.md#lifecycle).
 
 Additional MCPs and skills belong to trusted project configuration. Explicit
 coder MCP permissions do not broaden the read-only roles or authorize remote

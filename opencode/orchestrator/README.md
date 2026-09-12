@@ -4,7 +4,8 @@
 standalone memory plugin entry. `regular.ts` coordinates the authored
 workflow. `session-journals.ts` resolves native parent/project identities,
 `delegations.ts` owns the persisted lifecycle, `artifacts.ts` prepares coder evidence storage, `permissions.ts`
-enforces query capabilities, `prompts.ts` states role responsibilities, and
+enforces query capabilities, `redirect-bounds.ts` keeps writer shell logs
+bounded, `prompts.ts` states role responsibilities, and
 `memory/` adapts the pinned memory storage without automatic extraction.
 
 Both managed profiles use this runtime and their declared model/variant routes.
@@ -37,7 +38,19 @@ Writers sharing that journal cannot claim overlapping canonical paths,
 including across roots; reviewers and writers cannot overlap in the same
 worktree. Writers must honor ownership in shell commands too; the hook checks
 native edit/write/apply_patch targets (including move destinations), but does
-not provide an OS sandbox for shell writes.
+not provide an OS sandbox for shell writes. One shell shape is bounded
+explicitly: a writer pipeline that runs a non-terminating command and
+redirects into a file with no byte cap is rejected before execution, because
+a dev server looping on an error fills the disk long before anyone reads the
+log. The rejection names the bounded form. `ghead -c` from coreutils caps a
+live stream and stops the producer at the cap; BSD `head` rejects size
+suffixes, so a bare `head -c 500M` fails on macOS. `tail -c` bounds the file
+when only the final output matters. The guard requires boundedness, not a
+particular size, and accepts a command-wide `ulimit -f`; note that
+RLIMIT_FSIZE counts 512-byte blocks and kills the process with SIGXFSZ on
+every file it writes, not only the log. Its markers are a deliberately
+narrow list of runner scripts, watch flags and known servers; the guard is
+not a general shell sandbox and misses shapes it does not name.
 Read-only roles have a fail-closed tool/argument guard. Explicitly enabled
 coder MCP calls join the same execution ledger as native writes and shell calls.
 
