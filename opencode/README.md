@@ -75,22 +75,23 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                      | `example`                      |
-| ---------- | ------------------------------ | ------------------------------ |
-| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           |
-| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          |
-| Plan       | `openai/gpt-6-astra` (`max`)   | `openai/gpt-6-astra` (`max`)   |
-| Build      | `openai/gpt-6-astra` (`max`)   | `openai/gpt-6-astra` (`max`)   |
-| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
-| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Role       | `regular`                           | `example`                           |
+| ---------- | ----------------------------------- | ----------------------------------- |
+| Default    | `openai/gpt-6-astra`                | `openai/gpt-6-astra`                |
+| Small      | `openai/gpt-5.6-luna-fast`          | `openai/gpt-5.6-luna-fast`          |
+| Plan       | `openai/gpt-6-astra` (`max`)        | `openai/gpt-6-astra` (`max`)        |
+| Build      | `openai/gpt-6-astra` (`max`)        | `openai/gpt-6-astra` (`max`)        |
+| Coder      | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Explore    | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Researcher | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Reviewer   | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
 
 <!-- generated-end -->
 
-Supporting agents use `openai/gpt-5.6-luna` with `high`; `small_model` uses
-the same standard model.
+Supporting agents use `openai/gpt-5.6-luna-fast` with `high`; `small_model` uses
+the same standard model. The provider serves that ID from `gpt-5.6-luna` on the
+priority tier: same variants, same context limit, only `serviceTier` differs.
 
 `regular` is the active profile; `example` starts with identical routing and
 preserves the structure for future customization. Plan/build coordinates the

@@ -12,20 +12,20 @@
 # model and variant with `bin/opencode-profile models <provider> --verbose`.
 
 regular	default	openai/gpt-6-astra	-	-
-regular	small	openai/gpt-5.6-luna	-	-
+regular	small	openai/gpt-5.6-luna-fast	-	-
 regular	plan	openai/gpt-6-astra	max	-
 regular	build	openai/gpt-6-astra	max	-
-regular	coder	openai/gpt-5.6-luna	high	-
-regular	explore	openai/gpt-5.6-luna	high	-
-regular	researcher	openai/gpt-5.6-luna	high	-
-regular	scribe	openai/gpt-5.6-luna	high	-
-regular	reviewer	openai/gpt-5.6-luna	high	-
+regular	coder	openai/gpt-5.6-luna-fast	high	-
+regular	explore	openai/gpt-5.6-luna-fast	high	-
+regular	researcher	openai/gpt-5.6-luna-fast	high	-
+regular	scribe	openai/gpt-5.6-luna-fast	high	-
+regular	reviewer	openai/gpt-5.6-luna-fast	high	-
 example	default	openai/gpt-6-astra	-	-
-example	small	openai/gpt-5.6-luna	-	-
+example	small	openai/gpt-5.6-luna-fast	-	-
 example	plan	openai/gpt-6-astra	max	-
 example	build	openai/gpt-6-astra	max	-
-example	coder	openai/gpt-5.6-luna	high	-
-example	explore	openai/gpt-5.6-luna	high	-
-example	researcher	openai/gpt-5.6-luna	high	-
-example	scribe	openai/gpt-5.6-luna	high	-
-example	reviewer	openai/gpt-5.6-luna	high	-
+example	coder	openai/gpt-5.6-luna-fast	high	-
+example	explore	openai/gpt-5.6-luna-fast	high	-
+example	researcher	openai/gpt-5.6-luna-fast	high	-
+example	scribe	openai/gpt-5.6-luna-fast	high	-
+example	reviewer	openai/gpt-5.6-luna-fast	high	-
