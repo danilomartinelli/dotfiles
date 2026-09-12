@@ -107,6 +107,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Shared OpenCode profile policy                  | `opencode/profiles/_shared/`     |
 | OpenCode profile model routing                  | `opencode/profiles/_routing.tsv` |
 | OpenChamber tracked settings                    | `openchamber/_settings.tsv`      |
+| Agent worktree bootstrap                        | `.opencode/worktree.jsonc`       |
 | Public lifecycle and commands                   | `README.md`                      |
 | Coding and validation rules                     | `CODING_STANDARDS.md`            |
 

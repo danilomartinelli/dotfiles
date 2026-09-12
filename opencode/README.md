@@ -207,6 +207,40 @@ no OCX project merge in that path. The adapter also passes
 models after project merging. Project integrations remain available without
 changing the declared model routes.
 
+### Worktrees
+
+`kdco/worktree` exposes `worktree_create` and `worktree_delete`; the installer
+provisions it alongside `kdco/notify`. Its per-project configuration is
+`.opencode/worktree.jsonc`, and the plugin writes its own empty template into a
+checkout that has none, so a repository that needs worktree bootstrapping should
+track the file deliberately.
+
+This repository tracks one. A worktree of dotfiles starts without
+`opencode/orchestrator/node_modules`, which is untracked and around 686 MB;
+until it exists `bun test` cannot resolve `@opencode-ai/plugin` and the
+orchestrator suite fails before validating anything. The `postCreate` hook
+reinstalls it from the lockfile:
+
+```bash
+mise exec -- bun install --frozen-lockfile --ignore-scripts --cwd opencode/orchestrator
+```
+
+Reinstalling is deliberate: `sync.symlinkDirs` would share one `node_modules`
+across worktrees, so a worktree changing `package.json` or `bun.lock` would
+mutate the tree it branched from. Hooks run under `bash -c` without the login
+shell, which is why bun is reached through `mise exec`, the adapter
+`bin/opencode-profile` already uses. Nothing is copied into a worktree: the only
+machine-local file is `.localrc`, and it lives in `$HOME`.
+
+The plugin only logs a failed hook. When orchestrator imports do not resolve in
+a worktree, run that command there before investigating further.
+
+Linked worktrees opt out of Git's fsmonitor through
+`git/gitconfig.worktree.symlink`, because the daemon segfaults when the worktree
+it watches is deleted and leaves the socket behind that makes the next command
+fail with `fsmonitor_ipc__send_query`. A process still alive inside a worktree
+after its session ends is reported by `opencode-doctor`.
+
 ## Edit configuration or profiles
 
 Edit the owning source and use a new process to load the result:

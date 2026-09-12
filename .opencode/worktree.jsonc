@@ -1,0 +1,34 @@
+{
+  "$schema": "https://registry.kdco.dev/schemas/worktree.json",
+
+  // Read by kdco/worktree, which the OpenCode installer provisions. Without
+  // this file the plugin writes its own empty template into the checkout on
+  // the first worktree operation.
+
+  // Nothing in this repository needs copying into a worktree: the only
+  // machine-local file is .localrc, and it lives in $HOME, not here.
+  "sync": {
+    "copyFiles": [],
+    "symlinkDirs": [],
+    "exclude": []
+  },
+
+  "hooks": {
+    // An agent worktree starts without opencode/orchestrator/node_modules,
+    // which is untracked and around 686 MB. Until it exists, bun test cannot
+    // resolve @opencode-ai/plugin and the orchestrator suite fails before it
+    // validates anything.
+    //
+    // Reinstall from the lockfile rather than symlinking the main checkout's
+    // directory, so a worktree that changes package.json or bun.lock cannot
+    // mutate the tree it was branched from. Hooks run under bash -c without
+    // the login shell, so bun is reached through mise exec, the adapter
+    // bin/opencode-profile already uses. The plugin only logs a failed hook;
+    // when orchestrator imports do not resolve in a worktree, run this command
+    // there before investigating further.
+    "postCreate": [
+      "mise exec -- bun install --frozen-lockfile --ignore-scripts --cwd opencode/orchestrator"
+    ],
+    "preDelete": []
+  }
+}
