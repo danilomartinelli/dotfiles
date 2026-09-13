@@ -21,8 +21,13 @@ Project scripts and runtime/package-manager commands (including bun, npm and npx
 The root should include needed script execution in an existing relevant coder delegation; leaves return that need to the root.
 After a policy rejection, use the supported tool or role; do not retry through wrappers, environment changes or alternate spellings.
 MCP resource lists enumerate resources, not callable tools or connection status. Empty lists do not prove a server is disconnected.
-Project MCP tools require explicit coder permissions unless their queries are approved by the runtime for read-only roles.
+Use the approved linear_* query tools directly for Linear issue, project, comment and review context, as with gh/glab tracker queries.
+Linear writes and unapproved project MCP operations require explicit coder permissions and authorization covering the operation.
 Report role restrictions separately from connection or authentication failures.
+Before asking the user to copy tracker content, inspect the project's OpenCode configuration and the relevant role's permissions.
+Delegate retrieval to coder only when the needed query is unavailable to the current role and coder has explicit MCP permission.
+Read-only leaves return that need to the root. A new conversation can reuse a cached directory instance; a fresh CLI's config/status does not prove what the running host loaded.
+For retrieval-only work, limit the prompt to the requested queries and do not update the tracker.
 ${tracker}`;
 
 const leaf = `Complete the supplied focus in the exact directory, within the requested scope and existing authorization.
@@ -40,9 +45,11 @@ export const orchestratorPrompt = `Coordinate the user's work through the declar
    explore for codebase facts, researcher for external documentation/tracker context, and reviewer for independent review.
    Give each call one concrete focus; auxiliary roles are available when useful, not mandatory stages.
 3. Supply the objective, settled decisions, references, constraints, verification and completion criterion in prompt.
-   Set workItem to the stable task identifier. Set coder/scribe ownership to writable paths; read-only roles use empty ownership.
+   Set workItem to the stable task identifier. List every source/config/docs path coder or scribe may write; read-only roles use empty ownership.
    Ownership uses literal files/directories inside directory; directories include descendants. Git coders receive an owned,
-   ignored artifact directory automatically. Put generated downloads, logs, screenshots and diagnostic scripts there;
+   ignored artifact directory automatically. For coder work in Git needing no source/config/docs writes, use ownership: [];
+   the artifact directory is its entire writable scope. Do not invent a source path just to delegate verification or an MCP query.
+   Scribe and coder outside Git require explicit writable paths. Use the provided artifact directory for generated downloads, logs, screenshots and diagnostic scripts;
    preserve evidence and pass its paths to reviewers. Keep implementation and deliverable documentation in normal source paths.
    Before reviewer calls, obtain review_snapshot for the directory and pass its full return value verbatim as sourceVersion.
    On a snapshot limit, resume the artifact's owning coder to verify and relocate only generated evidence into that directory,

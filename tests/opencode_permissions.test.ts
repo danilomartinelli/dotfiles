@@ -198,7 +198,7 @@ describe("regular read-only tool boundary", () => {
     for (const role of [...readOnlyRoles, "coder", "scribe"]) {
       const permissions = rolePermissions(role);
       const exposed = Object.keys(permissions).filter((name) =>
-        /^(codegraph|context7|exa|gh_grep)_/.test(name),
+        /^(codegraph|context7|exa|gh_grep|linear)_/.test(name),
       );
       expect(exposed.sort()).toEqual([...mcpQueryTools].sort());
       for (const name of exposed) {
@@ -212,6 +212,10 @@ describe("regular read-only tool boundary", () => {
         "gh_grep_delete",
         "codegraph_init",
         "codegraph_unknown_read",
+        "linear_save_issue",
+        "linear_save_comment",
+        "linear_delete_comment",
+        "linear_unknown_read",
       ]) {
         expect(permissions[name] ?? permissions["*"]).toBe("deny");
         if (readOnlyRoles.has(role))
@@ -228,6 +232,37 @@ describe("regular read-only tool boundary", () => {
       expect(() =>
         assertReadOnlyTool("build", "exa_web_fetch_exa", args),
       ).toThrow("Read-only policy:");
+  });
+
+  test("Linear tracker queries are available to the same roles as CLI tracker queries", () => {
+    const mcp = { linear: { enabled: true } };
+    for (const role of readOnlyRoles) {
+      const permissions = rolePermissions(role, mcp, { "linear_*": "allow" });
+      for (const [name, args] of [
+        ["linear_get_issue", { id: "FIX-1", includeRelations: true }],
+        ["linear_list_issues", { query: "fixture", limit: 5 }],
+        ["linear_list_comments", { issueId: "FIX-1" }],
+        ["linear_get_project", { query: "fixture", includeResources: true }],
+        ["linear_get_document", { id: "fixture" }],
+      ] as const) {
+        expect(permissions[name], role).toBe("allow");
+        expect(() => assertReadOnlyTool(role, name, args), role).not.toThrow();
+      }
+      for (const name of [
+        "linear_save_issue",
+        "linear_save_comment",
+        "linear_share_issue",
+        "linear_unknown_read",
+      ]) {
+        expect(permissions[name] ?? permissions["*"], role).toBe("deny");
+        expect(() => assertReadOnlyTool(role, name, {}), role).toThrow(
+          "Read-only policy:",
+        );
+      }
+    }
+    expect(
+      rolePermissions("coder", mcp, { "linear_*": "allow" })["linear_*"],
+    ).toBe("allow");
   });
 
   test("LSP exposes navigation to every role while read-only roles reject other operations", () => {

@@ -191,14 +191,38 @@ boundaries or authorize remote changes. Build/plan, reviewer, explore and
 researcher retain their reviewed read-only tool allowlist. Supporting a new MCP
 in those roles requires reviewing its query operations in the runtime.
 
+The server named `linear` has reviewed queries for issues, comments, projects,
+documents, teams, users, milestones, releases and diff review context. These
+are available directly to build/plan, explore, researcher and reviewer, as with
+`gh`/`glab` queries; coder and scribe can also retrieve that context. Enable
+the server in the project configuration. Creating or changing tracker data
+remains a coder operation requiring explicit MCP permission and authorization.
+Unknown tools are denied even if the server describes them as read-only.
+
+For other project MCP queries not yet in the reviewed allowlist, build/plan
+can delegate to an explicitly permitted coder with a prompt limiting the task
+to retrieval. In a Git checkout, use
+`ownership: []` when no source/configuration/documentation writes are needed;
+coder receives only its automatic artifact directory. There is no need to
+grant an unrelated source path or copy tracker content manually. MCP permissions
+remain separate from authorization to change tracker data.
+
 Native `list_mcp_resources`, `list_mcp_resource_templates` and
 `read_mcp_resource` are available to read-only roles through OpenCode's `read`
 permission. They discover and retrieve resources, not the server's callable
 tools; an empty resource list does not prove a disconnected server. To check
 connection status with the selected profile, run `opencode-profile mcp list`
 from the project directory. `enabled: true` connects a server but does not grant
-its tools to a role. A connected project MCP still needs the explicit coder
-permissions shown above; build/plan do not inherit those permissions.
+its unapproved tools to a role. The explicit coder permissions shown above
+are needed for those operations; build/plan do not inherit them.
+
+A new conversation can reuse the same running directory instance and its
+cached configuration. If a fresh CLI sees a configured MCP but the host does
+not, compare `/path`, `/config` and `/mcp` on that running server with the
+exact worktree directory. Reload an idle directory instance after changing
+project configuration; restart OpenCode through its host after changing the
+orchestration plugin. Do not infer a credential failure from a different CLI's
+status or an agent's missing tools.
 
 Automatic discovery of home-level `.agents/skills` and `.claude/skills` is off.
 The runtime adds `.agents/skills` from the current directory through the Git

@@ -27,14 +27,18 @@ selection; delegations cannot override them. The routing source is
 1. Establish the objective, completion criteria, directory and existing user
    authorization. Reuse known facts and settled decisions.
 1. Give each delegation one focus, a stable work-item identifier, relevant
-   references, constraints and required verification. Writers receive explicit
-   writable paths; read-only roles receive no ownership.
+   references, constraints and required verification. Declare every source,
+   configuration or documentation path a writer may change; read-only roles
+   receive no ownership.
    The native session's directory is the path base. A child in another project
    keeps its lifecycle in the root project's journal. Resume and compaction
    recover that association and the actual directory.
    In Git checkouts, coder also receives a private, ignored artifact directory
-   inside its writable scope. Preserve generated evidence there and keep source
-   and deliverable documentation in their normal paths. See
+   inside its writable scope. For verification or permitted MCP work needing no
+   source writes, coder can use `ownership: []`: only that artifact directory
+   is writable. Scribe and coder outside Git still require explicit paths.
+   Preserve generated evidence there and keep source and deliverable
+   documentation in their normal paths. See
    [artifacts and snapshots](orchestrator/README.md#artifacts-and-review-snapshots)
    for limits and recovery.
 1. Start one useful child. Add independent parallel focuses when needed, up to
@@ -89,8 +93,12 @@ does not infer another worktree path, redirect a file request or broaden native
 external-directory permissions.
 
 The native role permissions and query guard share one explicit MCP tool list
-for CodeGraph exploration, Context7 documentation, Exa search/page retrieval and
-grep.app code search.
+for CodeGraph exploration, Context7 documentation, Exa search/page retrieval,
+grep.app code search and Linear tracker queries. The project registers the
+server as `linear`; approved issue/project/comment and related context queries
+are available directly to the same read-only roles as `gh`/`glab` queries.
+Tracker mutations remain coder operations with explicit MCP permissions and
+user authorization covering the requested changes.
 Unknown tools are denied by default, including new tools under those server
 names; a server prefix alone does not authorize a query.
 

@@ -20,6 +20,12 @@ its tools, inspect its live `tools/list` response and input schemas, then update
 the approved queries and isolated fixtures together. Do not infer capabilities
 from a server prefix or a `readOnlyHint` annotation alone.
 
+The Linear query entries were reviewed against its live `tools/list` schemas
+on 2026-09-13. They cover tracker retrieval; mutations, inbox operations and
+agent-skill tools remain outside this query allowlist. Keep the native fixture
+checking that a root can retrieve an issue, list issues and read comments
+without delegating to coder, while unknown tools remain unavailable.
+
 OpenCode's native MCP resource listing, template listing and resource reading
 use the `read` permission. The runtime query guard recognizes all three
 operations independently of the server tool allowlist. Keep the native fixture
@@ -105,10 +111,13 @@ silently replaced by similarly named files.
 Each coder in a Git checkout receives
 `.opencode-artifacts/<delegation-id>/` inside its delegation directory. The
 runtime reserves that path alongside its explicit writable scope, prepares it
-before prompting the child and reuses it on resume. Other writers need their
-own disjoint paths. Directory ownership includes descendants; a trailing `/**`
-is normalized to that directory, while other glob patterns are rejected before
-creating a child.
+before prompting the child and reuses it on resume. A coder request with
+`ownership: []` is valid in Git: the artifact directory is its entire writable
+scope, suitable for verification or explicitly permitted MCP work. Source,
+configuration and documentation writes still require their own declared paths.
+Scribe and coder outside Git require explicit ownership. Directory ownership
+includes descendants; a trailing `/**` is normalized to that directory, while
+other glob patterns are rejected before creating a child.
 
 The artifact directory has its own managed `.gitignore`. The runtime preserves
 the project's ignore files, refuses symlinks and tracked artifact content, and

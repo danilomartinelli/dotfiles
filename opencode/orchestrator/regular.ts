@@ -216,7 +216,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     tool: {
       delegate: tool({
         description:
-          "Run a declared role asynchronously: coder implements/verifies, scribe documents, explore investigates code, researcher retrieves external facts, reviewer reviews a source snapshot. Supply one focus in prompt; maximum three active. Resume the same delegation ID for corrections. Coder/scribe require disjoint ownership using literal files/directories inside directory; read-only roles require empty ownership. In Git checkouts, coder receives its own ignored artifact directory and ownership automatically. Only reviewer needs review_snapshot. Models come from the profile.",
+          "Run a declared role asynchronously: coder implements/verifies, scribe documents, explore investigates code, researcher retrieves external facts, reviewer reviews a source snapshot. Supply one focus in prompt; maximum three active. Resume the same delegation ID for corrections. List literal files/directories inside directory for every source/config/docs write. In Git checkouts, coder may use ownership: [] for verification or permitted MCP work; its automatic ignored artifact directory is then its entire writable scope. Do not invent a source path for query-only work. Scribe and coder outside Git require explicit ownership; read-only roles require empty ownership. Only reviewer needs review_snapshot. Models come from the profile.",
         args: {
           role: tool.schema.enum(childRoles),
           workItem: tool.schema.string().min(1).max(200),

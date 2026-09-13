@@ -543,6 +543,50 @@ test("snapshot includes staged, unstaged and untracked content", async () => {
   expect(await sourceVersion(f.directory)).not.toBe(two);
 });
 
+test("coder can retrieve tracker context with only automatic artifact ownership", async () => {
+  const f = await gitFixture();
+  await expect(
+    f.manager.start("root", f.request({ role: "scribe", ownership: [] })),
+  ).rejects.toThrow("explicit file or directory ownership");
+  const request = f.request({
+    ownership: [],
+    prompt:
+      "Retrieve tracker context through the configured MCP. Do not edit source or update the tracker.",
+  });
+  const row = await f.manager.start("root", request);
+  expect(row.artifacts).toBeString();
+  expect(row.ownership).toEqual([row.artifacts!]);
+  expect(f.created).toHaveLength(1);
+  expect(f.requests[0].body.parts[0].text).toContain(row.artifacts!);
+  await assertWriteTargets(
+    "write",
+    { filePath: path.join(row.artifacts!, "context.txt") },
+    row,
+  );
+  for (const file of ["src/implementation.ts", "opencode.jsonc"])
+    await expect(
+      assertWriteTargets(
+        "write",
+        { filePath: path.join(f.directory, file) },
+        row,
+      ),
+    ).rejects.toThrow("outside delegated");
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  const resumed = await f.manager.start("root", { ...request, resume: row.id });
+  expect(resumed.child).toBe(row.child);
+  expect(resumed.ownership).toEqual(row.ownership);
+});
+
+test("coder outside Git still needs an explicit writable destination", async () => {
+  const f = await fixture();
+  await expect(
+    f.manager.start("root", f.request({ ownership: [] })),
+  ).rejects.toThrow("explicit file or directory ownership");
+  expect(f.created).toHaveLength(0);
+  expect(f.requests).toHaveLength(0);
+});
+
 test("coder artifacts survive resume without counting toward source snapshots", async () => {
   const f = await gitFixture();
   const row = await f.manager.start("root", f.request());
@@ -601,9 +645,9 @@ test("artifact preparation rejects symlinks without claiming external paths or s
   );
   cleanup.push(() => rm(external, { recursive: true, force: true }));
   await symlink(external, path.join(f.directory, ".opencode-artifacts"));
-  await expect(f.manager.start("root", f.request())).rejects.toThrow(
-    "real directory",
-  );
+  await expect(
+    f.manager.start("root", f.request({ ownership: [] })),
+  ).rejects.toThrow("real directory");
   expect(f.created).toHaveLength(0);
   expect(await Bun.file(path.join(external, ".gitignore")).exists()).toBe(
     false,

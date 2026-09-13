@@ -409,8 +409,6 @@ export class Delegations {
       );
     const writer = writerRoles.has(request.role);
     const reviewer = request.role === "reviewer";
-    if (writer && !ownership.length)
-      throw new Error("Writers need explicit file or directory ownership.");
     if (!writer && ownership.length)
       throw new Error(
         "Read-only roles need empty ownership; put the investigation or review scope in the prompt.",
@@ -419,6 +417,10 @@ export class Delegations {
     const artifacts =
       request.role === "coder" ? await artifactPath(directory, id) : undefined;
     if (artifacts) ownership.push(artifacts);
+    if (writer && !ownership.length)
+      throw new Error(
+        "Writers need explicit file or directory ownership. Only coder in a Git checkout can use ownership: [] with automatic artifact storage.",
+      );
     if (reviewer) this.assertReviewReady(directory);
     if (
       reviewer &&

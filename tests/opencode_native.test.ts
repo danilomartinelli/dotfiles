@@ -57,6 +57,21 @@ const mcpQueries = [
     name: "searchGitHub",
     arguments: { query: "fixture()" },
   },
+  {
+    server: "linear",
+    name: "get_issue",
+    arguments: { id: "FIX-1", includeRelations: true },
+  },
+  {
+    server: "linear",
+    name: "list_issues",
+    arguments: { query: "fixture", limit: 5 },
+  },
+  {
+    server: "linear",
+    name: "list_comments",
+    arguments: { issueId: "FIX-1" },
+  },
 ];
 
 const mcpResourceQueries = [
@@ -290,7 +305,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     async fetch(request) {
       const pathname = new URL(request.url).pathname;
       const queryServer = pathname.match(
-        /^\/queries\/(codegraph|context7|exa|gh_grep)$/,
+        /^\/queries\/(codegraph|context7|exa|gh_grep|linear)$/,
       )?.[1];
       if (pathname === "/mcp" || queryServer) {
         if (request.method !== "POST")
@@ -370,6 +385,16 @@ test("native OpenCode initializes deferred tools and preserves routing and write
                     annotations: { readOnlyHint: true },
                     inputSchema: { type: "object", properties: {} },
                   },
+                  ...(queryServer === "linear"
+                    ? [
+                        {
+                          name: "save_issue",
+                          description: "Create or update a fixture issue.",
+                          annotations: { readOnlyHint: false },
+                          inputSchema: { type: "object", properties: {} },
+                        },
+                      ]
+                    : []),
                 ]
               : [
                   {
@@ -522,7 +547,11 @@ test("native OpenCode initializes deferred tools and preserves routing and write
             role: marker === "NATIVE_BAD_ROLE" ? "coder-complex" : "coder",
             workItem: "native-fixture",
             directory,
-            ownership: ["src"],
+            ownership: ["NATIVE_MCP_ROOT", "NATIVE_MCP_CANCEL_ROOT"].includes(
+              marker,
+            )
+              ? []
+              : ["src"],
             prompt:
               marker === "NATIVE_MCP_CANCEL_ROOT"
                 ? "NATIVE_MCP_CANCEL_CHILD. Run the pending project fixture MCP operation."
@@ -923,7 +952,7 @@ process.stdin.on('end', () => process.exit(0));
           },
           fixture: { type: "remote", url: `http://127.0.0.1:${mock.port}/mcp` },
           ...Object.fromEntries(
-            ["context7", "exa", "gh_grep"].map((server) => [
+            ["context7", "exa", "gh_grep", "linear"].map((server) => [
               server,
               {
                 type: "remote",
@@ -936,7 +965,11 @@ process.stdin.on('end', () => process.exit(0));
           coder: {
             model: "openai/gpt-6-astra",
             variant: "low",
-            permission: { "project_*": "allow", "fixture_*": "allow" },
+            permission: {
+              "project_*": "allow",
+              "fixture_*": "allow",
+              "linear_*": "allow",
+            },
           },
         },
       }),
@@ -1176,6 +1209,12 @@ process.stdin.on('end', () => process.exit(0));
     expect(
       rootRequest?.tools?.some((tool) => tool.name.endsWith("_unknown_read")),
     ).toBe(false);
+    expect(
+      rootRequest?.tools?.some((tool) => tool.name === "linear_save_issue"),
+    ).toBe(false);
+    expect(
+      childRequest?.tools?.some((tool) => tool.name === "linear_save_issue"),
+    ).toBe(true);
     expect(childRequest?.model).toBe("gpt-5.6-luna");
     expect(childRequest?.reasoning?.effort).toBe("high");
     expect(childRequest?.service_tier).toBeUndefined();
@@ -1397,6 +1436,17 @@ process.stdin.on('end', () => process.exit(0));
     });
     if (mcpResponse.info?.error)
       throw new Error(JSON.stringify(mcpResponse.info.error) + "\n" + logs);
+    const mcpRootMessages = await api(`/session/${session.id}/message`);
+    const mcpDelegation = mcpRootMessages
+      .flatMap((message: any) => message.parts)
+      .find(
+        (part: any) =>
+          part.tool === "delegate" &&
+          part.state.input?.prompt?.startsWith("NATIVE_MCP_CHILD"),
+      );
+    expect(mcpDelegation?.state.input.ownership).toEqual([]);
+    expect(mcpDelegation?.state.error).toBeUndefined();
+    expect(mcpDelegation?.state.status).toBe("completed");
     await until(
       async () =>
         delegation().messageID !== mcpGeneration &&
@@ -1407,6 +1457,7 @@ process.stdin.on('end', () => process.exit(0));
     );
     expect(mcpCalls).toBe(1);
     expect(pendingTools()).toBe(0);
+    expect(delegation().ownership).toEqual([delegation().artifacts]);
     const mcpMessages = await api(`/session/${child.id}/message`);
     const mcpTool = mcpMessages
       .flatMap((message: any) => message.parts)
@@ -1446,10 +1497,7 @@ process.stdin.on('end', () => process.exit(0));
     // Remote completion alone cannot replace the missing acknowledgement.
     expect(delegation().status).toBe("stopping");
     expect(pendingTools()).toBe(1);
-    expect(delegation().ownership).toEqual([
-      await realpath(join(directory, "src")),
-      delegation().artifacts,
-    ]);
+    expect(delegation().ownership).toEqual([delegation().artifacts]);
     expect((await api("/session")).length).toBe(6);
     const crossRoot = await api("/session", { title: "Cross-project fixture" });
     await api(`/session/${crossRoot.id}/message`, {
