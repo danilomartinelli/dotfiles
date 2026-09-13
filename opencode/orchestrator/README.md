@@ -20,6 +20,12 @@ its tools, inspect its live `tools/list` response and input schemas, then update
 the approved queries and isolated fixtures together. Do not infer capabilities
 from a server prefix or a `readOnlyHint` annotation alone.
 
+OpenCode's native MCP resource listing, template listing and resource reading
+use the `read` permission. The runtime query guard recognizes all three
+operations independently of the server tool allowlist. Keep the native fixture
+covering discovery followed by reading a returned URI; tool-only fixtures do
+not exercise this path.
+
 ## Lifecycle
 
 The project database under `~/.local/share/opencode/orchestrator/` contains

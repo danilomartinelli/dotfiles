@@ -191,6 +191,15 @@ boundaries or authorize remote changes. Build/plan, reviewer, explore and
 researcher retain their reviewed read-only tool allowlist. Supporting a new MCP
 in those roles requires reviewing its query operations in the runtime.
 
+Native `list_mcp_resources`, `list_mcp_resource_templates` and
+`read_mcp_resource` are available to read-only roles through OpenCode's `read`
+permission. They discover and retrieve resources, not the server's callable
+tools; an empty resource list does not prove a disconnected server. To check
+connection status with the selected profile, run `opencode-profile mcp list`
+from the project directory. `enabled: true` connects a server but does not grant
+its tools to a role. A connected project MCP still needs the explicit coder
+permissions shown above; build/plan do not inherit those permissions.
+
 Automatic discovery of home-level `.agents/skills` and `.claude/skills` is off.
 The runtime adds `.agents/skills` from the current directory through the Git
 worktree root, including intermediate directories, while preserving explicit

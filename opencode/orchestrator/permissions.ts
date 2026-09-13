@@ -32,6 +32,10 @@ const queryTools = new Set([
   "websearch",
   "codesearch",
   "lsp",
+  // OpenCode routes these native resource operations through its read permission.
+  "list_mcp_resources",
+  "list_mcp_resource_templates",
+  "read_mcp_resource",
   ...mcpQueryTools,
 ]);
 

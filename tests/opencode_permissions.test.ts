@@ -16,6 +16,24 @@ function query(command: string, role = "reviewer"): string {
 }
 
 describe("regular read-only tool boundary", () => {
+  test("read-only roles can discover MCP resources and read a discovered URI", () => {
+    for (const role of readOnlyRoles) {
+      // Native MCP resource tools use the read permission, not a server tool name.
+      expect(rolePermissions(role).read).toBe("allow");
+      for (const [tool, args] of [
+        ["list_mcp_resources", {}],
+        ["list_mcp_resources", { server: "project" }],
+        ["list_mcp_resource_templates", {}],
+        ["list_mcp_resource_templates", { server: "project" }],
+        ["read_mcp_resource", { server: "project", uri: "fixture://guide" }],
+      ] as const)
+        expect(() => assertReadOnlyTool(role, tool, args)).not.toThrow();
+      expect(() =>
+        assertReadOnlyTool(role, "project_update_issue", {}),
+      ).toThrow("Read-only policy:");
+    }
+  });
+
   test("tracker help is available without executing the documented operation", () => {
     for (const command of [
       "PAGER=cat GH_PAGER=cat 'gh' 'help' 'api'",

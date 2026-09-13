@@ -59,6 +59,15 @@ const mcpQueries = [
   },
 ];
 
+const mcpResourceQueries = [
+  { name: "list_mcp_resources", arguments: { server: "fixture" } },
+  { name: "list_mcp_resource_templates", arguments: { server: "fixture" } },
+  {
+    name: "read_mcp_resource",
+    arguments: { server: "fixture", uri: "fixture://guide" },
+  },
+];
+
 function latestDelegation(request: ProviderRequest, role = "coder") {
   for (const item of request.input.toReversed()) {
     if (
@@ -292,6 +301,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
           params?: {
             protocolVersion?: string;
             name?: string;
+            uri?: string;
             arguments?: unknown;
           };
         };
@@ -300,8 +310,34 @@ test("native OpenCode initializes deferred tools and preserves routing and write
         if (body.method === "initialize") {
           result = {
             protocolVersion: body.params?.protocolVersion,
-            capabilities: { tools: {} },
+            capabilities: {
+              tools: {},
+              ...(!queryServer ? { resources: {} } : {}),
+            },
             serverInfo: { name: "fixture", version: "1" },
+          };
+        } else if (body.method === "resources/list") {
+          result = {
+            resources: [
+              { name: "guide", uri: "fixture://guide", mimeType: "text/plain" },
+            ],
+          };
+        } else if (body.method === "resources/templates/list") {
+          result = {
+            resourceTemplates: [
+              { name: "guide", uriTemplate: "fixture://{name}" },
+            ],
+          };
+        } else if (body.method === "resources/read") {
+          expect(body.params?.uri).toBe("fixture://guide");
+          result = {
+            contents: [
+              {
+                uri: "fixture://guide",
+                mimeType: "text/plain",
+                text: "Fixture MCP resource verified.",
+              },
+            ],
           };
         } else if (body.method === "tools/list") {
           result = {
@@ -391,6 +427,9 @@ test("native OpenCode initializes deferred tools and preserves routing and write
       const mcpQuery = mcpQueries.find(
         (query) => !issued.has(`${query.server}_${query.name}`),
       );
+      const mcpResourceQuery = mcpResourceQueries.find(
+        (query) => !issued.has(query.name),
+      );
       const crossProject = input.includes("NATIVE_CROSS_RESUME")
         ? "NATIVE_CROSS_RESUME"
         : input.includes("NATIVE_CROSS_ROOT")
@@ -422,6 +461,9 @@ test("native OpenCode initializes deferred tools and preserves routing and write
         const name = `${mcpQuery.server}_${mcpQuery.name}`;
         issued.add(name);
         output = { name, arguments: mcpQuery.arguments };
+      } else if (marker === "NATIVE_VALID_ROOT" && mcpResourceQuery) {
+        issued.add(mcpResourceQuery.name);
+        output = mcpResourceQuery;
       } else if (marker === "NATIVE_VALID_ROOT" && inspection) {
         issued.add(inspection);
         output = {
@@ -1070,6 +1112,19 @@ process.stdin.on('end', () => process.exit(0));
         .flatMap((message: any) => message.parts)
         .find((part: any) => part.tool === `${query.server}_${query.name}`);
       expect(part?.state.status).toBe("completed");
+    }
+    for (const query of mcpResourceQueries) {
+      const part = rootMessages
+        .flatMap((message: any) => message.parts)
+        .find((part: any) => part.tool === query.name);
+      expect(part?.state.status).toBe("completed");
+      expect(part?.state.output).toContain(
+        query.name === "read_mcp_resource"
+          ? "Fixture MCP resource verified."
+          : query.name === "list_mcp_resource_templates"
+            ? "fixture://{name}"
+            : "fixture://guide",
+      );
     }
     const child = await until(async () => {
       const sessions = await api("/session");

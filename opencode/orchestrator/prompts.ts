@@ -20,6 +20,9 @@ Include CI artifacts in existing relevant coder work and pass the evidence to re
 Project scripts and runtime/package-manager commands (including bun, npm and npx) require coder, even when named docs or list.
 The root should include needed script execution in an existing relevant coder delegation; leaves return that need to the root.
 After a policy rejection, use the supported tool or role; do not retry through wrappers, environment changes or alternate spellings.
+MCP resource lists enumerate resources, not callable tools or connection status. Empty lists do not prove a server is disconnected.
+Project MCP tools require explicit coder permissions unless their queries are approved by the runtime for read-only roles.
+Report role restrictions separately from connection or authentication failures.
 ${tracker}`;
 
 const leaf = `Complete the supplied focus in the exact directory, within the requested scope and existing authorization.
