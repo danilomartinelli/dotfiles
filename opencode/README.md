@@ -75,17 +75,17 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                           | `example`                           |
-| ---------- | ----------------------------------- | ----------------------------------- |
-| Default    | `openai/gpt-6-astra`                | `openai/gpt-6-astra`                |
-| Small      | `openai/gpt-5.6-luna-fast`          | `openai/gpt-5.6-luna-fast`          |
-| Plan       | `openai/gpt-6-astra` (`max`)        | `openai/gpt-6-astra` (`max`)        |
-| Build      | `openai/gpt-6-astra` (`max`)        | `openai/gpt-6-astra` (`max`)        |
-| Coder      | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Explore    | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Researcher | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
-| Reviewer   | `openai/gpt-5.6-luna-fast` (`high`) | `openai/gpt-5.6-luna-fast` (`high`) |
+| Role       | `regular`                      | `example`                      |
+| ---------- | ------------------------------ | ------------------------------ |
+| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           |
+| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          |
+| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) |
+| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) |
+| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
+| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) |
 
 <!-- generated-end -->
 

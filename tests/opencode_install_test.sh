@@ -405,7 +405,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
   printf '{"permission":{"project_*":"ask"}}\n' >"$override"
   "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" "$fixture/opencode" \
     >/dev/null || return 1
-  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna-fast"' \
+  jq -e '.permission["project_*"] == "ask" and .agent.coder.model == "openai/gpt-5.6-luna"' \
     "$fixture/opencode/profiles/regular/opencode.jsonc" >/dev/null \
     || scenario_fail 'regular override did not merge with shared policy'
 
@@ -422,7 +422,7 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
 
   cp "$REPOSITORY_ROOT/opencode/profiles/_routing.tsv" \
     "$fixture/opencode/profiles/_routing.tsv"
-  printf 'example\tunknown-role\topenai/gpt-5.6-luna-fast\thigh\t-\n' \
+  printf 'example\tunknown-role\topenai/gpt-5.6-luna\thigh\t-\n' \
     >>"$fixture/opencode/profiles/_routing.tsv"
   assert_fails_with_output 'undeclared agent' \
     'routing row names an undeclared agent: example unknown-role' \
@@ -454,16 +454,16 @@ test_profiles_route_models() {
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" | jq -e '
       .model == "openai/gpt-6-astra" and
-      .small_model == "openai/gpt-5.6-luna-fast" and
+      .small_model == "openai/gpt-5.6-luna" and
       .lsp == true and
       .agent == {
-        "plan": {"model": "openai/gpt-6-astra", "variant": "max"},
-        "build": {"model": "openai/gpt-6-astra", "variant": "max"},
-        "coder": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "explore": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "researcher": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "scribe": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"},
-        "reviewer": {"model": "openai/gpt-5.6-luna-fast", "variant": "high"}
+        "plan": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
+        "build": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
+        "coder": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "explore": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "researcher": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "scribe": {"model": "openai/gpt-5.6-luna", "variant": "high"},
+        "reviewer": {"model": "openai/gpt-5.6-luna", "variant": "high"}
       }
     ' >/dev/null \
       || scenario_fail "$profile profile model routing is incorrect"
