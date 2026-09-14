@@ -288,33 +288,33 @@ deliberately.
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
 | `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
-| `bun`                                       | `1.3.14`         | JavaScript runtime and package manager          |
-| `elixir`                                    | `1.18`           | Elixir runtime                                  |
-| `erlang`                                    | `28`             | BEAM runtime                                    |
-| `go`                                        | `1.25.14`        | Go toolchain                                    |
+| `bun`                                       | `1.4.2`          | JavaScript runtime and package manager          |
+| `elixir`                                    | `1.20`           | Elixir runtime                                  |
+| `erlang`                                    | `29`             | BEAM runtime                                    |
+| `go`                                        | `1.27.1`         | Go toolchain                                    |
 | `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
-| `java`                                      | `temurin-21`     | Java runtime                                    |
+| `java`                                      | `temurin-25`     | Java runtime                                    |
 | `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.268`        | Claude Code CLI                                 |
+| `npm:@anthropic-ai/claude-code`             | `2.1.270`        | Claude Code CLI                                 |
 | `npm:@agentclientprotocol/claude-agent-acp` | `0.76.0`         | Claude ACP agent                                |
 | `npm:@agentclientprotocol/codex-acp`        | `1.11.0`         | Codex ACP agent                                 |
 | `npm:@earendil-works/pi-coding-agent`       | `0.85.1`         | Pi coding agent                                 |
 | `npm:@colbymchenry/codegraph`               | `1.6.0`          | Repository code graph CLI                       |
 | `npm:@openai/codex`                         | `0.154.0`        | Codex CLI                                       |
-| `npm:eas-cli`                               | `16.32.0`        | Expo Application Services CLI                   |
-| `npm:neonctl`                               | `3.6.0`          | Neon CLI                                        |
+| `npm:eas-cli`                               | `24.3.0`         | Expo Application Services CLI                   |
+| `npm:neonctl`                               | `4.17.3`         | Neon CLI                                        |
 | `npm:ocx`                                   | `2.0.15`         | OpenCode extension and profile manager          |
 | `npm:opencode-ai`                           | `1.18.30`        | OpenCode CLI                                    |
-| `npm:skills`                                | `1.5.25`         | Agent skills CLI                                |
-| `npm:wrangler`                              | `4.131.0`        | Cloudflare Workers CLI                          |
+| `npm:skills`                                | `1.5.26`         | Agent skills CLI                                |
+| `npm:wrangler`                              | `4.131.1`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
 | `pipx:kimi-cli`                             | `1.50.0`         | Kimi CLI                                        |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
-| `pnpm`                                      | `10.34.5`        | JavaScript package manager                      |
+| `pnpm`                                      | `12.4.1`         | JavaScript package manager                      |
 | `python`                                    | `3.14.7`         | Python runtime                                  |
-| `ruby`                                      | `3.4`            | Ruby runtime                                    |
-| `rust`                                      | `1.91.1`         | Rust toolchain                                  |
-| `terraform`                                 | `1.14.9`         | Infrastructure as code CLI                      |
+| `ruby`                                      | `4.0`            | Ruby runtime                                    |
+| `rust`                                      | `1.98.1`         | Rust toolchain                                  |
+| `terraform`                                 | `1.16.2`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
 | `yarn`                                      | `4.18.0`         | JavaScript package manager                      |
 
