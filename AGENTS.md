@@ -204,10 +204,18 @@ window, and an untracked global config shadowing a managed entry. Repairs need
 `--fix` and refuse to run while OpenCode holds the database. Do not add a
 second cleanup path for that directory.
 
-The orchestrator creates a delegation's artifact directory and never retires
-it, because it cannot tell a screenshot from a build cache. Retiring is the
-doctor's, under `--days`; the report always names the large ones so the cost
-is visible before anything is deleted.
+A coder owns two directories. Its artifact directory holds the evidence of one
+attempt and is preserved; the worktree's shared `workspace` holds everything
+disposable and is reused by every coder there, so a delegation no longer
+rebuilds the toolchain from nothing. The runtime does not serialize the
+workspace: overlapping source ownership stays refused, while sharing a build
+cache is the orchestrator's judgement. Retiring either is the doctor's, under
+`--days`; the report names the large ones so the cost is visible before
+anything is deleted.
+
+A delegation record carries its attempt count, which outlives the compaction
+the root's own recollection does not. It exists so a repeated resume changes
+method instead of repeating itself; it never stops the run.
 
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose` catalog, run through

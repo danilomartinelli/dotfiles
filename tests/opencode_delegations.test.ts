@@ -472,6 +472,55 @@ test("a cleanup acknowledgement that never arrives stops pinning ownership", asy
   expect(f.created).toHaveLength(1);
 });
 
+// Evidence is scoped to one attempt and a build cache to the worktree. Sharing
+// one directory made every delegation rebuild the toolchain from nothing.
+test("coders share one workspace and keep evidence apart", async () => {
+  const f = await gitFixture();
+  const first = await f.manager.start("root", f.request({ ownership: [] }));
+  const second = await f.manager.start(
+    "root",
+    f.request({ workItem: "issue-2", ownership: [] }),
+  );
+
+  expect(first.workspace).toBe(second.workspace!);
+  expect(first.artifacts).not.toBe(second.artifacts!);
+  expect(first.workspace).toContain(".opencode-artifacts");
+  await assertWriteTargets(
+    "write",
+    { filePath: path.join(first.workspace!, "derived-data", "build.log") },
+    second,
+  );
+});
+
+// Overlapping source stays refused; whether two writers may drive the same
+// build cache is the root's judgement, not a reservation the runtime enforces.
+test("a shared workspace is never the evidence of an ownership conflict", async () => {
+  const f = await fixture();
+  await f.manager.start("root", f.request({ ownership: ["src/a.ts"] }));
+  await f.manager.start(
+    "root",
+    f.request({ workItem: "issue-2", ownership: ["src/b.ts"] }),
+  );
+  await expect(
+    f.manager.start(
+      "root",
+      f.request({ workItem: "issue-3", ownership: ["src/a.ts"] }),
+    ),
+  ).rejects.toThrow("overlaps");
+});
+
+// The count outlives the compaction the root's own recollection does not.
+test("resuming a delegation counts the attempt", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  expect(row.attempt).toBe(1);
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  const second = await f.manager.start("root", f.request({ resume: row.id }));
+  expect(second.attempt).toBe(2);
+  expect(second.id).toBe(row.id);
+});
+
 test("changed review source invalidates its verdict", async () => {
   const f = await fixture();
   const row = await f.manager.start(
@@ -570,7 +619,8 @@ test("coder can retrieve tracker context with only automatic artifact ownership"
   });
   const row = await f.manager.start("root", request);
   expect(row.artifacts).toBeString();
-  expect(row.ownership).toEqual([row.artifacts!]);
+  expect(row.workspace).toBeString();
+  expect(row.ownership).toEqual([row.artifacts!, row.workspace!]);
   expect(f.created).toHaveLength(1);
   expect(f.requests[0].body.parts[0].text).toContain(row.artifacts!);
   await assertWriteTargets(

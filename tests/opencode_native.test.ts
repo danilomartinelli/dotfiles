@@ -1456,7 +1456,10 @@ process.stdin.on('end', () => process.exit(0));
     );
     expect(mcpCalls).toBe(1);
     expect(pendingTools()).toBe(0);
-    expect(delegation().ownership).toEqual([delegation().artifacts]);
+    expect(delegation().ownership).toEqual([
+      delegation().artifacts,
+      delegation().workspace,
+    ]);
     const mcpMessages = await api(`/session/${child.id}/message`);
     const mcpTool = mcpMessages
       .flatMap((message: any) => message.parts)
@@ -1496,7 +1499,10 @@ process.stdin.on('end', () => process.exit(0));
     // Remote completion alone cannot replace the missing acknowledgement.
     expect(delegation().status).toBe("stopping");
     expect(pendingTools()).toBe(1);
-    expect(delegation().ownership).toEqual([delegation().artifacts]);
+    expect(delegation().ownership).toEqual([
+      delegation().artifacts,
+      delegation().workspace,
+    ]);
     expect((await api("/session")).length).toBe(6);
     const crossRoot = await api("/session", { title: "Cross-project fixture" });
     await api(`/session/${crossRoot.id}/message`, {

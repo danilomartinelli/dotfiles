@@ -29,6 +29,14 @@ async function git(directory: string, ...args: string[]) {
   );
 }
 
+/** One disposable build workspace per worktree, beside the per-delegation
+ *  evidence directories. A delegation id is a UUID, so the name cannot clash. */
+const workspace = "workspace";
+
+export async function workspacePath(directory: string) {
+  return artifactPath(directory, workspace);
+}
+
 export async function artifactPath(directory: string, id: string) {
   try {
     const result = await git(directory, "rev-parse", "--is-inside-work-tree");

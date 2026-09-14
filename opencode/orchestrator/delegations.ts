@@ -5,7 +5,7 @@ import { mkdir, readFile, readlink, realpath, lstat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { PluginInput } from "@opencode-ai/plugin";
-import { artifactPath, prepareArtifacts } from "./artifacts";
+import { artifactPath, prepareArtifacts, workspacePath } from "./artifacts";
 
 const exec = promisify(execFile);
 export const childRoles = [
@@ -39,8 +39,10 @@ export type Delegation = {
   directory: string;
   ownership: string[];
   artifacts?: string;
+  workspace?: string;
   sourceVersion?: string;
   status: State;
+  attempt: number;
   started: number;
   deadline: number;
   result?: string;
@@ -428,6 +430,13 @@ export class Delegations {
     const artifacts =
       request.role === "coder" ? await artifactPath(directory, id) : undefined;
     if (artifacts) ownership.push(artifacts);
+    // Evidence is scoped to one attempt; a build cache is scoped to the
+    // worktree. Giving them one directory made every delegation rebuild the
+    // toolchain from nothing: one issue's three coders each grew their own
+    // Android SDK, AVD set and derived data.
+    const shared =
+      request.role === "coder" ? await workspacePath(directory) : undefined;
+    if (shared) ownership.push(shared);
     if (writer && !ownership.length)
       throw new Error(
         "Writers need explicit file or directory ownership. Only coder in a Git checkout can use ownership: [] with automatic artifact storage.",
@@ -482,10 +491,15 @@ export class Delegations {
               (reviewer && item.ownership.length > 0))
           )
             throw new Error("Review a stable version after writers finish.");
+          // Every coder in a worktree owns the same workspace, so it can never
+          // be evidence of a conflict. Whether two writers may share a build
+          // cache is the root's judgement; overlapping source stays refused.
+          const contested = ownership.filter((file) => file !== shared);
+          const held = item.ownership.filter((file) => file !== item.workspace);
           if (
             writer &&
-            item.ownership.length > 0 &&
-            ownership.some((a) => item.ownership.some((b) => overlaps(a, b)))
+            held.length > 0 &&
+            contested.some((a) => held.some((b) => overlaps(a, b)))
           )
             throw new Error(
               `Writer ownership overlaps delegation ${item.id}; resume it after completion or serialize the change.`,
@@ -503,8 +517,10 @@ export class Delegations {
           directory,
           ownership,
           artifacts,
+          workspace: shared,
           sourceVersion: request.sourceVersion,
           status: "starting",
+          attempt: (old?.attempt ?? 0) + 1,
           started: Date.now(),
           deadline: Date.now() + this.timeoutMs,
           notified: false,
@@ -516,6 +532,7 @@ export class Delegations {
 
     try {
       if (row.artifacts) await prepareArtifacts(directory, row.artifacts);
+      if (row.workspace) await prepareArtifacts(directory, row.workspace);
       if (!row.child) {
         const child = data(
           await this.client.session.create({
