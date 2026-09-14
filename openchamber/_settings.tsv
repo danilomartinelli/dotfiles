@@ -13,17 +13,15 @@
 # binary would otherwise miss. See bin/opencode-profile.
 opencodeBinary	"$DOTFILES_ROOT/bin/opencode-profile"
 
-# Appearance
+# Appearance. The four splashBg/splashFg names the app writes are localStorage
+# entries, not settings; desktopSplashColors is the key it owns in this file.
 themeId	"catppuccin-dark"
 themeVariant	"dark"
 useSystemTheme	true
 darkThemeId	"catppuccin-dark"
 lightThemeId	"catppuccin-light"
 monoFont	"jetbrains-mono"
-splashBgDark	"#1E1E2E"
-splashBgLight	"#fff6f4"
-splashFgDark	"#CDD6F4"
-splashFgLight	"#2e314a"
+desktopSplashColors	{"bgDark":"#1E1E2E","bgLight":"#fff6f4","fgDark":"#CDD6F4","fgLight":"#2e314a"}
 
 # Notifications
 notificationMode	"hidden-only"
@@ -41,7 +39,16 @@ sidebarProjectSortOrder	"manual"
 sidebarSessionGroupingMode	"by-worktree"
 sidebarShowRecentSection	true
 mobileKeyboardMode	"native"
-usageSelectedModels	{"claude":["Opus"]}
+defaultAgent	"build"
+openInAppId	"zed"
+
+# Retention. The app defaults to keeping everything: autoDeleteEnabled false,
+# and the window and action below are its defaults, declared so a later release
+# cannot change how long a session survives without this file saying so.
+autoDeleteEnabled	true
+autoDeleteAfterDays	30
+sessionRetentionAction	"archive"
+showDeletionDialog	false
 
 # Desktop host
 desktopKeepAwakeEnabled	true
