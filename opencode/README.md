@@ -191,7 +191,8 @@ tools for coder:
 `opencode.jsonc`, with `DO_NOT_TRACK=1` because its telemetry is on by default.
 It is declared `enabled: false`: its 76 tools tap, type, install apps, evaluate
 JavaScript in a running app and drive simulators, which no non-mobile session
-should carry. A mobile project turns it on and permits what its coder may use:
+should carry. A mobile project turns it on and permits what its coder may use,
+which applies through the GUI adapter and not through `ocx opencode`:
 
 ```json
 {
@@ -284,14 +285,24 @@ reads `OPENCODE_DISABLE_EXTERNAL_SKILLS` from its own environment and then
 hides every skill whose path contains `.agents/` or `.claude/`, so its slash
 menu listed no project skills while the agent could still load all of them.
 
-OCX profiles have empty `exclude` and `include` lists: OCX merges trusted project
-instructions/configuration itself. The shell sets
-`OPENCODE_DISABLE_PROJECT_CONFIG=true` to avoid duplicate discovery in that
-launch path. The direct GUI adapter overrides it to `false`, because there is
-no OCX project merge in that path. The adapter also passes
-`DOTFILES_OPENCODE_PROFILE_CONFIG` so the runtime restores the selected profile's
-models after project merging. Project integrations remain available without
-changing the declared model routes.
+`ocx opencode -p <profile>` cannot see a project's OpenCode configuration. OCX
+collects only `agent`, `command`, `skill` and `tool` directories out of
+`.opencode/` into the merged configuration it launches from, so a project's
+`opencode.json`, `opencode.jsonc` and `AGENTS.md` never reach the runtime. The
+profile's `exclude` and `include` lists filter that collection and cannot add a
+file type to it, which is why both stay empty. OCX also strips
+`OPENCODE_DISABLE_PROJECT_CONFIG` from the inherited environment and forces it
+to `true` whenever a profile is selected, so the shell's own export governs a
+bare `opencode` run outside OCX and nothing else.
+
+The direct GUI adapter does not use that launcher. It sets
+`OPENCODE_DISABLE_PROJECT_CONFIG=false`, so native discovery loads
+`<project>/opencode.json` and `<project>/.opencode/opencode.json`, and a
+project's MCP servers, permissions and instructions do apply there. The adapter
+also passes `DOTFILES_OPENCODE_PROFILE_CONFIG` so the runtime restores the
+selected profile's models after project merging, leaving the declared routes
+unchanged. An integration that has to work from the terminal has to be declared
+globally instead of by the project.
 
 ### Worktrees
 
