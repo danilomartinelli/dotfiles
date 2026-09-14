@@ -198,9 +198,15 @@ which the same check enforces.
 prunes none of it. `opencode/_doctor.sh`, reached through `opencode-doctor`,
 owns reporting and repairing it: the unbounded `event` replication log,
 processes left inside an agent worktree, `workspace` rows whose directory is
-gone, and an untracked global config shadowing a managed entry. Repairs need
-`--fix` and refuse to run while OpenCode holds the database. Do not add a
-second cleanup path for that directory.
+gone, a delegation's artifact directory nothing has written to inside the
+retention window, and an untracked global config shadowing a managed entry.
+Repairs need `--fix` and refuse to run while OpenCode holds the database. Do
+not add a second cleanup path for that directory.
+
+The orchestrator creates a delegation's artifact directory and never retires
+it, because it cannot tell a screenshot from a build cache. Retiring is the
+doctor's, under `--days`; the report always names the large ones so the cost
+is visible before anything is deleted.
 
 Validate model IDs and variants against the current live
 `opencode models <provider> --verbose` catalog, run through

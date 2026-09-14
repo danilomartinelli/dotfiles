@@ -33,7 +33,7 @@ FIXTURE_PATH_SUFFIX=/usr/bin:/bin:/usr/sbin
 # touches, with the foreign key that makes the event log cascade the way the
 # real one does and the message shape the finished-session rule inspects.
 make_fixture() {
-  local fixture now recent stale
+  local fixture now recent stale artifact_root
   fixture=$(installer_fixture opencode-doctor)
   now=$(($(date +%s) * 1000))
   recent=$now
@@ -41,6 +41,20 @@ make_fixture() {
 
   mkdir -p "$fixture/data/log" "$fixture/config" \
     "$fixture/data/worktree/project/live-worktree"
+
+  # Three delegation artifact directories under the live worktree: one written
+  # to just now, one untouched for a month, and one holding a file large enough
+  # to be named individually. Loose evidence sits in the artifact root, which
+  # belongs to no delegation and must survive every repair.
+  artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
+  mkdir -p "$artifact_root/fresh" "$artifact_root/idle" "$artifact_root/bulky"
+  printf 'evidence\n' >"$artifact_root/loose-evidence.log"
+  printf 'evidence\n' >"$artifact_root/fresh/screenshot.png"
+  printf 'evidence\n' >"$artifact_root/idle/screenshot.png"
+  dd if=/dev/zero of="$artifact_root/bulky/derived-data.bin" bs=1024 count=64 \
+    2>/dev/null
+  touch -t "$(date -r $((now / 1000 - 30 * 86400)) +%Y%m%d%H%M)" \
+    "$artifact_root/idle/screenshot.png" "$artifact_root/idle"
 
   sqlite3 "$fixture/data/opencode.db" <<EOF
 CREATE TABLE session (id text PRIMARY KEY, time_updated integer NOT NULL);
@@ -106,13 +120,27 @@ invoke_doctor() {
   local fixture=$1
   shift
   local -a artifacts=()
+  local -a overrides=()
 
   if [ "${1-}" = --artifacts ]; then
     artifacts=(--artifacts "$2")
     shift 2
   fi
 
+  # Same contract as fixture_run: a leading KEY=value is the module's
+  # environment, not one of its arguments.
+  while [ "$#" -gt 0 ]; do
+    case $1 in
+      [A-Z_]*=*)
+        overrides+=("$1")
+        shift
+        ;;
+      *) break ;;
+    esac
+  done
+
   fixture_run "$fixture" ${artifacts[@]+"${artifacts[@]}"} \
+    ${overrides[@]+"${overrides[@]}"} \
     PATH="$fixture/fake-bin:$FIXTURE_PATH_SUFFIX" \
     -- "$DOCTOR" \
     --data-dir "$fixture/data" \
@@ -235,6 +263,49 @@ test_retention_window_is_selectable() {
   assert_equal '0' \
     "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_done';")" \
     'events of a finished session inside a wider window'
+}
+
+test_report_counts_artifacts_and_names_the_large_ones() {
+  local fixture artifact_root
+  fixture=$(make_fixture)
+  artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
+  invoke_doctor "$fixture" ARTIFACT_REPORT_BYTES=16384
+
+  assert_contains "$fixture/stdout.log" 'delegation artifacts'
+  assert_contains "$fixture/stdout.log" 'in 3 directory(ies)'
+  # human_bytes formats through awk, whose decimal separator follows the
+  # locale, so the assertion names the path rather than the rendered size.
+  assert_contains "$fixture/stdout.log" "KB at $artifact_root/bulky"
+  assert_not_contains "$fixture/stdout.log" "at $artifact_root/fresh"
+  assert_contains "$fixture/stdout.log" 'retired artifacts (idle for 7 days): 1'
+  [ -d "$artifact_root/idle" ] || scenario_fail 'a report must not retire anything'
+}
+
+# Only the directory nothing has written to since the window goes. Evidence
+# sitting directly in the artifact root belongs to no delegation and stays.
+test_fix_retires_only_idle_artifact_directories() {
+  local fixture artifact_root
+  fixture=$(make_fixture)
+  artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
+  invoke_doctor "$fixture" --fix
+
+  [ ! -e "$artifact_root/idle" ] || scenario_fail 'an idle artifact directory survived'
+  [ -e "$artifact_root/fresh/screenshot.png" ] || scenario_fail 'fresh evidence was retired'
+  [ -e "$artifact_root/bulky/derived-data.bin" ] || scenario_fail 'a fresh large directory was retired'
+  [ -e "$artifact_root/loose-evidence.log" ] || scenario_fail 'loose evidence was retired'
+  assert_contains "$fixture/stdout.log" 'retired 1 delegation artifact directory(ies)'
+}
+
+test_days_zero_retires_every_artifact_directory() {
+  local fixture artifact_root
+  fixture=$(make_fixture)
+  artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
+  invoke_doctor "$fixture" --fix --days 0
+
+  [ ! -e "$artifact_root/idle" ] || scenario_fail 'an idle artifact directory survived --days 0'
+  [ ! -e "$artifact_root/fresh" ] || scenario_fail 'a fresh artifact directory survived --days 0'
+  [ ! -e "$artifact_root/bulky" ] || scenario_fail 'a large artifact directory survived --days 0'
+  [ -e "$artifact_root/loose-evidence.log" ] || scenario_fail 'loose evidence was retired'
 }
 
 test_fix_removes_only_workspaces_whose_directory_is_gone() {
@@ -398,6 +469,9 @@ scenario_run 'an untracked shadowing config is reported' test_untracked_shadowin
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
 scenario_run 'a repair prunes finished and stale sessions only' test_fix_prunes_finished_and_stale_sessions_only
 scenario_run 'the retention window protects only unfinished sessions' test_retention_window_is_selectable
+scenario_run 'a report counts artifacts and names the large ones' test_report_counts_artifacts_and_names_the_large_ones
+scenario_run 'a repair retires only idle artifact directories' test_fix_retires_only_idle_artifact_directories
+scenario_run 'zero retention retires every artifact directory' test_days_zero_retires_every_artifact_directory
 scenario_run 'a repair removes only workspaces whose directory is gone' test_fix_removes_only_workspaces_whose_directory_is_gone
 scenario_run 'a repair reaps a process left inside a worktree' test_fix_reaps_a_process_left_inside_a_worktree
 scenario_run 'a repair refuses while the database is held' test_fix_refuses_while_the_database_is_held

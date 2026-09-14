@@ -17,6 +17,11 @@
 #   - A `workspace` row outlives the directory it describes, and a row written
 #     by an OCX component that is no longer installed fails every server start
 #     with "Unknown workspace adapter".
+#   - A delegation's artifact directory is created per delegation and kept for
+#     as long as the worktree lives. The orchestrator cannot retire it on its
+#     own: it has no way to tell a screenshot from an Xcode DerivedData tree,
+#     so it preserves both. Verification work puts build output there because
+#     an `ownership: []` delegation has nowhere else to write.
 #
 # Reporting is the default because every repair deletes state no backup covers.
 # Repairs need --fix and refuse to run while OpenCode holds the database. That
@@ -56,11 +61,18 @@ CLEAR_LOGS=0
 # Keep one rotation of an oversized primary log during routine repairs.
 LOG_ROTATE_BYTES=67108864
 
+# Name a delegation's artifacts individually once they are large enough to
+# matter beside the database; smaller ones still count toward the total. It is
+# overridable for the same reason --data-dir is: so a fixture can exercise the
+# threshold without writing a gigabyte per scenario.
+ARTIFACT_REPORT_BYTES=${ARTIFACT_REPORT_BYTES:-1073741824}
+
 usage() {
   cat >&2 <<'EOF'
 Usage: opencode/_doctor.sh [--fix] [--days <n>] [--clear-logs] [--data-dir <dir>] [--config-dir <dir>]
 
---days 0       Prune all replication events, including today's; keep transcripts.
+--days <n>     Retention window for replication events and delegation artifacts.
+--days 0       Prune and retire both, including today's; keep transcripts.
 --clear-logs   With --fix, delete log files and rotations regardless of age or size.
 EOF
 }
@@ -143,6 +155,14 @@ file_bytes() {
     return 0
   }
   wc -c <"$1" | tr -d ' '
+}
+
+directory_bytes() {
+  [ -d "$1" ] || {
+    printf '0\n'
+    return 0
+  }
+  du -sk -- "$1" 2>/dev/null | awk '{print $1 * 1024; exit}'
 }
 
 # Command substitution strips the trailing newline, so a list of n lines
@@ -239,6 +259,33 @@ stale_workspaces() {
     done
 }
 
+# One directory per delegation, below the artifact root each worktree carries.
+# The search stays inside the data directory: an artifact directory a session
+# created in a checkout of the user's own is part of that checkout, visible in
+# its own status, and not this module's to retire.
+artifact_directories() {
+  [ -d "$WORKTREE_ROOT" ] || return 0
+  find "$WORKTREE_ROOT" -mindepth 3 -maxdepth 3 -type d \
+    -name .opencode-artifacts 2>/dev/null \
+    | while IFS= read -r artifact_root; do
+      find "$artifact_root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null
+    done
+}
+
+# Nothing has written to it inside the window, so no delegation is still adding
+# to it. Loose evidence sitting directly in the artifact root belongs to no
+# delegation and is never considered here. --days 0 retires every directory,
+# the way it prunes every replication event.
+#
+# -mtime counts the same 24-hour periods the event cutoff does. It is used in
+# place of -newermt because the BSD find on this platform rejects an epoch.
+artifact_is_retired() {
+  if [ "$RETENTION_DAYS" -eq 0 ]; then
+    return 0
+  fi
+  [ -z "$(find "$1" -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
+}
+
 # Every managed entry the installer links, so a shadowing sibling is judged
 # against the catalog rather than against a list restated here.
 collect_managed_entry() {
@@ -313,6 +360,40 @@ report_workspaces() {
   printf '%s\n' "$stale" | while IFS="$(printf '\t')" read -r workspace_id workspace_type workspace_directory; do
     [ -n "$workspace_id" ] || continue
     installer_note "workspace $workspace_id ($workspace_type) lost $workspace_directory"
+  done
+}
+
+report_artifacts() {
+  artifacts=$(artifact_directories)
+  if [ -z "$artifacts" ]; then
+    installer_note 'no delegation artifact directories'
+    return 0
+  fi
+
+  artifact_total=0
+  retired_total=0
+  retired_count=0
+  oversized=''
+  while IFS= read -r artifact_dir; do
+    [ -n "$artifact_dir" ] || continue
+    artifact_bytes=$(directory_bytes "$artifact_dir")
+    artifact_total=$((artifact_total + artifact_bytes))
+    if artifact_is_retired "$artifact_dir"; then
+      retired_total=$((retired_total + artifact_bytes))
+      retired_count=$((retired_count + 1))
+    fi
+    [ "$artifact_bytes" -ge "$ARTIFACT_REPORT_BYTES" ] || continue
+    oversized="$oversized$(printf '%s\t%s' "$(human_bytes "$artifact_bytes")" "$artifact_dir")
+"
+  done <<EOF
+$artifacts
+EOF
+
+  installer_note "delegation artifacts $(human_bytes "$artifact_total") in $(line_count "$artifacts") directory(ies)"
+  installer_note "retired artifacts (idle for $RETENTION_DAYS days): $retired_count, $(human_bytes "$retired_total")"
+  printf '%s' "$oversized" | while IFS="$(printf '\t')" read -r artifact_size artifact_dir; do
+    [ -n "$artifact_dir" ] || continue
+    installer_note "artifacts $artifact_size at $artifact_dir"
   done
 }
 
@@ -401,6 +482,38 @@ EOF
   [ "$removed" -eq 0 ] || installer_item "removed $removed workspace row(s) describing a missing directory"
 }
 
+# Retiring a directory takes its evidence with it, which is the whole point of
+# requiring --fix. The path guard is against a malformed list rather than a
+# depth proof: everything here came from a search rooted in the data directory.
+repair_artifacts() {
+  artifacts=$(artifact_directories)
+  [ -n "$artifacts" ] || return 0
+
+  retired=0
+  retired_total=0
+  while IFS= read -r artifact_dir; do
+    [ -n "$artifact_dir" ] || continue
+    artifact_is_retired "$artifact_dir" || continue
+    case $artifact_dir in
+      "$WORKTREE_ROOT"/*/.opencode-artifacts/*) ;;
+      *)
+        installer_warn "skipping an artifact path outside the worktree root: $artifact_dir"
+        continue
+        ;;
+    esac
+    [ ! -L "$artifact_dir" ] || continue
+    artifact_bytes=$(directory_bytes "$artifact_dir")
+    rm -rf -- "$artifact_dir"
+    retired=$((retired + 1))
+    retired_total=$((retired_total + artifact_bytes))
+  done <<EOF
+$artifacts
+EOF
+
+  [ "$retired" -eq 0 ] \
+    || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_total")"
+}
+
 repair_log() {
   if [ "$CLEAR_LOGS" -eq 1 ]; then
     cleared=0
@@ -436,6 +549,7 @@ report_database
 report_log
 report_processes
 report_workspaces
+report_artifacts
 report_configs
 
 if [ "$FIX" -eq 0 ]; then
@@ -453,5 +567,6 @@ installer_banner 'repairing OpenCode runtime state'
 repair_processes
 repair_events
 repair_workspaces
+repair_artifacts
 repair_log
 installer_success 'OpenCode state repaired'
