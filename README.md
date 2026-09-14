@@ -300,6 +300,7 @@ deliberately.
 | `npm:@agentclientprotocol/codex-acp`        | `1.11.0`         | Codex ACP agent                                 |
 | `npm:@earendil-works/pi-coding-agent`       | `0.85.1`         | Pi coding agent                                 |
 | `npm:@colbymchenry/codegraph`               | `1.6.0`          | Repository code graph CLI                       |
+| `npm:@swmansion/argent`                     | `0.25.0`         | Device and simulator control MCP                |
 | `npm:@openai/codex`                         | `0.154.0`        | Codex CLI                                       |
 | `npm:eas-cli`                               | `24.3.0`         | Expo Application Services CLI                   |
 | `npm:neonctl`                               | `4.17.3`         | Neon CLI                                        |

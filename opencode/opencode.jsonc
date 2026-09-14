@@ -1,6 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
+    "argent": {
+      "type": "local",
+      "command": ["argent", "mcp"],
+      "environment": { "DO_NOT_TRACK": "1" },
+      "enabled": false
+    },
     "codegraph": {
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"],

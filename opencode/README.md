@@ -185,6 +185,50 @@ tools for coder:
 }
 ```
 
+### Argent device control
+
+`argent` is declared in `mise/config.toml` and its MCP server in
+`opencode.jsonc`, with `DO_NOT_TRACK=1` because its telemetry is on by default.
+It is declared `enabled: false`: its 76 tools tap, type, install apps, evaluate
+JavaScript in a running app and drive simulators, which no non-mobile session
+should carry. A mobile project turns it on and permits what its coder may use:
+
+```json
+{
+  "mcp": { "argent": { "enabled": true } },
+  "agent": {
+    "coder": {
+      "permission": {
+        "argent_*": "allow",
+        "argent_debugger-evaluate": "ask"
+      }
+    }
+  }
+}
+```
+
+Device control is a coder action, so nothing is added to the reviewed read-only
+query list: build/plan, explore, researcher and reviewer keep their allowlist.
+
+Never run `argent init`. It writes its own editor registration and would leave
+an untracked configuration beside the managed one, which `opencode-doctor`
+then reports as a shadow. The declaration above replaces it.
+
+Verify the toolchain without OpenCode before blaming the integration, because
+every one of these answers comes from the CLI the MCP server wraps:
+
+```bash
+argent tools                 # the 76 tools, by name
+argent tools describe <name> # arguments of one tool
+argent list-devices          # what the host can actually reach
+argent run <tool> --help     # invoke one tool directly, no agent involved
+argent server status         # the shared tool-server this MCP talks to
+argent telemetry status      # must report disabled through the environment
+```
+
+`argent run` is the honest test: a failure there is the device or the SDK, and
+a failure only through the MCP is the integration or the permissions above.
+
 Coder preserves explicit permissions for configured MCP namespaces; a server
 alone does not grant access. These permissions do not override native tool
 boundaries or authorize remote changes. Build/plan, reviewer, explore and
