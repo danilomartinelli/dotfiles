@@ -169,7 +169,7 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
     'source "$1"; print -r -- "$OCX_PROFILE|$OPENCODE_EXPERIMENTAL_WORKSPACES|$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILLS|$OPENCODE_DISABLE_CLAUDE_CODE_SKILLS|$OPENCODE_EXPERIMENTAL_LSP_TOOL"' \
     zsh "$REPOSITORY_ROOT/opencode/env.zsh") || return 1
 
-  assert_equal 'regular|true|true|true|true|true' "$output" \
+  assert_equal 'regular|true|true||true|true' "$output" \
     'OpenCode shell environment'
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
@@ -236,7 +236,7 @@ EOF
     scenario_capture "$fixture" env HOME="$home" OCX_PROFILE="$selected" \
       FIXTURE_CHECKOUT="$checkout" FIXTURE_BREW="$fixture/brew" PATH=/usr/bin:/bin \
       "$checkout/bin/opencode-profile" --version
-    assert_contains "$fixture/stdout.log" "false|true|$home/.config/opencode/profiles/$selected/opencode.jsonc|$home/.config/opencode/profiles/$selected/opencode.jsonc"
+    assert_contains "$fixture/stdout.log" "false||$home/.config/opencode/profiles/$selected/opencode.jsonc|$home/.config/opencode/profiles/$selected/opencode.jsonc"
     assert_contains "$fixture/stdout.log" 'args:--version'
     assert_contains "$fixture/stdout.log" 'lsp:true'
     assert_contains "$fixture/stdout.log" "mcp:$fixture/brew/tools/codegraph"
@@ -245,7 +245,7 @@ EOF
     OPENCODE_CONFIG=stale DOTFILES_OPENCODE_PROFILE_CONFIG=stale \
     FIXTURE_CHECKOUT="$checkout" FIXTURE_BREW="$fixture/brew" \
     "$checkout/bin/opencode-profile" --help
-  assert_contains "$fixture/stdout.log" 'false|true|absent|absent'
+  assert_contains "$fixture/stdout.log" 'false||absent|absent'
   assert_contains "$fixture/stderr.log" 'no configuration for profile missing'
 }
 

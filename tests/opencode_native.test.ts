@@ -273,7 +273,6 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     OPENCODE_DISABLE_MODELS_FETCH: "true",
     OPENCODE_DISABLE_AUTOUPDATE: "true",
     OPENCODE_DISABLE_DEFAULT_PLUGINS: "true",
-    OPENCODE_DISABLE_EXTERNAL_SKILLS: "true",
     OPENCODE_DISABLE_CLAUDE_CODE: "true",
     OPENCODE_DISABLE_LSP_DOWNLOAD: "true",
     OPENCODE_EXPERIMENTAL_LSP_TOOL: "true",
@@ -1064,7 +1063,7 @@ process.stdin.on('end', () => process.exit(0));
       true,
     );
     expect(skills.some((skill: any) => skill.name === "global-fixture")).toBe(
-      false,
+      true,
     );
     expect(skills.some((skill: any) => skill.name === "ancestor-fixture")).toBe(
       true,
@@ -1078,7 +1077,7 @@ process.stdin.on('end', () => process.exit(0));
     ).toBe(true);
     expect(
       nonGitSkills.some((skill: any) => skill.name === "global-fixture"),
-    ).toBe(false);
+    ).toBe(true);
     const configured = await api("/config");
     expect(configured.model).toBe("openai/gpt-6-astra");
     expect(configured.small_model).toBe("openai/gpt-5.6-luna");

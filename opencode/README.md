@@ -224,13 +224,21 @@ project configuration; restart OpenCode through its host after changing the
 orchestration plugin. Do not infer a credential failure from a different CLI's
 status or an agent's missing tools.
 
-Automatic discovery of home-level `.agents/skills` and `.claude/skills` is off.
-The runtime adds `.agents/skills` from the current directory through the Git
-worktree root, including intermediate directories, while preserving explicit
-`skills.paths` and `skills.urls`. Outside Git, only the current directory is
-automatically added. Project `.opencode/skills`
-continues to work through normal configuration discovery. Other tools' global
-skill installations are untouched.
+Skill discovery for `.agents/skills` is the runtime's own: the home directory
+plus every directory from the current one through the Git worktree root, with
+explicit `skills.paths` and `skills.urls` preserved. Project `.opencode/skills`
+continues to work through normal configuration discovery.
+
+Only `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` is set, which keeps both
+home-level and project `.claude/skills` out of OpenCode. The broader
+`OPENCODE_DISABLE_EXTERNAL_SKILLS` is deliberately unset: despite what
+OpenCode's own `customize-opencode` skill claims, that flag guards the whole
+discovery block, so it removes a project's `.agents/skills` along with the
+home-level scan. Restoring the project paths through `skills.paths` is not
+enough either, because a desktop host cannot see that repair. OpenChamber
+reads `OPENCODE_DISABLE_EXTERNAL_SKILLS` from its own environment and then
+hides every skill whose path contains `.agents/` or `.claude/`, so its slash
+menu listed no project skills while the agent could still load all of them.
 
 OCX profiles have empty `exclude` and `include` lists: OCX merges trusted project
 instructions/configuration itself. The shell sets

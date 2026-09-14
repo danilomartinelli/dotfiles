@@ -5,7 +5,6 @@ import {
   type PluginInput,
 } from "@opencode-ai/plugin";
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
 import { realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -139,33 +138,6 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       codegraphEnabled = Boolean(
         config.mcp?.codegraph && config.mcp.codegraph.enabled !== false,
       );
-      // External discovery also scans ~/.agents. Keep project skills available
-      // explicitly while the launcher disables that global discovery.
-      const skillsConfig = config as Config & {
-        skills?: { paths?: string[]; urls?: string[] };
-      };
-      const directory = path.resolve(ctx.directory);
-      const worktree = path.resolve(ctx.worktree);
-      const relative = path.relative(worktree, directory);
-      // Non-Git instances use / as their worktree. They may load their own
-      // skills, but must not turn an ancestor home directory into project scope.
-      const bounded =
-        worktree !== path.parse(worktree).root &&
-        relative !== ".." &&
-        !relative.startsWith(`..${path.sep}`) &&
-        !path.isAbsolute(relative);
-      const projectSkills: string[] = [];
-      for (let current = directory; ; current = path.dirname(current)) {
-        const skills = path.join(current, ".agents/skills");
-        if (existsSync(skills)) projectSkills.push(skills);
-        if (!bounded || current === worktree) break;
-      }
-      skillsConfig.skills = {
-        ...skillsConfig.skills,
-        paths: [
-          ...new Set([...(skillsConfig.skills?.paths ?? []), ...projectSkills]),
-        ],
-      };
       config.agent ??= {};
       for (const role of new Set([
         ...Object.keys(config.agent),
