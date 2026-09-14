@@ -46,8 +46,11 @@ export async function assertWriteTargets(
           target.startsWith(`${directoryOwnership(owner)}${path.sep}`),
       )
     )
+      // Naming what this delegation may write keeps the refusal self-evident.
+      // Without it a leaf has only its own prompt to go on, and has reported a
+      // sibling delegation's authorization as a contradiction in the runtime.
       throw new Error(
-        `Write target is outside delegated file ownership: ${target}. Return the needed path to the root for a scoped resume; changing tool or path spelling does not extend ownership.`,
+        `Write target is outside delegated file ownership: ${target}. This delegation may write: ${child.ownership.join(", ") || "nothing"}. Return the needed path to the root for a scoped resume; changing tool or path spelling does not extend ownership.`,
       );
   }
 }
