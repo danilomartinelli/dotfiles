@@ -17,6 +17,9 @@
 #   - A `workspace` row outlives the directory it describes, and a row written
 #     by an OCX component that is no longer installed fails every server start
 #     with "Unknown workspace adapter".
+#   - A session snapshot is a Git directory shadowing the directory its
+#     `core.worktree` names. When that directory goes, OpenCode keeps trying to
+#     collect garbage inside it; one leftover wrote 39 warnings in a day.
 #   - A delegation's artifact directory is created per delegation and kept for
 #     as long as the worktree lives. The orchestrator cannot retire it on its
 #     own: it has no way to tell a screenshot from an Xcode DerivedData tree,
@@ -132,6 +135,7 @@ esac
 DATABASE=$DATA_DIR/opencode.db
 LOG_FILE=$DATA_DIR/log/opencode.log
 WORKTREE_ROOT=$DATA_DIR/worktree
+SNAPSHOT_ROOT=$DATA_DIR/snapshot
 CUTOFF_MS=$((($(date +%s) - RETENTION_DAYS * 86400) * 1000))
 
 require_command() {
@@ -143,6 +147,7 @@ require_command() {
 
 require_command sqlite3 'It ships with macOS; check PATH before rerunning.'
 require_command lsof 'It ships with macOS; check PATH before rerunning.'
+require_command git 'Install the Command Line Tools, then rerun.'
 
 # Read-only so a report can never be the thing that damages the database.
 database_query() {
@@ -259,6 +264,22 @@ stale_workspaces() {
     done
 }
 
+# A snapshot Git directory naming a directory that is gone. Reading the answer
+# out of the snapshot's own core.worktree keeps the rule true for a session in
+# a checkout of the user's own, not only for an agent worktree. A snapshot
+# whose config names no worktree is left alone: nothing here can judge it.
+stale_snapshots() {
+  [ -d "$SNAPSHOT_ROOT" ] || return 0
+  find "$SNAPSHOT_ROOT" -mindepth 2 -maxdepth 2 -type d 2>/dev/null \
+    | while IFS= read -r snapshot_dir; do
+      snapshot_worktree=$(git --git-dir "$snapshot_dir" config --get core.worktree 2>/dev/null) \
+        || continue
+      [ -n "$snapshot_worktree" ] || continue
+      [ ! -d "$snapshot_worktree" ] || continue
+      printf '%s\t%s\n' "$snapshot_dir" "$snapshot_worktree"
+    done
+}
+
 # One directory per delegation, below the artifact root each worktree carries.
 # The search stays inside the data directory: an artifact directory a session
 # created in a checkout of the user's own is part of that checkout, visible in
@@ -360,6 +381,20 @@ report_workspaces() {
   printf '%s\n' "$stale" | while IFS="$(printf '\t')" read -r workspace_id workspace_type workspace_directory; do
     [ -n "$workspace_id" ] || continue
     installer_note "workspace $workspace_id ($workspace_type) lost $workspace_directory"
+  done
+}
+
+report_snapshots() {
+  snapshots=$(stale_snapshots)
+  if [ -z "$snapshots" ]; then
+    installer_note 'no session snapshots describe a missing directory'
+    return 0
+  fi
+
+  installer_note "session snapshots whose directory is gone: $(line_count "$snapshots")"
+  printf '%s\n' "$snapshots" | while IFS="$(printf '\t')" read -r snapshot_dir snapshot_worktree; do
+    [ -n "$snapshot_dir" ] || continue
+    installer_note "snapshot lost $snapshot_worktree"
   done
 }
 
@@ -482,6 +517,37 @@ EOF
   [ "$removed" -eq 0 ] || installer_item "removed $removed workspace row(s) describing a missing directory"
 }
 
+# A snapshot whose directory is gone can never be restored into, so it goes
+# whole rather than by retention. The hash directory above it is removed only
+# when the last snapshot under it leaves.
+repair_snapshots() {
+  snapshots=$(stale_snapshots)
+  [ -n "$snapshots" ] || return 0
+
+  removed=0
+  removed_bytes=0
+  while IFS="$(printf '\t')" read -r snapshot_dir snapshot_worktree; do
+    [ -n "$snapshot_dir" ] || continue
+    case $snapshot_dir in
+      "$SNAPSHOT_ROOT"/*) ;;
+      *)
+        installer_warn "skipping a snapshot path outside the snapshot root: $snapshot_dir"
+        continue
+        ;;
+    esac
+    [ ! -L "$snapshot_dir" ] || continue
+    removed_bytes=$((removed_bytes + $(directory_bytes "$snapshot_dir")))
+    rm -rf -- "$snapshot_dir"
+    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || true
+    removed=$((removed + 1))
+  done <<EOF
+$snapshots
+EOF
+
+  [ "$removed" -eq 0 ] \
+    || installer_item "removed $removed session snapshot(s) describing a missing directory, $(human_bytes "$removed_bytes")"
+}
+
 # Retiring a directory takes its evidence with it, which is the whole point of
 # requiring --fix. The path guard is against a malformed list rather than a
 # depth proof: everything here came from a search rooted in the data directory.
@@ -549,6 +615,7 @@ report_database
 report_log
 report_processes
 report_workspaces
+report_snapshots
 report_artifacts
 report_configs
 
@@ -567,6 +634,7 @@ installer_banner 'repairing OpenCode runtime state'
 repair_processes
 repair_events
 repair_workspaces
+repair_snapshots
 repair_artifacts
 repair_log
 installer_success 'OpenCode state repaired'

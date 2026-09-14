@@ -33,7 +33,7 @@ FIXTURE_PATH_SUFFIX=/usr/bin:/bin:/usr/sbin
 # touches, with the foreign key that makes the event log cascade the way the
 # real one does and the message shape the finished-session rule inspects.
 make_fixture() {
-  local fixture now recent stale artifact_root
+  local fixture now recent stale artifact_root snapshot
   fixture=$(installer_fixture opencode-doctor)
   now=$(($(date +%s) * 1000))
   recent=$now
@@ -46,6 +46,18 @@ make_fixture() {
   # to just now, one untouched for a month, and one holding a file large enough
   # to be named individually. Loose evidence sits in the artifact root, which
   # belongs to no delegation and must survive every repair.
+  # Three session snapshots: one shadowing the live worktree, one whose
+  # directory is gone, and one whose config names no worktree at all and so
+  # cannot be judged.
+  for snapshot in live lost unset; do
+    git -c init.defaultBranch=main init --quiet --bare \
+      "$fixture/data/snapshot/project/$snapshot"
+  done
+  git --git-dir "$fixture/data/snapshot/project/live" config \
+    core.worktree "$fixture/data/worktree/project/live-worktree"
+  git --git-dir "$fixture/data/snapshot/project/lost" config \
+    core.worktree "$fixture/data/worktree/project/gone"
+
   artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
   mkdir -p "$artifact_root/fresh" "$artifact_root/idle" "$artifact_root/bulky"
   printf 'evidence\n' >"$artifact_root/loose-evidence.log"
@@ -265,6 +277,32 @@ test_retention_window_is_selectable() {
     'events of a finished session inside a wider window'
 }
 
+test_report_names_snapshots_whose_directory_is_gone() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_doctor "$fixture"
+
+  assert_contains "$fixture/stdout.log" 'session snapshots whose directory is gone: 1'
+  assert_contains "$fixture/stdout.log" "snapshot lost $fixture/data/worktree/project/gone"
+  [ -d "$fixture/data/snapshot/project/lost" ] \
+    || scenario_fail 'a report must not remove a snapshot'
+}
+
+test_fix_removes_only_snapshots_whose_directory_is_gone() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_doctor "$fixture" --fix
+
+  [ ! -e "$fixture/data/snapshot/project/lost" ] \
+    || scenario_fail 'a snapshot describing a missing directory survived'
+  [ -d "$fixture/data/snapshot/project/live" ] \
+    || scenario_fail 'a snapshot shadowing a live directory was removed'
+  [ -d "$fixture/data/snapshot/project/unset" ] \
+    || scenario_fail 'a snapshot naming no worktree was removed'
+  assert_contains "$fixture/stdout.log" \
+    'removed 1 session snapshot(s) describing a missing directory'
+}
+
 test_report_counts_artifacts_and_names_the_large_ones() {
   local fixture artifact_root
   fixture=$(make_fixture)
@@ -469,6 +507,8 @@ scenario_run 'an untracked shadowing config is reported' test_untracked_shadowin
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
 scenario_run 'a repair prunes finished and stale sessions only' test_fix_prunes_finished_and_stale_sessions_only
 scenario_run 'the retention window protects only unfinished sessions' test_retention_window_is_selectable
+scenario_run 'a report names snapshots whose directory is gone' test_report_names_snapshots_whose_directory_is_gone
+scenario_run 'a repair removes only snapshots whose directory is gone' test_fix_removes_only_snapshots_whose_directory_is_gone
 scenario_run 'a report counts artifacts and names the large ones' test_report_counts_artifacts_and_names_the_large_ones
 scenario_run 'a repair retires only idle artifact directories' test_fix_retires_only_idle_artifact_directories
 scenario_run 'zero retention retires every artifact directory' test_days_zero_retires_every_artifact_directory
