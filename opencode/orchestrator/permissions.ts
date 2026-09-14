@@ -242,6 +242,11 @@ const gitQueries: Record<string, Options> = {
   "merge-base": {
     flags: "--all -a --is-ancestor --octopus --independent --fork-point",
   },
+  "show-ref": {
+    flags:
+      "--head --heads --branches --tags --dereference -d --verify --quiet -q",
+    optional: "--abbrev --hash -s --exclude-existing",
+  },
 };
 
 function safeGit(argv: string[]): string[] {
@@ -291,6 +296,36 @@ function safeGit(argv: string[]): string[] {
       query,
       ...prependOnce(["--list"], args),
     ];
+  }
+  // Listing is the only worktree form that changes nothing; add, remove, move,
+  // prune, lock and repair all write.
+  if (query === "worktree") {
+    const args = argv.slice(index);
+    if (args[0] !== "list")
+      denied(
+        "worktree inspection accepts only worktree list; creating or removing one belongs to coder",
+      );
+    options(args.slice(1), { flags: "--porcelain -z -v --verbose" });
+    return ["git", ...safety, ...prefix, query, ...args];
+  }
+  // Reading the reflog answers what a branch pointed at before; expire, delete
+  // and drop rewrite it, and a bare `git reflog` already means `reflog show`.
+  if (query === "reflog") {
+    const args = argv.slice(index);
+    if (
+      args.some((argument) => ["expire", "delete", "drop"].includes(argument))
+    )
+      denied(
+        "reflog inspection accepts only reflog show; expiring or deleting entries belongs to coder",
+      );
+    options(args[0] === "show" ? args.slice(1) : args, {
+      flags: `${logFlags} --no-abbrev`,
+      values: logValues,
+      optional: "--abbrev --decorate --color",
+      numeric: "n",
+      count: true,
+    });
+    return ["git", ...safety, ...prefix, query, ...args];
   }
   if (query === "ls-remote")
     denied(
