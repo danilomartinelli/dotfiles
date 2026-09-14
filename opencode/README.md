@@ -189,10 +189,15 @@ tools for coder:
 
 `argent` is declared in `mise/config.toml` and its MCP server in
 `opencode.jsonc`, with `DO_NOT_TRACK=1` because its telemetry is on by default.
-It is declared `enabled: false`: its 76 tools tap, type, install apps, evaluate
-JavaScript in a running app and drive simulators, which no non-mobile session
-should carry. A mobile project turns it on and permits what its coder may use,
-which applies through the GUI adapter and not through `ocx opencode`:
+It is enabled, and coder is granted `argent_*` wherever the server is declared,
+with `argent_debugger-evaluate` left at `ask` because it evaluates arbitrary
+JavaScript inside the running app. The grant lives in `rolePermissions` rather
+than in a project's configuration because a profile launch cannot read one, so
+a project-side permission would work in the GUI adapter and nowhere else.
+Read-only roles get none of it: driving a device is a coder action.
+
+A project that wants a narrower boundary still states it, and coder preserves
+it for a configured MCP namespace:
 
 ```json
 {

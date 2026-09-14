@@ -345,21 +345,19 @@ test_profiles_trust_project_configuration() {
   done < <(opencode_catalog_names profile)
 
   opencode_config=$REPOSITORY_ROOT/opencode/opencode.jsonc
-  # Research servers connect everywhere; argent is declared for one command and
-  # one telemetry opt-out but stays off, because its tools drive real devices.
+  # Every declared server connects, argent included: a profile launch cannot see
+  # a project's configuration, so an integration the terminal needs lives here.
   jsonc_to_json "$opencode_config" | jq -e '
     (.mcp | keys) == ["argent", "codegraph", "context7", "exa", "gh_grep"] and
-    all(.mcp | to_entries[] | select(.key != "argent") | .value;
-        .enabled == true) and
+    all(.mcp[]; .enabled == true) and
     .mcp.codegraph.type == "local" and
     .mcp.codegraph.command == ["codegraph", "serve", "--mcp"] and
     .mcp.codegraph.environment.CODEGRAPH_TELEMETRY == "0" and
-    .mcp.argent.enabled == false and
     .mcp.argent.type == "local" and
     .mcp.argent.command == ["argent", "mcp"] and
     .mcp.argent.environment.DO_NOT_TRACK == "1"
   ' >/dev/null \
-    || scenario_fail 'global research MCP defaults are incorrect'
+    || scenario_fail 'global MCP defaults are incorrect'
 }
 
 test_profile_payloads_are_composed_from_the_shared_base() {

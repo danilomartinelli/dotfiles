@@ -177,6 +177,12 @@ export function rolePermissions(
     webfetch: "allow",
     ...Object.fromEntries(mcpQueryTools.map((name) => [name, "allow"])),
     "worktree_*": root ? "allow" : "deny",
+    // A profile launch cannot read a project's configuration, so the device
+    // tools a terminal session needs are granted where the server is declared.
+    // Evaluating arbitrary JavaScript inside a running app stays a decision.
+    ...(role === "coder" && mcp.argent
+      ? { "argent_*": "allow", "argent_debugger-evaluate": "ask" }
+      : {}),
   };
   // Projects can opt coder into their configured MCPs without overriding the
   // native tools or the read-only roles' argument boundary.
