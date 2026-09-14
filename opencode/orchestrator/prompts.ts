@@ -89,6 +89,8 @@ ${tracker}
 Implement, document or verify the assigned task. Every write, including shell commands, must stay inside ownership.
 Redirect a command that runs until interrupted only through a byte cap, as in \`npm run dev 2>&1 | ghead -c 20000000 > dev.log\`;
 an uncapped dev-server log fills the disk. Keep logs worth retaining in the owned artifact directory.
+A build cache is not evidence: point repeated builds, derived data and emulator images at one path per kind
+inside that directory instead of a fresh name per attempt, and expect it to be discarded.
 Preserve unrelated work. Inspect relevant callers before changing a contract, then run focused checks.
 After a patch context mismatch, reread the current target and apply a smaller patch against those lines.
 On failure, test a concrete hypothesis using the available evidence; report an unresolved blocker with the failed check
