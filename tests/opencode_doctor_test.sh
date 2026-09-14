@@ -69,7 +69,11 @@ make_fixture() {
     "$artifact_root/idle/screenshot.png" "$artifact_root/idle"
 
   sqlite3 "$fixture/data/opencode.db" <<EOF
-CREATE TABLE session (id text PRIMARY KEY, time_updated integer NOT NULL);
+CREATE TABLE session (
+  id text PRIMARY KEY,
+  workspace_id text,
+  time_updated integer NOT NULL
+);
 CREATE TABLE message (
   id text PRIMARY KEY,
   session_id text NOT NULL,
@@ -96,8 +100,8 @@ CREATE TABLE workspace (
 );
 
 INSERT INTO session VALUES
-  ('ses_recent', $recent), ('ses_cut', $recent), ('ses_done', $recent),
-  ('ses_stale', $stale);
+  ('ses_recent', NULL, $recent), ('ses_cut', NULL, $recent),
+  ('ses_done', 'wrk_live', $recent), ('ses_stale', 'wrk_gone', $stale);
 INSERT INTO message VALUES
   ('msg_r1', 'ses_recent', 1, '{"role":"assistant","time":{"created":1,"completed":2}}'),
   ('msg_r2', 'ses_recent', 2, '{"role":"user","time":{"created":2}}'),
@@ -120,6 +124,8 @@ INSERT INTO event VALUES
 INSERT INTO workspace VALUES
   ('wrk_live', 'worktree', 'live', '$fixture/data/worktree/project/live-worktree', 'project', 1),
   ('wrk_lost', 'ocx-git-worktree', 'lost', '$fixture/data/worktree/project/gone', 'project', 1);
+-- ses_stale names a workspace that was never inserted, the shape that strands
+-- a session: its delete and archive both fail before they reach the session.
 EOF
 
   printf '%s\n' "$fixture"
@@ -275,6 +281,37 @@ test_retention_window_is_selectable() {
   assert_equal '0' \
     "$(count_rows "$fixture" "SELECT count(*) FROM event WHERE aggregate_id = 'ses_done';")" \
     'events of a finished session inside a wider window'
+}
+
+# Deleting or archiving resolves the workspace first, so a reference to a row
+# that is gone strands the session in the UI with no way out.
+test_report_names_sessions_whose_workspace_is_gone() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_doctor "$fixture"
+
+  assert_contains "$fixture/stdout.log" \
+    'sessions that cannot be deleted or archived, their workspace row gone: 1'
+  assert_equal 'wrk_gone' \
+    "$(count_rows "$fixture" "SELECT workspace_id FROM session WHERE id = 'ses_stale';")" \
+    'workspace reference after a report'
+}
+
+# The repair leaves the session exactly as one opened without a workspace, which
+# deletes normally; a live reference is untouched.
+test_fix_releases_only_sessions_whose_workspace_is_gone() {
+  local fixture
+  fixture=$(make_fixture)
+  invoke_doctor "$fixture" --fix
+
+  assert_equal '' \
+    "$(count_rows "$fixture" "SELECT ifnull(workspace_id, '') FROM session WHERE id = 'ses_stale';")" \
+    'stranded workspace reference after a repair'
+  assert_equal 'wrk_live' \
+    "$(count_rows "$fixture" "SELECT workspace_id FROM session WHERE id = 'ses_done';")" \
+    'live workspace reference after a repair'
+  assert_contains "$fixture/stdout.log" \
+    'released 1 session(s) whose workspace row was gone'
 }
 
 test_report_names_snapshots_whose_directory_is_gone() {
@@ -507,6 +544,8 @@ scenario_run 'an untracked shadowing config is reported' test_untracked_shadowin
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
 scenario_run 'a repair prunes finished and stale sessions only' test_fix_prunes_finished_and_stale_sessions_only
 scenario_run 'the retention window protects only unfinished sessions' test_retention_window_is_selectable
+scenario_run 'a report names sessions whose workspace is gone' test_report_names_sessions_whose_workspace_is_gone
+scenario_run 'a repair releases only sessions whose workspace is gone' test_fix_releases_only_sessions_whose_workspace_is_gone
 scenario_run 'a report names snapshots whose directory is gone' test_report_names_snapshots_whose_directory_is_gone
 scenario_run 'a repair removes only snapshots whose directory is gone' test_fix_removes_only_snapshots_whose_directory_is_gone
 scenario_run 'a report counts artifacts and names the large ones' test_report_counts_artifacts_and_names_the_large_ones

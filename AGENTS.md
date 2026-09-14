@@ -198,9 +198,12 @@ which the same check enforces.
 prunes none of it. `opencode/_doctor.sh`, reached through `opencode-doctor`,
 owns reporting and repairing it: the unbounded `event` replication log,
 processes left inside an agent worktree, `workspace` rows whose directory is
-gone, a session snapshot whose `core.worktree` directory is gone, a
-delegation's artifact directory nothing has written to inside the retention
-window, and an untracked global config shadowing a managed entry. Repairs need
+gone, a session naming a `workspace` row that is gone, a session snapshot whose
+`core.worktree` directory is gone, a delegation's artifact directory nothing has
+written to inside the retention window, and an untracked global config shadowing
+a managed entry. A stranded workspace reference is the one that cannot wait:
+deleting or archiving resolves the workspace first, so the session cannot be
+removed through the interface at all until the reference is released. Repairs need
 `--fix` and refuse to run while OpenCode holds the database. Do not add a
 second cleanup path for that directory.
 

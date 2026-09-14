@@ -17,6 +17,9 @@
 #   - A `workspace` row outlives the directory it describes, and a row written
 #     by an OCX component that is no longer installed fails every server start
 #     with "Unknown workspace adapter".
+#   - A session keeps the id of the workspace it was opened in. When that row
+#     goes, the session cannot be deleted or archived at all: resolving the
+#     workspace fails first, and the API answers "Workspace not found".
 #   - A session snapshot is a Git directory shadowing the directory its
 #     `core.worktree` names. When that directory goes, OpenCode keeps trying to
 #     collect garbage inside it; one leftover wrote 39 warnings in a day.
@@ -264,6 +267,17 @@ stale_workspaces() {
     done
 }
 
+# A session pointing at a workspace row that no longer exists. Every delete and
+# archive resolves the workspace first, so the session is stranded in the UI
+# until the reference goes; a null id is what a session without one already
+# carries, and those delete normally.
+DANGLING_SESSIONS="workspace_id IS NOT NULL
+  AND workspace_id NOT IN (SELECT id FROM workspace)"
+
+dangling_session_count() {
+  database_query "SELECT count(*) FROM session WHERE $DANGLING_SESSIONS;"
+}
+
 # A snapshot Git directory naming a directory that is gone. Reading the answer
 # out of the snapshot's own core.worktree keeps the rule true for a session in
 # a checkout of the user's own, not only for an agent worktree. A snapshot
@@ -382,6 +396,16 @@ report_workspaces() {
     [ -n "$workspace_id" ] || continue
     installer_note "workspace $workspace_id ($workspace_type) lost $workspace_directory"
   done
+}
+
+report_sessions() {
+  dangling=$(dangling_session_count)
+  if [ "$dangling" -eq 0 ]; then
+    installer_note 'no sessions point at a workspace that is gone'
+    return 0
+  fi
+
+  installer_note "sessions that cannot be deleted or archived, their workspace row gone: $dangling"
 }
 
 report_snapshots() {
@@ -517,6 +541,16 @@ EOF
   [ "$removed" -eq 0 ] || installer_item "removed $removed workspace row(s) describing a missing directory"
 }
 
+repair_sessions() {
+  dangling=$(dangling_session_count)
+  if [ "$dangling" -eq 0 ]; then
+    return 0
+  fi
+
+  sqlite3 "$DATABASE" "UPDATE session SET workspace_id = NULL WHERE $DANGLING_SESSIONS;"
+  installer_item "released $dangling session(s) whose workspace row was gone"
+}
+
 # A snapshot whose directory is gone can never be restored into, so it goes
 # whole rather than by retention. The hash directory above it is removed only
 # when the last snapshot under it leaves.
@@ -615,6 +649,7 @@ report_database
 report_log
 report_processes
 report_workspaces
+report_sessions
 report_snapshots
 report_artifacts
 report_configs
@@ -634,6 +669,7 @@ installer_banner 'repairing OpenCode runtime state'
 repair_processes
 repair_events
 repair_workspaces
+repair_sessions
 repair_snapshots
 repair_artifacts
 repair_log
