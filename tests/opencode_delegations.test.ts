@@ -35,7 +35,7 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
-async function fixture(timeoutMs?: number) {
+async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   const directory = await mkdtemp(
     path.join(tmpdir(), "orchestrator-delegations-"),
   );
@@ -82,6 +82,7 @@ async function fixture(timeoutMs?: number) {
     structuredClone(routes),
     timeoutMs,
     async () => snapshot,
+    stopGraceMs,
   );
   cleanup.push(() => manager.close());
   const request = (overrides: Partial<Request> = {}): Request => ({
@@ -453,6 +454,20 @@ test("abort and idle do not release ownership before native tool cleanup acknowl
   );
   await f.manager.toolFinished(row.child!, "shell-call");
   expect(f.manager.get("root", row.id).status).toBe("cancelled");
+  await f.manager.start("root", f.request({ resume: row.id }));
+  expect(f.created).toHaveLength(1);
+});
+
+// A native call that outlives its abort leaves its row behind, and complete()
+// reconciles only calls the core marked as errors. The grace is measured from
+// the deadline, so a negative one puts that window in the past.
+test("a cleanup acknowledgement that never arrives stops pinning ownership", async () => {
+  const f = await fixture(60_000, -120_000);
+  const row = await f.manager.start("root", f.request());
+  f.manager.toolStarted(row.child!, "shell-call");
+  await f.manager.stop("root", row.id, "timed_out", "Deadline elapsed.");
+
+  expect(f.manager.get("root", row.id).status).toBe("timed_out");
   await f.manager.start("root", f.request({ resume: row.id }));
   expect(f.created).toHaveLength(1);
 });

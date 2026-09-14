@@ -207,6 +207,7 @@ export class Delegations {
     private routes: Routes,
     private timeoutMs = 30 * 60_000,
     private snapshot = sourceVersion,
+    private stopGraceMs = 5 * 60_000,
   ) {
     this.db = new Database(filename, { create: true });
     this.db.exec(
@@ -294,15 +295,25 @@ export class Delegations {
       ).count,
     );
   }
+  // A native call that outlives its abort never reaches tool.execute.after, and
+  // complete() reconciles only the calls the core marked as errors. Waiting for
+  // that acknowledgement is right while cleanup can still arrive; unbounded, it
+  // pins the delegation and its reserved paths for good. Past the grace an idle
+  // session is taken as the evidence the acknowledgement never delivered.
   private async finishStop(row: Delegation) {
-    if (!row.abortAcknowledged || !row.stopState || this.outstanding(row))
-      return;
+    if (!row.abortAcknowledged || !row.stopState) return;
+    const stranded = this.outstanding(row);
+    if (stranded && Date.now() < row.deadline + this.stopGraceMs) return;
     const statuses = data(
       await this.client.session.status({ query: { directory: row.directory } }),
       "Confirm stopped session",
     );
     if (row.child && statuses[row.child] && statuses[row.child].type !== "idle")
       return;
+    if (stranded && row.child)
+      this.db
+        .query("DELETE FROM tool_calls WHERE child=? AND generation=?")
+        .run(row.child, row.messageID);
     const current = this.get(row.root, row.id);
     if (
       current.messageID !== row.messageID ||
@@ -603,6 +614,27 @@ export class Delegations {
     this.timers.set(row.id, timer);
   }
 
+  // Nothing re-enters finishStop once the acknowledgement stops arriving, so
+  // the grace needs its own wake-up rather than the next host restart.
+  private armStopGrace(row: Delegation) {
+    if (this.timers.has(row.id)) return;
+    const timer = setTimeout(
+      () => {
+        this.timers.delete(row.id);
+        const current = this.get(row.root, row.id);
+        if (
+          current.messageID !== row.messageID ||
+          current.status !== "stopping"
+        )
+          return;
+        void this.finishStop(current).catch(() => {});
+      },
+      Math.max(1, row.deadline + this.stopGraceMs - Date.now()),
+    );
+    timer.unref();
+    this.timers.set(row.id, timer);
+  }
+
   async stop(
     root: string,
     id: string,
@@ -672,7 +704,9 @@ export class Delegations {
         await this.onStopped?.(pending);
       }
     }
-    return this.get(root, id);
+    const settled = this.get(root, id);
+    if (settled.status === "stopping") this.armStopGrace(settled);
+    return settled;
   }
 
   async complete(child: string) {
