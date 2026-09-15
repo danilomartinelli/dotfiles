@@ -16,17 +16,21 @@ source "$TEST_DIR/_support/stubs.sh"
 # shellcheck source=tests/_support/jsonc.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/jsonc.sh"
+# shellcheck source=tests/_support/fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/fixture.sh"
 scenario_init dotfiles-opencode-install-tests
 
 TAB=$'\t'
 
+# This suite's stubs, added to the fake-bin installer_fixture already created.
+# uname is not among them: the shared fixture stubs it for every suite.
 make_fake_clis() {
-  local home=$1
-  local fake_bin=$home/fake-bin
+  local fixture=$1
+  local fake_bin=$fixture/fake-bin
 
   mkdir -p "$fake_bin"
   ln -s "$(command -v bun)" "$fake_bin/real-bun"
-  stub_uname "$fake_bin"
 
   scenario_write_executable "$fake_bin/opencode" <<'EOF'
 #!/bin/sh
@@ -159,10 +163,11 @@ copy_opencode_fixture() {
 }
 
 test_shell_uses_regular_ocx_profile_and_shortcuts() {
-  local fake_bin home output
+  local fake_bin fixture home output
 
-  home=$(scenario_tmpdir shell)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture shell)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
   output=$(env HOME="$home" /bin/zsh -f -c \
@@ -173,15 +178,14 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
     'OpenCode shell environment'
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
-  scenario_capture "$home" env HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" /bin/zsh -f -c \
+  fixture_run "$fixture" -- /bin/zsh -f -c \
     'source "$1"; for shortcut in opencode oc oc:regular oc:example; do eval "$shortcut"; done; (( ! $+aliases[oc:go] && ! $+aliases[oc:boost] ))' \
     zsh "$REPOSITORY_ROOT/opencode/aliases.zsh"
 
-  assert_count "$home/events.log" 'ocx opencode' 4
-  assert_contains "$home/events.log" 'ocx opencode -p regular'
-  assert_contains "$home/events.log" 'ocx opencode -p example'
-  assert_not_contains "$home/events.log" 'native opencode'
+  assert_count "$fixture/events.log" 'ocx opencode' 4
+  assert_contains "$fixture/events.log" 'ocx opencode -p regular'
+  assert_contains "$fixture/events.log" 'ocx opencode -p example'
+  assert_not_contains "$fixture/events.log" 'native opencode'
 }
 
 test_gui_adapter_preserves_project_loading_and_pins_selected_profile_routes() {
@@ -531,19 +535,23 @@ test_opencode_catalog_reader_preserves_catalog_row_contract() {
 # fake would delete the versioned payload out of the repository, so every
 # scenario that runs the installer proves this against a fixture link first.
 assert_fake_ocx_unlinks_profiles() {
-  local fake_bin=$1
-  local probe profiles source
+  local fixture home profiles source
 
-  probe=$(scenario_tmpdir probe)
-  profiles=$probe/.config/opencode/profiles
-  source=$probe/versioned/regular
+  # Its own fixture: the probe seeds a profile link and removes it, and a
+  # caller's config directory is the one thing that must not be carrying that
+  # when the installer under test runs.
+  fixture=$(installer_fixture ocx-probe)
+  make_fake_clis "$fixture" >/dev/null
+  home=$fixture/home
+  profiles=$home/.config/opencode/profiles
+  source=$home/versioned/regular
 
   mkdir -p "$profiles" "$source"
   printf 'versioned payload\n' >"$source/opencode.jsonc"
   ln -s "$source" "$profiles/regular"
 
-  scenario_capture "$probe" env HOME="$probe" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" profile remove regular --global
+  fixture_run "$fixture" -- \
+    "$fixture/fake-bin/ocx" profile remove regular --global
 
   [[ ! -e $profiles/regular && ! -L $profiles/regular ]] \
     || scenario_fail 'fake ocx left the managed profile link in place'
@@ -552,56 +560,56 @@ assert_fake_ocx_unlinks_profiles() {
 }
 
 test_profile_removal_unlinks_instead_of_descending() {
-  assert_fake_ocx_unlinks_profiles "$(make_fake_clis "$(scenario_tmpdir removal)")"
+  assert_fake_ocx_unlinks_profiles
 }
 
 test_profile_removal_reports_absent_profiles() {
-  local home fake_bin
+  local fixture home fake_bin
 
-  home=$(scenario_tmpdir absent-profile)
-  fake_bin=$(make_fake_clis "$home")
-  assert_fails_with_status 66 scenario_capture "$home" \
-    env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$fake_bin/ocx" profile remove example --global
-  assert_contains "$home/stderr.log" 'Profile example not found'
+  fixture=$(installer_fixture absent-profile)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
+  assert_fails_with_status 66 \
+    fixture_run "$fixture" -- "$fake_bin/ocx" profile remove example --global
+  assert_contains "$fixture/stderr.log" 'Profile example not found'
 }
 
 test_installer_rejects_an_unusable_catalog() {
-  local fake_bin home
-  local -a run
+  local fake_bin fixture home
 
-  home=$(scenario_tmpdir catalog)
-  fake_bin=$(make_fake_clis "$home")
-  run=(env HOME="$home" PATH="$fake_bin:/usr/bin:/bin")
-
-  assert_fails_with_output 'missing catalog' 'entry catalog not found' \
-    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/absent.tsv" \
+  fixture=$(installer_fixture catalog)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
+  assert_fails 'missing catalog' fixture_run "$fixture" \
+    DOTFILES_OPENCODE_CATALOG="$home/absent.tsv" -- \
     "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_contains "$fixture/stderr.log" 'entry catalog not found'
 
   printf 'widget\tagents\t-\n' >"$home/unknown-kind.tsv"
-  assert_fails_with_output 'unknown catalog kind' \
-    'unknown OpenCode catalog kind' \
-    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/unknown-kind.tsv" \
+  assert_fails 'unknown catalog kind' fixture_run "$fixture" \
+    DOTFILES_OPENCODE_CATALOG="$home/unknown-kind.tsv" -- \
     "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_contains "$fixture/stderr.log" 'unknown OpenCode catalog kind'
 
   printf 'entry\tagents\n' >"$home/incomplete.tsv"
-  assert_fails_with_output 'incomplete catalog row' \
-    'invalid OpenCode catalog row' \
-    "${run[@]}" DOTFILES_OPENCODE_CATALOG="$home/incomplete.tsv" \
+  assert_fails 'incomplete catalog row' fixture_run "$fixture" \
+    DOTFILES_OPENCODE_CATALOG="$home/incomplete.tsv" -- \
     "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_contains "$fixture/stderr.log" 'invalid OpenCode catalog row'
 }
 
 test_installer_links_only_dotfiles_owned_entries() {
-  local config_dir current_add fake_bin home kind clone name previous_add
-  local runtime_path
+  local config_dir current_add fake_bin fixture home kind clone name
+  local previous_add runtime_path
 
-  home=$(scenario_tmpdir install)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture install)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir"
 
   # The reinstall below points the fake at profile links into this checkout.
-  assert_fake_ocx_unlinks_profiles "$fake_bin"
+  assert_fake_ocx_unlinks_profiles
 
   # Seed a real target for every managed entry. The default
   # replace-with-backup policy would park each one in a sibling .backup, so
@@ -616,9 +624,7 @@ test_installer_links_only_dotfiles_owned_entries() {
     fi
   done < <(opencode_catalog_names entry)
 
-  scenario_capture "$home" env HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
 
   [[ -z $(find "$config_dir" -maxdepth 2 -name '*.backup' -print -quit) ]] \
     || scenario_fail 'installer backed up a generated OpenCode entry or profile'
@@ -642,9 +648,9 @@ test_installer_links_only_dotfiles_owned_entries() {
   while IFS=$'\t' read -r kind name clone; do
     [[ $kind == profile ]] || continue
     current_add=$(opencode_profile_add_line "$name" "$clone")
-    assert_contains "$home/events.log" "$current_add"
+    assert_contains "$fixture/events.log" "$current_add"
     if [[ -n $previous_add ]]; then
-      assert_before "$home/events.log" "$previous_add" "$current_add"
+      assert_before "$fixture/events.log" "$previous_add" "$current_add"
     fi
     previous_add=$current_add
   done < <(opencode_catalog_rows)
@@ -662,78 +668,76 @@ test_installer_links_only_dotfiles_owned_entries() {
     || scenario_fail 'installer left competing orchestration plugins installed'
   assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/worktree@'
   assert_contains "$config_dir/.ocx/receipt.jsonc" '::kdco/notify@'
-  assert_contains "$home/events.log" 'ocx add kdco/worktree kdco/notify --global'
-  assert_not_contains "$home/events.log" 'ocx remove kdco/'
-  assert_before "$home/events.log" \
+  assert_contains "$fixture/events.log" 'ocx add kdco/worktree kdco/notify --global'
+  assert_not_contains "$fixture/events.log" 'ocx remove kdco/'
+  assert_before "$fixture/events.log" \
     "bun install --frozen-lockfile --ignore-scripts --cwd $REPOSITORY_ROOT/opencode/orchestrator" \
     'ocx init --global'
-  assert_not_contains "$home/events.log" 'ocx profile remove'
-  assert_not_contains "$home/events.log" '--force'
+  assert_not_contains "$fixture/events.log" 'ocx profile remove'
+  assert_not_contains "$fixture/events.log" '--force'
 
-  scenario_capture "$home" env HOME="$home" \
-    PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
 
   assert_catalog_links "$config_dir" 'reinstall'
-  assert_contains "$home/events.log" 'ocx profile remove regular --global'
-  assert_contains "$home/events.log" 'ocx profile remove example --global'
+  assert_contains "$fixture/events.log" 'ocx profile remove regular --global'
+  assert_contains "$fixture/events.log" 'ocx profile remove example --global'
 
   assert_contains "$config_dir/plugins/worktree.ts" 'runtime plugin worktree'
   assert_contains "$config_dir/plugins/notify.ts" 'runtime plugin notify'
-  assert_not_contains "$home/events.log" 'ocx remove kdco/'
+  assert_not_contains "$fixture/events.log" 'ocx remove kdco/'
 }
 
 test_installer_adds_a_missing_profile_on_existing_installation() {
-  local home fake_bin config_dir
+  local fixture home fake_bin config_dir
 
-  home=$(scenario_tmpdir add-profile)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture add-profile)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
   config_dir=$home/.config/opencode
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
   unlink "$config_dir/profiles/example"
 
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
 
-  assert_contains "$home/events.log" 'ocx profile remove regular --global'
-  assert_not_contains "$home/events.log" 'ocx profile remove example'
-  assert_contains "$home/events.log" 'ocx profile add example --clone regular --global'
+  assert_contains "$fixture/events.log" 'ocx profile remove regular --global'
+  assert_not_contains "$fixture/events.log" 'ocx profile remove example'
+  assert_contains "$fixture/events.log" 'ocx profile add example --clone regular --global'
   assert_catalog_links "$config_dir" 'new profile on existing installation'
 }
 
 test_installer_preserves_activation_when_dependencies_fail() {
-  local fake_bin home config_dir
+  local fake_bin fixture home config_dir
 
-  home=$(scenario_tmpdir dependency-failure)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture dependency-failure)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir/plugins"
   printf 'existing activation\n' >"$config_dir/opencode.jsonc"
   printf 'existing plugin\n' >"$config_dir/plugins/notify.ts"
 
-  assert_fails_with_output 'failed dependency install' \
-    'fixture dependency installation failed' \
-    env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" STUB_BUN_FAIL=true \
-    SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_fails 'failed dependency install' \
+    fixture_run "$fixture" STUB_BUN_FAIL=true -- \
+    "$REPOSITORY_ROOT/opencode/install.sh"
+  assert_contains "$fixture/stderr.log" 'fixture dependency installation failed'
 
   assert_contains "$config_dir/opencode.jsonc" 'existing activation'
   assert_contains "$config_dir/plugins/notify.ts" 'existing plugin'
-  assert_not_contains "$home/events.log" 'ocx '
+  assert_not_contains "$fixture/events.log" 'ocx '
   [[ ! -e $config_dir/orchestrator ]] \
     || scenario_fail 'installer activated orchestrator after dependency failure'
 }
 
 test_installer_refuses_competing_plugins() {
-  local fake_bin home config_dir plugin shape
+  local fake_bin fixture home config_dir plugin shape
 
   for plugin in workspace-plugin background-agents; do
     for shape in file symlink; do
-      home=$(scenario_tmpdir "competing-$plugin-$shape")
-      fake_bin=$(make_fake_clis "$home")
+      fixture=$(installer_fixture "competing-$plugin-$shape")
+      home=$fixture/home
+      fake_bin=$(make_fake_clis "$fixture")
       config_dir=$home/.config/opencode
       mkdir -p "$config_dir/plugins"
-      : >"$home/events.log"
       printf 'existing activation\n' >"$config_dir/opencode.jsonc"
       if [[ $shape == file ]]; then
         printf 'existing hook\n' >"$config_dir/plugins/$plugin.ts"
@@ -741,10 +745,10 @@ test_installer_refuses_competing_plugins() {
         ln -s "$home/missing-hook.ts" "$config_dir/plugins/$plugin.ts"
       fi
 
-      assert_fails_with_output 'competing orchestration hook' \
-        'OpenCode plugin conflicts with orchestrator' \
-        env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-        SCENARIO_EVENT_LOG="$home/events.log" "$REPOSITORY_ROOT/opencode/install.sh"
+      assert_fails 'competing orchestration hook' \
+        fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
+      assert_contains "$fixture/stderr.log" \
+        'OpenCode plugin conflicts with orchestrator'
 
       assert_contains "$config_dir/opencode.jsonc" 'existing activation'
       if [[ $shape == file ]]; then
@@ -752,8 +756,8 @@ test_installer_refuses_competing_plugins() {
       else
         assert_link_target "$home/missing-hook.ts" "$config_dir/plugins/$plugin.ts" 'competing hook'
       fi
-      assert_not_contains "$home/events.log" 'ocx '
-      assert_not_contains "$home/events.log" 'bun install'
+      assert_not_contains "$fixture/events.log" 'ocx '
+      assert_not_contains "$fixture/events.log" 'bun install'
       [[ ! -e $config_dir/orchestrator ]] \
         || scenario_fail 'installer activated orchestrator alongside a competing hook'
     done
@@ -761,10 +765,11 @@ test_installer_refuses_competing_plugins() {
 }
 
 test_installer_preserves_local_profiles() {
-  local fake_bin home profiles custom_source
+  local fake_bin fixture home profiles custom_source
 
-  home=$(scenario_tmpdir local-profiles)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture local-profiles)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
   profiles=$home/.config/opencode/profiles
   custom_source=$home/custom-linked
   mkdir -p "$profiles/custom" "$profiles/default" "$custom_source"
@@ -773,10 +778,8 @@ test_installer_preserves_local_profiles() {
   printf 'OCX default state\n' >"$profiles/default/keep.marker"
   ln -s "$custom_source" "$profiles/linked"
 
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
 
   [[ -d $profiles/custom && ! -L $profiles/custom ]] \
     || scenario_fail 'installer replaced a local profile named custom'
@@ -784,9 +787,9 @@ test_installer_preserves_local_profiles() {
   assert_link_target "$custom_source" "$profiles/linked" 'custom linked profile'
   assert_contains "$custom_source/keep.marker" 'custom linked state'
   assert_contains "$profiles/default/keep.marker" 'OCX default state'
-  assert_not_contains "$home/events.log" 'ocx profile remove custom'
-  assert_not_contains "$home/events.log" 'ocx profile remove linked'
-  assert_not_contains "$home/events.log" 'ocx profile remove default'
+  assert_not_contains "$fixture/events.log" 'ocx profile remove custom'
+  assert_not_contains "$fixture/events.log" 'ocx profile remove linked'
+  assert_not_contains "$fixture/events.log" 'ocx profile remove default'
 }
 
 assert_minimal_ocx_runtime() {
@@ -801,10 +804,11 @@ assert_minimal_ocx_runtime() {
 }
 
 test_installer_preserves_custom_payloads() {
-  local home fake_bin config_dir
+  local fixture home fake_bin config_dir
 
-  home=$(scenario_tmpdir custom-payloads)
-  fake_bin=$(make_fake_clis "$home")
+  fixture=$(installer_fixture custom-payloads)
+  home=$fixture/home
+  fake_bin=$(make_fake_clis "$fixture")
   config_dir=$home/.config/opencode
   mkdir -p "$config_dir/agents" "$home/custom-skills"
   printf 'custom agent\n' >"$config_dir/agents/coder.md"
@@ -812,14 +816,13 @@ test_installer_preserves_custom_payloads() {
   ln -s "$home/custom-skills" "$config_dir/skills"
   printf 'custom file\n' >"$config_dir/tools"
 
-  scenario_capture "$home" env HOME="$home" PATH="$fake_bin:/usr/bin:/bin" \
-    "$REPOSITORY_ROOT/opencode/install.sh"
+  fixture_run "$fixture" -- "$REPOSITORY_ROOT/opencode/install.sh"
 
   assert_contains "$config_dir/agents/coder.md" 'custom agent'
   assert_contains "$config_dir/tools" 'custom file'
   assert_link_target "$home/custom-skills" "$config_dir/skills" 'custom skills'
   assert_contains "$home/custom-skills/keep.md" 'custom skill'
-  assert_not_contains "$home/events.log" 'ocx remove'
+  assert_not_contains "$fixture/events.log" 'ocx remove'
 }
 
 scenario_run 'OpenCode shell defaults to the regular OCX profile' \

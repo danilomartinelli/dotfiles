@@ -24,10 +24,7 @@ new_fixture() {
   stub_xcodebuild "$fixture/fake-bin"
   ln -s "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/home/.dotfiles-root"
 
-  scenario_write_executable "$fixture/fake-bin/open" <<'EOF'
-#!/bin/sh
-printf 'open %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-EOF
+  stub_open "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
 }

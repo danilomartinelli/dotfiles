@@ -34,6 +34,19 @@ printf '%s\n' "${FAKE_UNAME:-Darwin}"
 EOF
 }
 
+# The macOS opener. Three suites stood in for it and two of them logged to the
+# shared event log while the third invented its own variable, so "did the run
+# open anything" was asserted three ways. A caller without scenario_capture
+# sets SCENARIO_EVENT_LOG itself; checklist_test.sh's pty runner does.
+# Usage: stub_open <bin-dir>
+stub_open() {
+  _stub_write "$1/open" <<'EOF'
+#!/bin/sh
+printf 'open %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+exit 0
+EOF
+}
+
 # The selected Xcode's Simulator SDK and runtime inventory. The default
 # runtime line is copied from the Xcode 26.6/iOS 26.5 output observed on the
 # development machine: available rows have no availability suffix.

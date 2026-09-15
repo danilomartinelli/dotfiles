@@ -96,11 +96,7 @@ EOF
 printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
 EOF
 
-  scenario_write_executable "$fixture/fake-bin/open" <<'EOF'
-#!/bin/sh
-printf 'open %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-exit 0
-EOF
+  stub_open "$fixture/fake-bin"
 }
 
 make_fixture() {

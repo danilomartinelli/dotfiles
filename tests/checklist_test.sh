@@ -13,6 +13,9 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$TEST_DIR/.." && pwd)
 # shellcheck source=tests/_support/shell-scenario.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
+# shellcheck source=tests/_support/stubs.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-checklist-tests
 
 CHECKLIST=$REPOSITORY_ROOT/_scripts/checklist
@@ -24,12 +27,8 @@ new_fixture() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
   mkdir -p "$fixture/fake-bin" "$fixture/home"
-  cat >"$fixture/fake-bin/open" <<'EOF'
-#!/bin/sh
-printf 'open %s\n' "$*" >> "$OPEN_LOG"
-EOF
-  chmod +x "$fixture/fake-bin/open"
-  : >"$fixture/open.log"
+  stub_open "$fixture/fake-bin"
+  : >"$fixture/events.log"
   printf '%s\n' "$fixture"
 }
 
@@ -44,7 +43,6 @@ invoke_checklist() {
   shift
   scenario_capture "$fixture" env \
     HOME="$fixture/home" \
-    OPEN_LOG="$fixture/open.log" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     DOTFILES_ROOT="$REPOSITORY_ROOT" \
     DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
@@ -81,10 +79,11 @@ sys.exit(os.waitstatus_to_exitcode(status))
 invoke_checklist_on_a_terminal() {
   local fixture=$1
   shift
+  : >"$fixture/events.log"
   /usr/bin/python3 -c "$PTY_RUNNER" \
     env \
     HOME="$fixture/home" \
-    OPEN_LOG="$fixture/open.log" \
+    SCENARIO_EVENT_LOG="$fixture/events.log" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     DOTFILES_ROOT="$REPOSITORY_ROOT" \
     DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
@@ -259,7 +258,7 @@ test_printing_never_opens_anything() {
   invoke_checklist "$fixture"
 
   assert_contains "$fixture/stdout.log" 'OpenedApp'
-  assert_empty "$fixture/open.log"
+  assert_empty "$fixture/events.log"
 }
 
 test_opening_requires_an_interactive_terminal() {
@@ -273,7 +272,7 @@ test_opening_requires_an_interactive_terminal() {
   assert_fails 'non-interactive opening' invoke_checklist "$fixture" --open-apps
   assert_contains "$fixture/stderr.log" \
     'app checklist opening requires an interactive terminal'
-  assert_empty "$fixture/open.log"
+  assert_empty "$fixture/events.log"
 }
 
 # The section a row prints under follows the resolved path, not the
@@ -308,14 +307,14 @@ test_opening_takes_the_first_candidate_that_exists() {
 
   invoke_checklist_on_a_terminal "$fixture" --open-apps
 
-  assert_contains "$fixture/open.log" "-ga $fixture/Second.app"
-  assert_not_contains "$fixture/open.log" 'First.app'
-  assert_not_contains "$fixture/open.log" 'Third.app'
+  assert_contains "$fixture/events.log" "-ga $fixture/Second.app"
+  assert_not_contains "$fixture/events.log" 'First.app'
+  assert_not_contains "$fixture/events.log" 'Third.app'
   # A row with nothing installed and a row with no app at all are both skipped,
   # so exactly one application is opened.
-  assert_not_contains "$fixture/open.log" 'Absent.app'
-  assert_not_contains "$fixture/open.log" 'ManualApp'
-  assert_count "$fixture/open.log" 'open ' 1
+  assert_not_contains "$fixture/events.log" 'Absent.app'
+  assert_not_contains "$fixture/events.log" 'ManualApp'
+  assert_count "$fixture/events.log" 'open ' 1
 }
 
 # The order of the candidates is the preference, which only shows when more
@@ -332,8 +331,8 @@ test_opening_prefers_the_earlier_of_two_installed_candidates() {
 
   # The path carries a space, so this also holds the array expansion to
   # delivering one argument rather than two.
-  assert_contains "$fixture/open.log" "-ga $fixture/Preferred 6.app"
-  assert_count "$fixture/open.log" 'open ' 1
+  assert_contains "$fixture/events.log" "-ga $fixture/Preferred 6.app"
+  assert_count "$fixture/events.log" 'open ' 1
 }
 
 # The roles named in the catalog are the ones git/install.sh and sops/install.sh
@@ -356,7 +355,7 @@ test_the_shipped_catalog_prints_and_opens_nothing() {
   assert_contains "$fixture/stdout.log" 'Post-bootstrap checklist'
   assert_contains "$fixture/stdout.log" 'Credentials & keys'
   assert_contains "$fixture/stdout.log" 'Shell'
-  assert_empty "$fixture/open.log"
+  assert_empty "$fixture/events.log"
 }
 
 test_the_shipped_catalog_explains_manual_mobile_prerequisites() {
