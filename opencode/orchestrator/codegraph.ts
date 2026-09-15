@@ -3,6 +3,7 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open, realpath, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { safeGitArgv, safeGitEnv } from "./safe-git";
 
 type Preparation = { root?: string; ready: boolean; notice: string };
 
@@ -17,14 +18,9 @@ export class CodeGraphProjects {
     env = process.env,
     private readonly timeout = 180_000,
   ) {
-    this.env = { ...env, CODEGRAPH_TELEMETRY: "0" };
-    for (const name of [
-      "GIT_DIR",
-      "GIT_WORK_TREE",
-      "GIT_INDEX_FILE",
-      "GIT_COMMON_DIR",
-    ])
-      delete this.env[name];
+    // The indexer runs git itself, so it inherits the same scrubbed environment
+    // rather than a second answer to the same question.
+    this.env = safeGitEnv({ ...env, CODEGRAPH_TELEMETRY: "0" });
   }
 
   private run(command: string, args: string[], cwd: string, timeout = 10_000) {
@@ -46,18 +42,7 @@ export class CodeGraphProjects {
   }
 
   private git(directory: string, ...args: string[]) {
-    return this.run(
-      "git",
-      [
-        "--no-optional-locks",
-        "-c",
-        "core.fsmonitor=false",
-        "-C",
-        directory,
-        ...args,
-      ],
-      directory,
-    );
+    return this.run("git", safeGitArgv(["-C", directory, ...args]), directory);
   }
 
   private async root(directory: string): Promise<string | undefined> {

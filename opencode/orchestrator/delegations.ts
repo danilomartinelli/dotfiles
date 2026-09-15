@@ -6,6 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { PluginInput } from "@opencode-ai/plugin";
 import { artifactPath, prepareArtifacts, workspacePath } from "./artifacts";
+import { safeGitArgv, safeGitEnv } from "./safe-git";
 
 const exec = promisify(execFile);
 export const childRoles = [
@@ -116,27 +117,12 @@ export function directoryOwnership(file: string): string {
 export async function sourceVersion(directory: string): Promise<string> {
   const git = async (...args: string[]) =>
     (
-      await exec(
-        "git",
-        [
-          "--no-optional-locks",
-          "--no-pager",
-          "-c",
-          "core.fsmonitor=false",
-          ...args,
-        ],
-        {
-          cwd: directory,
-          timeout: 10_000,
-          maxBuffer: 16 * 1024 * 1024,
-          env: {
-            ...process.env,
-            GIT_DIR: undefined,
-            GIT_WORK_TREE: undefined,
-            GIT_NO_LAZY_FETCH: "1",
-          },
-        },
-      )
+      await exec("git", safeGitArgv(args), {
+        cwd: directory,
+        timeout: 10_000,
+        maxBuffer: 16 * 1024 * 1024,
+        env: safeGitEnv(),
+      })
     ).stdout;
   const [head, diff, untracked] = await Promise.all([
     git("rev-parse", "HEAD"),

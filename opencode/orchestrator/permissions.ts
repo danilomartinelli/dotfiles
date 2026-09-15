@@ -1,3 +1,5 @@
+import { safeGitFlags, safeGitPrefixLength } from "./safe-git";
+
 /** The regular profile's query boundary; this is not an operating-system sandbox. */
 export const readOnlyRoles = new Set([
   "build",
@@ -253,25 +255,25 @@ function safeGit(argv: string[]): string[] {
   const prefix: string[] = [];
   let index = 0;
   while (argv[index]?.startsWith("-")) {
+    // Anything this module is about to supply itself is dropped rather than
+    // refused, which is what lets a normalized command be normalized again and
+    // come out unchanged. Which tokens those are is safe-git's answer, so the
+    // two spellings of the prefix cannot drift apart.
+    const supplied = safeGitPrefixLength(argv, index);
+    if (supplied) {
+      index += supplied;
+      continue;
+    }
     const flag = argv[index++];
     if (flag === "-C") {
       if (!argv[index]) denied("git -C requires a directory");
       prefix.push(flag, argv[index++]);
-    } else if (flag === "--no-pager" || flag === "--no-optional-locks") {
-      // These are supplied once in the normalized invocation.
-    } else if (flag === "-c" && argv[index] === "core.fsmonitor=false") {
-      index++;
     } else {
       denied("git global options may not configure programs or aliases");
     }
   }
   const query = argv[index++];
-  const safety = [
-    "--no-pager",
-    "--no-optional-locks",
-    "-c",
-    "core.fsmonitor=false",
-  ];
+  const safety = [...safeGitFlags];
   if (query === "branch") {
     const args = argv.slice(index);
     if (args.length === 1 && args[0] === "--show-current")

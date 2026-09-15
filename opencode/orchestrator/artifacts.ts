@@ -3,30 +3,19 @@ import { constants } from "node:fs";
 import { lstat, mkdir, open, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { safeGitArgv, safeGitEnv } from "./safe-git";
 
 const exec = promisify(execFile);
 const marker =
   "# OpenCode delegation artifacts; preserve evidence until explicitly retired.\n*\n";
 
 async function git(directory: string, ...args: string[]) {
-  const env: NodeJS.ProcessEnv = { ...process.env, GIT_NO_LAZY_FETCH: "1" };
-  for (const name of [
-    "GIT_DIR",
-    "GIT_WORK_TREE",
-    "GIT_INDEX_FILE",
-    "GIT_COMMON_DIR",
-  ])
-    delete env[name];
-  return exec(
-    "git",
-    ["--no-optional-locks", "-c", "core.fsmonitor=false", ...args],
-    {
-      cwd: directory,
-      env,
-      timeout: 10_000,
-      maxBuffer: 1024 * 1024,
-    },
-  );
+  return exec("git", safeGitArgv(args), {
+    cwd: directory,
+    env: safeGitEnv(),
+    timeout: 10_000,
+    maxBuffer: 1024 * 1024,
+  });
 }
 
 /** One disposable build workspace per worktree, beside the per-delegation

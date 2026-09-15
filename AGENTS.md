@@ -168,6 +168,13 @@ and direct memory capture. Project integrations stay project-local. Keep
 `scribe`, `explore` and `researcher` alongside `coder` and `reviewer`; assign
 specialized focuses in the delegation prompt instead of adding micro roles.
 
+`opencode/orchestrator/safe-git.ts` owns what makes a git invocation safe to run
+inside someone's checkout: the global flags, the inherited variables to scrub,
+and which of those tokens a normalizer may drop. Four places had four answers.
+Do not spell `core.fsmonitor=false` or a `GIT_DIR` scrub at a call site; ask for
+the argv and the environment. Launching the process stays with the caller,
+because `permissions.ts` never launches one.
+
 The installer provisions worktree/notification components and rejects competing
 orchestration hooks before activation. Manage registry components through OCX
 and keep `ocx verify --cwd ~/.config/opencode --verbose` green; never edit its
