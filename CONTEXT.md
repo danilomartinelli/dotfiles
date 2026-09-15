@@ -167,5 +167,8 @@ ready.
 _Avoid_: environment status, snapshot
 
 **Mobile Target**:
-iOS, Android, or both selected for Mobile Provisioning.
+A native platform Mobile Provisioning can assess and reconcile: iOS or Android.
+Declared in one place, so a selection may name one target or every one — `all`
+is a selection over targets rather than a target itself, and nothing that
+dispatches to a target has to enumerate the pairs.
 _Avoid_: platform selector

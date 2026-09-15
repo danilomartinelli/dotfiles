@@ -63,7 +63,7 @@ ios_readiness() {
     IOS_SDK_VERSION=''
     mobile_readiness_line 'iOS: incomplete — xcrun is unavailable; select a full Xcode installation.'
     mobile_readiness_next_step 'Complete Xcode first launch and license setup, then run: mobile-setup ios'
-    mobile_readiness_commit select-full-xcode
+    MOBILE_READINESS_ACTION=select-full-xcode
     return 0
   fi
 
@@ -71,7 +71,7 @@ ios_readiness() {
     IOS_SDK_VERSION=''
     mobile_readiness_line 'iOS: incomplete — the selected Xcode has no usable iPhone Simulator SDK.'
     mobile_readiness_next_step 'Select a full Xcode installation, finish its first launch, then run: mobile-setup ios'
-    mobile_readiness_commit select-full-xcode-sdk
+    MOBILE_READINESS_ACTION=select-full-xcode-sdk
     return 0
   fi
 
@@ -80,21 +80,21 @@ ios_readiness() {
   if ! runtime_listing=$(read_ios_runtime_listing); then
     mobile_readiness_line 'iOS: incomplete — Xcode could not list Simulator runtimes.'
     mobile_readiness_next_step 'Finish Xcode first launch and license setup, then run: mobile-setup ios'
-    mobile_readiness_commit finish-xcode-setup
+    MOBILE_READINESS_ACTION=finish-xcode-setup
     return 0
   fi
 
   if ios_runtime_is_available "$sdk_version" "$runtime_listing"; then
     mobile_readiness_line \
       "iOS: ready — Simulator runtime matches iPhone SDK $sdk_version."
-    mobile_readiness_commit none
+    MOBILE_READINESS_ACTION=none
     return 0
   fi
 
   mobile_readiness_line \
     "iOS: incomplete — no available Simulator runtime matches iPhone SDK $sdk_version."
   mobile_readiness_next_step 'Run: mobile-setup ios'
-  mobile_readiness_commit download-runtime
+  MOBILE_READINESS_ACTION=download-runtime
 }
 
 check_ios() {
@@ -115,21 +115,21 @@ install_ios() {
   # record decides in one comparison what used to be four repeated blocks.
   if [ "$MOBILE_READINESS_ACTION" != download-runtime ]; then
     mobile_readiness_report || true
-    printf 'Error: the selected full Xcode installation is not ready for Simulator provisioning.\n' >&2
-    printf '  → Finish Xcode first launch and accept its license manually, then rerun: mobile-setup ios\n' >&2
+    installer_error 'the selected full Xcode installation is not ready for Simulator provisioning.'
+    installer_hint 'Finish Xcode first launch and accept its license manually, then rerun: mobile-setup ios'
     return 1
   fi
 
   if ! command -v xcodebuild >/dev/null 2>&1; then
-    printf 'Error: xcodebuild is unavailable for iOS Simulator provisioning.\n' >&2
-    printf '  → Select a full Xcode installation, finish setup, then rerun: mobile-setup ios\n' >&2
+    installer_error 'xcodebuild is unavailable for iOS Simulator provisioning.'
+    installer_hint 'Select a full Xcode installation, finish setup, then rerun: mobile-setup ios'
     return 1
   fi
 
   printf 'iOS: downloading the latest runtime compatible with SDK %s.\n' "$IOS_SDK_VERSION"
   if ! xcodebuild -downloadPlatform iOS; then
-    printf 'Error: Xcode could not download the iOS Simulator runtime.\n' >&2
-    printf '  → Finish Xcode first launch and accept its license manually, then rerun: mobile-setup ios\n' >&2
+    installer_error 'Xcode could not download the iOS Simulator runtime.'
+    installer_hint 'Finish Xcode first launch and accept its license manually, then rerun: mobile-setup ios'
     return 1
   fi
 
@@ -138,8 +138,7 @@ install_ios() {
     return 0
   fi
 
-  printf 'Error: Xcode finished without an available runtime matching SDK %s.\n' \
-    "$IOS_SDK_VERSION" >&2
-  printf '  → Inspect Xcode Components, then rerun: mobile-setup ios\n' >&2
+  installer_error "Xcode finished without an available runtime matching SDK $IOS_SDK_VERSION."
+  installer_hint 'Inspect Xcode Components, then rerun: mobile-setup ios'
   return 1
 }

@@ -19,6 +19,13 @@ EOF
 
 MOBILE_SETUP_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
+# The progress vocabulary every installer prints in. Mobile Provisioning used to
+# hand-roll the same glyphs, which made it the fourth copy of a voice that
+# exists once precisely so a change to it reaches everything.
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$MOBILE_SETUP_DIR/installer-output.sh"
+
 # The record both target adapters fill, and the only place one becomes output.
 # It is sourced first because both adapters compose into it.
 # shellcheck source=_scripts/mobile-setup-readiness.sh
@@ -31,20 +38,33 @@ MOBILE_SETUP_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd
 # shellcheck disable=SC1091
 . "$MOBILE_SETUP_DIR/mobile-setup-android.sh"
 
+# The Mobile Targets, declared once. Adding a third used to mean editing the
+# usage text, the source list, two dispatch tables and the argument parser;
+# every one of those but the source list and the prose reads this now.
+MOBILE_TARGETS=(ios android)
+
+mobile_target_is_declared() {
+  local candidate=$1 declared
+
+  for declared in "${MOBILE_TARGETS[@]}"; do
+    [ "$declared" != "$candidate" ] || return 0
+  done
+  return 1
+}
+
+# The operation and the target compose the adapter's name rather than naming
+# every pair. A composed name that resolves to nothing is the hazard that comes
+# with that, so it is refused here: a half-added target must fail loudly rather
+# than succeed by doing nothing. See CODING_STANDARDS.md.
 dispatch_target() {
   local operation=$1
   local target=$2
 
-  case "$operation:$target" in
-    check:ios) check_ios ;;
-    check:android) check_android ;;
-    install:ios) install_ios ;;
-    install:android) install_android ;;
-    *)
-      printf 'mobile-setup: unsupported dispatch: %s %s\n' "$operation" "$target" >&2
-      return 2
-      ;;
-  esac
+  if ! command -v "${operation}_${target}" >/dev/null 2>&1; then
+    installer_error "unsupported dispatch: $operation $target"
+    return 2
+  fi
+  "${operation}_${target}"
 }
 
 dispatch_targets() {
@@ -53,16 +73,13 @@ dispatch_targets() {
   local status=0
   local selected_target
 
-  case "$target" in
-    ios | android)
-      dispatch_target "$operation" "$target" || status=1
-      ;;
-    all)
-      for selected_target in ios android; do
-        dispatch_target "$operation" "$selected_target" || status=1
-      done
-      ;;
-  esac
+  if [ "$target" = all ]; then
+    for selected_target in "${MOBILE_TARGETS[@]}"; do
+      dispatch_target "$operation" "$selected_target" || status=1
+    done
+  else
+    dispatch_target "$operation" "$target" || status=1
+  fi
 
   return "$status"
 }
@@ -84,18 +101,18 @@ while [ "$#" -gt 0 ]; do
       usage
       exit 0
       ;;
-    ios | android | all)
+    *)
+      if [ "$1" != all ] && ! mobile_target_is_declared "$1"; then
+        installer_error "unknown argument: $1"
+        usage >&2
+        exit 2
+      fi
       if [ "$target_seen" = true ]; then
         usage >&2
         exit 2
       fi
       target=$1
       target_seen=true
-      ;;
-    *)
-      printf 'mobile-setup: unknown argument: %s\n' "$1" >&2
-      usage >&2
-      exit 2
       ;;
   esac
   shift

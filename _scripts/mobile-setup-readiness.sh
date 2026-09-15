@@ -46,19 +46,27 @@ mobile_readiness_next_step() {
   mobile_readiness_line "  Next step: $1"
 }
 
-# Close the record by naming what may happen next.
-# Usage: mobile_readiness_commit <action>
-mobile_readiness_commit() {
-  MOBILE_READINESS_ACTION=$1
-}
-
+# The single ready rule. It keeps a function because four call sites ask it and
+# the record's whole machine-readable half is this one comparison; the setter it
+# used to sit beside did not, because `mobile_readiness_commit x` is strictly
+# longer than the assignment it wrapped.
 mobile_readiness_is_ready() {
   [ "$MOBILE_READINESS_ACTION" = none ]
 }
 
 # Print the record and report whether it is ready. Every readiness verdict in
 # this program leaves through here.
+#
+# An incomplete verdict is a diagnosis a person has to act on, so it goes to
+# stderr where CODING_STANDARDS.md puts warnings, and where the caller's own
+# hint about it already went: xcode/install.sh used to split one message across
+# two streams because this half arrived on the other one. A ready verdict is
+# not a warning and stays on stdout.
 mobile_readiness_report() {
-  printf '%s' "$MOBILE_READINESS_REPORT"
-  mobile_readiness_is_ready
+  if mobile_readiness_is_ready; then
+    printf '%s' "$MOBILE_READINESS_REPORT"
+    return 0
+  fi
+  printf '%s' "$MOBILE_READINESS_REPORT" >&2
+  return 1
 }

@@ -226,10 +226,10 @@ test_check_is_local_and_reports_incomplete_targets() {
   invoke_mobile "$fixture" -- --check || status=$?
 
   assert_equal 1 "$status" 'incomplete check status'
-  assert_contains "$fixture/stdout.log" 'iOS: incomplete'
-  assert_contains "$fixture/stdout.log" 'Android: incomplete'
-  assert_contains "$fixture/stdout.log" 'mobile-setup ios'
-  assert_contains "$fixture/stdout.log" 'mobile-setup android'
+  assert_contains "$fixture/stderr.log" 'iOS: incomplete'
+  assert_contains "$fixture/stderr.log" 'Android: incomplete'
+  assert_contains "$fixture/stderr.log" 'mobile-setup ios'
+  assert_contains "$fixture/stderr.log" 'mobile-setup android'
   assert_not_contains "$fixture/events.log" 'xcodebuild '
   assert_not_contains "$fixture/events.log" 'sdkmanager '
   assert_not_contains "$fixture/events.log" 'avdmanager '
@@ -273,8 +273,8 @@ test_ios_check_rejects_a_same_version_unavailable_runtime() {
   assert_equal 1 "$status" 'unavailable iOS runtime status'
   # 'matches iPhone SDK 26.5' occurs in the ready line too, so the verdict has
   # to be asserted by the word that distinguishes them.
-  assert_contains "$fixture/stdout.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
-  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
+  assert_contains "$fixture/stderr.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
+  assert_not_contains "$fixture/stderr.log" 'iOS: ready'
   assert_not_contains "$fixture/events.log" 'xcodebuild '
 }
 
@@ -286,8 +286,8 @@ test_ios_check_rejects_a_different_version_stale_runtime() {
   invoke_mobile "$fixture" "FAKE_IOS_RUNTIMES=$stale_runtime" -- --check ios || status=$?
 
   assert_equal 1 "$status" 'stale iOS runtime status'
-  assert_contains "$fixture/stdout.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
-  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
+  assert_contains "$fixture/stderr.log" 'iOS: incomplete — no available Simulator runtime matches iPhone SDK 26.5'
+  assert_not_contains "$fixture/stderr.log" 'iOS: ready'
   assert_not_contains "$fixture/events.log" 'xcodebuild '
 }
 
@@ -356,8 +356,8 @@ test_ios_install_selects_the_latest_compatible_download() {
   # install used to carry a copy of check's body and then call check as well,
   # so a successful download printed the incomplete verdict first and told the
   # reader to run the command that was already running.
-  assert_not_contains "$fixture/stdout.log" 'iOS: incomplete'
-  assert_not_contains "$fixture/stdout.log" 'Next step: Run: mobile-setup ios'
+  assert_not_contains "$fixture/stderr.log" 'iOS: incomplete'
+  assert_not_contains "$fixture/stderr.log" 'Next step: Run: mobile-setup ios'
 }
 
 # The readiness record is what install reads instead of re-observing, so the
@@ -388,7 +388,7 @@ test_ios_install_reports_download_failure_without_cross_target_or_ready_state() 
   assert_not_contains "$fixture/events.log" 'avdmanager '
   assert_not_contains "$fixture/stdout.log" 'Android:'
   assert_contains "$fixture/stderr.log" 'could not download the iOS Simulator runtime'
-  assert_not_contains "$fixture/stdout.log" 'iOS: ready'
+  assert_not_contains "$fixture/stderr.log" 'iOS: ready'
   [[ ! -e $fixture/home/.ios-runtime-ready ]] \
     || scenario_fail 'failed iOS download left a ready marker'
 }
@@ -403,7 +403,7 @@ test_android_install_stops_for_manual_prerequisites() {
     -- android || status=$?
 
   assert_equal 1 "$status" 'missing Android prerequisites status'
-  assert_contains "$fixture/stdout.log" \
+  assert_contains "$fixture/stderr.log" \
     "canonical SDK root is absent: $fixture/home/Library/Android/sdk"
   assert_contains "$fixture/stderr.log" 'Android Studio Setup Wizard'
   assert_contains "$fixture/stderr.log" 'mobile-setup android'
@@ -642,7 +642,7 @@ test_android_install_refuses_incompatible_avd_before_missing_package_install() {
   config_after=$(cat "$fixture/home/.android/avd/Pixel_API36.avd/config.ini")
 
   assert_equal 1 "$status" 'incompatible AVD with missing packages status'
-  assert_contains "$fixture/stdout.log" 'missing packages'
+  assert_contains "$fixture/stderr.log" 'missing packages'
   assert_contains "$fixture/stderr.log" 'refusing to overwrite'
   assert_not_contains "$fixture/events.log" 'sdkmanager '
   assert_not_contains "$fixture/events.log" 'avdmanager create'
@@ -666,7 +666,7 @@ test_android_install_rejects_an_unready_snapshot_after_package_install() {
 
   assert_equal 1 "$status" 'unready post-package-install snapshot status'
   assert_contains "$fixture/stderr.log" 'readiness snapshot incomplete'
-  assert_contains "$fixture/stdout.log" 'licenses are not accepted'
+  assert_contains "$fixture/stderr.log" 'licenses are not accepted'
   assert_not_contains "$fixture/events.log" 'avdmanager create'
 }
 
@@ -681,7 +681,7 @@ test_android_install_requires_full_readiness_after_avd_creation() {
   assert_equal 1 "$status" 'unready post-AVD-creation snapshot status'
   assert_contains "$fixture/stderr.log" \
     'final readiness snapshot is incomplete'
-  assert_contains "$fixture/stdout.log" 'missing packages'
+  assert_contains "$fixture/stderr.log" 'missing packages'
   assert_contains "$fixture/events.log" 'avdmanager create'
   [[ -f $fixture/home/.android/avd/Pixel_API36.avd/config.ini ]] \
     || scenario_fail 'Android install did not retain the created AVD'

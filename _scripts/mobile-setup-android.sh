@@ -107,7 +107,7 @@ android_package_is_installed() {
       [ -f "$sdk_root/system-images/android-36/google_apis/arm64-v8a/package.xml" ]
       ;;
     *)
-      printf 'Error: unknown Android package declaration: %s\n' "$package_name" >&2
+      installer_error "unknown Android package declaration: $package_name"
       return 1
       ;;
   esac
@@ -183,16 +183,16 @@ print_android_manual_prerequisites() {
   local sdk_root=$1
   local sdkmanager=$2
 
-  printf '  → Open Android Studio Setup Wizard and complete it.\n' >&2
-  printf '  → Install Android SDK Command-line Tools (latest) under %s.\n' "$sdk_root" >&2
-  printf '  → Run the SDK manager interactive license flow yourself: %s --licenses\n' "$sdkmanager" >&2
+  installer_hint 'Open Android Studio Setup Wizard and complete it.'
+  installer_hint "Install Android SDK Command-line Tools (latest) under $sdk_root."
+  installer_hint "Run the SDK manager interactive license flow yourself: $sdkmanager --licenses"
   printf '    Answer each vendor prompt manually; never pipe answers.\n' >&2
-  printf '  → Rerun: mobile-setup android\n' >&2
+  installer_hint 'Rerun: mobile-setup android'
 }
 
 refuse_incompatible_android_avd() {
-  printf 'Warning: %s exists but is incompatible; refusing to overwrite it.\n' "$ANDROID_AVD_NAME" >&2
-  printf '  → recovery: inspect or rename the existing AVD manually, then rerun: mobile-setup android\n' >&2
+  installer_warn "$ANDROID_AVD_NAME exists but is incompatible; refusing to overwrite it."
+  installer_hint 'recovery: inspect or rename the existing AVD manually, then rerun: mobile-setup android'
   return 1
 }
 
@@ -230,7 +230,7 @@ android_readiness() {
   ANDROID_AVD_STATE=$next_avd_state
   ANDROID_MISSING_PACKAGES=$next_missing_packages
 
-  mobile_readiness_commit "$(android_permitted_action)"
+  MOBILE_READINESS_ACTION="$(android_permitted_action)"
   compose_android_report "$sdk_root" "$sdkmanager" "$avdmanager"
 }
 
@@ -332,8 +332,8 @@ find_pixel_device() {
   local device_listing
 
   if ! device_listing=$(run_android_tool "$avdmanager" list device 2>/dev/null); then
-    printf 'Error: avdmanager could not list available Pixel hardware profiles.\n' >&2
-    printf '  → Verify Command-line Tools and Java, then rerun: mobile-setup android\n' >&2
+    installer_error 'avdmanager could not list available Pixel hardware profiles.'
+    installer_hint 'Verify Command-line Tools and Java, then rerun: mobile-setup android'
     return 1
   fi
 
@@ -401,7 +401,7 @@ install_android() {
 
     if ! run_android_tool "$sdkmanager" --sdk_root="$sdk_root" \
       "${missing_packages[@]}" </dev/null; then
-      printf 'Error: Android SDK package installation failed; a required license may still be missing.\n' >&2
+      installer_error 'Android SDK package installation failed; a required license may still be missing.'
       print_android_manual_prerequisites "$sdk_root" "$sdkmanager"
       return 1
     fi
@@ -412,7 +412,7 @@ install_android() {
     case "$MOBILE_READINESS_ACTION" in
       create-avd | none) ;;
       *)
-        printf 'Error: Android package installation left the readiness snapshot incomplete.\n' >&2
+        installer_error 'Android package installation left the readiness snapshot incomplete.'
         mobile_readiness_report || true
         return 1
         ;;
@@ -432,8 +432,8 @@ install_android() {
     return 1
   fi
   if [ -z "$pixel_device" ]; then
-    printf 'Error: no available Pixel hardware profile was found.\n' >&2
-    printf '  → Install an available Pixel device profile in Android Studio, then rerun: mobile-setup android\n' >&2
+    installer_error 'no available Pixel hardware profile was found.'
+    installer_hint 'Install an available Pixel device profile in Android Studio, then rerun: mobile-setup android'
     return 1
   fi
 
@@ -442,8 +442,8 @@ install_android() {
     -n "$ANDROID_AVD_NAME" \
     -k "$ANDROID_SYSTEM_IMAGE" \
     --device "$pixel_device"; then
-    printf 'Error: Android could not create %s.\n' "$ANDROID_AVD_NAME" >&2
-    printf '  → Resolve the vendor tooling error without deleting an existing AVD, then rerun: mobile-setup android\n' >&2
+    installer_error "Android could not create $ANDROID_AVD_NAME."
+    installer_hint 'Resolve the vendor tooling error without deleting an existing AVD, then rerun: mobile-setup android'
     return 1
   fi
 
@@ -451,8 +451,7 @@ install_android() {
     return 1
   fi
   if ! mobile_readiness_is_ready; then
-    printf 'Error: Android created %s but its final readiness snapshot is incomplete.\n' \
-      "$ANDROID_AVD_NAME" >&2
+    installer_error "Android created $ANDROID_AVD_NAME but its final readiness snapshot is incomplete."
     mobile_readiness_report || true
     return 1
   fi
