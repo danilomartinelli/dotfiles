@@ -1,10 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
+    // An Android cold boot is a documented 2-10 minute operation and Argent
+    // bounds it itself; OpenCode's own 60s request timeout cut every one of
+    // them off at 60.0s and left the tool-server booting a device the caller
+    // had already given up on. Cover Argent's own 15-minute ceiling instead.
     "argent": {
       "type": "local",
       "command": ["argent", "mcp"],
       "environment": { "DO_NOT_TRACK": "1" },
+      "timeout": 900000,
       "enabled": true
     },
     "codegraph": {

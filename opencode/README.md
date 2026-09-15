@@ -226,7 +226,7 @@ every one of these answers comes from the CLI the MCP server wraps:
 ```bash
 argent tools                 # the 76 tools, by name
 argent tools describe <name> # arguments of one tool
-argent list-devices          # what the host can actually reach
+argent run list-devices      # what the host can actually reach
 argent run <tool> --help     # invoke one tool directly, no agent involved
 argent server status         # the shared tool-server this MCP talks to
 argent telemetry status      # must report disabled through the environment
@@ -234,6 +234,39 @@ argent telemetry status      # must report disabled through the environment
 
 `argent run` is the honest test: a failure there is the device or the SDK, and
 a failure only through the MCP is the integration or the permissions above.
+
+### Why the Argent server declares a timeout
+
+`boot-device` on Android is documented as a 2-10 minute operation and Argent
+bounds it itself, clamping `bootTimeoutMs` to fifteen minutes. OpenCode's
+request timeout defaults to sixty seconds, and a call it abandons does not
+abandon the tool-server: the boot runs on, the emulator registers, later calls
+briefly reach it, and then the abandoned attempt's own failure path tears the
+device down underneath them. What the agent sees is a device that appeared and
+then answered `device '<serial>' not found`. The declared `timeout` exists so
+the caller outlives the operation it started; a shorter budget belongs in
+`bootTimeoutMs`, where Argent can report which stage failed.
+
+### An Android emulator that boots and disappears
+
+Argent hot-boots from the AVD's `default_boot` snapshot when one exists and
+falls back to a cold boot when the restore is unusable. It identifies the
+emulator it launched by a serial that was not present before, so when the
+abandoned hot-boot instance is still draining out of `adb devices`, the cold
+boot reusing the same port is never recognized as new. The boot then fails with
+`did not register within 60s` and terminates a device that is in fact up; the
+message names `-wipe-data`, which is not the smallest repair. Deleting the
+snapshot directory is. `~/.android/avd/<avd>.ini` holds the `path=` line that
+locates the AVD, and the directory to remove is `<path>/snapshots/default_boot`.
+Confirm through `argent run list-devices` that nothing holds the AVD first.
+Userdata and the AVD survive; only the hot-boot path is given up, and every
+subsequent boot is a cold boot that registers normally.
+
+An emulator that boots through Argent arrives asleep: `dumpsys power` reports
+`mWakefulness=Asleep`, and the first-frame probe passes on the all-black screen
+that produces. Screenshots are black and the UI tree is a bare `ROOT Screen`
+until the device is woken, which reads as a broken emulator and is not one.
+Wake it before describing or tapping anything.
 
 Coder preserves explicit permissions for configured MCP namespaces; a server
 alone does not grant access. These permissions do not override native tool

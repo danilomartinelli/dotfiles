@@ -359,7 +359,12 @@ test_profiles_trust_project_configuration() {
     .mcp.codegraph.environment.CODEGRAPH_TELEMETRY == "0" and
     .mcp.argent.type == "local" and
     .mcp.argent.command == ["argent", "mcp"] and
-    .mcp.argent.environment.DO_NOT_TRACK == "1"
+    .mcp.argent.environment.DO_NOT_TRACK == "1" and
+    # An absent timeout is the 60s default, which is shorter than the Android
+    # boot argent is being asked to perform. Hold the declaration to the
+    # fifteen-minute ceiling argent itself clamps to, so that the caller
+    # outlives the operation it started.
+    .mcp.argent.timeout >= 900000
   ' >/dev/null \
     || scenario_fail 'global MCP defaults are incorrect'
 }

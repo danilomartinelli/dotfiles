@@ -45,9 +45,21 @@ test("installed CodeGraph initializes the checkout and exposes its approved MCP 
     const generated = JSON.parse(
       printed.stdout.toString().slice(printed.stdout.toString().indexOf("{")),
     );
-    const declared = await Bun.file(
-      new URL("../opencode/opencode.jsonc", import.meta.url),
-    ).json();
+    // `.json()` is strict and only ever accepted this file because it happened
+    // to carry no comment. Tracked JSONC here carries whole-line comments and
+    // nothing else, so drop those lines the way `tests/_support/jsonc.sh`
+    // does; it owns the rule and explains why the rest of a line is left
+    // alone.
+    const declared = JSON.parse(
+      (
+        await Bun.file(
+          new URL("../opencode/opencode.jsonc", import.meta.url),
+        ).text()
+      )
+        .split("\n")
+        .filter((line) => !/^\s*\/\//.test(line))
+        .join("\n"),
+    );
     expect(declared.mcp.codegraph.command).toEqual(
       generated.mcp.codegraph.command,
     );
