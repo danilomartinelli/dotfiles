@@ -18,7 +18,6 @@ import {
   type Routes,
 } from "./delegations";
 import { assertReadOnlyTool } from "./permissions";
-import { assertBoundedRedirect } from "./redirect-bounds";
 import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
@@ -432,8 +431,6 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
           );
         await assertWriteTargets(input.tool, output.args, child);
       }
-      if (writerRoles.has(role) && input.tool === "bash")
-        assertBoundedRedirect(output.args.command);
       assertReadOnlyTool(role, input.tool, output.args);
       if (input.tool === "codegraph_codegraph_explore")
         await codegraph.query(

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { rolePermissions } from "../opencode/orchestrator/prompts";
 import {
   assertReadOnlyTool,
+  guardBash,
   mcpQueryTools,
   readOnlyRoles,
 } from "../opencode/orchestrator/permissions";
@@ -655,7 +656,6 @@ describe("regular read-only tool boundary", () => {
       "apply_patch",
       "task",
       "delegate",
-      "memory",
       "project_create_item",
       "project_update_item",
       "project_execute",
@@ -697,7 +697,30 @@ describe("regular read-only tool boundary", () => {
         assertReadOnlyTool(role, "write", { content: "fixture" }),
       ).not.toThrow();
     }
-    expect(() => assertReadOnlyTool("build", "bash", {})).toThrow();
+  });
+
+  // memory and a bash call with no command string were asserted here and
+  // neither reaches this function: regular.ts answers memory before it, and the
+  // native bash tool does not produce args without a command. An assertion
+  // about an unreachable branch reads as a contract, which is worse than none.
+  test("bash reaches one guard, and only the roles the table grants it", () => {
+    expect(() => guardBash("scribe", { command: "ls" })).toThrow(
+      "scribe cannot execute bash",
+    );
+    expect(() => guardBash("general", { command: "ls" })).toThrow();
+
+    // A writer's command is bounded rather than normalized; a read-only role's
+    // is normalized in place, which is the object the host goes on to execute.
+    const writer: Record<string, unknown> = { command: "npm test > out.log" };
+    expect(() => guardBash("coder", writer)).not.toThrow();
+    expect(writer.command).toBe("npm test > out.log");
+    expect(() =>
+      guardBash("coder", { command: "npm run dev > dev.log 2>&1" }),
+    ).toThrow("Unbounded log redirect");
+
+    const reader: Record<string, unknown> = { command: "git status" };
+    guardBash("build", reader);
+    expect(String(reader.command)).toContain("core.fsmonitor=false");
   });
 
   test("accepted queries do not execute configured Git or ripgrep helper programs", () => {

@@ -1,3 +1,4 @@
+import { assertBoundedRedirect } from "./redirect-bounds";
 import { safeGitFlags, safeGitPrefixLength } from "./safe-git";
 
 /** The regular profile's query boundary; this is not an operating-system sandbox. */
@@ -582,6 +583,41 @@ function safeCommand(command: string): string {
 }
 
 /**
+ * Which roles may run bash at all.
+ *
+ * prompts.ts renders the permission table from this and the runtime guard below
+ * enforces it, so a gate can no longer name a role the table denies: the writer
+ * gate at the call site used to admit scribe, whose bash the table has always
+ * denied, which left half of it unreachable and its own test silent about that.
+ */
+export function roleMayRunBash(role: string): boolean {
+  return role !== "scribe";
+}
+
+/**
+ * What a role may put in a bash command, as one interface.
+ *
+ * A read-only role's command is normalized so it cannot reach a configured Git
+ * program or pager. A writer's is checked for an unbounded redirect, which is
+ * where 349 lines of tokenizer live and where their whole risk is: the tokenizer
+ * was thoroughly tested and nothing stated which role reached it, which field of
+ * args the native tool actually reads, or that this runs before the other guard
+ * touches the same object.
+ */
+export function guardBash(role: string, args: Record<string, unknown>): void {
+  if (!roleMayRunBash(role)) denied(`${role} cannot execute bash`);
+  if (typeof args.command !== "string")
+    denied("bash requires a command string");
+  if (writerRoles.has(role)) {
+    assertBoundedRedirect(args.command);
+    return;
+  }
+  if (!readOnlyRoles.has(role))
+    denied("unknown agent has no implicit tool access");
+  args.command = safeCommand(args.command);
+}
+
+/**
  * Throws before an unsupported tool executes. Pass the actual mutable tool args:
  * accepted shell queries are normalized to disable configured Git programs/pagers.
  * The caller owns authorization of orchestration and memory tools separately.
@@ -591,15 +627,10 @@ export function assertReadOnlyTool(
   tool: string,
   args: Record<string, unknown>,
 ): void {
+  if (tool === "bash") return guardBash(role, args);
   if (writerRoles.has(role)) return;
   if (!readOnlyRoles.has(role))
     denied("unknown agent has no implicit tool access");
-  if (tool === "bash") {
-    if (typeof args.command !== "string")
-      denied("bash requires a command string");
-    args.command = safeCommand(args.command);
-    return;
-  }
   if (!queryTools.has(tool)) denied(`${role} cannot execute ${tool}`);
   if (
     tool === "lsp" &&
