@@ -539,6 +539,30 @@ test_missing_database_is_an_operational_error() {
   assert_contains "$fixture/stderr.log" 'no OpenCode database at'
 }
 
+# The CREATE TABLE script above is this suite's own, and opencode/_runtime-store.sh
+# declares independently which tables and columns it reads. Neither derives the
+# other, so they are held to each other here: a fixture that stopped covering
+# the real dependency would otherwise let every scenario pass against a schema
+# the module can no longer use.
+test_fixture_schema_satisfies_the_store_declaration() {
+  local fixture table columns column present
+  fixture=$(make_fixture)
+
+  while IFS=: read -r table columns; do
+    [ -n "$table" ] || continue
+    present=$(sqlite3 "$fixture/data/opencode.db" \
+      "SELECT group_concat(name) FROM pragma_table_info('$table');")
+    for column in ${columns//,/ }; do
+      case ",$present," in
+        *",$column,"*) ;;
+        *) scenario_fail "the fixture schema lacks $table.$column" || return 1 ;;
+      esac
+    done
+  done < <(sed -n "/^RUNTIME_STORE_SCHEMA='/,/'$/p" \
+    "$REPOSITORY_ROOT/opencode/_runtime-store.sh" \
+    | sed "s/^RUNTIME_STORE_SCHEMA='//; s/'$//" | grep -v '^$')
+}
+
 scenario_run 'a report names state without changing it' test_report_names_state_without_changing_it
 scenario_run 'an untracked shadowing config is reported' test_untracked_shadowing_config_is_reported
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
@@ -561,4 +585,5 @@ scenario_run 'zero retention and explicit log clearing preserve transcripts and 
 scenario_run 'log clearing refuses a symlinked directory before changing state' test_log_clear_refuses_a_symlinked_directory
 scenario_run 'an invalid retention window is a usage error' test_invalid_retention_is_a_usage_error
 scenario_run 'a missing database is an operational error' test_missing_database_is_an_operational_error
+scenario_run 'the fixture schema satisfies what the store declares' test_fixture_schema_satisfies_the_store_declaration
 scenario_finish

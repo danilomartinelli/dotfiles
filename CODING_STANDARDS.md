@@ -210,6 +210,15 @@ why routing it through the reader would cost the property the reader exists
 for. Widening a catalog past seven columns means widening the reader first; a
 wider row packs its tail into the last argument instead of failing.
 
+A catalog row that names behaviour binds to it by convention rather than by a
+`case` listing every pair. `_doctor.sh` composes `runtime_condition_<name>` from
+the row's first column, and `_scripts/mobile-setup` composes
+`<operation>_<target>`. The convention is only safe with the refusal that goes
+with it: resolve the name, check it is defined, and stop the run when it is
+not. A composed name that silently resolves to nothing is worse than the
+enumeration it replaced, because a half-added row then does nothing at all
+instead of failing.
+
 A tool's configuration directory is `installer_config_dir <tool>`, which
 resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
 not reintroduce that variable in an installer, a `*.zsh` file, or a tracked

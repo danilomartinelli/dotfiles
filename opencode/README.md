@@ -431,15 +431,23 @@ opencode-doctor --fix --days 0 --clear-logs
 ```
 
 `opencode/_doctor.sh` owns the behavior and the command is a thin adapter over
-it. It reports and repairs the following state:
+it. `opencode/_runtime-conditions.tsv` declares what it inspects, in the order
+it runs, and the table below is rendered from that catalog:
 
-| State                      | Why it accumulates                                                           |
-| -------------------------- | ---------------------------------------------------------------------------- |
-| Log files                  | CLI/plugin output and rotated logs                                           |
-| The `event` table          | An append-only replication log for remote workspaces, with no retention      |
-| Worktree processes         | A command an agent started outlives the session that started it              |
-| Stale `workspace` rows     | A row outlives its directory, and a retired adapter fails every server start |
-| An untracked global config | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`    |
+<!-- generated: runtime-conditions -->
+
+| State                      | Doctor                          | Why it accumulates                                                                                        |
+| -------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Worktree processes         | Reported, repaired with `--fix` | A command an agent started outlives the session that started it                                           |
+| The `event` table          | Reported, repaired with `--fix` | An append-only replication log for remote workspaces, with no retention                                   |
+| Stale `workspace` rows     | Reported, repaired with `--fix` | A row outlives its directory, and a retired adapter fails every server start                              |
+| Stranded sessions          | Reported, repaired with `--fix` | A session names a `workspace` row that is gone, so it can be neither deleted nor archived                 |
+| Stale session snapshots    | Reported, repaired with `--fix` | A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes    |
+| Idle delegation artifacts  | Reported, repaired with `--fix` | A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output |
+| An untracked global config | Reported only                   | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`                                 |
+| Log files                  | Reported, repaired with `--fix` | CLI and plugin output, and the rotations it leaves behind                                                 |
+
+<!-- generated-end -->
 
 The event log is the one that grows without bound. Every streaming update of a
 message part is stored as a fresh copy of the whole part, so one long session

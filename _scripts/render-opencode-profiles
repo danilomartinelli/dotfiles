@@ -75,8 +75,9 @@ roster=$topic_dir/_managed-entries.tsv
 shared_dir=$topic_dir/profiles/_shared
 overrides_dir=$topic_dir/profiles/_overrides
 routing=$topic_dir/profiles/_routing.tsv
+conditions=$topic_dir/_runtime-conditions.tsv
 
-for required in "$roster" "$routing" "$shared_dir/AGENTS.md" \
+for required in "$roster" "$routing" "$conditions" "$shared_dir/AGENTS.md" \
   "$shared_dir/ocx.jsonc" "$shared_dir/opencode.jsonc"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
@@ -257,8 +258,26 @@ emit_routing_rows() {
   done
 }
 
+# The doctor's conditions carry their own declared prose, so the table is the
+# catalog in the shape a person reads rather than a second list of the same
+# facts. Reporting is named per row because a condition the doctor describes
+# and never acts on is the one a reader most needs distinguished.
+condition_rows=()
+collect_condition_row() {
+  local action=$3
+  # shellcheck disable=SC2016 # The backticks are Markdown code spans, not
+  # command substitution: this composes a README table cell.
+  case "$action" in
+    repair) action='Reported, repaired with `--fix`' ;;
+    report) action='Reported only' ;;
+    *) fail "unknown condition action in $conditions: $action" ;;
+  esac
+  condition_rows+=("$2"$'\t'"$action"$'\t'"$4")
+  return 0
+}
+
 render_readme_block() {
-  local profile header
+  local profile header row
 
   case "$1" in
     profile-routing)
@@ -267,6 +286,11 @@ render_readme_block() {
         header=$header$'\t'"\`$profile\`"
       done
       emit_routing_rows | markdown_table "$header"
+      ;;
+    runtime-conditions)
+      for row in "${condition_rows[@]}"; do
+        printf '%s\n' "$row"
+      done | markdown_table $'State\tDoctor\tWhy it accumulates'
       ;;
     *)
       fail "unknown generated block: $1"
@@ -327,6 +351,9 @@ render_config() {
 compose_policies
 validate_routing
 routing_records=$(compose_routing_records "${routing_fields[@]}")
+
+catalog_each_row "$conditions" collect_condition_row
+[ "${#condition_rows[@]}" -gt 0 ] || fail "no condition rows in $conditions"
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-opencode-profiles.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT

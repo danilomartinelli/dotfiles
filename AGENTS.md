@@ -196,16 +196,20 @@ which the same check enforces.
 
 `~/.local/share/opencode` is runtime state, not configuration, and OpenCode
 prunes none of it. `opencode/_doctor.sh`, reached through `opencode-doctor`,
-owns reporting and repairing it: the unbounded `event` replication log,
-processes left inside an agent worktree, `workspace` rows whose directory is
-gone, a session naming a `workspace` row that is gone, a session snapshot whose
-`core.worktree` directory is gone, a delegation's artifact directory nothing has
-written to inside the retention window, and an untracked global config shadowing
-a managed entry. A stranded workspace reference is the one that cannot wait:
-deleting or archiving resolves the workspace first, so the session cannot be
-removed through the interface at all until the reference is released. Repairs need
-`--fix` and refuse to run while OpenCode holds the database. Do not add a
-second cleanup path for that directory.
+owns reporting and repairing it. `opencode/_runtime-conditions.tsv` is the
+catalog of what it inspects, in run order, and the table in `opencode/README.md`
+is rendered from it; adding a condition is a row plus a
+`runtime_condition_<name>` function, and nothing else restates the list. A
+stranded workspace reference is the one that cannot wait: deleting or archiving
+resolves the workspace first, so the session cannot be removed through the
+interface at all until the reference is released. Each condition detects once
+per run and reports what it repaired, so a refused `--fix` prints no report; see
+`docs/adr/0015-the-doctor-reports-what-it-repaired.md`. Repairs need `--fix` and
+refuse to run while OpenCode holds the database.
+`opencode/_runtime-store.sh` is the one way into the database, it declares the
+schema it depends on, and it refuses every write until a caller has established
+that OpenCode is idle. Do not add a second cleanup path for that directory, and
+do not reach sqlite3 around the store.
 
 A coder owns two directories. Its artifact directory holds the evidence of one
 attempt and is preserved; the worktree's shared `workspace` holds everything

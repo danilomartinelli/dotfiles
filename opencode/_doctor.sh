@@ -3,31 +3,18 @@
 # Report and repair the OpenCode runtime state that nothing else owns.
 #
 # install.sh links the tracked half of OpenCode into ~/.config/opencode. The
-# other half is the data directory, and OpenCode prunes none of it:
+# other half is the data directory, and OpenCode prunes none of it. What
+# accumulates there is declared in _runtime-conditions.tsv, one row per
+# condition, and the README table is rendered from that catalog: the list used
+# to be restated in this header, in the report order, in the repair order, in
+# bin/opencode-doctor and in the README, and four of those five had drifted.
 #
-#   - `event` is an append-only replication log for remote workspaces. Every
-#     streaming update of a message part is stored as a fresh copy of the whole
-#     part, so one long session writes its own transcript back many times over.
-#     `message` and `part` retain the transcript independently. A session whose
-#     newest message is a completed assistant reply has nothing left to
-#     replicate, so its events are prunable at any age; only a session still
-#     waiting for or writing a reply keeps them, and only within the window.
-#   - A command an agent started inside a worktree outlives the session that
-#     started it.
-#   - A `workspace` row outlives the directory it describes, and a row written
-#     by an OCX component that is no longer installed fails every server start
-#     with "Unknown workspace adapter".
-#   - A session keeps the id of the workspace it was opened in. When that row
-#     goes, the session cannot be deleted or archived at all: resolving the
-#     workspace fails first, and the API answers "Workspace not found".
-#   - A session snapshot is a Git directory shadowing the directory its
-#     `core.worktree` names. When that directory goes, OpenCode keeps trying to
-#     collect garbage inside it; one leftover wrote 39 warnings in a day.
-#   - A delegation's artifact directory is created per delegation and kept for
-#     as long as the worktree lives. The orchestrator cannot retire it on its
-#     own: it has no way to tell a screenshot from an Xcode DerivedData tree,
-#     so it preserves both. Verification work puts build output there because
-#     an `ownership: []` delegation has nowhere else to write.
+# Each row binds to a runtime_condition_<name> function below, which detects
+# its condition once per run and then reports it, or reports and repairs it.
+# Detecting once is what makes the numbers honest — a report and a repair that
+# each measured separately, on opposite sides of the idle check, could disagree
+# about what was there.
+# docs/adr/0015-the-doctor-reports-what-it-repaired.md
 #
 # Reporting is the default because every repair deletes state no backup covers.
 # Repairs need --fix and refuse to run while OpenCode holds the database. That
@@ -52,7 +39,12 @@ SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/../_scripts/catalog.sh"
 
+# shellcheck source=opencode/_runtime-store.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/_runtime-store.sh"
+
 MANAGED_ENTRIES=$SCRIPT_DIR/_managed-entries.tsv
+RUNTIME_CONDITIONS=$SCRIPT_DIR/_runtime-conditions.tsv
 
 # OpenCode resolves its data directory through XDG_DATA_HOME and names that
 # variable in its own diagnostics, which is the tool stating its own fact.
@@ -135,11 +127,9 @@ case $RETENTION_DAYS in
     ;;
 esac
 
-DATABASE=$DATA_DIR/opencode.db
 LOG_FILE=$DATA_DIR/log/opencode.log
 WORKTREE_ROOT=$DATA_DIR/worktree
 SNAPSHOT_ROOT=$DATA_DIR/snapshot
-CUTOFF_MS=$((($(date +%s) - RETENTION_DAYS * 86400) * 1000))
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 && return 0
@@ -151,11 +141,6 @@ require_command() {
 require_command sqlite3 'It ships with macOS; check PATH before rerunning.'
 require_command lsof 'It ships with macOS; check PATH before rerunning.'
 require_command git 'Install the Command Line Tools, then rerun.'
-
-# Read-only so a report can never be the thing that damages the database.
-database_query() {
-  sqlite3 "file:$DATABASE?mode=ro" "$1"
-}
 
 file_bytes() {
   [ -f "$1" ] || {
@@ -195,13 +180,6 @@ human_bytes() {
   }'
 }
 
-# The processes that still hold the database. Any of them means OpenCode is up,
-# and every repair below is refused while that is true.
-database_holders() {
-  [ -f "$DATABASE" ] || return 0
-  lsof -t -- "$DATABASE" 2>/dev/null || true
-}
-
 # Processes whose working directory is inside an agent worktree. A child
 # inherits its parent's directory, so a leaked tree matches through every one
 # of its members and needs no separate descendant walk.
@@ -221,61 +199,15 @@ leaked_processes() {
   '
 }
 
-# A session is finished when its newest message is an assistant reply that
-# reached completion. One the model never completed was interrupted and may be
-# resumed, and one whose newest message is a prompt is still owed a reply.
-#
-# The message index on (session_id, time_created) answers the newest-message
-# lookup per session without touching message bodies beyond that one row.
-FINISHED_SESSIONS="SELECT id FROM session AS finished
-  WHERE (SELECT json_extract(data, '\$.role') = 'assistant'
-           AND json_extract(data, '\$.time.completed') IS NOT NULL
-         FROM message WHERE session_id = finished.id
-         ORDER BY time_created DESC LIMIT 1)"
-
-# Which sessions still need their replication history: the unfinished ones
-# inside the retention window. Every other aggregate is prunable.
-# `event_sequence` holds one small row per session, so naming the aggregates
-# there and matching them through the event log's own index answers an exact
-# count without scanning the large event payloads.
-#
-# The sequence rows themselves stay. They are tiny, and keeping one means the
-# seq a session reached never restarts below a number some replica already saw.
-PRUNABLE_AGGREGATES="SELECT aggregate_id FROM event_sequence
-  WHERE aggregate_id NOT IN (
-    SELECT id FROM session
-    WHERE time_updated >= $CUTOFF_MS AND id NOT IN ($FINISHED_SESSIONS))"
-
-# Zero is an explicit full replication-log cleanup, including timestamps in
-# the current second or ahead of this machine's clock. Transcripts stay intact.
-if [ "$RETENTION_DAYS" -eq 0 ]; then
-  PRUNABLE_AGGREGATES='SELECT aggregate_id FROM event_sequence'
-fi
-
-prunable_event_count() {
-  database_query "SELECT count(*) FROM event WHERE aggregate_id IN ($PRUNABLE_AGGREGATES);"
-}
-
 # A workspace row whose directory is gone describes nothing a session can be
 # resumed into, and it is the shape the rows with a retired adapter took.
 stale_workspaces() {
-  database_query "SELECT id || '	' || type || '	' || directory FROM workspace;" \
+  runtime_store_workspace_rows \
     | while IFS="$(printf '\t')" read -r workspace_id workspace_type workspace_directory; do
       [ -n "$workspace_directory" ] || continue
       [ ! -d "$workspace_directory" ] || continue
       printf '%s\t%s\t%s\n' "$workspace_id" "$workspace_type" "$workspace_directory"
     done
-}
-
-# A session pointing at a workspace row that no longer exists. Every delete and
-# archive resolves the workspace first, so the session is stranded in the UI
-# until the reference goes; a null id is what a session without one already
-# carries, and those delete normally.
-DANGLING_SESSIONS="workspace_id IS NOT NULL
-  AND workspace_id NOT IN (SELECT id FROM workspace)"
-
-dangling_session_count() {
-  database_query "SELECT count(*) FROM session WHERE $DANGLING_SESSIONS;"
 }
 
 # A snapshot Git directory naming a directory that is gone. Reading the answer
@@ -358,20 +290,10 @@ shadowing_configs() {
   done
 }
 
-report_database() {
-  database_bytes=$(file_bytes "$DATABASE")
-  prunable=$(prunable_event_count)
+# Each condition detects once, then says what it found and — in repair mode —
+# what it did about it.
 
-  installer_note "database $(human_bytes "$database_bytes") at $DATABASE"
-  installer_note "prunable replication events (finished sessions, or idle for $RETENTION_DAYS days): $prunable"
-}
-
-report_log() {
-  log_bytes=$(file_bytes "$LOG_FILE")
-  installer_note "log $(human_bytes "$log_bytes") at $LOG_FILE"
-}
-
-report_processes() {
+runtime_condition_processes() {
   leaked=$(leaked_processes)
   if [ -z "$leaked" ]; then
     installer_note 'no processes left inside an agent worktree'
@@ -383,9 +305,57 @@ report_processes() {
     [ -n "$pid" ] || continue
     installer_note "pid $pid $(ps -o command= -p "$pid" 2>/dev/null | cut -c1-72)"
   done
+  [ "$1" = repair ] || return 0
+
+  printf '%s\n' "$leaked" | while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    kill -TERM "$pid" 2>/dev/null || true
+  done
+
+  waited=0
+  while [ "$waited" -lt 5 ]; do
+    [ -n "$(leaked_processes)" ] || break
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  leaked_processes | while IFS= read -r pid; do
+    [ -n "$pid" ] || continue
+    kill -KILL "$pid" 2>/dev/null || true
+  done
+
+  # What is gone, not what was signalled. A process that exited on its own, or
+  # that survived the kill, was counted as reaped when this reported the list
+  # it started from.
+  remaining=$(leaked_processes)
+  installer_item "reaped $(($(line_count "$leaked") - $(line_count "$remaining"))) process(es) left inside an agent worktree"
+  [ -z "$remaining" ] \
+    || installer_warn "$(line_count "$remaining") process(es) are still inside an agent worktree"
 }
 
-report_workspaces() {
+runtime_condition_events() {
+  prunable=$(runtime_store_prunable_event_count)
+  installer_note "prunable replication events (finished sessions, or idle for $RETENTION_DAYS days): $prunable"
+  [ "$1" = repair ] || return 0
+
+  if [ "$prunable" -eq 0 ]; then
+    installer_note 'no prunable replication events'
+    return 0
+  fi
+
+  before=$(file_bytes "$(runtime_store_path)")
+  runtime_store_prune_events
+  after=$(file_bytes "$(runtime_store_path)")
+
+  installer_item "pruned replication events of finished sessions and of sessions idle for $RETENTION_DAYS days"
+  installer_item "database $(human_bytes "$before") to $(human_bytes "$after")"
+}
+
+runtime_condition_workspaces() {
+  unreadable=$(runtime_store_unreadable_workspaces)
+  [ "$unreadable" -eq 0 ] \
+    || installer_warn "$unreadable workspace row(s) name a directory containing a newline and are not inspected"
+
   stale=$(stale_workspaces)
   if [ -z "$stale" ]; then
     installer_note 'no workspace rows describe a missing directory'
@@ -396,19 +366,39 @@ report_workspaces() {
     [ -n "$workspace_id" ] || continue
     installer_note "workspace $workspace_id ($workspace_type) lost $workspace_directory"
   done
+  [ "$1" = repair ] || return 0
+
+  removed=0
+  while IFS="$(printf '\t')" read -r workspace_id workspace_type workspace_directory; do
+    [ -n "$workspace_id" ] || continue
+    if runtime_store_delete_workspace "$workspace_id"; then
+      removed=$((removed + 1))
+    fi
+  done <<EOF
+$stale
+EOF
+
+  [ "$removed" -eq 0 ] || installer_item "removed $removed workspace row(s) describing a missing directory"
 }
 
-report_sessions() {
-  dangling=$(dangling_session_count)
+runtime_condition_sessions() {
+  dangling=$(runtime_store_dangling_session_count)
   if [ "$dangling" -eq 0 ]; then
     installer_note 'no sessions point at a workspace that is gone'
     return 0
   fi
 
   installer_note "sessions that cannot be deleted or archived, their workspace row gone: $dangling"
+  [ "$1" = repair ] || return 0
+
+  runtime_store_release_dangling_sessions
+  installer_item "released $dangling session(s) whose workspace row was gone"
 }
 
-report_snapshots() {
+# A snapshot whose directory is gone can never be restored into, so it goes
+# whole rather than by retention. The hash directory above it is removed only
+# when the last snapshot under it leaves.
+runtime_condition_snapshots() {
   snapshots=$(stale_snapshots)
   if [ -z "$snapshots" ]; then
     installer_note 'no session snapshots describe a missing directory'
@@ -420,9 +410,36 @@ report_snapshots() {
     [ -n "$snapshot_dir" ] || continue
     installer_note "snapshot lost $snapshot_worktree"
   done
+  [ "$1" = repair ] || return 0
+
+  removed=0
+  removed_bytes=0
+  while IFS="$(printf '\t')" read -r snapshot_dir snapshot_worktree; do
+    [ -n "$snapshot_dir" ] || continue
+    case $snapshot_dir in
+      "$SNAPSHOT_ROOT"/*) ;;
+      *)
+        installer_warn "skipping a snapshot path outside the snapshot root: $snapshot_dir"
+        continue
+        ;;
+    esac
+    [ ! -L "$snapshot_dir" ] || continue
+    removed_bytes=$((removed_bytes + $(directory_bytes "$snapshot_dir")))
+    rm -rf -- "$snapshot_dir"
+    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || true
+    removed=$((removed + 1))
+  done <<EOF
+$snapshots
+EOF
+
+  [ "$removed" -eq 0 ] \
+    || installer_item "removed $removed session snapshot(s) describing a missing directory, $(human_bytes "$removed_bytes")"
 }
 
-report_artifacts() {
+# Retiring a directory takes its evidence with it, which is the whole point of
+# requiring --fix. The path guard is against a malformed list rather than a
+# depth proof: everything here came from a search rooted in the data directory.
+runtime_condition_artifacts() {
   artifacts=$(artifact_directories)
   if [ -z "$artifacts" ]; then
     installer_note 'no delegation artifact directories'
@@ -454,143 +471,10 @@ EOF
     [ -n "$artifact_dir" ] || continue
     installer_note "artifacts $artifact_size at $artifact_dir"
   done
-}
-
-report_configs() {
-  shadowing=$(shadowing_configs)
-  if [ -z "$shadowing" ]; then
-    installer_note 'no untracked configuration shadows a managed entry'
-    return 0
-  fi
-
-  printf '%s\n' "$shadowing" | while IFS= read -r shadow_path; do
-    [ -n "$shadow_path" ] || continue
-    installer_warn "untracked configuration OpenCode also reads: $shadow_path"
-    installer_hint 'Track what it declares in opencode/opencode.jsonc, then remove it.'
-  done
-}
-
-require_stopped_opencode() {
-  holders=$(database_holders)
-  [ -n "$holders" ] || return 0
-
-  installer_error 'OpenCode is running and holds the database'
-  installer_hint "Quit OpenChamber and any opencode session, then rerun. Holding pids: $(printf '%s' "$holders" | tr '\n' ' ')"
-  exit 1
-}
-
-repair_processes() {
-  leaked=$(leaked_processes)
-  [ -n "$leaked" ] || return 0
-
-  printf '%s\n' "$leaked" | while IFS= read -r pid; do
-    [ -n "$pid" ] || continue
-    kill -TERM "$pid" 2>/dev/null || true
-  done
-
-  waited=0
-  while [ "$waited" -lt 5 ]; do
-    [ -n "$(leaked_processes)" ] || break
-    sleep 1
-    waited=$((waited + 1))
-  done
-
-  leaked_processes | while IFS= read -r pid; do
-    [ -n "$pid" ] || continue
-    kill -KILL "$pid" 2>/dev/null || true
-  done
-
-  installer_item "reaped $(line_count "$leaked") process(es) left inside an agent worktree"
-}
-
-repair_events() {
-  prunable=$(prunable_event_count)
-  if [ "$prunable" -eq 0 ]; then
-    installer_note 'no prunable replication events'
-    return 0
-  fi
-
-  before=$(file_bytes "$DATABASE")
-  sqlite3 "$DATABASE" "DELETE FROM event WHERE aggregate_id IN ($PRUNABLE_AGGREGATES);"
-  sqlite3 "$DATABASE" 'VACUUM;'
-  after=$(file_bytes "$DATABASE")
-
-  installer_item "pruned replication events of finished sessions and of sessions idle for $RETENTION_DAYS days"
-  installer_item "database $(human_bytes "$before") to $(human_bytes "$after")"
-}
-
-repair_workspaces() {
-  stale=$(stale_workspaces)
-  [ -n "$stale" ] || return 0
-
-  removed=0
-  while IFS="$(printf '\t')" read -r workspace_id workspace_type workspace_directory; do
-    [ -n "$workspace_id" ] || continue
-    case $workspace_id in
-      *[!A-Za-z0-9_-]*)
-        installer_warn "skipping workspace row with an unexpected id: $workspace_id"
-        continue
-        ;;
-    esac
-    sqlite3 "$DATABASE" "DELETE FROM workspace WHERE id = '$workspace_id';"
-    removed=$((removed + 1))
-  done <<EOF
-$stale
-EOF
-
-  [ "$removed" -eq 0 ] || installer_item "removed $removed workspace row(s) describing a missing directory"
-}
-
-repair_sessions() {
-  dangling=$(dangling_session_count)
-  if [ "$dangling" -eq 0 ]; then
-    return 0
-  fi
-
-  sqlite3 "$DATABASE" "UPDATE session SET workspace_id = NULL WHERE $DANGLING_SESSIONS;"
-  installer_item "released $dangling session(s) whose workspace row was gone"
-}
-
-# A snapshot whose directory is gone can never be restored into, so it goes
-# whole rather than by retention. The hash directory above it is removed only
-# when the last snapshot under it leaves.
-repair_snapshots() {
-  snapshots=$(stale_snapshots)
-  [ -n "$snapshots" ] || return 0
-
-  removed=0
-  removed_bytes=0
-  while IFS="$(printf '\t')" read -r snapshot_dir snapshot_worktree; do
-    [ -n "$snapshot_dir" ] || continue
-    case $snapshot_dir in
-      "$SNAPSHOT_ROOT"/*) ;;
-      *)
-        installer_warn "skipping a snapshot path outside the snapshot root: $snapshot_dir"
-        continue
-        ;;
-    esac
-    [ ! -L "$snapshot_dir" ] || continue
-    removed_bytes=$((removed_bytes + $(directory_bytes "$snapshot_dir")))
-    rm -rf -- "$snapshot_dir"
-    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || true
-    removed=$((removed + 1))
-  done <<EOF
-$snapshots
-EOF
-
-  [ "$removed" -eq 0 ] \
-    || installer_item "removed $removed session snapshot(s) describing a missing directory, $(human_bytes "$removed_bytes")"
-}
-
-# Retiring a directory takes its evidence with it, which is the whole point of
-# requiring --fix. The path guard is against a malformed list rather than a
-# depth proof: everything here came from a search rooted in the data directory.
-repair_artifacts() {
-  artifacts=$(artifact_directories)
-  [ -n "$artifacts" ] || return 0
+  [ "$1" = repair ] || return 0
 
   retired=0
-  retired_total=0
+  retired_bytes=0
   while IFS= read -r artifact_dir; do
     [ -n "$artifact_dir" ] || continue
     artifact_is_retired "$artifact_dir" || continue
@@ -605,16 +489,34 @@ repair_artifacts() {
     artifact_bytes=$(directory_bytes "$artifact_dir")
     rm -rf -- "$artifact_dir"
     retired=$((retired + 1))
-    retired_total=$((retired_total + artifact_bytes))
+    retired_bytes=$((retired_bytes + artifact_bytes))
   done <<EOF
 $artifacts
 EOF
 
   [ "$retired" -eq 0 ] \
-    || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_total")"
+    || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_bytes")"
 }
 
-repair_log() {
+runtime_condition_configs() {
+  shadowing=$(shadowing_configs)
+  if [ -z "$shadowing" ]; then
+    installer_note 'no untracked configuration shadows a managed entry'
+    return 0
+  fi
+
+  printf '%s\n' "$shadowing" | while IFS= read -r shadow_path; do
+    [ -n "$shadow_path" ] || continue
+    installer_warn "untracked configuration OpenCode also reads: $shadow_path"
+    installer_hint 'Track what it declares in opencode/opencode.jsonc, then remove it.'
+  done
+}
+
+runtime_condition_log() {
+  log_bytes=$(file_bytes "$LOG_FILE")
+  installer_note "log $(human_bytes "$log_bytes") at $LOG_FILE"
+  [ "$1" = repair ] || return 0
+
   if [ "$CLEAR_LOGS" -eq 1 ]; then
     cleared=0
     cleared_bytes=0
@@ -628,49 +530,66 @@ repair_log() {
     return 0
   fi
 
-  log_bytes=$(file_bytes "$LOG_FILE")
   [ "$log_bytes" -gt "$LOG_ROTATE_BYTES" ] || return 0
 
   mv -f -- "$LOG_FILE" "$LOG_FILE.1"
   installer_item "rotated $(human_bytes "$log_bytes") of log to $LOG_FILE.1"
 }
 
-if [ ! -f "$DATABASE" ]; then
-  installer_error "no OpenCode database at $DATABASE"
-  installer_hint 'Run OpenCode once, or pass --data-dir for a different data directory.'
+require_stopped_opencode() {
+  holders=$(runtime_store_holders)
+  [ -n "$holders" ] || return 0
+
+  installer_error 'OpenCode is running and holds the database'
+  installer_hint "Quit OpenChamber and any opencode session, then rerun. Holding pids: $(printf '%s' "$holders" | tr '\n' ' ')"
   exit 1
-fi
+}
+
+# The catalog's declaration decides both what runs and whether it may act, so a
+# row naming a condition nobody implemented stops the run instead of being
+# quietly skipped.
+run_condition() {
+  condition_name=$1
+  condition_action=$3
+
+  command -v "runtime_condition_$condition_name" >/dev/null 2>&1 || {
+    installer_error "the runtime conditions catalog names an unknown condition: $condition_name"
+    exit 1
+  }
+
+  if [ "$FIX" -eq 1 ] && [ "$condition_action" = repair ]; then
+    "runtime_condition_$condition_name" repair
+  else
+    "runtime_condition_$condition_name" report
+  fi
+  return 0
+}
+
+runtime_store_open "$DATA_DIR" "$RETENTION_DAYS"
 
 MANAGED_ENTRY_NAMES=''
 catalog_each_row "$MANAGED_ENTRIES" collect_managed_entry
 
-installer_banner 'inspecting OpenCode runtime state'
-report_database
-report_log
-report_processes
-report_workspaces
-report_sessions
-report_snapshots
-report_artifacts
-report_configs
+# Everything that can refuse the run does so before any condition is detected,
+# so a refused --fix never prints half a picture of state it then leaves alone.
+if [ "$FIX" -eq 1 ]; then
+  require_stopped_opencode
+  if [ "$CLEAR_LOGS" -eq 1 ] && [ -L "$DATA_DIR/log" ]; then
+    installer_error "refusing to clear a symlinked log directory: $DATA_DIR/log"
+    exit 1
+  fi
+  runtime_store_permit_writes
+  installer_banner 'inspecting and repairing OpenCode runtime state'
+else
+  installer_banner 'inspecting OpenCode runtime state'
+fi
+
+installer_note "database $(human_bytes "$(file_bytes "$(runtime_store_path)")") at $(runtime_store_path)"
+catalog_each_row "$RUNTIME_CONDITIONS" run_condition
 
 if [ "$FIX" -eq 0 ]; then
   installer_success 'OpenCode state reported; rerun with --fix to repair'
   exit 0
 fi
 
-require_stopped_opencode
-if [ "$CLEAR_LOGS" -eq 1 ] && [ -L "$DATA_DIR/log" ]; then
-  installer_error "refusing to clear a symlinked log directory: $DATA_DIR/log"
-  exit 1
-fi
-
-installer_banner 'repairing OpenCode runtime state'
-repair_processes
-repair_events
-repair_workspaces
-repair_sessions
-repair_snapshots
-repair_artifacts
-repair_log
 installer_success 'OpenCode state repaired'

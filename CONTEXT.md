@@ -78,6 +78,15 @@ A path a tool recreates on every run, which this repository replaces without
 preserving. Disposable by definition, so it is never backed up.
 _Avoid_: temporary file, scratch path
 
+**Runtime condition**:
+A named state inside a tool's runtime directory that this repository is willing
+to report, and sometimes to repair. Declared once, in run order, so the set
+cannot differ between what runs, what is documented, and what a command's own
+help claims. Complements a runtime path rather than contradicting it: the path
+is the tool's alone, and the condition is the whole of what this repository
+says about what accumulates there.
+_Avoid_: check, issue, problem, health check
+
 **Runtime path**:
 A path a tool owns entirely, which this repository never links, backs up, or
 removes. Distinct from a generated target: both are written by the tool, but

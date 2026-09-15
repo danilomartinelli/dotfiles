@@ -1,0 +1,17 @@
+# Runtime conditions consumed by _doctor.sh and by the README render in
+# _scripts/render-opencode-profiles.
+# Columns: name, label, action, description (action ∈ repair|report)
+# Row order is run order: processes are reaped before anything else reads the
+# files they hold, and the log is rotated last.
+# Each row binds to a runtime_condition_<name> function in _doctor.sh; a row
+# whose action is "report" names state a person must decide about, so the
+# doctor describes it and never acts on it.
+
+processes	Worktree processes	repair	A command an agent started outlives the session that started it
+events	The `event` table	repair	An append-only replication log for remote workspaces, with no retention
+workspaces	Stale `workspace` rows	repair	A row outlives its directory, and a retired adapter fails every server start
+sessions	Stranded sessions	repair	A session names a `workspace` row that is gone, so it can be neither deleted nor archived
+snapshots	Stale session snapshots	repair	A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes
+artifacts	Idle delegation artifacts	repair	A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output
+configs	An untracked global config	report	OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`
+log	Log files	repair	CLI and plugin output, and the rotations it leaves behind

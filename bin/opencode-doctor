@@ -1,9 +1,10 @@
 #!/bin/sh
 #
-# Report and repair the OpenCode runtime state nothing else prunes: the
-# replication event log, processes left inside an agent worktree, workspace
-# rows describing a directory that is gone, and an untracked configuration
-# file shadowing a managed one.
+# Report and repair the OpenCode runtime state nothing else prunes.
+#
+# opencode/_doctor.sh owns the behavior and opencode/_runtime-conditions.tsv
+# declares what it inspects; opencode/README.md renders that catalog. Listing
+# the conditions here as well is what let this file fall four behind them.
 #
 # Examples
 #
