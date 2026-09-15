@@ -1,6 +1,7 @@
 import type { PluginInput } from "@opencode-ai/plugin";
 import path from "node:path";
 import {
+  canonical,
   openDelegations,
   type Delegation,
   type Delegations,
@@ -71,11 +72,12 @@ export class SessionJournals {
     const manager = await this.project(root.projectID);
     if (session.parentID) {
       const child = manager.forChild(sessionID);
-      if (
-        !child ||
-        child.root !== root.id ||
-        path.resolve(child.directory) !== path.resolve(session.directory)
-      )
+      // A delegation records its directory canonically, so the native session's
+      // spelling has to be canonicalised to be comparable. Resolving only the
+      // relative segments would report a child reached through a symlink as a
+      // delegation defect.
+      const directory = await canonical(session.directory);
+      if (!child || child.root !== root.id || child.directory !== directory)
         throw new Error(
           "Child session has no matching root delegation; enter child roles through delegate.",
         );

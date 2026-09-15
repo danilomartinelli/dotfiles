@@ -222,6 +222,46 @@ test("cross-project hooks recover the root journal, retain reservations on cance
   expect(f.created).toHaveLength(1);
 });
 
+test("a child whose directory is reached through a symlink keeps its root journal", async () => {
+  const f = await fixture();
+  // The fixture resolves its own root deliberately: what is under test is the
+  // spelling the native session reports, not the spelling the journal stored.
+  const root = await realpath(f.directory);
+  const real = path.join(root, "real-project");
+  const linked = path.join(root, "linked-project");
+  await mkdir(real);
+  await symlink(real, linked);
+  const sessions: Record<string, any> = {
+    root: { id: "root", projectID: "root-project", directory: root },
+    "child-1": {
+      id: "child-1",
+      parentID: "root",
+      projectID: "root-project",
+      directory: linked,
+    },
+  };
+  f.client.session.get = async ({ path: { id } }: any) => ({
+    data: sessions[id],
+  });
+  function instance() {
+    const journals = new SessionJournals(
+      path.join(root, "journals"),
+      f.client as any,
+      routes,
+    );
+    cleanup.push(() => journals.close());
+    return journals;
+  }
+  const manager = await instance().forSession("root");
+  const row = await manager.start(
+    "root",
+    f.request({ directory: linked, ownership: ["src"] }),
+  );
+  expect(row.directory).toBe(real);
+  const childManager = await instance().forSession(row.child!);
+  expect(childManager.forChild(row.child!)?.directory).toBe(real);
+});
+
 test("support roles retain bounded delegation and their read or write capability", async () => {
   const f = await fixture();
   for (const role of ["explore", "researcher"]) {
