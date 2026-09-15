@@ -10,8 +10,10 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
+  assertWriteTargets,
   childRoles,
   sourceVersion,
+  writeTools,
   writerRoles,
   type Routes,
 } from "./delegations";
@@ -20,7 +22,6 @@ import { assertBoundedRedirect } from "./redirect-bounds";
 import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
-import { assertWriteTargets, writeTools } from "./write-targets";
 import { CodeGraphProjects } from "./codegraph";
 
 export async function regularHooks(ctx: PluginInput, declared: Config) {

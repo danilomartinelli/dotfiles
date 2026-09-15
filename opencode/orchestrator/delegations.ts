@@ -6,6 +6,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { PluginInput } from "@opencode-ai/plugin";
 import { artifactPath, prepareArtifacts, workspacePath } from "./artifacts";
+import { patchTargets } from "./patch-targets";
 import { safeGitArgv, safeGitEnv } from "./safe-git";
 
 const exec = promisify(execFile);
@@ -96,6 +97,59 @@ export async function canonical(filename: string, links = 0): Promise<string> {
     if (parent === filename) throw error;
     return path.join(await canonical(parent, links), path.basename(filename));
   }
+}
+
+export const writeTools = new Set(["edit", "write", "apply_patch"]);
+
+/**
+ * Refuse a write outside what this delegation owns.
+ *
+ * It lives here rather than in a module of its own because the strings it
+ * matches are produced fifty lines below, by the same normalization: a module
+ * holding only the matcher had to import `canonical` and `directoryOwnership`
+ * back out of this file, and neither end could be read without the other.
+ */
+export async function assertWriteTargets(
+  tool: string,
+  args: Record<string, unknown>,
+  child: { directory: string; ownership: string[] },
+) {
+  const targets =
+    tool === "apply_patch" ? patchTargets(args.patchText) : [args.filePath];
+  for (const filename of targets) {
+    if (typeof filename !== "string" || !filename)
+      throw new Error("Cannot resolve write target.");
+    const target = await canonical(path.resolve(child.directory, filename));
+    if (
+      !child.ownership.some(
+        (owner) =>
+          target === directoryOwnership(owner) ||
+          target.startsWith(`${directoryOwnership(owner)}${path.sep}`),
+      )
+    )
+      // Naming what this delegation may write keeps the refusal self-evident.
+      // Without it a leaf has only its own prompt to go on, and has reported a
+      // sibling delegation's authorization as a contradiction in the runtime.
+      throw new Error(
+        `Write target is outside delegated file ownership: ${target}. This delegation may write: ${child.ownership.join(", ") || "nothing"}. Return the needed path to the root for a scoped resume; changing tool or path spelling does not extend ownership.`,
+      );
+  }
+}
+
+/**
+ * The ownership entries that can evidence a conflict between two delegations.
+ *
+ * Every coder in a worktree owns the same shared build workspace, so an
+ * overlap there is expected rather than contested. Both sides of the conflict
+ * check used to spell that exclusion inline, against two differently named
+ * fields, with the reservation of the workspace name recorded only as a
+ * comment in artifacts.ts.
+ */
+export function contestedOwnership(
+  ownership: string[],
+  workspace: string | undefined,
+): string[] {
+  return ownership.filter((file) => file !== workspace);
 }
 
 export function overlaps(a: string, b: string): boolean {
@@ -480,8 +534,8 @@ export class Delegations {
           // Every coder in a worktree owns the same workspace, so it can never
           // be evidence of a conflict. Whether two writers may share a build
           // cache is the root's judgement; overlapping source stays refused.
-          const contested = ownership.filter((file) => file !== shared);
-          const held = item.ownership.filter((file) => file !== item.workspace);
+          const contested = contestedOwnership(ownership, shared);
+          const held = contestedOwnership(item.ownership, item.workspace);
           if (
             writer &&
             held.length > 0 &&

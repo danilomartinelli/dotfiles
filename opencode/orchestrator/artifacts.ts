@@ -18,15 +18,29 @@ async function git(directory: string, ...args: string[]) {
   });
 }
 
-/** One disposable build workspace per worktree, beside the per-delegation
- *  evidence directories. A delegation id is a UUID, so the name cannot clash. */
+/**
+ * One disposable build workspace per worktree, beside the per-delegation
+ * evidence directories. The name is reserved: a delegation id is a UUID, so it
+ * cannot collide, and artifactPath refuses it rather than leaving that an
+ * observation in a comment. Sharing the two would hand one delegation's
+ * preserved evidence to every coder's build cache, which the doctor then
+ * retires on the workspace's schedule.
+ */
 const workspace = "workspace";
 
 export async function workspacePath(directory: string) {
-  return artifactPath(directory, workspace);
+  return artifactRoot(directory, workspace);
 }
 
 export async function artifactPath(directory: string, id: string) {
+  if (id === workspace)
+    throw new Error(
+      "The workspace id is reserved for the worktree's shared build workspace.",
+    );
+  return artifactRoot(directory, id);
+}
+
+async function artifactRoot(directory: string, id: string) {
   try {
     const result = await git(directory, "rev-parse", "--is-inside-work-tree");
     if (result.stdout.trim() !== "true") return undefined;

@@ -10,12 +10,12 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import {
+  assertWriteTargets,
   Delegations,
   sourceVersion,
   type Request,
 } from "../opencode/orchestrator/delegations";
 import { SessionJournals } from "../opencode/orchestrator/session-journals";
-import { assertWriteTargets } from "../opencode/orchestrator/write-targets";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {

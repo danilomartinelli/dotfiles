@@ -2,8 +2,11 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { canonical } from "../opencode/orchestrator/delegations";
-import { assertWriteTargets } from "../opencode/orchestrator/write-targets";
+import {
+  assertWriteTargets,
+  canonical,
+} from "../opencode/orchestrator/delegations";
+import { artifactPath } from "../opencode/orchestrator/artifacts";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -110,5 +113,14 @@ test("missing targets and shell-wrapped patches fail before native execution", a
   }
   await expect(assertWriteTargets("write", {}, child)).rejects.toThrow(
     "Cannot resolve",
+  );
+});
+
+// Sharing the two directories would hand one delegation's preserved evidence to
+// every coder's build cache, and the reservation that prevents it used to be an
+// observation in a comment.
+test("the shared build workspace id is reserved from delegation artifacts", async () => {
+  await expect(artifactPath(tmpdir(), "workspace")).rejects.toThrow(
+    "reserved for the worktree's shared build workspace",
   );
 });
