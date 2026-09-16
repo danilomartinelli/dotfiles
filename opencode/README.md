@@ -262,11 +262,36 @@ Confirm through `argent run list-devices` that nothing holds the AVD first.
 Userdata and the AVD survive; only the hot-boot path is given up, and every
 subsequent boot is a cold boot that registers normally.
 
+Deleting it once is not the end of it, because the failure feeds itself. Argent
+tears a failed boot down with `emu kill`, and a cold boot carries no
+`-no-snapshot-save`, so the emulator obeys that shutdown by writing a
+`default_boot` from whatever half-started guest it had. The next boot restores
+that, cannot use it, and is torn down in turn. The snapshot on disk carries no
+reliable sign of which kind it is — a half-started guest and a plain lock screen
+both save a small `screenshot.png` — so the failing boot is the signal, and
+deleting the snapshot is the response to it rather than to anything visible
+beforehand.
+
 An emulator that boots through Argent arrives asleep: `dumpsys power` reports
 `mWakefulness=Asleep`, and the first-frame probe passes on the all-black screen
 that produces. Screenshots are black and the UI tree is a bare `ROOT Screen`
 until the device is woken, which reads as a broken emulator and is not one.
 Wake it before describing or tapping anything.
+
+### A locked device makes `describe` slow, not broken
+
+`describe` prefers Argent's own `android-devtools` helper and falls back to
+`uiautomator`. The helper is an app, and an Android device that has a PIN and
+has not been unlocked since boot refuses to start one that is not Direct Boot
+aware. `logcat` carries a `SecurityException` from `startInstrumentation`
+saying `com.argent.androiddevtools` is not encryption aware. Argent does not
+read that as fatal, so every call waits out the helper's readiness budget
+before falling back, and the fallback sometimes loses the race and reports
+`Failed to parse uiautomator dump output`. Measured on one AVD locked and
+another unlocked: thirty-one seconds through `uiautomator` against one and two
+tenths through `android-devtools`. Unlocking past the keyguard is the fix, and
+until then the thirty seconds belong to the keyguard rather than to the tool or
+the app.
 
 Coder preserves explicit permissions for configured MCP namespaces; a server
 alone does not grant access. These permissions do not override native tool
