@@ -9,14 +9,14 @@ profiles and maintains the worktree and notification components.
 The installer links only the entries declared in `opencode/_managed-entries.tsv`
 into `~/.config/opencode`. It never replaces the whole configuration directory.
 
-| Owner    | Paths in `~/.config/opencode`                                                   | Purpose                                                   |
-| -------- | ------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Dotfiles | `orchestrator/`                                                                 | Workflow, prompts, permissions and pinned memory adapter  |
-| Dotfiles | `profiles/regular/`, `profiles/example/`, `profiles/anthropic/`, `profiles/go/` | Rendered instructions and model routing                   |
-| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`                             | Registry, common plugins/MCPs and memory storage settings |
-| Dotfiles | `tui.jsonc`                                                                     | Theme, interaction and notification defaults              |
-| OCX      | `.ocx/`, `plugins/`, `package.json`, `.gitignore`                               | Component receipts, generated code and dependencies       |
-| OCX      | `profiles/default/`                                                             | Internal initial profile; never selected by the shell     |
+| Owner    | Paths in `~/.config/opencode`                                                                     | Purpose                                                   |
+| -------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Dotfiles | `orchestrator/`                                                                                   | Workflow, prompts, permissions and pinned memory adapter  |
+| Dotfiles | `profiles/regular/`, `profiles/example/`, `profiles/anthropic/`, `profiles/go/`, `profiles/xing/` | Rendered instructions and model routing                   |
+| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`                                               | Registry, common plugins/MCPs and memory storage settings |
+| Dotfiles | `tui.jsonc`                                                                                       | Theme, interaction and notification defaults              |
+| OCX      | `.ocx/`, `plugins/`, `package.json`, `.gitignore`                                                 | Component receipts, generated code and dependencies       |
+| OCX      | `profiles/default/`                                                                               | Internal initial profile; never selected by the shell     |
 
 Registry payloads are no longer versioned. Do not copy runtime files or receipts
 into this repository. Keep retained components byte-intact and validate them with
@@ -34,8 +34,9 @@ frozen Bun dependencies without lifecycle scripts, initializes OCX, registers
 installed with their shared `kdco-primitives` dependency.
 
 The installer links the managed entries and refreshes `regular`, `example`,
-`anthropic` and `go`. Custom profiles and payloads remain untouched. Re-running
-the installer is supported and leaves session and memory data alone.
+`anthropic`, `go` and `xing`. Custom profiles and payloads remain untouched.
+Re-running the installer is supported and leaves session and memory data
+alone.
 
 The installer refuses activation when workspace/background orchestration hooks
 are present. Resolve those components through OCX before installing; the
@@ -61,6 +62,7 @@ Open a new Zsh session or run `reload!` after shell changes.
 | `oc:example`   | Select `example` explicitly           |
 | `oc:anthropic` | Select `anthropic` explicitly         |
 | `oc:go`        | Select `go` explicitly                |
+| `oc:xing`      | Select `xing` explicitly              |
 
 `opencode/env.zsh` declares the default `OCX_PROFILE=regular`. Zed's ACP also
 selects `regular`. OpenChamber uses `bin/opencode-profile`, which launches
@@ -77,17 +79,17 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 <!-- generated: profile-routing -->
 
-| Role       | `regular`                      | `example`                      | `anthropic`                          | `go`                                 |
-| ---------- | ------------------------------ | ------------------------------ | ------------------------------------ | ------------------------------------ |
-| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           | `anthropic/claude-opus-5`            | `opencode-go/kimi-k3`                |
-| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          | `anthropic/claude-sonnet-5`          | `opencode-go/glm-5.3-flash`          |
-| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-opus-5` (`xhigh`)  | `opencode-go/kimi-k3` (`max`)        |
-| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-opus-5` (`xhigh`)  | `opencode-go/kimi-k3` (`max`)        |
-| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-sonnet-5` (`high`) | `opencode-go/glm-5.3` (`high`)       |
-| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-sonnet-5` (`high`) | `opencode-go/glm-5.3-flash` (`high`) |
-| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-sonnet-5` (`high`) | `opencode-go/glm-5.3-flash` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-sonnet-5` (`high`) | `opencode-go/glm-5.3` (`high`)       |
-| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-sonnet-5` (`high`) | `opencode-go/glm-5.3` (`high`)       |
+| Role       | `regular`                      | `example`                      | `anthropic`                            | `go`                                 | `xing`                                   |
+| ---------- | ------------------------------ | ------------------------------ | -------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           | `anthropic/claude-fable-5-1`           | `opencode-go/kimi-k3`                | `kimi-for-coding/k3`                     |
+| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          | `anthropic/claude-opus-5`              | `opencode-go/glm-5.3-flash`          | `zai-coding-plan/glm-5.3-flash`          |
+| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-for-coding/k3` (`max`)             |
+| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-for-coding/k3` (`max`)             |
+| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
+| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
+| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
+| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
+| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
 
 <!-- generated-end -->
 
@@ -103,14 +105,24 @@ work. Coder implements and verifies, reviewer checks a supplied focus, scribe
 writes documentation, explore investigates code and researcher retrieves
 external facts. Supporting roles are used when useful, not as mandatory stages.
 
-A profile reaches one provider, and that is the whole of what separates the
-four: the shared policy, the agents and their roles are identical. `anthropic`
-mirrors the two tiers of `regular`, with Claude Opus 5 over plan and build and
-Claude Sonnet 5 everywhere else; it resolves only while the Anthropic auth
-plugin below loads. `go` spends the opencode-go plan where a role judges and
-saves it where a role mostly reads: Kimi K3 orchestrates, GLM 5.3 writes and
-reviews, GLM 5.3 Flash explores and researches. Kimi K3 publishes `max` alone,
-which is why plan and build do not say `xhigh` there.
+A profile exists for the providers it reaches, and that is the whole of what
+separates the five: the shared policy, the agents and their roles are
+identical. `anthropic` mirrors the two tiers of `regular`, with Claude Fable
+5.1 over plan and build and Claude Opus 5 everywhere else; it resolves only
+while the Anthropic auth plugin below loads. `claude-fable-5-1` is the current
+Fable: `claude-fable-5` is a separate, older model at the same price rather
+than an alias for it. `go` spends the opencode-go plan where a
+role judges and saves it where a role mostly reads: Kimi K3 orchestrates, GLM
+5.3 writes and reviews, GLM 5.3 Flash explores and researches. Kimi K3
+publishes `max` alone, which is why plan and build do not say `xhigh` there.
+
+`xing` is that same split bought direct, and the one profile created for two
+providers: Kimi K3 from the Kimi For Coding subscription orchestrates, and GLM
+5.3 and GLM 5.3 Flash from the Z.AI Coding Plan do the writing and the reading.
+The two subscriptions are bought separately and neither publishes the other's
+models, so no single provider can serve this routing. See
+[coding-plan providers](#coding-plan-providers) for what the two credentials
+are and which endpoint each reaches.
 
 A root runs at most three children with explicit focuses and non-overlapping
 writer ownership. Corrections resume the same child. Reviews use a source
@@ -135,6 +147,24 @@ the `latest` tag is the OpenCode v1 plugin declared under the `plugin` key, and
 `npm:opencode-ai` in `mise/config.toml`; loading the wrong line fails with
 `must default export an object with server()` and leaves the provider missing
 rather than reporting a credential problem.
+
+### Coding-plan providers
+
+`xing` needs no plugin: OpenCode ships both of its providers and authenticates
+each from the environment, so the two keys belong in `.localrc` beside the
+others. `kimi-for-coding/*` reads `KIMI_API_KEY` and reaches
+`api.kimi.com/coding/v1`; `zai-coding-plan/*` reads `ZHIPU_API_KEY` and reaches
+`api.z.ai/api/coding/paas/v4`. Both are subscription endpoints rather than
+metered ones, which is why `opencode models --verbose` reports zero cost for
+every model in them.
+
+One key name serves four providers, and that is the trap worth knowing before
+editing a `zai*` route. `ZHIPU_API_KEY` also feeds `zhipuai-coding-plan`, whose
+catalog is nearly identical but whose endpoint is `open.bigmodel.cn`, and the
+metered `zai` and `zhipuai` pair. `opencode auth list` shows all four as
+configured because it only observes that the variable is set; a key issued by
+one platform is rejected by the other's endpoint at request time, and the
+routing table is the only place that choice is recorded.
 
 ### Repository and tracker access
 
@@ -486,6 +516,9 @@ To add a profile:
 1. Add routing rows and a `profile` row to `opencode/_managed-entries.tsv`, with
    `regular` as its clone source.
 1. Render the profile and add its `oc:<name>` shortcut to `opencode/aliases.zsh`.
+1. Name the providers it was created for in `tests/opencode_install_test.sh`.
+   No row states that, so nothing else refuses a route borrowed from another
+   profile.
 1. Document the profile here, in `README.md` and in `AGENTS.md`.
 1. Validate its models, run the focused tests, install and verify its link.
 

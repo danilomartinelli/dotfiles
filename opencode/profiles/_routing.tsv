@@ -11,9 +11,14 @@
 # `variant` is the reasoning knob in OpenCode's AgentConfig. Validate each
 # model and variant with `bin/opencode-profile models <provider> --verbose`.
 
-# Each profile reaches one provider. That is the whole of what separates
-# them: the shared policy, the agents and the roles are identical, so a row
-# naming another provider is the one mistake this table can make silently.
+# A profile exists for the providers it reaches. That is the whole of what
+# separates them: the shared policy, the agents and the roles are identical, so
+# a row naming a provider the profile was not created for is the one mistake
+# this table can make silently. Most profiles were created for one provider;
+# `xing` was created for two, because its two subscriptions are bought
+# separately and neither publishes the other's models. The installer fixture
+# names each profile's set rather than counting it, so a borrowed row stays
+# refused in both cases.
 
 regular	default	openai/gpt-6-astra	-	-
 regular	small	openai/gpt-5.6-luna	-	-
@@ -34,18 +39,21 @@ example	researcher	openai/gpt-5.6-luna	high	-
 example	scribe	openai/gpt-5.6-luna	high	-
 example	reviewer	openai/gpt-5.6-luna	high	-
 # The Anthropic line mirrors regular's two tiers: the flagship reasons about
-# the work, one mid model does all of it. anthropic/* resolves only while
-# the auth plugin pinned in opencode/opencode.jsonc loads.
+# the work, one mid model does all of it. Both tiers moved up one: Fable 5.1
+# over plan and build, Opus 5 everywhere else. `claude-fable-5-1` is the
+# current Fable — `claude-fable-5` is a separate, older model at the same
+# price, not an alias for it. anthropic/* resolves only while the auth plugin
+# pinned in opencode/opencode.jsonc loads.
 
-anthropic	default	anthropic/claude-opus-5	-	-
-anthropic	small	anthropic/claude-sonnet-5	-	-
-anthropic	plan	anthropic/claude-opus-5	xhigh	-
-anthropic	build	anthropic/claude-opus-5	xhigh	-
-anthropic	coder	anthropic/claude-sonnet-5	high	-
-anthropic	explore	anthropic/claude-sonnet-5	high	-
-anthropic	researcher	anthropic/claude-sonnet-5	high	-
-anthropic	scribe	anthropic/claude-sonnet-5	high	-
-anthropic	reviewer	anthropic/claude-sonnet-5	high	-
+anthropic	default	anthropic/claude-fable-5-1	-	-
+anthropic	small	anthropic/claude-opus-5	-	-
+anthropic	plan	anthropic/claude-fable-5-1	xhigh	-
+anthropic	build	anthropic/claude-fable-5-1	xhigh	-
+anthropic	coder	anthropic/claude-opus-5	high	-
+anthropic	explore	anthropic/claude-opus-5	high	-
+anthropic	researcher	anthropic/claude-opus-5	high	-
+anthropic	scribe	anthropic/claude-opus-5	high	-
+anthropic	reviewer	anthropic/claude-opus-5	high	-
 # opencode-go publishes a cheap tier that keeps the million-token window, so
 # this profile spends on judgement and not on reading: kimi-k3 orchestrates,
 # glm-5.3 writes and reviews, glm-5.3-flash reads. kimi-k3 publishes `max`
@@ -60,3 +68,20 @@ go	explore	opencode-go/glm-5.3-flash	high	-
 go	researcher	opencode-go/glm-5.3-flash	high	-
 go	scribe	opencode-go/glm-5.3	high	-
 go	reviewer	opencode-go/glm-5.3	high	-
+# `xing` is `go`'s split bought direct: the same two tiers, from the Kimi For
+# Coding and Z.AI Coding Plan subscriptions rather than from opencode-go
+# reselling them. It is the one profile created for two providers, because
+# neither subscription publishes the other's models. Both tiers keep the
+# million-token window, so this profile also spends on judgement and not on
+# reading. kimi-for-coding/k3 publishes `low`, `high` and `max`, so plan and
+# build say `max` here for the same reason they do in `go`.
+
+xing	default	kimi-for-coding/k3	-	-
+xing	small	zai-coding-plan/glm-5.3-flash	-	-
+xing	plan	kimi-for-coding/k3	max	-
+xing	build	kimi-for-coding/k3	max	-
+xing	coder	zai-coding-plan/glm-5.3	high	-
+xing	explore	zai-coding-plan/glm-5.3-flash	high	-
+xing	researcher	zai-coding-plan/glm-5.3-flash	high	-
+xing	scribe	zai-coding-plan/glm-5.3	high	-
+xing	reviewer	zai-coding-plan/glm-5.3	high	-

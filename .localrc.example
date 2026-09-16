@@ -52,6 +52,11 @@
 
 # OpenCode/OCX providers (inherited from the shell environment)
 # export OPENCODE_API_KEY="<CHANGE_ME>"
+# The `xing` profile routes these two coding-plan subscriptions. ZHIPU_API_KEY
+# also names three other providers, so issue it from z.ai: `zai-coding-plan`
+# reaches api.z.ai and rejects a key issued by open.bigmodel.cn.
+# export KIMI_API_KEY="<CHANGE_ME>"
+# export ZHIPU_API_KEY="<CHANGE_ME>"
 #
 # Optional extras used by other agents/tools (Aider, Hermes, skills CLI, …)
 # export ANTHROPIC_API_KEY="<CHANGE_ME>"

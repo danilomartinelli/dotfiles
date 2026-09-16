@@ -472,16 +472,15 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
 }
 
 test_profiles_route_models() {
-  local profile config pair provider
+  local profile config pair providers
 
-  assert_equal $'regular\nexample\nanthropic\ngo' \
+  assert_equal $'regular\nexample\nanthropic\ngo\nxing' \
     "$(opencode_catalog_names profile)" 'managed OpenCode profile roster'
 
   # Which models a profile names is _routing.tsv's to say, and the render check
-  # holds the payloads to it. What no single row can state is the property that
-  # makes a profile one thing rather than a mixture: every route it carries,
-  # including small_model, reaches the same provider. A row borrowed from
-  # another profile renders cleanly and breaks only that.
+  # holds the payloads to it. What no single row can state is the shape every
+  # profile shares: the same agents, each routed with a variant, over native
+  # LSP.
   while IFS= read -r profile; do
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" | jq -e '
@@ -489,24 +488,31 @@ test_profiles_route_models() {
       (.agent | keys) == [
         "build", "coder", "explore", "plan", "researcher", "reviewer", "scribe"
       ] and
-      ([.agent[] | has("model") and has("variant")] | all) and
-      ([.model, .small_model, .agent[].model]
-       | map(split("/")[0]) | unique | length) == 1
+      ([.agent[] | has("model") and has("variant")] | all)
     ' >/dev/null \
       || scenario_fail "$profile profile model routing is incorrect"
   done < <(opencode_catalog_names profile)
 
-  # The provider each one reaches is the profile's reason to exist, so it is
-  # named here rather than inferred from whatever the payload happens to hold.
+  # The providers a profile reaches are its reason to exist, so they are named
+  # here rather than inferred from whatever the payload happens to hold: a row
+  # borrowed from another profile renders cleanly and breaks only this. Every
+  # route is held to the set, small_model included, and the first name is the
+  # provider the default model comes from. Counting the set instead of
+  # declaring it would have been the shorter check, and it would have accepted
+  # `xing` routed entirely to either half of what it was created for.
   for pair in regular:openai example:openai anthropic:anthropic \
-    go:opencode-go; do
+    go:opencode-go xing:kimi-for-coding,zai-coding-plan; do
     profile=${pair%%:*}
-    provider=${pair#*:}
+    providers=${pair#*:}
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" \
-      | jq -e --arg provider "$provider" '.model | startswith($provider + "/")' \
-        >/dev/null \
-      || scenario_fail "$profile profile must route $provider models"
+      | jq -e --arg providers "$providers" '
+          ($providers | split(",")) as $declared
+          | ([.model, .small_model, .agent[].model]
+             | map(split("/")[0]) | unique) == ($declared | sort)
+          and (.model | startswith($declared[0] + "/"))
+        ' >/dev/null \
+      || scenario_fail "$profile profile must route $providers models"
   done
 
   cmp "$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc" \

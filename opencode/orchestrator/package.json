@@ -7,8 +7,8 @@
     "format:check": "prettier --check '*.ts' 'memory/*.ts' package.json"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "1.18.30",
-    "@opencode-ai/sdk": "1.18.30",
+    "@opencode-ai/plugin": "1.18.31",
+    "@opencode-ai/sdk": "1.18.31",
     "opencode-mem": "2.26.0"
   },
   "devDependencies": {

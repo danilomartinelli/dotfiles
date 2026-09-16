@@ -1,35 +1,35 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "anthropic/claude-opus-5",
-  "small_model": "anthropic/claude-sonnet-5",
+  "model": "anthropic/claude-fable-5-1",
+  "small_model": "anthropic/claude-opus-5",
   "lsp": true,
   "agent": {
     "plan": {
-      "model": "anthropic/claude-opus-5",
+      "model": "anthropic/claude-fable-5-1",
       "variant": "xhigh"
     },
     "build": {
-      "model": "anthropic/claude-opus-5",
+      "model": "anthropic/claude-fable-5-1",
       "variant": "xhigh"
     },
     "coder": {
-      "model": "anthropic/claude-sonnet-5",
+      "model": "anthropic/claude-opus-5",
       "variant": "high"
     },
     "explore": {
-      "model": "anthropic/claude-sonnet-5",
+      "model": "anthropic/claude-opus-5",
       "variant": "high"
     },
     "researcher": {
-      "model": "anthropic/claude-sonnet-5",
+      "model": "anthropic/claude-opus-5",
       "variant": "high"
     },
     "scribe": {
-      "model": "anthropic/claude-sonnet-5",
+      "model": "anthropic/claude-opus-5",
       "variant": "high"
     },
     "reviewer": {
-      "model": "anthropic/claude-sonnet-5",
+      "model": "anthropic/claude-opus-5",
       "variant": "high"
     }
   }

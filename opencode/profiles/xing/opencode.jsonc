@@ -1,0 +1,36 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "kimi-for-coding/k3",
+  "small_model": "zai-coding-plan/glm-5.3-flash",
+  "lsp": true,
+  "agent": {
+    "plan": {
+      "model": "kimi-for-coding/k3",
+      "variant": "max"
+    },
+    "build": {
+      "model": "kimi-for-coding/k3",
+      "variant": "max"
+    },
+    "coder": {
+      "model": "zai-coding-plan/glm-5.3",
+      "variant": "high"
+    },
+    "explore": {
+      "model": "zai-coding-plan/glm-5.3-flash",
+      "variant": "high"
+    },
+    "researcher": {
+      "model": "zai-coding-plan/glm-5.3-flash",
+      "variant": "high"
+    },
+    "scribe": {
+      "model": "zai-coding-plan/glm-5.3",
+      "variant": "high"
+    },
+    "reviewer": {
+      "model": "zai-coding-plan/glm-5.3",
+      "variant": "high"
+    }
+  }
+}

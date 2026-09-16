@@ -197,7 +197,7 @@ The root reports the failure without generating another summary.
 ## Dependencies and updates
 
 `package.json` and `bun.lock` pin dependencies, including OpenCode Mem 2.26.0
-and the SDK matching OpenCode 1.18.30. The private memory storage adapter checks
+and the SDK matching OpenCode 1.18.31. The private memory storage adapter checks
 the exact package version before importing its internal modules. Do not update
 the memory version without checking its schema, exports and transaction seam.
 

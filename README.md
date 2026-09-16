@@ -451,7 +451,7 @@ Arguments provided after an alias are passed to the expanded command.
 
 OpenCode is launched through OCX: `opencode` and `oc` use the `regular`
 profile selected by `OCX_PROFILE`; `oc:regular`, `oc:example`,
-`oc:anthropic` and `oc:go` select a profile explicitly.
+`oc:anthropic`, `oc:go` and `oc:xing` select a profile explicitly.
 
 ## How the repository works
 
@@ -542,8 +542,8 @@ account-specific state outside this repository.
 OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
 the `kdco` registry and links the dotfiles-owned `orchestrator/`, `ocx.jsonc`,
 `opencode.jsonc`, `opencode-mem.jsonc`,
-`tui.jsonc`, and the `regular`, `example`, `anthropic` and `go` profile
-directories.
+`tui.jsonc`, and the `regular`, `example`, `anthropic`, `go` and `xing`
+profile directories.
 `opencode/_managed-entries.tsv` is the one catalog behind that list: the
 installer and both test suites read it rather than keeping their own copy, and
 a check keeps this paragraph agreeing with it. The managed TUI
@@ -565,11 +565,14 @@ owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
 declares the models; `_scripts/render-opencode-profiles` composes the
 sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
 payloads the installer links. `regular` uses Astra/xhigh for plan/build and Luna/high for
-coder, reviewer, scribe, explore and researcher. Each profile reaches a single
-provider: `anthropic` routes Claude Opus 5 and Sonnet 5 over the same two tiers,
-and `go` spends the opencode-go plan on judgement rather than reading, with
-Kimi K3 orchestrating, GLM 5.3 writing and reviewing and GLM 5.3 Flash
-exploring and researching.
+coder, reviewer, scribe, explore and researcher. Each profile exists for the
+providers it reaches: `anthropic` routes Claude Fable 5.1 and Opus 5 over the
+same two tiers, and `go` spends the opencode-go plan on judgement rather than
+reading, with Kimi K3 orchestrating, GLM 5.3 writing and reviewing and GLM 5.3
+Flash exploring and researching. `xing` is that same split bought direct and
+the one profile created for two providers, taking Kimi K3 from the Kimi For
+Coding subscription and both GLM tiers from the Z.AI Coding Plan; it reads
+`KIMI_API_KEY` and `ZHIPU_API_KEY` from the environment and needs no plugin.
 The orchestrator assigns each delegation a focus, with bounded parallel work,
 resumable corrections and consolidated memory without auxiliary sessions.
 `example` has the same initial routing and demonstrates another profile.

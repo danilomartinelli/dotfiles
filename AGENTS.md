@@ -159,9 +159,9 @@ expectations from it. No code carries a second copy of the list.
 
 Dotfiles owns `orchestrator/`, `ocx.jsonc`, `opencode.jsonc`,
 `opencode-mem.jsonc`, `tui.jsonc`, and the managed `regular`, `example`,
-`anthropic` and `go` profiles. OCX owns `.ocx/`, `plugins/`, `package.json`,
-`.gitignore`, and `profiles/default/`; never copy or version those runtime
-paths.
+`anthropic`, `go` and `xing` profiles. OCX owns `.ocx/`, `plugins/`,
+`package.json`, `.gitignore`, and `profiles/default/`; never copy or version
+those runtime paths.
 
 OCX remains upstream. `opencode/orchestrator/` is authored here, with pinned
 OpenCode SDK and memory dependencies. It owns prompts, permissions, delegation
