@@ -35,6 +35,16 @@
     }
   },
   "plugin": [
+    // OpenCode ships no Anthropic provider of its own: without this plugin the
+    // stored Anthropic OAuth credential is listed by `opencode auth list` and
+    // the provider still resolves to "Provider not found". Every anthropic/*
+    // route in profiles/_routing.tsv depends on it.
+    //
+    // The two release lines of this package are not cross-compatible and share
+    // one npm name: 1.x on `latest` is the OpenCode v1 plugin, 2.x on `next` is
+    // the OpenCode v2 one, which OpenCode 1.x refuses with "must default export
+    // an object with server()". Move this pin only with npm:opencode-ai.
+    "@ex-machina/opencode-anthropic-auth@1.8.4",
     "@tarquinen/opencode-dcp@3.1.15",
     "@franlol/opencode-md-table-formatter@0.0.6",
     "./orchestrator/index.ts"

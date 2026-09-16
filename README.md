@@ -450,8 +450,8 @@ Arguments provided after an alias are passed to the expanded command.
 | AWS CloudWatch/DynamoDB   | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery`                                                              |
 
 OpenCode is launched through OCX: `opencode` and `oc` use the `regular`
-profile selected by `OCX_PROFILE`; `oc:regular` and `oc:example`
-select a profile explicitly.
+profile selected by `OCX_PROFILE`; `oc:regular`, `oc:example`,
+`oc:anthropic` and `oc:go` select a profile explicitly.
 
 ## How the repository works
 
@@ -542,7 +542,8 @@ account-specific state outside this repository.
 OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
 the `kdco` registry and links the dotfiles-owned `orchestrator/`, `ocx.jsonc`,
 `opencode.jsonc`, `opencode-mem.jsonc`,
-`tui.jsonc`, and the `regular` and `example` profile directories.
+`tui.jsonc`, and the `regular`, `example`, `anthropic` and `go` profile
+directories.
 `opencode/_managed-entries.tsv` is the one catalog behind that list: the
 installer and both test suites read it rather than keeping their own copy, and
 a check keeps this paragraph agreeing with it. The managed TUI
@@ -555,20 +556,27 @@ OCX itself remains upstream; the orchestration plugin is authored here.
 
 The `regular` profile carries the active trusted-project model routing.
 Global `opencode.jsonc` owns common plugins, CodeGraph and research MCPs; each project
-declares additional integrations and explicit permissions.
+declares additional integrations and explicit permissions. OpenCode has no
+Anthropic provider of its own, so that file also pins the Anthropic auth plugin
+on the release line matching the installed OpenCode; see the
+[Anthropic provider notes](opencode/README.md#anthropic-provider).
 OCX cannot layer one profile over another. `opencode/profiles/_shared/`
 owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
 declares the models; `_scripts/render-opencode-profiles` composes the
 sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
-payloads the installer links. `regular` uses Astra/max for plan/build and Luna/high for
-coder, reviewer, scribe, explore and researcher.
+payloads the installer links. `regular` uses Astra/xhigh for plan/build and Luna/high for
+coder, reviewer, scribe, explore and researcher. Each profile reaches a single
+provider: `anthropic` routes Claude Opus 5 and Sonnet 5 over the same two tiers,
+and `go` spends the opencode-go plan on judgement rather than reading, with
+Kimi K3 orchestrating, GLM 5.3 writing and reviewing and GLM 5.3 Flash
+exploring and researching.
 The orchestrator assigns each delegation a focus, with bounded parallel work,
 resumable corrections and consolidated memory without auxiliary sessions.
 `example` has the same initial routing and demonstrates another profile.
 The shell default remains `regular`. Prompts prefer `gh`/`glab` after remote
 and CLI discovery. External home-level skills are not discovered automatically;
 project skills remain available.
-Both profiles enable native LSP queries. CodeGraph initializes missing indices
+Every profile enables native LSP queries. CodeGraph initializes missing indices
 once per Git checkout and keeps `.codegraph/` ignored, without auxiliary LLM
 sessions. See the [code navigation guide](opencode/README.md#code-navigation-lsp-and-codegraph)
 for setup, project opt-out and recovery.

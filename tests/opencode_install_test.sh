@@ -179,12 +179,14 @@ test_shell_uses_regular_ocx_profile_and_shortcuts() {
 
   # shellcheck disable=SC2016 # Expanded by the nested Zsh.
   fixture_run "$fixture" -- /bin/zsh -f -c \
-    'source "$1"; for shortcut in opencode oc oc:regular oc:example; do eval "$shortcut"; done; (( ! $+aliases[oc:go] && ! $+aliases[oc:boost] ))' \
+    'source "$1"; for shortcut in opencode oc oc:regular oc:example oc:anthropic oc:go; do eval "$shortcut"; done; (( ! $+aliases[oc:default] && ! $+aliases[oc:boost] ))' \
     zsh "$REPOSITORY_ROOT/opencode/aliases.zsh"
 
-  assert_count "$fixture/events.log" 'ocx opencode' 4
+  assert_count "$fixture/events.log" 'ocx opencode' 6
   assert_contains "$fixture/events.log" 'ocx opencode -p regular'
   assert_contains "$fixture/events.log" 'ocx opencode -p example'
+  assert_contains "$fixture/events.log" 'ocx opencode -p anthropic'
+  assert_contains "$fixture/events.log" 'ocx opencode -p go'
   assert_not_contains "$fixture/events.log" 'native opencode'
 }
 
@@ -243,7 +245,7 @@ printf 'mcp:%s\n' "$(command -v codegraph)"
 printf 'android:%s\n' "${ANDROID_HOME:-absent}"
 printf 'adb:%s\n' "$(command -v adb)"
 EOF
-  for selected in regular example; do
+  for selected in regular example anthropic go; do
     mkdir -p "$home/.config/opencode/profiles/$selected"
     printf '{}\n' >"$home/.config/opencode/profiles/$selected/opencode.jsonc"
     scenario_capture "$fixture" env HOME="$home" OCX_PROFILE="$selected" \
@@ -470,29 +472,42 @@ test_profile_overrides_are_isolated_and_cannot_override_routes() {
 }
 
 test_profiles_route_models() {
-  local profile config
+  local profile config pair provider
 
-  assert_equal $'regular\nexample' "$(opencode_catalog_names profile)" \
-    'managed OpenCode profile roster'
+  assert_equal $'regular\nexample\nanthropic\ngo' \
+    "$(opencode_catalog_names profile)" 'managed OpenCode profile roster'
 
+  # Which models a profile names is _routing.tsv's to say, and the render check
+  # holds the payloads to it. What no single row can state is the property that
+  # makes a profile one thing rather than a mixture: every route it carries,
+  # including small_model, reaches the same provider. A row borrowed from
+  # another profile renders cleanly and breaks only that.
   while IFS= read -r profile; do
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
     jsonc_to_json "$config" | jq -e '
-      .model == "openai/gpt-6-astra" and
-      .small_model == "openai/gpt-5.6-luna" and
       .lsp == true and
-      .agent == {
-        "plan": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
-        "build": {"model": "openai/gpt-6-astra", "variant": "xhigh"},
-        "coder": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "explore": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "researcher": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "scribe": {"model": "openai/gpt-5.6-luna", "variant": "high"},
-        "reviewer": {"model": "openai/gpt-5.6-luna", "variant": "high"}
-      }
+      (.agent | keys) == [
+        "build", "coder", "explore", "plan", "researcher", "reviewer", "scribe"
+      ] and
+      ([.agent[] | has("model") and has("variant")] | all) and
+      ([.model, .small_model, .agent[].model]
+       | map(split("/")[0]) | unique | length) == 1
     ' >/dev/null \
       || scenario_fail "$profile profile model routing is incorrect"
   done < <(opencode_catalog_names profile)
+
+  # The provider each one reaches is the profile's reason to exist, so it is
+  # named here rather than inferred from whatever the payload happens to hold.
+  for pair in regular:openai example:openai anthropic:anthropic \
+    go:opencode-go; do
+    profile=${pair%%:*}
+    provider=${pair#*:}
+    config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc
+    jsonc_to_json "$config" \
+      | jq -e --arg provider "$provider" '.model | startswith($provider + "/")' \
+        >/dev/null \
+      || scenario_fail "$profile profile must route $provider models"
+  done
 
   cmp "$REPOSITORY_ROOT/opencode/profiles/regular/opencode.jsonc" \
     "$REPOSITORY_ROOT/opencode/profiles/example/opencode.jsonc" \

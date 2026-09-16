@@ -11,6 +11,10 @@
 # `variant` is the reasoning knob in OpenCode's AgentConfig. Validate each
 # model and variant with `bin/opencode-profile models <provider> --verbose`.
 
+# Each profile reaches one provider. That is the whole of what separates
+# them: the shared policy, the agents and the roles are identical, so a row
+# naming another provider is the one mistake this table can make silently.
+
 regular	default	openai/gpt-6-astra	-	-
 regular	small	openai/gpt-5.6-luna	-	-
 regular	plan	openai/gpt-6-astra	xhigh	-
@@ -29,3 +33,30 @@ example	explore	openai/gpt-5.6-luna	high	-
 example	researcher	openai/gpt-5.6-luna	high	-
 example	scribe	openai/gpt-5.6-luna	high	-
 example	reviewer	openai/gpt-5.6-luna	high	-
+# The Anthropic line mirrors regular's two tiers: the flagship reasons about
+# the work, one mid model does all of it. anthropic/* resolves only while
+# the auth plugin pinned in opencode/opencode.jsonc loads.
+
+anthropic	default	anthropic/claude-opus-5	-	-
+anthropic	small	anthropic/claude-sonnet-5	-	-
+anthropic	plan	anthropic/claude-opus-5	xhigh	-
+anthropic	build	anthropic/claude-opus-5	xhigh	-
+anthropic	coder	anthropic/claude-sonnet-5	high	-
+anthropic	explore	anthropic/claude-sonnet-5	high	-
+anthropic	researcher	anthropic/claude-sonnet-5	high	-
+anthropic	scribe	anthropic/claude-sonnet-5	high	-
+anthropic	reviewer	anthropic/claude-sonnet-5	high	-
+# opencode-go publishes a cheap tier that keeps the million-token window, so
+# this profile spends on judgement and not on reading: kimi-k3 orchestrates,
+# glm-5.3 writes and reviews, glm-5.3-flash reads. kimi-k3 publishes `max`
+# alone, which is why plan and build do not say `xhigh` here.
+
+go	default	opencode-go/kimi-k3	-	-
+go	small	opencode-go/glm-5.3-flash	-	-
+go	plan	opencode-go/kimi-k3	max	-
+go	build	opencode-go/kimi-k3	max	-
+go	coder	opencode-go/glm-5.3	high	-
+go	explore	opencode-go/glm-5.3-flash	high	-
+go	researcher	opencode-go/glm-5.3-flash	high	-
+go	scribe	opencode-go/glm-5.3	high	-
+go	reviewer	opencode-go/glm-5.3	high	-
