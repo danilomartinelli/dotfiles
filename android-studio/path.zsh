@@ -1,6 +1,11 @@
-export ANDROID_HOME="$HOME/Library/Android/sdk"
+# `_sdk.sh` owns where the SDK is; this file only puts it on PATH. The
+# OpenChamber adapter asks the same script, so a GUI host and a login shell
+# cannot disagree about which tools exist.
+export ANDROID_HOME="$("$DOTFILES_ROOT/android-studio/_sdk.sh" root)"
 unset ANDROID_SDK_ROOT
 
-export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
-export PATH="$PATH:$ANDROID_HOME/emulator"
-export PATH="$PATH:$ANDROID_HOME/platform-tools"
+_android_path="$("$DOTFILES_ROOT/android-studio/_sdk.sh" path 2>/dev/null)"
+if [[ -n $_android_path ]]; then
+  export PATH="$PATH:$_android_path"
+fi
+unset _android_path

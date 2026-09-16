@@ -193,10 +193,17 @@ test_gui_adapter_preserves_project_loading_and_pins_selected_profile_routes() {
   fixture=$(scenario_tmpdir gui-adapter)
   checkout=$fixture/checkout
   home=$fixture/home
-  mkdir -p "$checkout/bin" "$checkout/_scripts" "$checkout/homebrew" "$checkout/opencode" "$fixture/brew/bin" "$fixture/brew/tools" "$home"
+  mkdir -p "$checkout/bin" "$checkout/_scripts" "$checkout/homebrew" "$checkout/opencode" "$checkout/android-studio" "$fixture/brew/bin" "$fixture/brew/tools" "$home"
   cp "$REPOSITORY_ROOT/bin/opencode-profile" "$checkout/bin/"
   cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$checkout/_scripts/"
   cp "$REPOSITORY_ROOT/opencode/env.zsh" "$checkout/opencode/"
+  cp "$REPOSITORY_ROOT/android-studio/_sdk.sh" "$checkout/android-studio/"
+  # The SDK lives outside Homebrew and Mise, so only the adapter's own lookup
+  # can put adb in front of OpenCode's shell children on a GUI host.
+  scenario_write_executable "$home/Library/Android/sdk/platform-tools/adb" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
   scenario_write_executable "$fixture/resolver" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$FIXTURE_CHECKOUT"
@@ -233,6 +240,8 @@ printf '%s\n' "$OPENCODE_DISABLE_PROJECT_CONFIG|$OPENCODE_DISABLE_EXTERNAL_SKILL
 printf 'args:%s\n' "$*"
 printf 'lsp:%s\n' "$OPENCODE_EXPERIMENTAL_LSP_TOOL"
 printf 'mcp:%s\n' "$(command -v codegraph)"
+printf 'android:%s\n' "${ANDROID_HOME:-absent}"
+printf 'adb:%s\n' "$(command -v adb)"
 EOF
   for selected in regular example; do
     mkdir -p "$home/.config/opencode/profiles/$selected"
@@ -244,6 +253,8 @@ EOF
     assert_contains "$fixture/stdout.log" 'args:--version'
     assert_contains "$fixture/stdout.log" 'lsp:true'
     assert_contains "$fixture/stdout.log" "mcp:$fixture/brew/tools/codegraph"
+    assert_contains "$fixture/stdout.log" "android:$home/Library/Android/sdk"
+    assert_contains "$fixture/stdout.log" "adb:$home/Library/Android/sdk/platform-tools/adb"
   done
   scenario_capture "$fixture" env HOME="$home" OCX_PROFILE=missing \
     OPENCODE_CONFIG=stale DOTFILES_OPENCODE_PROFILE_CONFIG=stale \

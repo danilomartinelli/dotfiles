@@ -67,5 +67,17 @@ fi
 # and package CLIs to OpenCode's MCP/LSP/shell children; Homebrew supplies system
 # CLIs. Keep the resolved OpenCode binary and pass its arguments unchanged.
 PATH="$brew_prefix/bin:$brew_prefix/sbin:$PATH"
+
+# The Android SDK installs outside both, so adb and the emulator reached those
+# children only when the GUI host happened to resolve a login shell first. Ask
+# the topic that owns the location instead of depending on that.
+ANDROID_HOME=$("$DOTFILES_ROOT/android-studio/_sdk.sh" root 2>/dev/null) \
+  || ANDROID_HOME=
+if [ -n "$ANDROID_HOME" ]; then
+  export ANDROID_HOME
+  if android_path=$("$DOTFILES_ROOT/android-studio/_sdk.sh" path 2>/dev/null); then
+    PATH="$PATH:$android_path"
+  fi
+fi
 export PATH
 exec "$mise_binary" exec --no-deps -- "$opencode_binary" "$@"

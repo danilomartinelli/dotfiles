@@ -278,6 +278,25 @@ that produces. Screenshots are black and the UI tree is a bare `ROOT Screen`
 until the device is woken, which reads as a broken emulator and is not one.
 Wake it before describing or tapping anything.
 
+### Updating an app without clearing its data
+
+`reinstall-app` is the only install Argent exposes, and it says what it does:
+the previous installation is removed first "so app data and runtime permissions
+are cleared". There is no flag that keeps them. A retest that depends on state
+the app already holds therefore cannot go through the MCP at all, and the
+`adb install -r` that does keep it is a coder's ordinary shell command — the
+runtime permits it, and only a task that scopes device work to Argent does not.
+
+`ANDROID_HOME` and the SDK tool directories come from `android-studio/_sdk.sh`,
+which `path.zsh` and the OpenChamber adapter both ask, so `adb` is on PATH for a
+GUI-hosted session and a login shell alike. Two failures are worth recognizing
+rather than rediscovering: `INSTALL_FAILED_UPDATE_INCOMPATIBLE` means the new
+APK carries a different signature and only an uninstall will take it, which is
+the data loss the update was avoiding; `INSTALL_FAILED_VERSION_DOWNGRADE` means
+the new `versionCode` is lower and `-d` allows it. `dumpsys package <id>` proves
+the outcome, because an update leaves `firstInstallTime` alone and moves
+`lastUpdateTime`.
+
 ### A locked device makes `describe` slow, not broken
 
 `describe` prefers Argent's own `android-devtools` helper and falls back to
