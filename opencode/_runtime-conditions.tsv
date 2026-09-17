@@ -13,5 +13,6 @@ workspaces	Stale `workspace` rows	repair	A row outlives its directory, and a ret
 sessions	Stranded sessions	repair	A session names a `workspace` row that is gone, so it can be neither deleted nor archived
 snapshots	Stale session snapshots	repair	A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes
 artifacts	Idle delegation artifacts	repair	A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output
+worktrees	Idle worktree checkouts	repair	A retired session's checkout keeps its node_modules and build output, and no other condition owns the directory itself
 configs	An untracked global config	report	OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`
 log	Log files	repair	CLI and plugin output, and the rotations it leaves behind

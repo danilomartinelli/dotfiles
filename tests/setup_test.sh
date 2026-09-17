@@ -4,6 +4,18 @@ set -u
 
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPOSITORY_ROOT="$(cd "$TEST_DIR/.." && pwd -P)"
+
+# homebrew/_bundle.sh declares which taps it trusts and in what order; the
+# phase assertions below only need the first one, to say that a tap is created
+# before anything is trusted. Reading it here is what keeps retiring a tap from
+# failing a test about phase ordering.
+FIRST_TRUSTED_TAP=$(
+  sed -n "s/^TRUSTED_TAPS='\([^ ']*\).*/\1/p" "$REPOSITORY_ROOT/homebrew/_bundle.sh"
+)
+[ -n "$FIRST_TRUSTED_TAP" ] || {
+  printf 'setup_test: no TRUSTED_TAPS in homebrew/_bundle.sh\n' >&2
+  exit 1
+}
 # shellcheck source=tests/_support/shell-scenario.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
@@ -232,7 +244,7 @@ test_bootstrap_sequence() {
   assert_before "$fixture/stdout.log" 'dotfile links' 'macOS defaults'
   assert_before "$fixture/events.log" macos-defaults hostname
   assert_before "$fixture/events.log" hostname homebrew-installer
-  assert_before "$fixture/events.log" 'brew tap nikitabobko/tap' 'brew trust --tap'
+  assert_before "$fixture/events.log" "brew tap $FIRST_TRUSTED_TAP" 'brew trust --tap'
   assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
   assert_before "$fixture/events.log" 'brew bundle --file' topic-workspace
   assert_before "$fixture/events.log" topic-alpha topic-zulu
@@ -272,7 +284,7 @@ test_update_sequence_and_cwd_independence() {
   assert_before "$fixture/events.log" homebrew-installer 'brew update'
   assert_before "$fixture/events.log" 'brew tap' 'brew update'
   assert_before "$fixture/events.log" 'brew update' 'brew upgrade'
-  assert_before "$fixture/events.log" 'brew upgrade' 'brew tap nikitabobko/tap'
+  assert_before "$fixture/events.log" 'brew upgrade' "brew tap $FIRST_TRUSTED_TAP"
   assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
   assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
   assert_not_contains "$fixture/events.log" macos-defaults

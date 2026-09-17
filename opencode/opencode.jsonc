@@ -1,5 +1,50 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  // The payload of the profile opencode/env.zsh names as the default, rendered
+  // by _scripts/render-opencode-profiles from the same sources every other
+  // profile is rendered from. Do not edit inside the markers.
+  //
+  // It is here for hosts that cannot select a profile. `ocx opencode` and
+  // bin/opencode-profile both export OPENCODE_CONFIG, which merges the chosen
+  // profile OVER this file, so every profile still owns its own routes and the
+  // CLI is unaffected. A desktop app opened from the Dock inherits no
+  // environment and reaches only this file: without these keys it would start
+  // with no model and every delegated agent unrouted.
+  // generated: default-profile
+  "model": "openai/gpt-6-astra",
+  "small_model": "openai/gpt-5.6-luna",
+  "lsp": true,
+  "agent": {
+    "plan": {
+      "model": "openai/gpt-6-astra",
+      "variant": "xhigh"
+    },
+    "build": {
+      "model": "openai/gpt-6-astra",
+      "variant": "xhigh"
+    },
+    "coder": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high"
+    },
+    "explore": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high"
+    },
+    "researcher": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high"
+    },
+    "scribe": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high"
+    },
+    "reviewer": {
+      "model": "openai/gpt-5.6-luna",
+      "variant": "high"
+    }
+  },
+  // generated-end
   "mcp": {
     // An Android cold boot is a documented 2-10 minute operation and Argent
     // bounds it itself; OpenCode's own 60s request timeout cut every one of

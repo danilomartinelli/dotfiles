@@ -253,6 +253,104 @@ artifact_is_retired() {
   [ -z "$(find "$1" -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
 }
 
+# Remove a directory this module owns, and answer whether it is gone.
+#
+# A build cache is not made only of files this user can delete: a downloader
+# that caches a signed application bundle writes it back read-only, and the
+# first rm -rf leaves the whole subtree standing. The retry exists for that
+# case, and the final test exists because both attempts can still fail --
+# on a mount that went away, or on a path something else has open. Reporting
+# is what depends on the answer: the byte counts used to be added up before
+# the removal and printed whether or not it worked, so a run that could not
+# delete 42 GB still said it had.
+retire_directory() {
+  rm -rf -- "$1" 2>/dev/null
+  if [ -e "$1" ]; then
+    chmod -R u+w -- "$1" 2>/dev/null || true
+    rm -rf -- "$1" 2>/dev/null
+  fi
+  [ ! -e "$1" ]
+}
+
+# Every checkout below the worktree root. The doctor owned everything inside
+# one -- the processes, the snapshots, the artifacts -- and never the checkout
+# itself, so a retired session left its node_modules and build output behind
+# permanently.
+#
+# Which of them may go is decided in runtime_condition_worktrees, from
+# worktree_state and worktree_is_idle. Processes are not consulted here: the
+# processes condition runs first in the catalog and has already reaped anything
+# living inside one by the time this is asked.
+#
+# The depth is the one artifact_directories already assumes: a worktree root
+# holds one directory per checkout.
+worktree_checkouts() {
+  [ -d "$WORKTREE_ROOT" ] || return 0
+  find "$WORKTREE_ROOT" -mindepth 2 -maxdepth 2 -type d 2>/dev/null
+}
+
+# What a checkout is: reconstructible, holding work, or not judgeable here.
+#
+# Reconstructible means every byte in it exists somewhere else -- no
+# uncommitted change, nothing untracked that Git would report, and no commit
+# an upstream does not already have. Only such a directory may be retired.
+#
+# Holding work is the opposite, and a retention window has no standing to
+# discard it. A directory that is not a Git checkout, or one whose branch
+# tracks nothing, is neither: this module cannot tell a scratch directory from
+# something deliberate, so it says so and leaves it, the way stale_snapshots
+# leaves a snapshot whose config names no worktree.
+WORKTREE_RECONSTRUCTIBLE=0
+WORKTREE_HOLDS_WORK=1
+WORKTREE_UNJUDGEABLE=2
+
+# Git, in the checkout this condition is asking about. It is a function rather
+# than a command held in a variable because the checkout path is one of the
+# arguments: an unquoted expansion would split a path containing a space into
+# two of them.
+#
+# --no-optional-locks because a plain `git status` refreshes the index and
+# writes it back. Asking the question would then be what made the answer to
+# worktree_is_idle wrong: the checkout looked written-to a moment ago, every
+# time, so no checkout was ever idle and the condition retired nothing.
+worktree_git() {
+  _worktree_checkout=$1
+  shift
+  git -C "$_worktree_checkout" --no-optional-locks -c core.fsmonitor=false "$@"
+}
+
+worktree_state() {
+  worktree_git "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+    || return "$WORKTREE_UNJUDGEABLE"
+  [ -z "$(worktree_git "$1" status --porcelain --untracked-files=normal 2>/dev/null)" ] \
+    || return "$WORKTREE_HOLDS_WORK"
+  worktree_git "$1" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1 \
+    || return "$WORKTREE_UNJUDGEABLE"
+  [ -z "$(worktree_git "$1" log --oneline '@{u}..HEAD' 2>/dev/null)" ] \
+    || return "$WORKTREE_HOLDS_WORK"
+  return "$WORKTREE_RECONSTRUCTIBLE"
+}
+
+# Nothing has written source here inside the window. `.git` is excluded on
+# purpose: Git rewrites its own bookkeeping whenever anything reads the
+# repository, including this module, so those timestamps answer "was this
+# checkout inspected" and never "is an agent still working in it".
+#
+# `.opencode-artifacts` is deliberately NOT excluded. The artifacts condition
+# runs first and, having just retired a directory inside it, leaves the
+# artifact root looking written-to, so a checkout whose artifacts went in this
+# run is retired by the next one instead. That is the conservative order:
+# recent artifacts are the evidence that a delegation recently worked here, and
+# a window that retires the checkout anyway would be deciding on the strength
+# of a timestamp this module had itself just moved. A zero-day window is
+# unaffected -- it retires everything without consulting an mtime at all.
+worktree_is_idle() {
+  if [ "$RETENTION_DAYS" -eq 0 ]; then
+    return 0
+  fi
+  [ -z "$(find "$1" -name .git -prune -o -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
+}
+
 # Every managed entry the installer links, so a shadowing sibling is judged
 # against the catalog rather than against a list restated here.
 collect_managed_entry() {
@@ -475,6 +573,7 @@ EOF
 
   retired=0
   retired_bytes=0
+  kept=0
   while IFS= read -r artifact_dir; do
     [ -n "$artifact_dir" ] || continue
     artifact_is_retired "$artifact_dir" || continue
@@ -487,15 +586,122 @@ EOF
     esac
     [ ! -L "$artifact_dir" ] || continue
     artifact_bytes=$(directory_bytes "$artifact_dir")
-    rm -rf -- "$artifact_dir"
-    retired=$((retired + 1))
-    retired_bytes=$((retired_bytes + artifact_bytes))
+    if retire_directory "$artifact_dir"; then
+      retired=$((retired + 1))
+      retired_bytes=$((retired_bytes + artifact_bytes))
+    else
+      kept=$((kept + 1))
+      installer_warn "could not retire $artifact_dir"
+    fi
   done <<EOF
 $artifacts
 EOF
 
   [ "$retired" -eq 0 ] \
     || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_bytes")"
+  [ "$kept" -eq 0 ] \
+    || installer_hint "$kept artifact directory(ies) survived removal; inspect the paths above"
+}
+
+# The checkout an agent worktree is made of. Retiring one takes its build
+# output with it, which is the point: a worktree is reconstructed from the
+# repository it links to, and nothing here is a source of truth. A checkout
+# holding uncommitted, untracked or unpushed work is named and left alone,
+# because a retention window is not standing to discard work that exists
+# nowhere else.
+#
+# Git keeps a registration for a linked worktree in the repository it belongs
+# to. Removing the directory alone leaves that registration behind, so the
+# owning repository is pruned in the same step; a prune only ever drops
+# registrations whose directory is already gone.
+runtime_condition_worktrees() {
+  checkouts=$(worktree_checkouts)
+  if [ -z "$checkouts" ]; then
+    installer_note 'no agent worktree checkouts'
+    return 0
+  fi
+
+  checkout_total=0
+  idle=''
+  held=''
+  unjudged=0
+  while IFS= read -r checkout; do
+    [ -n "$checkout" ] || continue
+    checkout_total=$((checkout_total + $(directory_bytes "$checkout")))
+    checkout_state=0
+    worktree_state "$checkout" || checkout_state=$?
+    case $checkout_state in
+      "$WORKTREE_HOLDS_WORK")
+        held="$held$checkout
+"
+        continue
+        ;;
+      "$WORKTREE_UNJUDGEABLE")
+        unjudged=$((unjudged + 1))
+        continue
+        ;;
+    esac
+    worktree_is_idle "$checkout" || continue
+    idle="$idle$checkout
+"
+  done <<EOF
+$checkouts
+EOF
+
+  # line_count answers about a list with no trailing newline, which is what a
+  # command substitution hands it. These two were built a line at a time, so
+  # they carry one, and counting one directly reported one entry too many.
+  held=$(printf '%s' "$held")
+  idle=$(printf '%s' "$idle")
+
+  installer_note "agent worktree checkouts: $(line_count "$checkouts"), $(human_bytes "$checkout_total")"
+  [ "$unjudged" -eq 0 ] \
+    || installer_note "checkouts nothing here can judge, and so keeps: $unjudged"
+  # The newline stripped above is put back for the read loop, which drops a
+  # final line that has no terminator.
+  printf '%s\n' "$held" | while IFS= read -r checkout; do
+    [ -n "$checkout" ] || continue
+    installer_warn "worktree holds work that is not on a remote: $checkout"
+    installer_hint 'Push or discard it there, then rerun to retire the checkout.'
+  done
+  installer_note "retired checkouts (idle for $RETENTION_DAYS days): $(line_count "$idle")"
+  [ "$1" = repair ] || return 0
+
+  retired=0
+  retired_bytes=0
+  pruned=''
+  while IFS= read -r checkout; do
+    [ -n "$checkout" ] || continue
+    case $checkout in
+      "$WORKTREE_ROOT"/*/*) ;;
+      *)
+        installer_warn "skipping a worktree path outside the worktree root: $checkout"
+        continue
+        ;;
+    esac
+    [ ! -L "$checkout" ] || continue
+    owner=$(worktree_git "$checkout" rev-parse --path-format=absolute \
+      --git-common-dir 2>/dev/null) || owner=
+    checkout_bytes=$(directory_bytes "$checkout")
+    if retire_directory "$checkout"; then
+      retired=$((retired + 1))
+      retired_bytes=$((retired_bytes + checkout_bytes))
+      [ -z "$owner" ] || pruned="$pruned$owner
+"
+    else
+      installer_warn "could not retire $checkout"
+    fi
+  done <<EOF
+$idle
+EOF
+
+  printf '%s' "$pruned" | sort -u | while IFS= read -r owner; do
+    [ -n "$owner" ] || continue
+    git --git-dir "$owner" -c core.fsmonitor=false worktree prune >/dev/null 2>&1 || true
+  done
+
+  [ "$retired" -eq 0 ] \
+    || installer_item "retired $retired agent worktree checkout(s), $(human_bytes "$retired_bytes")"
 }
 
 runtime_condition_configs() {
@@ -541,7 +747,7 @@ require_stopped_opencode() {
   [ -n "$holders" ] || return 0
 
   installer_error 'OpenCode is running and holds the database'
-  installer_hint "Quit OpenChamber and any opencode session, then rerun. Holding pids: $(printf '%s' "$holders" | tr '\n' ' ')"
+  installer_hint "Quit the OpenCode desktop app and any opencode session, then rerun. Holding pids: $(printf '%s' "$holders" | tr '\n' ' ')"
   exit 1
 }
 

@@ -226,11 +226,11 @@ test_untracked_shadowing_config_is_reported() {
   fixture=$(make_fixture)
   : >"$fixture/config/opencode.jsonc"
   : >"$fixture/config/opencode.json"
-  : >"$fixture/config/opencode.jsonc.openchamber.backup"
+  : >"$fixture/config/opencode.jsonc.desktop.backup"
   invoke_doctor "$fixture"
 
   assert_contains "$fixture/stderr.log" "$fixture/config/opencode.json"
-  assert_contains "$fixture/stderr.log" "$fixture/config/opencode.jsonc.openchamber.backup"
+  assert_contains "$fixture/stderr.log" "$fixture/config/opencode.jsonc.desktop.backup"
 }
 
 test_clean_config_directory_is_not_reported() {
@@ -338,6 +338,48 @@ test_fix_removes_only_snapshots_whose_directory_is_gone() {
     || scenario_fail 'a snapshot naming no worktree was removed'
   assert_contains "$fixture/stdout.log" \
     'removed 1 session snapshot(s) describing a missing directory'
+}
+
+# Three agent worktree checkouts beside the fixture's existing non-Git one:
+# one reconstructible (clean and fully pushed to a bare origin), one holding a
+# commit the origin has never seen, and one holding an uncommitted change. The
+# origin is a real bare repository rather than a stub, because the whole
+# question the condition asks -- does every byte here exist somewhere else --
+# is one only Git can answer.
+#
+# Their mtimes are pushed a month back so the default retention window treats
+# them as idle; the `live-worktree` the other scenarios use stays untouched.
+make_worktree_checkouts() {
+  local fixture=$1 root checkout month
+  root=$fixture/data/worktree/project
+  month=$(date -r $(($(date +%s) - 30 * 86400)) +%Y%m%d%H%M)
+
+  # One origin per checkout. Sharing a single bare repository made the second
+  # and third pushes non-fast-forward rejections, which left those checkouts
+  # holding work for a reason the scenario never meant to arrange.
+  for checkout in pushed unpushed dirty 'spaced name'; do
+    git -c init.defaultBranch=main init --quiet --bare "$fixture/$checkout.git"
+    git -c init.defaultBranch=main init --quiet "$root/$checkout"
+    git -C "$root/$checkout" config user.email fixture@example.invalid
+    git -C "$root/$checkout" config user.name Fixture
+    printf 'source\n' >"$root/$checkout/file.txt"
+    git -C "$root/$checkout" add file.txt
+    git -C "$root/$checkout" commit --quiet -m 'fixture'
+    git -C "$root/$checkout" remote add origin "$fixture/$checkout.git"
+    git -C "$root/$checkout" push --quiet -u origin main
+  done
+
+  printf 'local only\n' >"$root/unpushed/file.txt"
+  git -C "$root/unpushed" commit --quiet -am 'local only'
+  printf 'uncommitted\n' >"$root/dirty/file.txt"
+
+  # -depth so children are touched before their parents: touching a file
+  # inside a directory bumps that directory's own mtime back to now, and a
+  # single stale file anywhere is enough to keep the checkout out of the
+  # retention window.
+  for checkout in pushed unpushed dirty 'spaced name'; do
+    find "$root/$checkout" -depth -exec touch -t "$month" {} +
+  done
 }
 
 test_report_counts_artifacts_and_names_the_large_ones() {
@@ -572,10 +614,78 @@ scenario_run 'a report names sessions whose workspace is gone' test_report_names
 scenario_run 'a repair releases only sessions whose workspace is gone' test_fix_releases_only_sessions_whose_workspace_is_gone
 scenario_run 'a report names snapshots whose directory is gone' test_report_names_snapshots_whose_directory_is_gone
 scenario_run 'a repair removes only snapshots whose directory is gone' test_fix_removes_only_snapshots_whose_directory_is_gone
+# The checkout itself had no owner before this condition: every other one
+# reaches inside a worktree -- the processes, the snapshots, the artifacts --
+# and none of them removed the directory holding them, so a retired session's
+# node_modules stayed forever. A report still changes nothing.
+test_report_names_worktree_checkouts_without_retiring_them() {
+  local fixture root
+  fixture=$(make_fixture)
+  make_worktree_checkouts "$fixture"
+  root=$fixture/data/worktree/project
+  invoke_doctor "$fixture"
+
+  assert_contains "$fixture/stdout.log" 'agent worktree checkouts: 5'
+  assert_contains "$fixture/stdout.log" 'retired checkouts (idle for 7 days): 2'
+  # live-worktree is not a Git checkout, so nothing here can judge it.
+  assert_contains "$fixture/stdout.log" 'checkouts nothing here can judge, and so keeps: 1'
+  assert_contains "$fixture/stderr.log" "worktree holds work that is not on a remote: $root/unpushed"
+  assert_contains "$fixture/stderr.log" "worktree holds work that is not on a remote: $root/dirty"
+  [ -d "$root/pushed" ] || scenario_fail 'a report must not retire anything'
+}
+
+# Only the checkout whose every byte exists on the origin goes. An unpushed
+# commit and an uncommitted change are both work that exists nowhere else, and
+# a retention window has no standing to discard either.
+test_fix_retires_only_reconstructible_worktree_checkouts() {
+  local fixture root
+  fixture=$(make_fixture)
+  make_worktree_checkouts "$fixture"
+  root=$fixture/data/worktree/project
+  invoke_doctor "$fixture" --fix
+
+  [ ! -d "$root/pushed" ] || scenario_fail 'a fully pushed checkout must be retired'
+  [ -d "$root/unpushed" ] || scenario_fail 'an unpushed commit must survive'
+  [ -d "$root/dirty" ] || scenario_fail 'an uncommitted change must survive'
+  [ -d "$root/live-worktree" ] \
+    || scenario_fail 'a directory that is not a Git checkout must survive'
+  # The checkout path reaches Git as an argument. Held in a command string and
+  # expanded unquoted, a path with a space arrived as two arguments and every
+  # question about it failed, which reads as "holding work" and keeps it.
+  [ ! -d "$root/spaced name" ] \
+    || scenario_fail 'a path containing a space must be judged like any other'
+  assert_contains "$fixture/stdout.log" 'retired 2 agent worktree checkout(s)'
+}
+
+# A read-only subtree is what a build cache routinely holds -- a downloader
+# that caches a signed application bundle writes it back read-only -- and the
+# first rm -rf leaves the whole thing standing. The report used to add up the
+# bytes before removing anything and print the total either way, so a run that
+# freed nothing still said it had freed the directory.
+test_fix_reports_only_the_artifacts_it_could_remove() {
+  local fixture artifact_root
+  fixture=$(make_fixture)
+  artifact_root=$fixture/data/worktree/project/live-worktree/.opencode-artifacts
+  mkdir -p "$artifact_root/idle/locked"
+  printf 'signed\n' >"$artifact_root/idle/locked/bundle"
+  chmod -w "$artifact_root/idle/locked"
+  touch -t "$(date -r $(($(date +%s) - 30 * 86400)) +%Y%m%d%H%M)" \
+    "$artifact_root/idle/locked/bundle" "$artifact_root/idle/locked" "$artifact_root/idle"
+  invoke_doctor "$fixture" --fix
+
+  [ ! -d "$artifact_root/idle" ] \
+    || scenario_fail 'a read-only subtree must not stop the retirement'
+  assert_contains "$fixture/stdout.log" 'retired 1 delegation artifact directory(ies)'
+  assert_not_contains "$fixture/stderr.log" 'could not retire'
+}
+
 scenario_run 'a report counts artifacts and names the large ones' test_report_counts_artifacts_and_names_the_large_ones
 scenario_run 'a repair retires only idle artifact directories' test_fix_retires_only_idle_artifact_directories
 scenario_run 'zero retention retires every artifact directory' test_days_zero_retires_every_artifact_directory
 scenario_run 'a repair removes only workspaces whose directory is gone' test_fix_removes_only_workspaces_whose_directory_is_gone
+scenario_run 'a report names worktree checkouts without retiring them' test_report_names_worktree_checkouts_without_retiring_them
+scenario_run 'a repair retires only reconstructible worktree checkouts' test_fix_retires_only_reconstructible_worktree_checkouts
+scenario_run 'a repair reports only the artifacts it could remove' test_fix_reports_only_the_artifacts_it_could_remove
 scenario_run 'a repair reaps a process left inside a worktree' test_fix_reaps_a_process_left_inside_a_worktree
 scenario_run 'a repair refuses while the database is held' test_fix_refuses_while_the_database_is_held
 scenario_run 'a repeated repair changes nothing further' test_repeat_repair_changes_nothing_further

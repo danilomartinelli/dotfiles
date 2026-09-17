@@ -213,7 +213,7 @@ describe("regular read-only tool boundary", () => {
     for (const role of [...readOnlyRoles, "coder", "scribe"]) {
       const permissions = rolePermissions(role);
       const exposed = Object.keys(permissions).filter((name) =>
-        /^(codegraph|context7|exa|gh_grep|linear)_/.test(name),
+        /^(codegraph|context7|exa|gh_grep)_/.test(name),
       );
       expect(exposed.sort()).toEqual([...mcpQueryTools].sort());
       for (const name of exposed) {
@@ -227,10 +227,6 @@ describe("regular read-only tool boundary", () => {
         "gh_grep_delete",
         "codegraph_init",
         "codegraph_unknown_read",
-        "linear_save_issue",
-        "linear_save_comment",
-        "linear_delete_comment",
-        "linear_unknown_read",
       ]) {
         expect(permissions[name] ?? permissions["*"]).toBe("deny");
         if (readOnlyRoles.has(role))
@@ -249,25 +245,15 @@ describe("regular read-only tool boundary", () => {
       ).toThrow("Read-only policy:");
   });
 
-  test("Linear tracker queries are available to the same roles as CLI tracker queries", () => {
-    const mcp = { linear: { enabled: true } };
+  test("a project MCP allowlist never widens what a read-only role may call", () => {
+    const mcp = { tracker: { enabled: true } };
     for (const role of readOnlyRoles) {
-      const permissions = rolePermissions(role, mcp, { "linear_*": "allow" });
-      for (const [name, args] of [
-        ["linear_get_issue", { id: "FIX-1", includeRelations: true }],
-        ["linear_list_issues", { query: "fixture", limit: 5 }],
-        ["linear_list_comments", { issueId: "FIX-1" }],
-        ["linear_get_project", { query: "fixture", includeResources: true }],
-        ["linear_get_document", { id: "fixture" }],
-      ] as const) {
-        expect(permissions[name], role).toBe("allow");
-        expect(() => assertReadOnlyTool(role, name, args), role).not.toThrow();
-      }
+      const permissions = rolePermissions(role, mcp, { "tracker_*": "allow" });
       for (const name of [
-        "linear_save_issue",
-        "linear_save_comment",
-        "linear_share_issue",
-        "linear_unknown_read",
+        "tracker_get_issue",
+        "tracker_list_issues",
+        "tracker_save_issue",
+        "tracker_unknown_read",
       ]) {
         expect(permissions[name] ?? permissions["*"], role).toBe("deny");
         expect(() => assertReadOnlyTool(role, name, {}), role).toThrow(
@@ -276,7 +262,7 @@ describe("regular read-only tool boundary", () => {
       }
     }
     expect(
-      rolePermissions("coder", mcp, { "linear_*": "allow" })["linear_*"],
+      rolePermissions("coder", mcp, { "tracker_*": "allow" })["tracker_*"],
     ).toBe("allow");
   });
 

@@ -57,21 +57,6 @@ const mcpQueries = [
     name: "searchGitHub",
     arguments: { query: "fixture()" },
   },
-  {
-    server: "linear",
-    name: "get_issue",
-    arguments: { id: "FIX-1", includeRelations: true },
-  },
-  {
-    server: "linear",
-    name: "list_issues",
-    arguments: { query: "fixture", limit: 5 },
-  },
-  {
-    server: "linear",
-    name: "list_comments",
-    arguments: { issueId: "FIX-1" },
-  },
 ];
 
 const mcpResourceQueries = [
@@ -304,7 +289,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
     async fetch(request) {
       const pathname = new URL(request.url).pathname;
       const queryServer = pathname.match(
-        /^\/queries\/(codegraph|context7|exa|gh_grep|linear)$/,
+        /^\/queries\/(codegraph|context7|exa|gh_grep)$/,
       )?.[1];
       if (pathname === "/mcp" || queryServer) {
         if (request.method !== "POST")
@@ -384,7 +369,7 @@ test("native OpenCode initializes deferred tools and preserves routing and write
                     annotations: { readOnlyHint: true },
                     inputSchema: { type: "object", properties: {} },
                   },
-                  ...(queryServer === "linear"
+                  ...(queryServer === "gh_grep"
                     ? [
                         {
                           name: "save_issue",
@@ -951,7 +936,7 @@ process.stdin.on('end', () => process.exit(0));
           },
           fixture: { type: "remote", url: `http://127.0.0.1:${mock.port}/mcp` },
           ...Object.fromEntries(
-            ["context7", "exa", "gh_grep", "linear"].map((server) => [
+            ["context7", "exa", "gh_grep"].map((server) => [
               server,
               {
                 type: "remote",
@@ -967,7 +952,7 @@ process.stdin.on('end', () => process.exit(0));
             permission: {
               "project_*": "allow",
               "fixture_*": "allow",
-              "linear_*": "allow",
+              "gh_grep_*": "allow",
             },
           },
         },
@@ -1209,10 +1194,10 @@ process.stdin.on('end', () => process.exit(0));
       rootRequest?.tools?.some((tool) => tool.name.endsWith("_unknown_read")),
     ).toBe(false);
     expect(
-      rootRequest?.tools?.some((tool) => tool.name === "linear_save_issue"),
+      rootRequest?.tools?.some((tool) => tool.name === "gh_grep_save_issue"),
     ).toBe(false);
     expect(
-      childRequest?.tools?.some((tool) => tool.name === "linear_save_issue"),
+      childRequest?.tools?.some((tool) => tool.name === "gh_grep_save_issue"),
     ).toBe(true);
     expect(childRequest?.model).toBe("gpt-5.6-luna");
     expect(childRequest?.reasoning?.effort).toBe("high");

@@ -21,8 +21,6 @@ Project scripts and runtime/package-manager commands (including bun, npm and npx
 The root should include needed script execution in an existing relevant coder delegation; leaves return that need to the root.
 After a policy rejection, use the supported tool or role; do not retry through wrappers, environment changes or alternate spellings.
 MCP resource lists enumerate resources, not callable tools or connection status. Empty lists do not prove a server is disconnected.
-Use the approved linear_* query tools directly for Linear issue, project, comment and review context, as with gh/glab tracker queries.
-Linear writes and unapproved project MCP operations require explicit coder permissions and authorization covering the operation.
 Report role restrictions separately from connection or authentication failures.
 Before asking the user to copy tracker content, inspect the project's OpenCode configuration and the relevant role's permissions.
 Delegate retrieval to coder only when the needed query is unavailable to the current role and coder has explicit MCP permission.

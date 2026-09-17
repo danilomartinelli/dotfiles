@@ -234,8 +234,8 @@ is its description. Run the renderer after changing a declaration;
 <!-- generated-end -->
 
 Third-party taps are declared in `Brewfile`. `homebrew/_bundle.sh` maintains a
-narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
-`vultr/vultr-cli` before running `brew bundle`.
+narrow trust list for `psviderski/tap`, `vjeantet/tap`, and `vultr/vultr-cli`
+before running `brew bundle`.
 
 ### Applications and fonts
 
@@ -243,9 +243,9 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 
 | Group                     | Homebrew casks                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `devin-cli`, `lens`, `linear`, `openchamber`, `postman`, `tableplus`, `zed`    |
+| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed`                      |
 | Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                         |
-| Window and menu bar       | `nikitabobko/tap/aerospace`, `bartender`, `keyclu`                                                          |
+| Window and menu bar       | `bartender`, `keyclu`                                                                                       |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
 | Design and media          | `cleanshot`, `figma`, `spotify`                                                                             |
 | Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                             |
@@ -263,10 +263,10 @@ narrow trust list for `nikitabobko/tap`, `psviderski/tap`, `vjeantet/tap`, and
 
 <!-- generated-end -->
 
-Topic installers configure Ghostty, Zed, Neovim, AeroSpace, OrbStack,
-Bartender, KeyClu, Raycast script commands, Tailscale, OpenCode/OCX, Hermes,
-SOPS directories, SSH, Workspace, Mise, iOS Simulator and Android Emulator
-readiness, Archiver associations, and the Dock.
+Topic installers configure Ghostty, Zed, Neovim, OrbStack, Bartender, KeyClu,
+Raycast script commands, Tailscale, OpenCode/OCX, Hermes, SOPS directories,
+SSH, Workspace, Mise, iOS Simulator and Android Emulator readiness, Archiver
+associations, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
 applied once so later manual changes survive: a Dock you rearranged and a
@@ -342,7 +342,7 @@ through their preferred Git subcommand form.
 | `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators                    |
 | `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                                 |
 | `opencode-doctor`  | `opencode-doctor [--fix] [--days n] [--clear-logs]`: report or repair OpenCode runtime state |
-| `opencode-profile` | Run OpenCode with an OCX profile applied, for GUI hosts that spawn the binary                |
+| `opencode-profile` | Run OpenCode with an OCX profile applied, for hosts that spawn the binary                    |
 | `set-defaults`     | Apply tracked macOS preferences                                                              |
 | `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity                              |
 | `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key                            |
@@ -516,18 +516,17 @@ de-duplicated.
 
 ### Configuration ownership
 
-| Configuration          | Installed location                    | Ownership rule                                                             |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
-| Private environment    | `~/.localrc`                          | Generated locally, mode `600`, never committed                             |
-| Shared shell defaults  | `.commonrc`                           | Tracked and secret-free                                                    |
-| Git identity           | `git/gitconfig.local.symlink`         | Generated locally and gitignored                                           |
-| Git worktree overrides | `~/.gitconfig.worktree`               | Tracked; applied only to linked worktrees, above the machine-local include |
-| Private SSH hosts      | `~/.ssh/config_local`                 | Preserved by the tracked SSH config                                        |
-| SOPS age identities    | `~/.config/sops/age/`                 | Machine-private, mode `600`                                                |
-| Zed settings           | `~/.config/zed/settings.json`         | Tracked JSONC-compatible config, no plaintext credentials                  |
-| OpenCode workspace     | `~/.config/opencode`                  | Split between dotfiles-owned links and OCX runtime state                   |
-| Hermes state           | `~/.hermes`                           | Machine-local runtime state                                                |
-| OpenChamber settings   | `~/.config/openchamber/settings.json` | Catalogued keys merged in; relay keys and session state left untouched     |
+| Configuration          | Installed location            | Ownership rule                                                             |
+| ---------------------- | ----------------------------- | -------------------------------------------------------------------------- |
+| Private environment    | `~/.localrc`                  | Generated locally, mode `600`, never committed                             |
+| Shared shell defaults  | `.commonrc`                   | Tracked and secret-free                                                    |
+| Git identity           | `git/gitconfig.local.symlink` | Generated locally and gitignored                                           |
+| Git worktree overrides | `~/.gitconfig.worktree`       | Tracked; applied only to linked worktrees, above the machine-local include |
+| Private SSH hosts      | `~/.ssh/config_local`         | Preserved by the tracked SSH config                                        |
+| SOPS age identities    | `~/.config/sops/age/`         | Machine-private, mode `600`                                                |
+| Zed settings           | `~/.config/zed/settings.json` | Tracked JSONC-compatible config, no plaintext credentials                  |
+| OpenCode workspace     | `~/.config/opencode`          | Split between dotfiles-owned links and OCX runtime state                   |
+| Hermes state           | `~/.hermes`                   | Machine-local runtime state                                                |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth

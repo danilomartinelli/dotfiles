@@ -106,7 +106,6 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv`  |
 | Shared OpenCode profile policy                  | `opencode/profiles/_shared/`     |
 | OpenCode profile model routing                  | `opencode/profiles/_routing.tsv` |
-| OpenChamber tracked settings                    | `openchamber/_settings.tsv`      |
 | Agent worktree bootstrap                        | `.opencode/worktree.jsonc`       |
 | Public lifecycle and commands                   | `README.md`                      |
 | Coding and validation rules                     | `CODING_STANDARDS.md`            |
@@ -241,25 +240,31 @@ performance option, and remember that `variant` is the only reasoning knob
 `AgentConfig` accepts — `reasoningEffort` and `textVerbosity` are provider
 option names that OpenCode discards without a word.
 
-### OpenChamber
+### The OpenCode desktop app
 
-OpenChamber hosts OpenCode in a desktop app and spawns the CLI directly, so it
-sees neither the topic environment nor the profile that `ocx` merges in at
-launch. Its `opencodeBinary` setting therefore points at `bin/opencode-profile`,
-which exports `OPENCODE_CONFIG` for the selected profile. That variable merges
-over the global `opencode.jsonc` instead of replacing it, so model routing
-arrives without displacing the permissions, agents, MCP servers, and plugins
-declared globally. `ocx opencode` cannot fill the slot: it consumes `-h`, `-v`,
-and `--version` itself and prints its profile banner on stdout.
+`opencode-desktop` embeds the OpenCode runtime rather than spawning a CLI, and
+reads `~/.config/opencode` itself. MCP servers, plugins, the orchestrator and
+permissions therefore arrive already managed, and the app needs no adapter.
 
-The adapter runs the resolved binary through `mise exec --no-deps` and includes
-Homebrew paths so native MCP/LSP/shell children can find declared CLIs without
-a login shell. Preserve argument forwarding and clean version/help output.
+What it cannot do is select a profile: it has no selector, and a `.app` opened
+from the Dock inherits no environment, so `OPENCODE_CONFIG` never reaches it.
+`opencode/opencode.jsonc` carries the default profile's payload for that reason,
+inside a `// generated: default-profile` block. `_scripts/render-opencode-profiles`
+writes it from `profiles/_routing.tsv` and the `OCX_PROFILE` that
+`opencode/env.zsh` declares, so the routing floor and the shell default cannot
+disagree and neither is written down twice. Never edit between the markers. See
+`docs/adr/0018-the-global-opencode-config-carries-the-default-profile.md`.
 
-`~/.config/openchamber/settings.json` is merged key by key from
-`openchamber/_settings.tsv`, never linked or copied whole. The same file holds
-`relayEncryptionKey`, `relaySigningKey`, security-scoped bookmarks, and session
-state, none of which may be tracked. Track a preference by adding its row.
+It is a floor and not a second declaration: `OPENCODE_CONFIG` merges a profile
+over that file, so every profile still replaces every route and the CLI is
+unchanged. Its window and session state stays in `~/Library/Application Support`,
+machine-local and untracked.
+
+`bin/opencode-profile` remains the adapter for a host that does spawn the binary,
+and for `opencode models <provider> --verbose`. It runs the resolved binary
+through `mise exec --no-deps` and includes Homebrew paths so native MCP/LSP/shell
+children can find declared CLIs without a login shell. Preserve argument
+forwarding and clean version/help output.
 
 ## Editing and simplification
 

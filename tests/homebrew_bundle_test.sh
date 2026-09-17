@@ -52,12 +52,12 @@ test_trust_then_bundle() {
 
   fixture=$(make_fixture)
   invoke_bundle "$fixture" -- --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"
-  assert_before "$fixture/events.log" 'brew tap nikitabobko/tap' 'brew trust --tap nikitabobko/tap'
+  assert_before "$fixture/events.log" 'brew tap vultr/vultr-cli' 'brew trust --tap vultr/vultr-cli'
   assert_before "$fixture/events.log" 'brew tap psviderski/tap' 'brew trust --tap psviderski/tap'
   assert_before "$fixture/events.log" 'brew tap vjeantet/tap' 'brew trust --tap vjeantet/tap'
   assert_before "$fixture/events.log" 'brew trust --tap psviderski/tap' "brew bundle --file $fixture/Brewfile"
   assert_before "$fixture/events.log" 'brew trust --tap vjeantet/tap' "brew bundle --file $fixture/Brewfile"
-  assert_before "$fixture/events.log" 'brew trust --tap nikitabobko/tap' "brew bundle --file $fixture/Brewfile"
+  assert_before "$fixture/events.log" 'brew trust --tap vultr/vultr-cli' "brew bundle --file $fixture/Brewfile"
 }
 
 test_trust_advisory_bundle_critical() {
@@ -66,7 +66,7 @@ test_trust_advisory_bundle_critical() {
   fixture=$(make_fixture)
   invoke_bundle "$fixture" FAIL_BREW_TRUST=1 \
     -- --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"
-  assert_contains "$fixture/stderr.log" 'trust nikitabobko/tap failed'
+  assert_contains "$fixture/stderr.log" 'trust vultr/vultr-cli failed'
   assert_contains "$fixture/events.log" 'brew bundle --file'
 
   fixture=$(make_fixture)

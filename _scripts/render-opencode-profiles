@@ -76,11 +76,23 @@ shared_dir=$topic_dir/profiles/_shared
 overrides_dir=$topic_dir/profiles/_overrides
 routing=$topic_dir/profiles/_routing.tsv
 conditions=$topic_dir/_runtime-conditions.tsv
+global_config=$topic_dir/opencode.jsonc
+environment=$topic_dir/env.zsh
 
-for required in "$roster" "$routing" "$conditions" "$shared_dir/AGENTS.md" \
+for required in "$roster" "$routing" "$conditions" "$global_config" \
+  "$environment" "$shared_dir/AGENTS.md" \
   "$shared_dir/ocx.jsonc" "$shared_dir/opencode.jsonc"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
+
+# Which profile the machine runs by default is already declared, once, as the
+# shell's OCX_PROFILE. Reading it here is what keeps the global config's routing
+# floor and the shell in step without a second place to say which profile wins.
+# env.zsh is POSIX-sourceable for this reason; bin/opencode-profile relies on
+# the same property.
+# shellcheck disable=SC1090 # Sourced from the resolved topic directory.
+default_profile=$(. "$environment" && printf '%s' "${OCX_PROFILE:-}")
+[ -n "$default_profile" ] || fail "no OCX_PROFILE declared in $environment"
 
 # Roster order is apply order in the installer, and rendering in the same order
 # keeps a diff of this script's output readable against one of the installer's.
@@ -95,6 +107,8 @@ collect_profile_row() {
 }
 catalog_each_row "$roster" collect_profile_row
 [ "${#profiles[@]}" -gt 0 ] || fail "no profile rows in $roster"
+printf '%s\n' "${profiles[@]}" | grep -Fqx -- "$default_profile" \
+  || fail "$environment names a profile with no roster entry: $default_profile"
 
 declare -A routing_seen=()
 # The routing table is read once, by the reader, during validation. These hold
@@ -328,6 +342,60 @@ compose_routing_records() {
   ' --args "$@"
 }
 
+# The default profile's payload, as the keys it contributes to a surrounding
+# JSONC object: the enclosing braces dropped, and the last key comma-terminated
+# because another follows the block. jq already indents its contents one level
+# in, which is the level they land at. `$schema` is dropped; the file declares
+# its own. The trim and the comma are two passes because sed's `$` names the
+# last line of its input: one pass would delete the closing brace and then look
+# for it again to append to.
+render_default_profile() {
+  render_config "$default_profile" \
+    | jq --indent 2 'del(.["$schema"])' \
+    | sed '1d;$d' \
+    | sed '$s/$/,/'
+}
+
+# Replace what sits between the markers in a JSONC file, the way
+# markdown_render_blocks does for a Markdown one. The markers are `//` line
+# comments, so the file stays valid JSONC whether or not a block has been
+# rendered into it yet.
+# Usage: jsonc_render_blocks <jsonc-file> <handler>
+jsonc_render_blocks() {
+  local source_path=$1 handler=$2 block='' line
+
+  grep -Fq '// generated: ' "$source_path" \
+    || fail "no generated blocks in $source_path"
+
+  while IFS= read -r line; do
+    case "${line#"${line%%[![:space:]]*}"}" in
+      '// generated: '*)
+        [ -z "$block" ] || fail "nested generated marker: $line"
+        block=${line#*'// generated: '}
+        printf '%s\n' "$line"
+        "$handler" "$block" || return 1
+        ;;
+      '// generated-end')
+        [ -n "$block" ] || fail "generated-end without an opening marker"
+        block=''
+        printf '%s\n' "$line"
+        ;;
+      *)
+        [ -n "$block" ] || printf '%s\n' "$line"
+        ;;
+    esac
+  done <"$source_path"
+
+  [ -z "$block" ] || fail "unterminated generated block: $block"
+}
+
+render_jsonc_block() {
+  case "$1" in
+    default-profile) render_default_profile ;;
+    *) fail "unknown generated block: $1" ;;
+  esac
+}
+
 render_config() {
   local profile=$1
 
@@ -372,6 +440,13 @@ for profile in "${profiles[@]}"; do
   generated_file_sync "$shared_dir/AGENTS.md" \
     "$topic_dir/profiles/$profile/AGENTS.md" "$repository_root"
 done
+
+# The global config carries the default profile's routing for hosts that cannot
+# select one. It is the same declaration as that profile's payload, so it is
+# rendered from the same records rather than copied.
+jsonc_render_blocks "$global_config" render_jsonc_block \
+  >"$work_dir/global.jsonc" || fail "cannot render $global_config"
+generated_file_sync "$work_dir/global.jsonc" "$global_config" "$repository_root"
 
 # The routing table in the topic README is the same declaration in the shape a
 # person reads. It was maintained by hand beside the catalog that drives the

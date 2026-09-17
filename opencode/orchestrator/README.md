@@ -20,12 +20,6 @@ its tools, inspect its live `tools/list` response and input schemas, then update
 the approved queries and isolated fixtures together. Do not infer capabilities
 from a server prefix or a `readOnlyHint` annotation alone.
 
-The Linear query entries were reviewed against its live `tools/list` schemas
-on 2026-09-13. They cover tracker retrieval; mutations, inbox operations and
-agent-skill tools remain outside this query allowlist. Keep the native fixture
-checking that a root can retrieve an issue, list issues and read comments
-without delegating to coder, while unknown tools remain unavailable.
-
 OpenCode's native MCP resource listing, template listing and resource reading
 use the `read` permission. The runtime query guard recognizes all three
 operations independently of the server tool allowlist. Keep the native fixture

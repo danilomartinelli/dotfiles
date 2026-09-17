@@ -7,7 +7,6 @@
 cask_args appdir: '/Applications'
 
 # Third-party taps trusted by homebrew/_bundle.sh
-tap 'nikitabobko/tap'               # AeroSpace tiling window manager
 tap 'psviderski/tap'                # Uncloud CLI
 tap 'vjeantet/tap'                  # Alerter CLI for macOS notifications
 tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
@@ -82,10 +81,8 @@ brew 'zsh-syntax-highlighting'      # Zsh command-line highlighting
 # Development
 cask 'android-studio'               # Android development IDE
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
-cask 'devin-cli'                    # Devin CLI: local coding agent with Cloud integration
 cask 'lens'                         # Kubernetes IDE
-cask 'linear'                       # Project management and issue tracking
-cask 'openchamber'                  # Desktop and web interface for OpenCode agents
+cask 'opencode-desktop'             # OpenCode desktop client for local and remote agent sessions
 cask 'postman'                      # API development and testing tool
 cask 'tableplus'                    # Database management tool
 cask 'zed'                          # High-performance collaborative code editor
@@ -95,7 +92,6 @@ cask 'ghostty'                      # Fast, native GPU-accelerated terminal emul
 cask 'session-manager-plugin'       # AWS Systems Manager Session Manager plugin
 
 # Window and menu bar
-cask 'nikitabobko/tap/aerospace'    # i3-like tiling window manager for macOS
 cask 'bartender'                    # Menu bar icon organiser
 cask 'keyclu'                       # Discover and browse application shortcuts
 

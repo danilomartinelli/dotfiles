@@ -199,9 +199,10 @@ is what keeps `eval` out of a module every installer sources.
 
 A token ends where its name ends, so no honoured name may prefix another one in
 the same call. A value substituted into JSON source text rather than into a
-decoded string is escaped by its caller first, the way `openchamber/install.sh`
-escapes the checkout path: the module expands text and does not know the syntax
-the result lands in.
+decoded string is escaped by its caller first: the module expands text and does
+not know the syntax the result lands in. APFS allows both `"` and `\` in a path
+component, so a checkout path spliced in raw is a value `jq` refuses to parse,
+and `tests/catalog_test.sh` holds the module to that.
 
 A catalog that arrives as a command's stdout rather than a file is read
 directly by its consumer. `_scripts/topic-catalog` output is the only one, and

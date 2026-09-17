@@ -212,9 +212,9 @@ test_a_name_without_a_replacement_is_refused() {
 # catalog.sh is sourced by every installer and by the interactive shell's
 # startup, so neither exit from an expansion may leave a name behind. The
 # refusal used to return before its unset.
-# openchamber substitutes into JSON source text rather than into a decoded
-# string, so it JSON-escapes the checkout path first. APFS allows both `"` and
-# `\` in a path component, and either spliced in raw yields a value jq refuses.
+# A caller that substitutes into JSON source text rather than into a decoded
+# string JSON-escapes the checkout path first. APFS allows both `"` and `\` in a
+# path component, and either spliced in raw yields a value jq refuses.
 test_a_json_escaped_replacement_survives_argjson() {
   local fixture
   fixture=$(scenario_tmpdir expand-json)

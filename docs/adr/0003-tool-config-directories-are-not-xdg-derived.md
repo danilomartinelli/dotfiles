@@ -14,13 +14,13 @@ original ticket specified: three installers already did it, five hardcoded
 spelling the easy one. Checking the tools rather than the installers is what
 ruled it out.
 
-| Tool               | Reads `XDG_CONFIG_HOME`                    |
-| ------------------ | ------------------------------------------ |
-| git, mise, nvim    | yes                                        |
-| ghostty, aerospace | yes; the variable is in the shipped binary |
-| opencode           | yes                                        |
-| sops/age           | yes, but moot: see below                   |
-| zed                | **no** on macOS                            |
+| Tool            | Reads `XDG_CONFIG_HOME`                    |
+| --------------- | ------------------------------------------ |
+| git, mise, nvim | yes                                        |
+| ghostty         | yes; the variable is in the shipped binary |
+| opencode        | yes                                        |
+| sops/age        | yes, but moot: see below                   |
+| zed             | **no** on macOS                            |
 
 Zed hardcodes `~/.config/zed` on macOS: its binary carries the literal
 `sudo chown $(whoami):staff ~/.config` in the message it prints when that

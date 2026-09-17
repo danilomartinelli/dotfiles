@@ -22,13 +22,13 @@ credential	-	cursor-agent login	Cursor subscription
 credential	-	aws configure	AWS credentials
 app	/Applications/Google Drive.app	Google Drive	sign in and choose folders to sync
 app	/Applications/Bitwarden.app	Bitwarden	log in to unlock the vault
-app	/Applications/AeroSpace.app	AeroSpace	grant Accessibility permission; log out and back in
 app	/Applications/Bartender 6.app|/Applications/Bartender.app	Bartender	grant Screen Recording permission
 app	/Applications/Caffeine.app	Caffeine	click the coffee cup in the menu bar to activate
 app	/Applications/ChatGPT.app	ChatGPT	sign in; set Option+Space global shortcut
 app	/Applications/CleanShot X.app	CleanShot X	grant Screen Recording + Accessibility permissions
 app	/Applications/Dia.app	Dia	set as default browser: defaultbrowser dia
 app	/Applications/Discord.app	Discord	sign in to your account
+app	/Applications/OpenCode.app	OpenCode	sign in; it reads ~/.config/opencode and ~/.local/share/opencode like the CLI
 app	/Applications/Paste.app	Paste	grant Accessibility + Full Disk Access permissions
 app	/Applications/KeyClu.app	KeyClu	grant Accessibility permission
 app	/Applications/Raycast.app	Raycast	complete the onboarding; script commands: $DOTFILES_ROOT/raycast/scripts

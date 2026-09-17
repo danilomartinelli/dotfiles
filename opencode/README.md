@@ -65,12 +65,33 @@ Open a new Zsh session or run `reload!` after shell changes.
 | `oc:xing`      | Select `xing` explicitly              |
 
 `opencode/env.zsh` declares the default `OCX_PROFILE=regular`. Zed's ACP also
-selects `regular`. OpenChamber uses `bin/opencode-profile`, which launches
-OpenCode directly with the chosen profile's `OPENCODE_CONFIG` layered over the
-global configuration. The adapter supplies the Mise tool environment and
-Homebrew paths to OpenCode and its MCP/LSP/shell subprocesses, including when
-the desktop app starts without a login-shell `PATH`. It skips automatic
-dependency preparation; installation remains part of the normal Mise setup.
+selects `regular`. A host that spawns the binary itself uses
+`bin/opencode-profile`, which launches OpenCode directly with the chosen
+profile's `OPENCODE_CONFIG` layered over the global configuration. The adapter
+supplies the Mise tool environment and Homebrew paths to OpenCode and its
+MCP/LSP/shell subprocesses, including when a GUI host starts without a
+login-shell `PATH`. It skips automatic dependency preparation; installation
+remains part of the normal Mise setup.
+
+### The desktop app
+
+`opencode-desktop` embeds the runtime rather than spawning a CLI, and reads the
+same `~/.config/opencode` the shell does: the MCP servers, the plugin list, the
+orchestrator and the permissions all arrive already managed. It has no profile
+selector and, opened from the Dock, inherits no environment, so
+`OPENCODE_CONFIG` never reaches it and nothing would carry the routing the
+profiles own.
+
+`opencode/opencode.jsonc` therefore carries the default profile's payload in a
+`// generated: default-profile` block that `_scripts/render-opencode-profiles`
+writes from `profiles/_routing.tsv` and `opencode/env.zsh`. It is a floor, not a
+second declaration: `OPENCODE_CONFIG` merges a profile **over** this file, so
+`oc:anthropic`, `oc:go` and `oc:xing` keep replacing every route, and the CLI
+behaves exactly as before. Change a route in `_routing.tsv` and rerun the
+renderer; never edit between the markers.
+
+Its own window and session state lives in `~/Library/Application Support`,
+which is machine-local and untracked, the way every other app's window state is.
 
 The TUI uses Catppuccin Macchiato, `ctrl+x` as leader, `ctrl+p` for commands,
 accelerated scrolling, a blinking block cursor and silent notifications.
@@ -346,7 +367,7 @@ the app already holds therefore cannot go through the MCP at all, and the
 runtime permits it, and only a task that scopes device work to Argent does not.
 
 `ANDROID_HOME` and the SDK tool directories come from `android-studio/_sdk.sh`,
-which `path.zsh` and the OpenChamber adapter both ask, so `adb` is on PATH for a
+which `path.zsh` and `bin/opencode-profile` both ask, so `adb` is on PATH for a
 GUI-hosted session and a login shell alike. Two failures are worth recognizing
 rather than rediscovering: `INSTALL_FAILED_UPDATE_INCOMPATIBLE` means the new
 APK carries a different signature and only an uninstall will take it, which is
@@ -376,13 +397,12 @@ boundaries or authorize remote changes. Build/plan, reviewer, explore and
 researcher retain their reviewed read-only tool allowlist. Supporting a new MCP
 in those roles requires reviewing its query operations in the runtime.
 
-The server named `linear` has reviewed queries for issues, comments, projects,
-documents, teams, users, milestones, releases and diff review context. These
-are available directly to build/plan, explore, researcher and reviewer, as with
-`gh`/`glab` queries; coder and scribe can also retrieve that context. Enable
-the server in the project configuration. Creating or changing tracker data
-remains a coder operation requiring explicit MCP permission and authorization.
-Unknown tools are denied even if the server describes them as read-only.
+Tracker retrieval reaches the read-only roles through the `gh`/`glab` queries
+they already hold. A project that registers its own tracker MCP does not widen
+that: its tools stay outside the reviewed allowlist, so reading through it is a
+coder operation with explicit MCP permission, and creating or changing tracker
+data is one regardless. Unknown tools are denied even if the server describes
+them as read-only.
 
 For other project MCP queries not yet in the reviewed allowlist, build/plan
 can delegate to an explicitly permitted coder with a prompt limiting the task
@@ -420,10 +440,10 @@ home-level and project `.claude/skills` out of OpenCode. The broader
 OpenCode's own `customize-opencode` skill claims, that flag guards the whole
 discovery block, so it removes a project's `.agents/skills` along with the
 home-level scan. Restoring the project paths through `skills.paths` is not
-enough either, because a desktop host cannot see that repair. OpenChamber
-reads `OPENCODE_DISABLE_EXTERNAL_SKILLS` from its own environment and then
-hides every skill whose path contains `.agents/` or `.claude/`, so its slash
-menu listed no project skills while the agent could still load all of them.
+enough either, because a desktop host cannot see that repair: a host that reads
+`OPENCODE_DISABLE_EXTERNAL_SKILLS` from its own environment goes on to hide
+every skill whose path contains `.agents/` or `.claude/`, so its slash menu
+lists no project skills while the agent can still load all of them.
 
 `ocx opencode -p <profile>` cannot see a project's OpenCode configuration. OCX
 collects only `agent`, `command`, `skill` and `tool` directories out of
@@ -574,16 +594,17 @@ it runs, and the table below is rendered from that catalog:
 
 <!-- generated: runtime-conditions -->
 
-| State                      | Doctor                          | Why it accumulates                                                                                        |
-| -------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Worktree processes         | Reported, repaired with `--fix` | A command an agent started outlives the session that started it                                           |
-| The `event` table          | Reported, repaired with `--fix` | An append-only replication log for remote workspaces, with no retention                                   |
-| Stale `workspace` rows     | Reported, repaired with `--fix` | A row outlives its directory, and a retired adapter fails every server start                              |
-| Stranded sessions          | Reported, repaired with `--fix` | A session names a `workspace` row that is gone, so it can be neither deleted nor archived                 |
-| Stale session snapshots    | Reported, repaired with `--fix` | A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes    |
-| Idle delegation artifacts  | Reported, repaired with `--fix` | A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output |
-| An untracked global config | Reported only                   | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`                                 |
-| Log files                  | Reported, repaired with `--fix` | CLI and plugin output, and the rotations it leaves behind                                                 |
+| State                      | Doctor                          | Why it accumulates                                                                                                     |
+| -------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Worktree processes         | Reported, repaired with `--fix` | A command an agent started outlives the session that started it                                                        |
+| The `event` table          | Reported, repaired with `--fix` | An append-only replication log for remote workspaces, with no retention                                                |
+| Stale `workspace` rows     | Reported, repaired with `--fix` | A row outlives its directory, and a retired adapter fails every server start                                           |
+| Stranded sessions          | Reported, repaired with `--fix` | A session names a `workspace` row that is gone, so it can be neither deleted nor archived                              |
+| Stale session snapshots    | Reported, repaired with `--fix` | A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes                 |
+| Idle delegation artifacts  | Reported, repaired with `--fix` | A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output              |
+| Idle worktree checkouts    | Reported, repaired with `--fix` | A retired session's checkout keeps its node_modules and build output, and no other condition owns the directory itself |
+| An untracked global config | Reported only                   | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`                                              |
+| Log files                  | Reported, repaired with `--fix` | CLI and plugin output, and the rotations it leaves behind                                                              |
 
 <!-- generated-end -->
 
@@ -607,8 +628,8 @@ symlinks are preserved; a symlinked log directory is refused. This option is
 read-only without `--fix`.
 
 Reporting is the default because each repair deletes state no backup covers.
-Repairs refuse to run while OpenCode holds the database, so quit OpenChamber
-and any `opencode` session first. That precondition is also what makes reaping
+Repairs refuse to run while OpenCode holds the database, so quit the desktop
+app and any `opencode` session first. That precondition is also what makes reaping
 safe to state: a process still living inside an agent worktree while no
 OpenCode runs has no owner left.
 

@@ -93,12 +93,11 @@ does not infer another worktree path, redirect a file request or broaden native
 external-directory permissions.
 
 The native role permissions and query guard share one explicit MCP tool list
-for CodeGraph exploration, Context7 documentation, Exa search/page retrieval,
-grep.app code search and Linear tracker queries. The project registers the
-server as `linear`; approved issue/project/comment and related context queries
-are available directly to the same read-only roles as `gh`/`glab` queries.
-Tracker mutations remain coder operations with explicit MCP permissions and
-user authorization covering the requested changes.
+for CodeGraph exploration, Context7 documentation, Exa search/page retrieval
+and grep.app code search. Tracker retrieval stays with the `gh`/`glab` queries
+the read-only roles already hold; tracker mutations remain coder operations
+with explicit MCP permissions and user authorization covering the requested
+changes.
 Unknown tools are denied by default, including new tools under those server
 names; a server prefix alone does not authorize a query.
 
