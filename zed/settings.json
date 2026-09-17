@@ -130,6 +130,59 @@
   "auto_update": false,
   "base_keymap": "VSCode",
   "vim_mode": false,
+  // Reopen what was open. A machine move restores the workspace rather than an
+  // empty window, and closing the last tab keeps the window so the dock entry
+  // still leads somewhere.
+  "restore_on_startup": "last_session",
+  "when_closing_with_no_tabs": "keep_window_open",
+  "confirm_quit": false,
+  "use_smartcase_search": true,
+  // Panels for features this setup does not use. Hiding the buttons is the
+  // whole change: the features stay available from the command palette.
+  "collaboration_panel": {
+    "button": false
+  },
+  "chat_panel": {
+    "button": "never"
+  },
+  "notification_panel": {
+    "button": false
+  },
+  "minimap": {
+    "show": "auto",
+    "thumb": "always",
+    "current_line_highlight": "all"
+  },
+  "scrollbar": {
+    "show": "auto",
+    "git_diff": true,
+    "search_results": true,
+    "selected_symbol": true,
+    "diagnostics": "all",
+    "cursors": true
+  },
+  // Blame on the line under the cursor, with the commit summary, because the
+  // question a blame answers here is "why", not "who".
+  "git": {
+    "inline_blame": {
+      "enabled": true,
+      "show_commit_summary": true
+    },
+    "hunk_style": "staged_hollow"
+  },
+  // Diagnostics beside the code rather than only in the panel. Warnings are
+  // included: this repository's shellcheck and eslint findings are warnings.
+  "diagnostics": {
+    "include_warnings": true,
+    "inline": {
+      "enabled": true,
+      "update_debounce_ms": 150
+    }
+  },
+  // 80 is what mdformat wraps Markdown to and what the shell files here keep;
+  // 100 is the second guide for TypeScript.
+  "wrap_guides": [80, 100],
+  "show_wrap_guides": true,
   "ui_font_size": 16,
   "buffer_font_family": "JetBrainsMono Nerd Font",
   "buffer_font_size": 15,
@@ -166,6 +219,17 @@
     "diagnostics": false,
     "metrics": false
   },
+  // Names this repository invents, which no extension can be expected to know.
+  // Only those: `*.jsonc`, `*.toml` and `*.zsh` are already mapped by Zed, and
+  // restating them here would put a second owner on something that works. The
+  // `_*.tsv` catalogs are plain rows rather than a language, so they keep the
+  // default. `.prettierrc.json` is strict JSON on purpose and is not listed:
+  // `jq` reads it in tests/zed_settings_test.sh.
+  "file_types": {
+    "Shell Script": ["*.symlink", ".localrc", ".localrc.example", ".commonrc"],
+    "Ruby": ["Brewfile"],
+    "JSONC": ["*.keyclu"]
+  },
   "file_scan_exclusions": [
     "**/.git",
     "**/.DS_Store",
@@ -179,7 +243,18 @@
     "**/_build",
     "**/deps",
     "**/.elixir_ls",
-    "**/target"
+    "**/target",
+    // Generated or agent-owned trees. `.opencode-artifacts` is a delegation's
+    // evidence directory: it is Git-ignored by its own marker, it is where the
+    // orchestrator's build output lands, and indexing one costs more than every
+    // other exclusion here combined.
+    "**/.opencode-artifacts",
+    "**/.codegraph",
+    "**/.wrangler",
+    "**/.direnv",
+    "**/.gradle",
+    "**/Pods",
+    "**/.expo"
   ],
   // Secrets never reach the assistant context or previews.
   "private_files": [
@@ -187,8 +262,64 @@
     "**/*.pem",
     "**/*.key",
     "**/id_*",
-    "**/secrets.yml"
+    "**/secrets.yml",
+    // The machine-private half this repository draws a boundary around:
+    // .localrc, the generated Git identity, age identities, and kubeconfigs.
+    "**/.localrc",
+    "**/gitconfig.local*",
+    "**/*.age",
+    "**/*_rsa",
+    "**/*_ed25519",
+    "**/kubeconfig*",
+    "**/*.kubeconfig"
   ],
+  // Server-specific options. These cannot live under `languages`: that key
+  // selects which servers run, this one configures them.
+  "lsp": {
+    "gopls": {
+      "initialization_options": {
+        "usePlaceholders": true,
+        "staticcheck": true,
+        "analyses": {
+          "unusedparams": true,
+          "unusedwrite": true,
+          "nilness": true,
+          "shadow": false
+        },
+        "hints": {
+          "assignVariableTypes": true,
+          "compositeLiteralFields": true,
+          "constantValues": true,
+          "functionTypeParameters": true,
+          "parameterNames": false,
+          "rangeVariableTypes": true
+        }
+      }
+    },
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy"
+        },
+        "inlayHints": {
+          "closureReturnTypeHints": { "enable": "with_block" },
+          "parameterHints": { "enable": false }
+        }
+      }
+    },
+    // Ruff reads pyproject.toml/ruff.toml from the project; nothing is pinned
+    // here so a repository's own configuration stays the authority.
+    "basedpyright": {
+      "settings": {
+        "basedpyright": {
+          "analysis": {
+            "diagnosticMode": "openFilesOnly",
+            "typeCheckingMode": "standard"
+          }
+        }
+      }
+    }
+  },
   "languages": {
     "JavaScript": {
       "prettier": { "allowed": true }
@@ -257,10 +388,60 @@
         }
       }
     },
+    // Like the Nix entry below, `language_servers` is a priority list and not a
+    // fallback chain: every server left enabled runs at once and duplicates
+    // diagnostics. Each unwanted one is disabled with `!` rather than merely
+    // omitted, so an extension update cannot silently re-enable it.
+    //
+    // The Zed elixir extension registers five servers -- dexter, elixir-ls,
+    // expert, lexical and next-ls -- and left alone it runs whichever ones it
+    // defaults to. elixir-ls is the one named here because it is the one this
+    // machine has already downloaded and runs today; expert is its maintained
+    // successor and switching is a one-word edit, but doing it blind would
+    // trade a working server for a download that has never been attempted.
+    // Formatting stays with `mix format`, which the server runs, so no external
+    // formatter is declared: the project's .formatter.exs is the authority.
     "Elixir": {
-      "tab_size": 2
+      "tab_size": 2,
+      "language_servers": [
+        "elixir-ls",
+        "!expert",
+        "!dexter",
+        "!next-ls",
+        "!lexical"
+      ]
     },
+    // Ruff both lints and formats; basedpyright supplies types. Ruff is named
+    // as the formatter explicitly because with both servers enabled either one
+    // could claim the buffer, and pyright's formatting is not Ruff's.
     "Python": {
+      "tab_size": 4,
+      "language_servers": ["basedpyright", "ruff", "!pyright", "!pylsp"],
+      "formatter": [
+        {
+          "code_actions": {
+            "source.organizeImports.ruff": true,
+            "source.fixAll.ruff": true
+          }
+        },
+        {
+          "language_server": {
+            "name": "ruff"
+          }
+        }
+      ]
+    },
+    // gopls is the only Go server, so the list only records that. Imports are
+    // organized on format because gofmt does not add or drop an import and
+    // `goimports` behaviour is what the toolchain expects on save.
+    "Go": {
+      "tab_size": 4,
+      "hard_tabs": true,
+      "code_actions_on_format": {
+        "source.organizeImports": true
+      }
+    },
+    "Rust": {
       "tab_size": 4
     },
     // The Zed nix extension registers two language servers, nil and nixd.
