@@ -105,7 +105,11 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
     prompt: "Implement bounded behavior; run focused checks.",
     ...overrides,
   });
-  function result(child: string, text = "Verified result") {
+  function result(
+    child: string,
+    text = "Verified result",
+    error?: { name: string },
+  ) {
     const entries = messages.get(child)!;
     entries.push({
       info: {
@@ -114,6 +118,7 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
         parentID: entries[0].info.id,
         finish: "stop",
         time: { completed: Date.now() },
+        ...(error ? { error } : {}),
       },
       parts: [{ type: "text", text }],
     });
@@ -866,6 +871,48 @@ test("recover releases a destroyed child while its root session remains", async 
   const released = f.manager.get("root", writer.id);
   expect(released.status).toBe("failed");
   expect(released.result).toContain("no longer exists");
+  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+});
+
+// An abandoned root whose sessions still exist never calls recover again. Its
+// past-deadline writer must not pin review_snapshot for every other root that
+// shares the journal; only the caller's children used to be swept.
+test("recover times out another root's expired writer so review can proceed", async () => {
+  const f = await fixture(60_000);
+  const writer = await f.manager.start("abandoned-root", f.request());
+  expect(() => f.manager.assertReviewReady(writer.directory)).toThrow(
+    writer.id,
+  );
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(f.filename);
+  const stored = db
+    .query("SELECT record FROM delegations WHERE id=?")
+    .get(writer.id) as { record: string };
+  const record = JSON.parse(stored.record);
+  record.deadline = Date.now() - 1;
+  db.query("UPDATE delegations SET record=? WHERE id=?").run(
+    JSON.stringify(record),
+    writer.id,
+  );
+  db.close();
+  await f.manager.recover("live-root");
+  const released = f.manager.get("abandoned-root", writer.id);
+  expect(released.status).toBe("timed_out");
+  expect(f.aborts).toContain(writer.child!);
+  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+});
+
+// Same gap when the child already finished with an abort: complete never ran
+// because only the owning root's recover inspected it.
+test("recover settles another root's finished child before review", async () => {
+  const f = await fixture();
+  const writer = await f.manager.start("abandoned-root", f.request());
+  f.result(writer.child!, "aborted", {
+    error: { name: "MessageAbortedError" },
+  });
+  await f.manager.recover("live-root");
+  const released = f.manager.get("abandoned-root", writer.id);
+  expect(released.status).toBe("failed");
   expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
 });
 

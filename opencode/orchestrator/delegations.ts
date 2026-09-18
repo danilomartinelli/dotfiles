@@ -916,15 +916,17 @@ export class Delegations {
   /** Idempotent recovery: inspect existing children, never create replacements. */
   async recover(root: string) {
     await this.reconcileOrphans();
-    for (const row of this.list(root).filter((item) =>
-      active.has(item.status),
-    )) {
+    // Sweep the whole journal, not only this root. An abandoned root whose
+    // sessions still exist never recovers itself; its expired or finished
+    // writers would otherwise pin review_snapshot for every other root.
+    for (const row of this.all().filter((item) => active.has(item.status))) {
       if (row.child) await this.complete(row.child);
-      const current = this.get(root, row.id);
-      if (active.has(current.status) && Date.now() >= current.deadline)
+      const current = this.get(row.root, row.id);
+      if (!active.has(current.status)) continue;
+      if (Date.now() >= current.deadline)
         await this.stop(
-          root,
-          row.id,
+          current.root,
+          current.id,
           "timed_out",
           "Deadline elapsed while the orchestrator was disconnected.",
         );

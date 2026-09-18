@@ -137,7 +137,10 @@ acknowledged. Missing acknowledgement leaves a delegation in `stopping`;
 recovery inspects existing executions without creating replacements. When a
 root or child session no longer exists in OpenCode, recover releases that
 writer's journal reservation so another root sharing the project is not
-blocked forever on `review_snapshot` or overlapping ownership. See
+blocked forever on `review_snapshot` or overlapping ownership. The same
+recovery settles finished children and times out expired writers across the
+whole journal, not only the caller's root, so an abandoned session cannot pin
+the checkout after its deadline. See
 [the runtime lifecycle](orchestrator/README.md#lifecycle) for remote MCP
 cancellation limits and reconciliation requirements.
 
