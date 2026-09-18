@@ -8,6 +8,9 @@ import {
   guardBash,
   mcpQueryTools,
   readOnlyRoles,
+  roleMayWrite,
+  writeTools,
+  writerRoles,
 } from "../opencode/orchestrator/permissions";
 
 function query(command: string, role = "reviewer"): string {
@@ -243,6 +246,22 @@ describe("regular read-only tool boundary", () => {
       expect(() =>
         assertReadOnlyTool("build", "exa_web_fetch_exa", args),
       ).toThrow("Read-only policy:");
+  });
+
+  test("the existing writer role and tool families stay one matrix", () => {
+    for (const role of ["coder", "scribe"])
+      for (const tool of writeTools) {
+        expect(writerRoles.has(role)).toBe(true);
+        expect(roleMayWrite(role, tool)).toBe(true);
+        expect(rolePermissions(role)[tool]).toBe("allow");
+      }
+    for (const role of ["build", "plan", "reviewer", "explore", "researcher"])
+      for (const tool of writeTools) {
+        expect(roleMayWrite(role, tool)).toBe(false);
+        expect(rolePermissions(role)[tool]).toBe("deny");
+      }
+    for (const role of ["coder", "scribe", "unknown"])
+      expect(roleMayWrite(role, "unknown_tool")).toBe(false);
   });
 
   test("a project MCP allowlist never widens what a read-only role may call", () => {

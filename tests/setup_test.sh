@@ -144,6 +144,7 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
   cp "$REPOSITORY_ROOT/_scripts/checklist" "$fixture/_scripts/checklist"
+  cp "$fixture/_scripts/checklist" "$fixture/_scripts/checklist-real"
   cp "$REPOSITORY_ROOT/_scripts/output.sh" "$fixture/_scripts/output.sh"
   cp "$REPOSITORY_ROOT/_scripts/_checklist.tsv" "$fixture/_scripts/_checklist.tsv"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
@@ -183,6 +184,18 @@ make_fixture() {
     "$fixture/_scripts/mobile-setup" \
     "$fixture/android-studio/install.sh" \
     "$fixture/xcode/install.sh"
+
+  # Observe entry into the checklist without depending on its catalog or
+  # application-opening implementation. The standard setup paths must not
+  # reach either this sentinel or the separate open command double.
+  scenario_write_executable "$fixture/_scripts/checklist" <<'EOF'
+#!/bin/sh
+printf 'checklist-entry %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+if [ "$#" -eq 1 ] && [ "$1" = --open-apps ]; then
+  exec "$(dirname "$0")/checklist-real" "$@"
+fi
+exit "${FAIL_CHECKLIST:-0}"
+EOF
 
   printf '%s\n' '# local environment' >"$fixture/.localrc.example"
   printf '%s\n' '# Brewfile fixture' >"$fixture/Brewfile"
@@ -309,20 +322,14 @@ test_standard_modes_never_open_apps_or_launch_checklist() {
   bootstrap_fixture=$(make_fixture)
   invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/setup" bootstrap
   assert_not_contains "$bootstrap_fixture/events.log" 'open '
+  assert_not_contains "$bootstrap_fixture/events.log" 'checklist-entry '
   assert_not_contains "$bootstrap_fixture/stdout.log" 'Post-bootstrap checklist'
-  awk '/^run_bootstrap\(\)/,/^}/' "$bootstrap_fixture/_scripts/setup" \
-    >"$bootstrap_fixture/bootstrap-function.txt"
-  assert_not_contains "$bootstrap_fixture/bootstrap-function.txt" open
-  assert_not_contains "$bootstrap_fixture/bootstrap-function.txt" checklist
 
   update_fixture=$(make_fixture)
   invoke "$update_fixture" "$update_fixture/_scripts/setup" update
   assert_not_contains "$update_fixture/events.log" 'open '
+  assert_not_contains "$update_fixture/events.log" 'checklist-entry '
   assert_not_contains "$update_fixture/stdout.log" 'Post-bootstrap checklist'
-  awk '/^run_update\(\)/,/^}/' "$update_fixture/_scripts/setup" \
-    >"$update_fixture/update-function.txt"
-  assert_not_contains "$update_fixture/update-function.txt" open
-  assert_not_contains "$update_fixture/update-function.txt" checklist
 }
 
 test_checklist_opening_requires_interactive_opt_in() {

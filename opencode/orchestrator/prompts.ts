@@ -1,4 +1,9 @@
-import { mcpQueryTools, roleMayRunBash } from "./permissions";
+import {
+  mcpQueryTools,
+  roleMayRunBash,
+  roleMayWrite,
+  writeTools,
+} from "./permissions";
 
 const codeContext = `Use CodeGraph for structural questions spanning files, LSP for precise definitions/references/types, and read/glob/grep for text or unsupported languages.
 Choose the tool that answers the question directly; these are not mandatory stages. Confirm stale or conflicting index results against current source.
@@ -145,7 +150,12 @@ export function rolePermissions(
   ...declared: unknown[]
 ): Record<string, unknown> {
   const root = role === "build" || role === "plan";
-  const writer = role === "coder" || role === "scribe";
+  const writePermissions = Object.fromEntries(
+    [...writeTools].map((tool) => [
+      tool,
+      roleMayWrite(role, tool) ? "allow" : "deny",
+    ]),
+  );
   const permissions: Record<string, unknown> = {
     "*": "deny",
     read: "allow",
@@ -156,9 +166,7 @@ export function rolePermissions(
     // Runtime argument guards enforce read-only queries before execution, and
     // guardBash decides who reaches them from this same answer.
     bash: roleMayRunBash(role) ? "allow" : "deny",
-    edit: writer ? "allow" : "deny",
-    write: writer ? "allow" : "deny",
-    apply_patch: writer ? "allow" : "deny",
+    ...writePermissions,
     task: "deny",
     compress: root ? "allow" : "deny",
     delegate: root ? "allow" : "deny",

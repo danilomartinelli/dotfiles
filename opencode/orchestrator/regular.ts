@@ -13,11 +13,9 @@ import {
   assertWriteTargets,
   childRoles,
   sourceVersion,
-  writeTools,
-  writerRoles,
   type Routes,
 } from "./delegations";
-import { assertReadOnlyTool } from "./permissions";
+import { assertReadOnlyTool, roleMayWrite } from "./permissions";
 import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
@@ -424,7 +422,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       const mcpExecution =
         role === "coder" &&
         mcpServers.some((server) => input.tool.startsWith(`${server}_`));
-      if (writerRoles.has(role) && writeTools.has(input.tool)) {
+      if (roleMayWrite(role, input.tool)) {
         if (!child)
           throw new Error(
             "Writer edits require a delegation with file ownership.",
@@ -442,7 +440,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         output.args,
         (await journals.session(input.sessionID)).directory,
       );
-      if ((writerRoles.has(role) && writeTools.has(input.tool)) || mcpExecution)
+      if (roleMayWrite(role, input.tool) || mcpExecution)
         manager.toolStarted(input.sessionID, input.callID);
     },
     "shell.env": async (input) => {

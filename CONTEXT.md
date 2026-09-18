@@ -93,6 +93,16 @@ removes. Distinct from a generated target: both are written by the tool, but
 only a generated target is ours to destroy.
 _Avoid_: generated, generated state
 
+### Delegation
+
+**Agent role**:
+The declared responsibility of an agent, independent of the model selected by
+its profile. It participates in determining the agent's permitted operations.
+
+**Delegation ownership**:
+The scope of paths in which a writer delegation may modify files. Permission to
+use a tool does not authorize writing outside that scope.
+
 ### Credentials
 
 **Key provisioning**:

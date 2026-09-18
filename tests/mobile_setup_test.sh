@@ -10,6 +10,10 @@ source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/stubs.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/stubs.sh"
+# shellcheck source=tests/_support/mobile-android-fixture.sh
+# shellcheck disable=SC1091
+source "$TEST_DIR/_support/mobile-android-fixture.sh"
+export ANDROID_FIXTURE_HELPER="$TEST_DIR/_support/mobile-android-fixture.sh"
 scenario_init dotfiles-mobile-setup-tests
 
 MOBILE_SETUP=$REPOSITORY_ROOT/bin/mobile-setup
@@ -27,152 +31,6 @@ new_fixture() {
   stub_open "$fixture/fake-bin"
 
   printf '%s\n' "$fixture"
-}
-
-android_root() {
-  printf '%s\n' "$1/home/Library/Android/sdk"
-}
-
-write_android_tools() {
-  local fixture=$1
-  local root
-
-  root=$(android_root "$fixture")
-  mkdir -p "$root/cmdline-tools/latest/bin"
-
-  scenario_write_executable "$root/cmdline-tools/latest/bin/sdkmanager" <<'EOF'
-#!/bin/sh
-printf 'sdkmanager %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-if [ -n "${FAKE_EXPECT_JAVA_HOME:-}" ] && [ "${JAVA_HOME:-}" != "$FAKE_EXPECT_JAVA_HOME" ]; then
-  printf 'sdkmanager unexpected JAVA_HOME: %s\n' "${JAVA_HOME:-unset}" >>"$SCENARIO_EVENT_LOG"
-  exit 67
-fi
-sdk_root=
-for argument in "$@"; do
-  case "$argument" in
-    --sdk_root=*) sdk_root=${argument#--sdk_root=} ;;
-  esac
-done
-
-if [ "${FAKE_SDKMANAGER_INSTALL:-0}" -eq 1 ] && [ -n "$sdk_root" ]; then
-  for package in "$@"; do
-    case "$package" in
-      platform-tools)
-        mkdir -p "$sdk_root/platform-tools"
-        : >"$sdk_root/platform-tools/adb"
-        chmod +x "$sdk_root/platform-tools/adb"
-        ;;
-      emulator)
-        mkdir -p "$sdk_root/emulator"
-        : >"$sdk_root/emulator/emulator"
-        chmod +x "$sdk_root/emulator/emulator"
-        ;;
-      'cmdline-tools;latest')
-        mkdir -p "$sdk_root/cmdline-tools/latest/bin"
-        ;;
-      'platforms;android-36')
-        mkdir -p "$sdk_root/platforms/android-36"
-        : >"$sdk_root/platforms/android-36/android.jar"
-        ;;
-      'build-tools;36.0.0')
-        mkdir -p "$sdk_root/build-tools/36.0.0"
-        : >"$sdk_root/build-tools/36.0.0/aapt2"
-        chmod +x "$sdk_root/build-tools/36.0.0/aapt2"
-        ;;
-      'system-images;android-36;google_apis;arm64-v8a')
-        mkdir -p "$sdk_root/system-images/android-36/google_apis/arm64-v8a"
-        : >"$sdk_root/system-images/android-36/google_apis/arm64-v8a/package.xml"
-        ;;
-    esac
-  done
-fi
-if [ "${FAKE_SDKMANAGER_REMOVE_LICENSE:-0}" -eq 1 ] && [ -n "$sdk_root" ]; then
-  rm -f "$sdk_root/licenses/android-sdk-license"
-fi
-if [ "${FAKE_SDKMANAGER_REJECT_STDIN:-0}" -eq 1 ]; then
-  if IFS= read -r input; then
-    printf 'sdkmanager read stdin: %s\n' "$input" >>"$SCENARIO_EVENT_LOG"
-    exit 66
-  fi
-fi
-exit "${FAKE_SDKMANAGER_STATUS:-0}"
-EOF
-
-  scenario_write_executable "$root/cmdline-tools/latest/bin/avdmanager" <<'EOF'
-#!/bin/sh
-printf 'avdmanager %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-if [ -n "${FAKE_EXPECT_JAVA_HOME:-}" ] && [ "${JAVA_HOME:-}" != "$FAKE_EXPECT_JAVA_HOME" ]; then
-  printf 'avdmanager unexpected JAVA_HOME: %s\n' "${JAVA_HOME:-unset}" >>"$SCENARIO_EVENT_LOG"
-  exit 67
-fi
-case "$1 ${2-}" in
-  'list device')
-    if [ "${FAKE_AVDMANAGER_LIST_STATUS:-0}" -ne 0 ]; then
-      exit "$FAKE_AVDMANAGER_LIST_STATUS"
-    fi
-    cat <<'DEVICES'
-id: 28 or "pixel"
-Name: Pixel
-OEM : Google
-DEVICES
-    ;;
-  'create avd')
-    avd_name=
-    image=
-    device=
-    previous=
-    for argument in "$@"; do
-      case "$previous" in
-        -n) avd_name=$argument ;;
-        -k) image=$argument ;;
-        --device) device=$argument ;;
-      esac
-      previous=$argument
-    done
-    mkdir -p "$HOME/.android/avd/$avd_name.avd"
-    printf 'image.sysdir.1=%s\nhw.device.name=%s\n' "$image" "$device" \
-      >"$HOME/.android/avd/$avd_name.avd/config.ini"
-    printf 'path=%s\n' "$HOME/.android/avd/$avd_name.avd" \
-      >"$HOME/.android/avd/$avd_name.ini"
-    if [ "${FAKE_AVDMANAGER_REMOVE_PACKAGE:-0}" -eq 1 ]; then
-      rm -f "$HOME/Library/Android/sdk/platforms/android-36/android.jar"
-    fi
-    ;;
-esac
-exit "${FAKE_AVDMANAGER_STATUS:-0}"
-EOF
-
-  mkdir -p "$root/licenses"
-  : >"$root/licenses/android-sdk-license"
-}
-
-install_android_packages() {
-  local fixture=$1
-  local root
-
-  root=$(android_root "$fixture")
-  mkdir -p "$root/platform-tools" "$root/emulator" \
-    "$root/platforms/android-36" "$root/build-tools/36.0.0" \
-    "$root/system-images/android-36/google_apis/arm64-v8a"
-  : >"$root/platform-tools/adb"
-  : >"$root/emulator/emulator"
-  : >"$root/platforms/android-36/android.jar"
-  : >"$root/build-tools/36.0.0/aapt2"
-  : >"$root/system-images/android-36/google_apis/arm64-v8a/package.xml"
-  chmod +x "$root/platform-tools/adb" "$root/emulator/emulator" \
-    "$root/build-tools/36.0.0/aapt2"
-}
-
-write_android_avd() {
-  local fixture=$1
-  local image=${2:-system-images/android-36/google_apis/arm64-v8a}
-  local device=${3:-pixel}
-
-  mkdir -p "$fixture/home/.android/avd/Pixel_API36.avd"
-  printf 'image.sysdir.1=%s\nhw.device.name=%s\n' "$image" "$device" \
-    >"$fixture/home/.android/avd/Pixel_API36.avd/config.ini"
-  printf 'path=%s\n' "$fixture/home/.android/avd/Pixel_API36.avd" \
-    >"$fixture/home/.android/avd/Pixel_API36.ini"
 }
 
 invoke_mobile() {
@@ -411,6 +269,22 @@ test_android_install_stops_for_manual_prerequisites() {
   assert_not_contains "$fixture/events.log" '--licenses'
 }
 
+test_android_check_reports_a_missing_individual_vendor_tool() {
+  local fixture root status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm "$root/cmdline-tools/latest/bin/sdkmanager"
+
+  invoke_mobile "$fixture" -- --check android || status=$?
+
+  assert_equal 1 "$status" 'missing sdkmanager status'
+  assert_contains "$fixture/stderr.log" 'sdkmanager expected at'
+  assert_not_contains "$fixture/stderr.log" 'avdmanager expected at'
+  assert_not_contains "$fixture/events.log" 'avdmanager create'
+}
+
 test_android_classification_replaces_the_complete_named_snapshot() {
   local fixture root
   fixture=$(new_fixture)
@@ -609,6 +483,22 @@ test_android_install_skips_a_compatible_avd() {
   assert_contains "$fixture/stdout.log" 'Pixel_API36 AVD is ready'
 }
 
+test_android_install_rejects_an_incomplete_avd_before_mutation() {
+  local fixture status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  mkdir -p "$fixture/home/.android/avd/Pixel_API36.avd"
+  : >"$fixture/home/.android/avd/Pixel_API36.ini"
+
+  invoke_mobile "$fixture" -- android || status=$?
+
+  assert_equal 1 "$status" 'incomplete AVD status'
+  assert_contains "$fixture/stderr.log" 'refusing to overwrite'
+  assert_not_contains "$fixture/events.log" 'sdkmanager '
+  assert_not_contains "$fixture/events.log" 'avdmanager create'
+}
+
 test_android_install_refuses_to_overwrite_an_incompatible_avd() {
   local fixture config_before config_after status=0
   fixture=$(new_fixture)
@@ -667,6 +557,22 @@ test_android_install_rejects_an_unready_snapshot_after_package_install() {
   assert_equal 1 "$status" 'unready post-package-install snapshot status'
   assert_contains "$fixture/stderr.log" 'readiness snapshot incomplete'
   assert_contains "$fixture/stderr.log" 'licenses are not accepted'
+  assert_not_contains "$fixture/events.log" 'avdmanager create'
+}
+
+test_android_install_reports_a_failed_package_action_without_creating_an_avd() {
+  local fixture root status=0
+  fixture=$(new_fixture)
+  write_android_tools "$fixture"
+  install_android_packages "$fixture"
+  root=$(android_root "$fixture")
+  rm -rf "$root/platforms/android-36"
+
+  invoke_mobile "$fixture" FAKE_SDKMANAGER_STATUS=1 -- android || status=$?
+
+  assert_equal 1 "$status" 'failed package action status'
+  assert_contains "$fixture/stderr.log" 'Android SDK package installation failed'
+  assert_contains "$fixture/events.log" 'sdkmanager '
   assert_not_contains "$fixture/events.log" 'avdmanager create'
 }
 
@@ -867,6 +773,8 @@ scenario_run 'iOS install reports download failure without cross-target or ready
   test_ios_install_reports_download_failure_without_cross_target_or_ready_state
 scenario_run 'Android install stops for manual prerequisites' \
   test_android_install_stops_for_manual_prerequisites
+scenario_run 'Android check reports a missing individual vendor tool' \
+  test_android_check_reports_a_missing_individual_vendor_tool
 scenario_run 'Android classification replaces the complete named snapshot' \
   test_android_classification_replaces_the_complete_named_snapshot
 scenario_run 'Android freezes resolved paths for each invocation' \
@@ -874,12 +782,16 @@ scenario_run 'Android freezes resolved paths for each invocation' \
 scenario_run 'Android install reconciles packages and creates an absent AVD' \
   test_android_install_reconciles_only_missing_packages_and_creates_an_absent_avd
 scenario_run 'Android install skips a compatible AVD' test_android_install_skips_a_compatible_avd
+scenario_run 'Android install rejects an incomplete AVD before mutation' \
+  test_android_install_rejects_an_incomplete_avd_before_mutation
 scenario_run 'Android install protects incompatible AVD state' \
   test_android_install_refuses_to_overwrite_an_incompatible_avd
 scenario_run 'Android protects incompatible AVDs before package installation' \
   test_android_install_refuses_incompatible_avd_before_missing_package_install
 scenario_run 'Android rejects an unready snapshot after package installation' \
   test_android_install_rejects_an_unready_snapshot_after_package_install
+scenario_run 'Android reports failed package actions without creating an AVD' \
+  test_android_install_reports_a_failed_package_action_without_creating_an_avd
 scenario_run 'Android requires full readiness after AVD creation' \
   test_android_install_requires_full_readiness_after_avd_creation
 scenario_run 'all targets continue after an earlier target fails' \
