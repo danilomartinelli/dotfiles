@@ -10,7 +10,15 @@ export const readOnlyRoles = new Set([
   "researcher",
 ]);
 
-const writerRoles = new Set(["coder", "scribe"]);
+/** Roles whose writes are subject to delegated file ownership. */
+export const writerRoles = new Set(["coder", "scribe"]);
+
+/** Native write tools and the runtime tools that require ownership checks. */
+export const writeTools = new Set(["edit", "write", "apply_patch"]);
+
+export function roleMayWrite(role: string, tool: string): boolean {
+  return writerRoles.has(role) && writeTools.has(tool);
+}
 
 /** Shared by native role permissions and the runtime query guard. */
 export const mcpQueryTools = [

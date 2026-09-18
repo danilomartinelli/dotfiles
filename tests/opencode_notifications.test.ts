@@ -139,6 +139,86 @@ test("the review snapshot tool allows read-only children while enforcing writer 
   });
 });
 
+test("regular tool admission preserves role gates, ordering, and query effects", () =>
+  fixture(async ({ hooks, manager, request }: any) => {
+    const before = (
+      sessionID: string,
+      tool: string,
+      args: any,
+      callID = `${sessionID}-${tool}`,
+    ) =>
+      hooks["tool.execute.before"](
+        { sessionID, tool, callID },
+        { args },
+      );
+    const after = (sessionID: string, callID: string) =>
+      hooks["tool.execute.after"]({ sessionID, callID }, {});
+
+    await expect(
+      before("root", "task", {}),
+    ).rejects.toThrow("native task routing is disabled");
+    await expect(
+      before("root", "memory", { mode: "search" }),
+    ).resolves.toBeUndefined();
+    await expect(
+      before("root", "memory", { mode: "search", content: "write" }),
+    ).rejects.toThrow("retrieval-only");
+
+    const deniedWriter = await manager.start("root", request("owned-denied.txt"));
+    await expect(
+      before(deniedWriter.child, "memory_commit", {}),
+    ).rejects.toThrow("Only the root orchestrator");
+    await expect(
+      before(
+        deniedWriter.child,
+        "write",
+        { filePath: "outside.txt" },
+        "denied-writer-write",
+      ),
+    ).rejects.toThrow("outside delegated file ownership");
+    const stoppedDeniedWriter = await manager.stop("root", deniedWriter.id);
+    expect(stoppedDeniedWriter.status).toBe("cancelled");
+
+    const writer = await manager.start("root", request("owned-allowed.txt"));
+    await expect(
+      before(
+        writer.child,
+        "write",
+        { filePath: "owned-allowed.txt" },
+        "allowed-writer-write",
+      ),
+    ).resolves.toBeUndefined();
+    const stoppingWriter = await manager.stop("root", writer.id);
+    expect(stoppingWriter.status).toBe("stopping");
+    await expect(after(writer.child, "allowed-writer-write")).resolves.toBeUndefined();
+    expect(manager.get("root", writer.id).status).toBe("cancelled");
+
+    await hooks.config({ agent: {}, mcp: { exa: {} }, permission: {} });
+    const deniedReader = await manager.start("root", {
+      ...request("read-only"),
+      role: "explore",
+      ownership: [],
+    });
+    await expect(
+      before(deniedReader.child, "exa_agent_run", {}, "denied-reader-exa"),
+    ).rejects.toThrow("cannot execute exa_agent_run");
+    const stoppedDeniedReader = await manager.stop("root", deniedReader.id);
+    expect(stoppedDeniedReader.status).toBe("cancelled");
+
+    const reader = await manager.start("root", {
+      ...request("read-only-allowed"),
+    });
+    await expect(
+      before(reader.child, "exa_web_fetch_exa", {
+        urls: ["https://example.invalid/docs"],
+      }, "allowed-reader-exa"),
+    ).resolves.toBeUndefined();
+    const stoppingReader = await manager.stop("root", reader.id);
+    expect(stoppingReader.status).toBe("stopping");
+    await expect(after(reader.child, "allowed-reader-exa")).resolves.toBeUndefined();
+    expect(manager.get("root", reader.id).status).toBe("cancelled");
+  }));
+
 test("a pending stop wakes the existing root once and preserves ownership until acknowledgement", () =>
   fixture(async (f) => {
     const row = await f.manager.start("root", f.request("first"));

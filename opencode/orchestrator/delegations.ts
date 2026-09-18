@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import type { PluginInput } from "@opencode-ai/plugin";
 import { artifactPath, prepareArtifacts, workspacePath } from "./artifacts";
 import { patchTargets } from "./patch-targets";
+import { writerRoles } from "./permissions";
 import { safeGitArgv, safeGitEnv } from "./safe-git";
 
 const exec = promisify(execFile);
@@ -17,7 +18,6 @@ export const childRoles = [
   "explore",
   "researcher",
 ] as const;
-export const writerRoles = new Set(["coder", "scribe"]);
 export type Route = { model: string; variant: string };
 export type Routes = Record<string, Route>;
 type Client = PluginInput["client"];
@@ -98,8 +98,6 @@ export async function canonical(filename: string, links = 0): Promise<string> {
     return path.join(await canonical(parent, links), path.basename(filename));
   }
 }
-
-export const writeTools = new Set(["edit", "write", "apply_patch"]);
 
 /**
  * Refuse a write outside what this delegation owns.
