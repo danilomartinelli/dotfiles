@@ -79,6 +79,11 @@ continue after it. Missing acknowledgments stay `stopping`, retain the
 reservation and report the diagnostic. Recovery inspects existing sessions; it never starts replacement
 children. A creation interrupted before its child ID was recorded needs
 session inspection and explicit reconciliation; no speculative restart occurs.
+Destroying a root or child session outside the orchestrator does not clear the
+project journal. Recover therefore treats a missing root or child as terminal,
+releases its ownership, and records the diagnostic, so a new root is not stuck
+behind `review_snapshot` or path overlap forever. A living session still cannot
+cancel another root's writers; only absence releases them.
 For remote MCP calls, OpenCode 1.18.30 forwards abort to the client. That can
 reject the local promise before the server finishes, suppressing the native
 completion hook. A cancelled MCP call then remains `stopping` even if the server

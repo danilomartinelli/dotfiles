@@ -43,21 +43,32 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   const requests: any[] = [],
     created: any[] = [],
     aborts: string[] = [];
+  const destroyed = new Set<string>();
+  const parents = new Map<string, string>();
   const messages = new Map<string, any[]>();
   let snapshot = "source:1";
   const client = {
     session: {
       status: async () => ({ data: {} }),
-      get: async ({ path: { id } }: any) => ({
-        data: {
-          id,
-          directory,
-          parentID: id.startsWith("child") ? "root" : undefined,
-        },
-      }),
+      get: async ({ path: { id } }: any) => {
+        if (destroyed.has(id)) return { error: "not found" };
+        return {
+          data: {
+            id,
+            directory,
+            parentID: parents.has(id)
+              ? parents.get(id)
+              : id.startsWith("child")
+                ? "root"
+                : undefined,
+          },
+        };
+      },
       create: async (args: any) => {
         created.push(args);
-        return { data: { id: `child-${created.length}` } };
+        const id = `child-${created.length}`;
+        parents.set(id, args.body.parentID ?? "root");
+        return { data: { id } };
       },
       promptAsync: async (args: any) => {
         requests.push(args);
@@ -66,9 +77,10 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
         ]);
         return {};
       },
-      messages: async ({ path: { id } }: any) => ({
-        data: messages.get(id) ?? [],
-      }),
+      messages: async ({ path: { id } }: any) => {
+        if (destroyed.has(id)) return { error: "not found" };
+        return { data: messages.get(id) ?? [] };
+      },
       abort: async ({ path: { id } }: any) => {
         aborts.push(id);
         return { data: true };
@@ -117,6 +129,9 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
     aborts,
     messages,
     result,
+    destroy(...ids: string[]) {
+      for (const id of ids) destroyed.add(id);
+    },
     setSnapshot: (value: string) => {
       snapshot = value;
     },
@@ -819,6 +834,39 @@ test("review preparation waits for writers in that checkout and identifies their
   await f.manager.stop("root", writer.id);
   expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
   expect(() => f.manager.assertSettled("root")).toThrow("active delegations");
+});
+
+test("recover releases a destroyed root's writer so another root can review", async () => {
+  const f = await fixture();
+  const writer = await f.manager.start("destroyed-root", f.request());
+  expect(() => f.manager.assertReviewReady(writer.directory)).toThrow(
+    writer.id,
+  );
+  f.destroy("destroyed-root", writer.child!);
+  await f.manager.recover("live-root");
+  const released = f.manager.get("destroyed-root", writer.id);
+  expect(released.status).toBe("failed");
+  expect(released.result).toContain("no longer exists");
+  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+  await f.manager.start(
+    "live-root",
+    f.request({
+      role: "reviewer",
+      ownership: [],
+      sourceVersion: "source:1",
+    }),
+  );
+});
+
+test("recover releases a destroyed child while its root session remains", async () => {
+  const f = await fixture();
+  const writer = await f.manager.start("root", f.request());
+  f.destroy(writer.child!);
+  await f.manager.recover("root");
+  const released = f.manager.get("root", writer.id);
+  expect(released.status).toBe("failed");
+  expect(released.result).toContain("no longer exists");
+  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
 });
 
 test("resume errors distinguish active execution, mismatched identity and profile changes", async () => {

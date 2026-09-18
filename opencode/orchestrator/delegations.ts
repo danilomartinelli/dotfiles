@@ -420,6 +420,60 @@ export class Delegations {
         `Review a stable version after writers finish. Delegation ${writer.id} (${writer.role}, ${writer.status}) still reserves ${writer.directory}; collect its completion notification before retrying.`,
       );
   }
+  private async sessionExists(id: string, directory: string): Promise<boolean> {
+    try {
+      const session = data(
+        await this.client.session.get({
+          path: { id },
+          query: { directory },
+        }),
+        "Resolve session",
+      );
+      return session.id === id;
+    } catch {
+      return false;
+    }
+  }
+  /**
+   * Destroying an OpenCode session does not clear the project journal. A writer
+   * whose root or child is gone still blocks review and overlapping ownership
+   * for every other root sharing that journal. Release those reservations
+   * before recover walks the caller's own children.
+   */
+  private async reconcileOrphans() {
+    for (const row of this.all().filter((item) => active.has(item.status))) {
+      const rootAlive = await this.sessionExists(row.root, row.directory);
+      if (!rootAlive) {
+        this.releaseOrphan(
+          row,
+          `Root session ${row.root} no longer exists; released its reservation.`,
+        );
+        continue;
+      }
+      if (!row.child) continue;
+      if (await this.sessionExists(row.child, row.directory)) continue;
+      this.releaseOrphan(
+        row,
+        `Child session ${row.child} no longer exists; released its reservation.`,
+      );
+    }
+  }
+  private releaseOrphan(row: Delegation, reason: string) {
+    clearTimeout(this.timers.get(row.id));
+    this.timers.delete(row.id);
+    if (row.child)
+      this.db
+        .query("DELETE FROM tool_calls WHERE child=? AND generation=?")
+        .run(row.child, row.messageID);
+    const current = this.get(row.root, row.id);
+    if (!active.has(current.status) || current.messageID !== row.messageID)
+      return;
+    current.status = "failed";
+    current.result = reason;
+    current.abortAcknowledged = true;
+    current.stopState = "failed";
+    this.save(current);
+  }
   async start(root: string, request: Request): Promise<Delegation> {
     if (this.consolidations.size)
       throw new Error(
@@ -861,6 +915,7 @@ export class Delegations {
 
   /** Idempotent recovery: inspect existing children, never create replacements. */
   async recover(root: string) {
+    await this.reconcileOrphans();
     for (const row of this.list(root).filter((item) =>
       active.has(item.status),
     )) {

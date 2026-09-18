@@ -134,7 +134,10 @@ changes. Project instructions cannot replace the profile's declared routes.
 
 Cancellation and timeout retain reservations until tool completion is
 acknowledged. Missing acknowledgement leaves a delegation in `stopping`;
-recovery inspects existing executions without creating replacements. See
+recovery inspects existing executions without creating replacements. When a
+root or child session no longer exists in OpenCode, recover releases that
+writer's journal reservation so another root sharing the project is not
+blocked forever on `review_snapshot` or overlapping ownership. See
 [the runtime lifecycle](orchestrator/README.md#lifecycle) for remote MCP
 cancellation limits and reconciliation requirements.
 
