@@ -81,6 +81,7 @@ brew 'zsh-syntax-highlighting'      # Zsh command-line highlighting
 # Development
 cask 'android-studio'               # Android development IDE
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
+cask 'conductor'                    # Parallel Claude Code agent workspaces
 cask 'lens'                         # Kubernetes IDE
 cask 'opencode-desktop'             # OpenCode desktop client for local and remote agent sessions
 cask 'postman'                      # API development and testing tool

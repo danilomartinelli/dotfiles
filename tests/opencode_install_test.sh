@@ -501,7 +501,7 @@ test_profiles_route_models() {
   # declaring it would have been the shorter check, and it would have accepted
   # `xing` routed entirely to either half of what it was created for.
   for pair in regular:openai example:openai anthropic:anthropic \
-    go:opencode-go xing:kimi-for-coding,zai-coding-plan; do
+    go:opencode-go xing:kimi-code-plan-global,zai-coding-plan; do
     profile=${pair%%:*}
     providers=${pair#*:}
     config=$REPOSITORY_ROOT/opencode/profiles/$profile/opencode.jsonc

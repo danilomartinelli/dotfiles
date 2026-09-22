@@ -102,10 +102,10 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 | Role       | `regular`                      | `example`                      | `anthropic`                            | `go`                                 | `xing`                                   |
 | ---------- | ------------------------------ | ------------------------------ | -------------------------------------- | ------------------------------------ | ---------------------------------------- |
-| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           | `anthropic/claude-fable-5-1`           | `opencode-go/kimi-k3`                | `kimi-for-coding/k3`                     |
+| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           | `anthropic/claude-fable-5-1`           | `opencode-go/kimi-k3`                | `kimi-code-plan-global/k3`               |
 | Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          | `anthropic/claude-opus-5`              | `opencode-go/glm-5.3-flash`          | `zai-coding-plan/glm-5.3-flash`          |
-| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-for-coding/k3` (`max`)             |
-| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-for-coding/k3` (`max`)             |
+| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-code-plan-global/k3` (`max`)       |
+| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-code-plan-global/k3` (`max`)       |
 | Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
 | Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
 | Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
@@ -138,10 +138,11 @@ role judges and saves it where a role mostly reads: Kimi K3 orchestrates, GLM
 publishes `max` alone, which is why plan and build do not say `xhigh` there.
 
 `xing` is that same split bought direct, and the one profile created for two
-providers: Kimi K3 from the Kimi For Coding subscription orchestrates, and GLM
-5.3 and GLM 5.3 Flash from the Z.AI Coding Plan do the writing and the reading.
-The two subscriptions are bought separately and neither publishes the other's
-models, so no single provider can serve this routing. See
+providers: Kimi K3 from the Kimi For Coding (kimi.ai, the global plan)
+subscription orchestrates, and GLM 5.3 and GLM 5.3 Flash from the Z.AI Coding
+Plan do the writing and the reading. The two subscriptions are bought
+separately and neither publishes the other's models, so no single provider can
+serve this routing. See
 [coding-plan providers](#coding-plan-providers) for what the two credentials
 are and which endpoint each reaches.
 
@@ -173,8 +174,8 @@ rather than reporting a credential problem.
 
 `xing` needs no plugin: OpenCode ships both of its providers and authenticates
 each from the environment, so the two keys belong in `.localrc` beside the
-others. `kimi-for-coding/*` reads `KIMI_API_KEY` and reaches
-`api.kimi.com/coding/v1`; `zai-coding-plan/*` reads `ZHIPU_API_KEY` and reaches
+others. `kimi-code-plan-global/*` reads `KIMI_API_KEY` and reaches
+`api.kimi.ai/coding/v1`; `zai-coding-plan/*` reads `ZHIPU_API_KEY` and reaches
 `api.z.ai/api/coding/paas/v4`. Both are subscription endpoints rather than
 metered ones, which is why `opencode models --verbose` reports zero cost for
 every model in them.

@@ -69,17 +69,17 @@ go	researcher	opencode-go/glm-5.3-flash	high	-
 go	scribe	opencode-go/glm-5.3	high	-
 go	reviewer	opencode-go/glm-5.3	high	-
 # `xing` is `go`'s split bought direct: the same two tiers, from the Kimi For
-# Coding and Z.AI Coding Plan subscriptions rather than from opencode-go
-# reselling them. It is the one profile created for two providers, because
-# neither subscription publishes the other's models. Both tiers keep the
-# million-token window, so this profile also spends on judgement and not on
-# reading. kimi-for-coding/k3 publishes `low`, `high` and `max`, so plan and
-# build say `max` here for the same reason they do in `go`.
+# Coding (kimi.ai, the global plan) and Z.AI Coding Plan subscriptions rather
+# than from opencode-go reselling them. It is the one profile created for two
+# providers, because neither subscription publishes the other's models. Both
+# tiers keep the million-token window, so this profile also spends on judgement
+# and not on reading. kimi-code-plan-global/k3 publishes `low`, `high` and
+# `max`, so plan and build say `max` here for the same reason they do in `go`.
 
-xing	default	kimi-for-coding/k3	-	-
+xing	default	kimi-code-plan-global/k3	-	-
 xing	small	zai-coding-plan/glm-5.3-flash	-	-
-xing	plan	kimi-for-coding/k3	max	-
-xing	build	kimi-for-coding/k3	max	-
+xing	plan	kimi-code-plan-global/k3	max	-
+xing	build	kimi-code-plan-global/k3	max	-
 xing	coder	zai-coding-plan/glm-5.3	high	-
 xing	explore	zai-coding-plan/glm-5.3-flash	high	-
 xing	researcher	zai-coding-plan/glm-5.3-flash	high	-

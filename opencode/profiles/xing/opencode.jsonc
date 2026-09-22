@@ -1,15 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "kimi-for-coding/k3",
+  "model": "kimi-code-plan-global/k3",
   "small_model": "zai-coding-plan/glm-5.3-flash",
   "lsp": true,
   "agent": {
     "plan": {
-      "model": "kimi-for-coding/k3",
+      "model": "kimi-code-plan-global/k3",
       "variant": "max"
     },
     "build": {
-      "model": "kimi-for-coding/k3",
+      "model": "kimi-code-plan-global/k3",
       "variant": "max"
     },
     "coder": {

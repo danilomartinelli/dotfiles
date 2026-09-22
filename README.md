@@ -243,7 +243,7 @@ before running `brew bundle`.
 
 | Group                     | Homebrew casks                                                                                              |
 | ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed`                      |
+| Development               | `android-studio`, `chatgpt`, `conductor`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed`         |
 | Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                         |
 | Window and menu bar       | `bartender`, `keyclu`                                                                                       |
 | Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
@@ -295,27 +295,27 @@ deliberately.
 | `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
 | `java`                                      | `temurin-25`     | Java runtime                                    |
 | `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.273`        | Claude Code CLI                                 |
-| `npm:@agentclientprotocol/claude-agent-acp` | `0.78.0`         | Claude ACP agent                                |
+| `npm:@anthropic-ai/claude-code`             | `2.1.280`        | Claude Code CLI                                 |
+| `npm:@agentclientprotocol/claude-agent-acp` | `0.81.0`         | Claude ACP agent                                |
 | `npm:@agentclientprotocol/codex-acp`        | `1.12.0`         | Codex ACP agent                                 |
-| `npm:@earendil-works/pi-coding-agent`       | `0.85.1`         | Pi coding agent                                 |
+| `npm:@earendil-works/pi-coding-agent`       | `0.87.1`         | Pi coding agent                                 |
 | `npm:@colbymchenry/codegraph`               | `1.6.0`          | Repository code graph CLI                       |
-| `npm:@swmansion/argent`                     | `0.25.1`         | Device and simulator control MCP                |
-| `npm:@openai/codex`                         | `0.154.0`        | Codex CLI                                       |
-| `npm:eas-cli`                               | `24.6.0`         | Expo Application Services CLI                   |
-| `npm:neonctl`                               | `4.18.1`         | Neon CLI                                        |
+| `npm:@swmansion/argent`                     | `0.25.2`         | Device and simulator control MCP                |
+| `npm:@openai/codex`                         | `0.156.0`        | Codex CLI                                       |
+| `npm:eas-cli`                               | `24.7.0`         | Expo Application Services CLI                   |
+| `npm:neonctl`                               | `5.0.1`          | Neon CLI                                        |
 | `npm:ocx`                                   | `2.0.15`         | OpenCode extension and profile manager          |
 | `npm:opencode-ai`                           | `1.18.31`        | OpenCode CLI                                    |
-| `npm:skills`                                | `1.5.26`         | Agent skills CLI                                |
-| `npm:wrangler`                              | `4.132.0`        | Cloudflare Workers CLI                          |
+| `npm:skills`                                | `1.7.0`          | Agent skills CLI                                |
+| `npm:wrangler`                              | `4.136.3`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
-| `pipx:kimi-cli`                             | `1.50.0`         | Kimi CLI                                        |
+| `pipx:kimi-cli`                             | `1.52.0`         | Kimi CLI                                        |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
-| `pnpm`                                      | `12.4.2`         | JavaScript package manager                      |
+| `pnpm`                                      | `12.5.1`         | JavaScript package manager                      |
 | `python`                                    | `3.14.7`         | Python runtime                                  |
 | `ruby`                                      | `4.0`            | Ruby runtime                                    |
 | `rust`                                      | `1.98.1`         | Rust toolchain                                  |
-| `terraform`                                 | `1.16.2`         | Infrastructure as code CLI                      |
+| `terraform`                                 | `1.16.3`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
 | `yarn`                                      | `4.18.0`         | JavaScript package manager                      |
 
