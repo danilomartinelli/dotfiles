@@ -23,7 +23,7 @@ export function roleMayWrite(role: string, tool: string): boolean {
 const rootRoles = new Set(["build", "plan"]);
 const declaredRoles = new Set([...readOnlyRoles, ...writerRoles]);
 
-export type OrchestrationAccess = "none" | "root" | "every";
+export type OrchestrationScope = "none" | "root" | "every";
 
 /**
  * Which roles may call each orchestration and memory tool, stated once.
@@ -34,7 +34,7 @@ export type OrchestrationAccess = "none" | "root" | "every";
  * for every child. A role answer is not identity: the caller still proves a
  * root session is one, and ownership still bounds what a writer may change.
  */
-const orchestrationAccess = {
+const orchestrationScopes = {
   task: "none",
   compress: "root",
   delegate: "root",
@@ -51,9 +51,9 @@ const orchestrationAccess = {
   plan_read: "every",
   todoread: "every",
   memory: "every",
-} as const satisfies Record<string, OrchestrationAccess>;
+} as const satisfies Record<string, OrchestrationScope>;
 
-export const orchestrationTools = Object.keys(orchestrationAccess);
+export const orchestrationTools = Object.keys(orchestrationScopes);
 
 /**
  * Who may call an orchestration or memory tool, or undefined for a tool this
@@ -61,9 +61,9 @@ export const orchestrationTools = Object.keys(orchestrationAccess);
  * plugin's unlisted tools are governed and denied, so an update cannot grant
  * capability through its prefix alone.
  */
-function orchestrationScope(tool: string): OrchestrationAccess | undefined {
-  if (Object.hasOwn(orchestrationAccess, tool))
-    return orchestrationAccess[tool as keyof typeof orchestrationAccess];
+function orchestrationScope(tool: string): OrchestrationScope | undefined {
+  if (Object.hasOwn(orchestrationScopes, tool))
+    return orchestrationScopes[tool as keyof typeof orchestrationScopes];
   return tool.startsWith("worktree_") ? "none" : undefined;
 }
 
@@ -100,7 +100,7 @@ export function admitOrchestration(
   role: string,
   tool: string,
   args: Record<string, unknown>,
-): OrchestrationAccess | undefined {
+): OrchestrationScope | undefined {
   const scope = orchestrationScope(tool);
   if (!scope) return undefined;
   if (!roleMayOrchestrate(role, tool)) {
