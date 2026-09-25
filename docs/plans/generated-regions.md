@@ -6,8 +6,7 @@ owner. Implemented in `_scripts/generated-region.sh`, covered by
 `tests/generated_renderer_test.sh`.
 
 Canonical implementation spec:
-[issue #40](https://github.com/danilomartinelli/dotfiles/issues/40), labelled
-`ready-for-agent`.
+[issue #40](https://github.com/danilomartinelli/dotfiles/issues/40).
 
 Markdown and JSONC duplicated the state machine that replaces generated regions
 inside hand-authored files. That responsibility is now shared, while content

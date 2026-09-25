@@ -20,6 +20,10 @@ source "$TEST_DIR/_support/shell-scenario.sh"
 # shellcheck source=tests/_support/jsonc.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/jsonc.sh"
+
+# shellcheck source=_scripts/generated-region.sh
+# shellcheck disable=SC1091
+source "$REPOSITORY_ROOT/_scripts/generated-region.sh"
 scenario_init dotfiles-generated-renderer-tests
 
 FORMATS=(markdown jsonc)
@@ -312,13 +316,10 @@ test_a_stale_region_is_reported_by_check_and_restored_by_a_write() {
 }
 
 # The lines outside every region interior in a JSONC file: the markers and the
-# hand-authored configuration around them.
+# hand-authored configuration around them, read by the reader itself with an
+# empty body for every region.
 jsonc_outside_regions() {
-  awk '
-    /^[[:space:]]*\/\/ generated-end$/ { inside = 0 }
-    !inside { print }
-    /^[[:space:]]*\/\/ generated: / { inside = 1 }
-  ' "$1"
+  generated_regions_render jsonc "$1" true
 }
 
 # ADR-0018: the global config carries whichever profile env.zsh declares as

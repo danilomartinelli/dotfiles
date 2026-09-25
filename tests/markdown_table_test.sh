@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Rendering generated tables into hand-written Markdown.
+# The Markdown tables generated regions are filled with.
 #
 # Both renderers build their tables through this module. Where a table lands
 # inside a hand-written file is the generated-region reader's, and
