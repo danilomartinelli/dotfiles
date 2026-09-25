@@ -103,6 +103,17 @@ its profile. It participates in determining the agent's permitted operations.
 The scope of paths in which a writer delegation may modify files. Permission to
 use a tool does not authorize writing outside that scope.
 
+**Delegation recovery**:
+The reconciliation of recorded delegations with the state of their existing
+sessions. Recovery never starts replacement children.
+_Avoid_: resume, restart
+
+**Delegation resume**:
+A new attempt of the same delegation after its previous attempt has reached a
+confirmed terminal state. Distinct from recovery, which reconciles work already
+recorded rather than executing another attempt.
+_Avoid_: recovery, replacement delegation
+
 ### Credentials
 
 **Key provisioning**:
