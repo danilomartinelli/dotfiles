@@ -22,6 +22,15 @@
 # living inside an agent worktree while no OpenCode runs has no owner left to
 # lose, so no ancestry heuristic has to decide it.
 #
+# Snapshots, delegation artifacts and agent worktree checkouts leave through one
+# operation, retire_directory. Each condition keeps the question of which
+# directories may go and what to tidy once they have; the operation owns what
+# "retired" means. A directory counts only once it is confirmed gone, its bytes
+# are what it measured before removal, and one that survives, or that could not
+# be measured or identified, keeps the repair from ending in success without
+# stopping the repairs that do not depend on it.
+# docs/adr/0019-incomplete-directory-retirement-makes-repair-fail.md
+#
 # A shadowing configuration file is reported and never removed. Which global
 # config a machine should carry is a policy question this module has no
 # standing to answer; naming the file that OpenCode merges behind the tracked
@@ -150,12 +159,49 @@ file_bytes() {
   wc -c <"$1" | tr -d ' '
 }
 
-directory_bytes() {
-  [ -d "$1" ] || {
-    printf '0\n'
-    return 0
-  }
-  du -sk -- "$1" 2>/dev/null | awk '{print $1 * 1024; exit}'
+TAB=$(printf '\t')
+
+# Whether <path> is one of the lines of <list>.
+path_listed() {
+  case "
+$2" in
+    *"
+$1
+"*) return 0 ;;
+  esac
+  return 1
+}
+
+# The allocated size of a directory, in bytes, into MEASURED_BYTES.
+#
+# A size is only a size when du finished without complaint and printed one. du
+# still prints a total after failing to read part of a tree, and an empty or
+# garbled answer read as arithmetic is zero; both used to reach the totals as if
+# they were measurements. A failure is remembered for the rest of the run, so a
+# directory the inventory could not measure is never retired on the strength of
+# a later attempt that happened to succeed.
+MEASUREMENT_REFUSED=''
+
+measure_directory() {
+  MEASURED_BYTES=0
+  if path_listed "$1" "$MEASUREMENT_REFUSED"; then
+    return 1
+  fi
+
+  measured=$(du -sk -- "$1" 2>/dev/null) || measured=''
+  case $measured in
+    [0-9]*"$TAB"*) measured=${measured%%"$TAB"*} ;;
+    *) measured='' ;;
+  esac
+  case $measured in
+    '' | *[!0-9]*)
+      MEASUREMENT_REFUSED="$MEASUREMENT_REFUSED$1
+"
+      return 1
+      ;;
+  esac
+
+  MEASURED_BYTES=$((measured * 1024))
 }
 
 # Command substitution strips the trailing newline, so a list of n lines
@@ -253,23 +299,110 @@ artifact_is_retired() {
   [ -z "$(find "$1" -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
 }
 
-# Remove a directory this module owns, and answer whether it is gone.
+# What this run could not retire. A directory whose repair failed or was
+# refused is kept, and so is every directory above it: removing the parent
+# would carry out the very removal that was just refused, whatever the
+# retention window says. None of it outlives the run.
+RETIREMENT_UNRESOLVED=''
+RETIREMENT_FAILURES=0
+REGISTRATION_FAILURES=0
+
+# Record a directory repair that did not finish and say what is left of it.
+# Usage: retirement_unresolved <path> <what went wrong> <what to do about it>
+retirement_unresolved() {
+  RETIREMENT_UNRESOLVED="$RETIREMENT_UNRESOLVED$1
+"
+  RETIREMENT_FAILURES=$((RETIREMENT_FAILURES + 1))
+  installer_warn "could not retire $1: $2"
+  installer_hint "$3"
+}
+
+# A path below <path> whose repair did not finish in this run, into
+# RETIREMENT_BLOCKER. Ancestry is matched a whole component at a time, so a
+# failure inside .../pushed-copy says nothing about .../pushed.
+retirement_blocker() {
+  while IFS= read -r unresolved; do
+    case $unresolved in
+      "$1"/*)
+        RETIREMENT_BLOCKER=$unresolved
+        return 0
+        ;;
+    esac
+  done <<EOF
+$RETIREMENT_UNRESOLVED
+EOF
+  return 1
+}
+
+# Retire one directory a condition has selected: measure it, remove it, retry
+# once with write permission restored, and confirm it is gone. Which
+# directories may go, and whatever tidying follows, stays with the condition;
+# what "retired" means lives here, so the three conditions that remove
+# directories cannot each mean something different by it.
+#
+# Returns 0 when the directory was there and is now confirmed gone, with its
+# pre-removal size in RETIRED_BYTES; 1 when it is kept, which is reported and
+# fails the repair; 2 when it was gone before anything acted, which is neither
+# a retirement nor a failure.
+#
+# An optional <admit> function runs once the target is known to be a real
+# directory and before anything destructive. It returns non-zero to keep the
+# directory, setting RETIREMENT_REFUSAL and RETIREMENT_REFUSAL_HINT, and may set
+# RETIREMENT_NOTE for any diagnostic about the removal that follows.
 #
 # A build cache is not made only of files this user can delete: a downloader
 # that caches a signed application bundle writes it back read-only, and the
 # first rm -rf leaves the whole subtree standing. The retry exists for that
-# case, and the final test exists because both attempts can still fail --
-# on a mount that went away, or on a path something else has open. Reporting
-# is what depends on the answer: the byte counts used to be added up before
-# the removal and printed whether or not it worked, so a run that could not
-# delete 42 GB still said it had.
+# case. The final test exists because an exit status is not proof -- both
+# attempts can still leave the directory on a mount that went away, or on a
+# path something else has open. The byte counts used to be added up before the
+# removal and printed whether or not it worked, so a run that could not delete
+# 42 GB still said it had.
+#
+# Usage: retire_directory <path> [<admit>]
 retire_directory() {
-  rm -rf -- "$1" 2>/dev/null
-  if [ -e "$1" ]; then
-    chmod -R u+w -- "$1" 2>/dev/null || true
-    rm -rf -- "$1" 2>/dev/null
+  retiring=$1
+  RETIRED_BYTES=0
+  RETIREMENT_NOTE=''
+
+  # A dangling symlink is not absence.
+  if [ ! -e "$retiring" ] && [ ! -L "$retiring" ]; then
+    return 2
   fi
-  [ ! -e "$1" ]
+  # Deciding that a directory may go does not authorize deleting whatever has
+  # taken its place, and nothing here follows a link.
+  if [ -L "$retiring" ] || [ ! -d "$retiring" ]; then
+    retirement_unresolved "$retiring" 'it is no longer a directory' \
+      'Nothing was removed or followed; inspect what replaced it by hand.'
+    return 1
+  fi
+  if retirement_blocker "$retiring"; then
+    retirement_unresolved "$retiring" "$RETIREMENT_BLOCKER inside it was not retired" \
+      'It is kept for the rest of this run; see what was reported for the path inside it.'
+    return 1
+  fi
+  if [ "$#" -gt 1 ] && ! "$2" "$retiring"; then
+    retirement_unresolved "$retiring" "$RETIREMENT_REFUSAL" "$RETIREMENT_REFUSAL_HINT"
+    return 1
+  fi
+  if ! measure_directory "$retiring"; then
+    retirement_unresolved "$retiring" 'its size could not be measured' \
+      "Nothing was removed.${RETIREMENT_NOTE:+ $RETIREMENT_NOTE} Check that everything inside it is readable, then inspect it by hand."
+    return 1
+  fi
+
+  rm -rf -- "$retiring" 2>/dev/null || :
+  if [ -e "$retiring" ] || [ -L "$retiring" ]; then
+    chmod -R u+w -- "$retiring" 2>/dev/null || :
+    rm -rf -- "$retiring" 2>/dev/null || :
+  fi
+  if [ -e "$retiring" ] || [ -L "$retiring" ]; then
+    retirement_unresolved "$retiring" 'it survived removal' \
+      "Part of it may already be gone, including what a later run would need to recognize it.${RETIREMENT_NOTE:+ $RETIREMENT_NOTE} Inspect and recover it by hand."
+    return 1
+  fi
+
+  RETIRED_BYTES=$MEASURED_BYTES
 }
 
 # Every checkout below the worktree root. The doctor owned everything inside
@@ -349,6 +482,69 @@ worktree_is_idle() {
     return 0
   fi
   [ -z "$(find "$1" -name .git -prune -o -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
+}
+
+# Who else holds a record of this checkout, asked while it still exists.
+#
+# A linked worktree is registered in the repository it was added from, and the
+# only thing naming that repository is the checkout's own .git file, which
+# leaves with the checkout. So the owner is established before removal, and a
+# linked checkout whose owner cannot be established is kept rather than
+# retired into a registration nobody can find again. An ordinary clone carries
+# its repository inside it and leaves nothing behind to clean.
+#
+# This is retire_directory's <admit> for checkouts. It runs only once the
+# checkout is known to exist, so one that vanished first is not mistaken for
+# one whose owner could not be found.
+identify_checkout_owner() {
+  CHECKOUT_OWNER=''
+  CHECKOUT_REGISTRATION=''
+  RETIREMENT_REFUSAL='its Git owner could not be identified'
+  RETIREMENT_REFUSAL_HINT='Nothing was removed. Inspect the checkout and the repository it was created from by hand.'
+
+  identity=$(worktree_git "$1" rev-parse --path-format=absolute \
+    --git-dir --git-common-dir 2>/dev/null </dev/null) || return 1
+  identity_git_dir=$(printf '%s\n' "$identity" | sed -n 1p)
+  identity_common_dir=$(printf '%s\n' "$identity" | sed -n 2p)
+  if [ -z "$identity_git_dir" ] || [ -z "$identity_common_dir" ]; then
+    return 1
+  fi
+
+  [ "$identity_git_dir" != "$identity_common_dir" ] || return 0
+
+  RETIREMENT_REFUSAL="its Git owner $identity_common_dir could not be verified"
+  case $identity_common_dir in
+    "$1" | "$1"/*) return 1 ;;
+  esac
+  case $identity_git_dir in
+    "$identity_common_dir"/worktrees/*) ;;
+    *) return 1 ;;
+  esac
+  if [ ! -d "$identity_common_dir" ] || [ ! -d "$identity_git_dir" ]; then
+    return 1
+  fi
+
+  CHECKOUT_OWNER=$identity_common_dir
+  CHECKOUT_REGISTRATION=$identity_git_dir
+  RETIREMENT_NOTE="Its Git owner is $CHECKOUT_OWNER."
+}
+
+# The maintenance a retired linked worktree owes its owner: dropping the one
+# registration that described it. `git worktree prune` would also drop the
+# registration of any other worktree that merely cannot be reached right now,
+# such as one on a volume that is not mounted. The directory is already gone
+# and stays counted; a registration left behind is its own failure, reported
+# with the owner while this run still knows it.
+remove_checkout_registration() {
+  if git --git-dir "$CHECKOUT_OWNER" -c core.fsmonitor=false \
+    worktree remove "$1" >/dev/null 2>&1 </dev/null \
+    && [ ! -e "$CHECKOUT_REGISTRATION" ]; then
+    return 0
+  fi
+
+  REGISTRATION_FAILURES=$((REGISTRATION_FAILURES + 1))
+  installer_warn "retired $1, but could not remove its Git registration from $CHECKOUT_OWNER"
+  installer_hint "Inspect it with git --git-dir '$CHECKOUT_OWNER' worktree list and remove it by hand; a later run cannot find this owner, because the checkout that named it is gone."
 }
 
 # Every managed entry the installer links, so a shadowing sibling is judged
@@ -495,7 +691,8 @@ runtime_condition_sessions() {
 
 # A snapshot whose directory is gone can never be restored into, so it goes
 # whole rather than by retention. The hash directory above it is removed only
-# when the last snapshot under it leaves.
+# when the last snapshot under it leaves, and only as tidying: keeping it takes
+# nothing back from the snapshot already retired.
 runtime_condition_snapshots() {
   snapshots=$(stale_snapshots)
   if [ -z "$snapshots" ]; then
@@ -517,15 +714,15 @@ runtime_condition_snapshots() {
     case $snapshot_dir in
       "$SNAPSHOT_ROOT"/*) ;;
       *)
-        installer_warn "skipping a snapshot path outside the snapshot root: $snapshot_dir"
+        retirement_unresolved "$snapshot_dir" 'it lies outside the snapshot root' \
+          'Nothing was removed.'
         continue
         ;;
     esac
-    [ ! -L "$snapshot_dir" ] || continue
-    removed_bytes=$((removed_bytes + $(directory_bytes "$snapshot_dir")))
-    rm -rf -- "$snapshot_dir"
-    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || true
+    retire_directory "$snapshot_dir" || continue
     removed=$((removed + 1))
+    removed_bytes=$((removed_bytes + RETIRED_BYTES))
+    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || :
   done <<EOF
 $snapshots
 EOF
@@ -550,7 +747,12 @@ runtime_condition_artifacts() {
   oversized=''
   while IFS= read -r artifact_dir; do
     [ -n "$artifact_dir" ] || continue
-    artifact_bytes=$(directory_bytes "$artifact_dir")
+    artifact_bytes=0
+    if measure_directory "$artifact_dir"; then
+      artifact_bytes=$MEASURED_BYTES
+    else
+      installer_warn "could not measure $artifact_dir; its size is left out of the totals"
+    fi
     artifact_total=$((artifact_total + artifact_bytes))
     if artifact_is_retired "$artifact_dir"; then
       retired_total=$((retired_total + artifact_bytes))
@@ -573,34 +775,26 @@ EOF
 
   retired=0
   retired_bytes=0
-  kept=0
   while IFS= read -r artifact_dir; do
     [ -n "$artifact_dir" ] || continue
     artifact_is_retired "$artifact_dir" || continue
     case $artifact_dir in
       "$WORKTREE_ROOT"/*/.opencode-artifacts/*) ;;
       *)
-        installer_warn "skipping an artifact path outside the worktree root: $artifact_dir"
+        retirement_unresolved "$artifact_dir" 'it lies outside the worktree root' \
+          'Nothing was removed.'
         continue
         ;;
     esac
-    [ ! -L "$artifact_dir" ] || continue
-    artifact_bytes=$(directory_bytes "$artifact_dir")
-    if retire_directory "$artifact_dir"; then
-      retired=$((retired + 1))
-      retired_bytes=$((retired_bytes + artifact_bytes))
-    else
-      kept=$((kept + 1))
-      installer_warn "could not retire $artifact_dir"
-    fi
+    retire_directory "$artifact_dir" || continue
+    retired=$((retired + 1))
+    retired_bytes=$((retired_bytes + RETIRED_BYTES))
   done <<EOF
 $artifacts
 EOF
 
   [ "$retired" -eq 0 ] \
     || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_bytes")"
-  [ "$kept" -eq 0 ] \
-    || installer_hint "$kept artifact directory(ies) survived removal; inspect the paths above"
 }
 
 # The checkout an agent worktree is made of. Retiring one takes its build
@@ -612,8 +806,8 @@ EOF
 #
 # Git keeps a registration for a linked worktree in the repository it belongs
 # to. Removing the directory alone leaves that registration behind, so the
-# owning repository is pruned in the same step; a prune only ever drops
-# registrations whose directory is already gone.
+# owner is identified before the checkout goes and its registration is removed
+# right after; see identify_checkout_owner and remove_checkout_registration.
 runtime_condition_worktrees() {
   checkouts=$(worktree_checkouts)
   if [ -z "$checkouts" ]; then
@@ -627,7 +821,11 @@ runtime_condition_worktrees() {
   unjudged=0
   while IFS= read -r checkout; do
     [ -n "$checkout" ] || continue
-    checkout_total=$((checkout_total + $(directory_bytes "$checkout")))
+    if measure_directory "$checkout"; then
+      checkout_total=$((checkout_total + MEASURED_BYTES))
+    else
+      installer_warn "could not measure $checkout; its size is left out of the total"
+    fi
     checkout_state=0
     worktree_state "$checkout" || checkout_state=$?
     case $checkout_state in
@@ -669,36 +867,24 @@ EOF
 
   retired=0
   retired_bytes=0
-  pruned=''
   while IFS= read -r checkout; do
     [ -n "$checkout" ] || continue
     case $checkout in
       "$WORKTREE_ROOT"/*/*) ;;
       *)
-        installer_warn "skipping a worktree path outside the worktree root: $checkout"
+        retirement_unresolved "$checkout" 'it lies outside the worktree root' \
+          'Nothing was removed.'
         continue
         ;;
     esac
-    [ ! -L "$checkout" ] || continue
-    owner=$(worktree_git "$checkout" rev-parse --path-format=absolute \
-      --git-common-dir 2>/dev/null) || owner=
-    checkout_bytes=$(directory_bytes "$checkout")
-    if retire_directory "$checkout"; then
-      retired=$((retired + 1))
-      retired_bytes=$((retired_bytes + checkout_bytes))
-      [ -z "$owner" ] || pruned="$pruned$owner
-"
-    else
-      installer_warn "could not retire $checkout"
-    fi
+    CHECKOUT_OWNER=''
+    retire_directory "$checkout" identify_checkout_owner || continue
+    retired=$((retired + 1))
+    retired_bytes=$((retired_bytes + RETIRED_BYTES))
+    [ -z "$CHECKOUT_OWNER" ] || remove_checkout_registration "$checkout"
   done <<EOF
 $idle
 EOF
-
-  printf '%s' "$pruned" | sort -u | while IFS= read -r owner; do
-    [ -n "$owner" ] || continue
-    git --git-dir "$owner" -c core.fsmonitor=false worktree prune >/dev/null 2>&1 || true
-  done
 
   [ "$retired" -eq 0 ] \
     || installer_item "retired $retired agent worktree checkout(s), $(human_bytes "$retired_bytes")"
@@ -796,6 +982,15 @@ catalog_each_row "$RUNTIME_CONDITIONS" run_condition
 if [ "$FIX" -eq 0 ]; then
   installer_success 'OpenCode state reported; rerun with --fix to repair'
   exit 0
+fi
+
+# A directory repair that did not finish lets every independent one go ahead,
+# and then keeps the run from calling itself repaired. What did finish was
+# reported where it happened, so nothing here needs to repeat it.
+if [ "$RETIREMENT_FAILURES" -gt 0 ] || [ "$REGISTRATION_FAILURES" -gt 0 ]; then
+  installer_error "OpenCode repair incomplete: $RETIREMENT_FAILURES directory(ies) not retired, $REGISTRATION_FAILURES Git registration(s) left behind"
+  installer_hint 'Every step reported as done above is done. Inspect each path named above by hand: a later run judges eligibility afresh and does not resume this one.'
+  exit 1
 fi
 
 installer_success 'OpenCode state repaired'

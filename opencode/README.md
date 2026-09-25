@@ -630,6 +630,34 @@ log directory regardless of age or size. Other files, subdirectories and
 symlinks are preserved; a symlinked log directory is refused. This option is
 read-only without `--fix`.
 
+Snapshots, delegation artifacts and agent worktree checkouts leave through one
+retirement operation. Each condition decides which of its directories are
+eligible. The doctor then measures a directory, removes it, restores write
+permission and tries once more if anything survived, and counts it only once it
+is confirmed gone. Reported bytes are those pre-removal sizes of fully retired
+directories, not the free space the filesystem gained. A directory whose size
+cannot be measured, or that has been replaced by a file or symlink, is kept; one
+that is already gone is neither counted nor treated as a failure.
+
+A directory that is not retired is named with the step that failed, and every
+directory above it is kept for the rest of that run, even with `--days 0`.
+Repairs that do not depend on it still run. The run then ends with
+`OpenCode repair incomplete` and exit status 1 instead of reporting success; what
+it did complete is reported above that line.
+
+A linked worktree is registered in the repository it was added from. The doctor
+identifies that owner before removing the checkout, keeps the checkout when it
+cannot, and afterwards removes that one registration and no other. A
+registration it cannot remove is reported with its owner and fails the run,
+although the checkout stays counted as retired. An ordinary clone leaves no
+registration to remove.
+
+Recovery from an incomplete repair is manual. A partial removal can take the
+metadata that identified a snapshot or checkout, and a removed checkout can no
+longer name its owner, so a later run judges what remains afresh and may keep it
+as something it cannot judge. `--days 0` bypasses the age check only, and
+nothing records an interrupted repair between runs.
+
 Reporting is the default because each repair deletes state no backup covers.
 Repairs refuse to run while OpenCode holds the database, so quit the desktop
 app and any `opencode` session first. That precondition is also what makes reaping

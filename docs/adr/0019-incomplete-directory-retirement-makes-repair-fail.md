@@ -38,6 +38,9 @@ checkout is gone, a failed registration cleanup does not undo its retirement
 count or bytes, but the repair fails and names the owner still needing
 maintenance. Ordinary clones have no external worktree registration to clean.
 Removing a snapshot's empty parent remains optional.
+The cleanup removes the retired checkout's own registration and no other;
+pruning the owner would also forget a worktree that is merely unreachable, such
+as one on a volume that is not mounted.
 
 Recovery after an incomplete removal or failed Git registration cleanup is
 manual when the next run can no longer identify the target. Diagnostics name
