@@ -78,6 +78,12 @@ A path a tool recreates on every run, which this repository replaces without
 preserving. Disposable by definition, so it is never backed up.
 _Avoid_: temporary file, scratch path
 
+**Generated region**:
+A named portion of a hand-authored file that this repository regenerates from
+its declarations. Unlike a generated target, the surrounding file is not
+disposable: its hand-authored content remains owned by the person.
+_Avoid_: generated block, managed block
+
 **Runtime condition**:
 A named state inside a tool's runtime directory that this repository is willing
 to report, and sometimes to repair. Declared once, in run order, so the set
