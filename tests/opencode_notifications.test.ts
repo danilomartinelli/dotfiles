@@ -3,6 +3,37 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { regularHooks } from "../opencode/orchestrator/regular";
+import { rolePermissions } from "../opencode/orchestrator/prompts";
+
+// The agreed classification, written out here rather than read back from the
+// policy module, so an answer both adapters share can still be wrong and fail.
+const rootTools = [
+  "compress",
+  "delegate",
+  "delegation_list",
+  "delegation_cancel",
+  "review_snapshot",
+  "plan_save",
+  "memory_commit",
+  "todowrite",
+  "question",
+  "worktree_create",
+  "worktree_delete",
+];
+const sharedTools = ["delegation_read", "plan_read", "todoread", "memory"];
+
+/** OpenCode applies the last native permission rule whose pattern matches. */
+function nativeAnswer(permissions: Record<string, unknown>, tool: string) {
+  let answer: unknown;
+  for (const [pattern, value] of Object.entries(permissions)) {
+    const glob = pattern
+      .split("*")
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+      .join(".*");
+    if (new RegExp(`^${glob}$`).test(tool)) answer = value;
+  }
+  return answer;
+}
 
 async function fixture(run: (f: any) => Promise<void>) {
   const directory = await realpath(
@@ -26,7 +57,8 @@ async function fixture(run: (f: any) => Promise<void>) {
             id,
             directory,
             projectID: "fixture",
-            parentID: id === "root" ? undefined : "root",
+            // Sessions named like a root are roots; every other one is a child of root.
+            parentID: /root$/.test(id) ? undefined : "root",
           },
         }),
         status: async () => ({ data: {} }),
@@ -73,9 +105,32 @@ async function fixture(run: (f: any) => Promise<void>) {
     );
     hooks = runtime.hooks;
     const manager = await runtime.managerFor("root");
+    const git = (...args: string[]) => {
+      const result = Bun.spawnSync(["git", ...args], {
+        cwd: directory,
+        env: {
+          ...process.env,
+          GIT_CONFIG_GLOBAL: "/dev/null",
+          GIT_CONFIG_NOSYSTEM: "1",
+          GIT_AUTHOR_NAME: "Fixture",
+          GIT_AUTHOR_EMAIL: "fixture@example.invalid",
+          GIT_COMMITTER_NAME: "Fixture",
+          GIT_COMMITTER_EMAIL: "fixture@example.invalid",
+        },
+      });
+      expect(result.exitCode).toBe(0);
+    };
     await run({
       hooks,
       directory,
+      /** A committed checkout, which a reviewer's source version requires. */
+      checkout: async () => {
+        git("init");
+        git("config", "core.excludesFile", "/dev/null");
+        await writeFile(path.join(directory, ".gitignore"), ".local/\n");
+        git("add", ".gitignore");
+        git("commit", "-m", "Fixture");
+      },
       manager,
       messages,
       requests,
@@ -103,27 +158,8 @@ async function fixture(run: (f: any) => Promise<void>) {
 }
 
 test("the review snapshot tool allows read-only children while enforcing writer reservations", async () => {
-  await fixture(async ({ hooks, directory, manager, request }: any) => {
-    const git = (...args: string[]) => {
-      const result = Bun.spawnSync(["git", ...args], {
-        cwd: directory,
-        env: {
-          ...process.env,
-          GIT_CONFIG_GLOBAL: "/dev/null",
-          GIT_CONFIG_NOSYSTEM: "1",
-          GIT_AUTHOR_NAME: "Fixture",
-          GIT_AUTHOR_EMAIL: "fixture@example.invalid",
-          GIT_COMMITTER_NAME: "Fixture",
-          GIT_COMMITTER_EMAIL: "fixture@example.invalid",
-        },
-      });
-      expect(result.exitCode).toBe(0);
-    };
-    git("init");
-    git("config", "core.excludesFile", "/dev/null");
-    await writeFile(path.join(directory, ".gitignore"), ".local/\n");
-    git("add", ".gitignore");
-    git("commit", "-m", "Fixture");
+  await fixture(async ({ hooks, directory, manager, request, checkout }: any) => {
+    await checkout();
     await manager.start("root", {
       ...request("investigate"),
       role: "explore",
@@ -217,6 +253,160 @@ test("regular tool admission preserves role gates, ordering, and query effects",
     expect(stoppingReader.status).toBe("stopping");
     await expect(after(reader.child, "allowed-reader-exa")).resolves.toBeUndefined();
     expect(manager.get("root", reader.id).status).toBe("cancelled");
+  }));
+
+test("orchestration and memory tools mean the same thing natively and at admission", () =>
+  fixture(async ({ hooks, manager, request, messages, checkout, directory }: any) => {
+    await checkout();
+    messages.set("plan-root", [
+      { info: { role: "assistant", agent: "plan" }, parts: [] },
+    ]);
+    const sessions: [string, string][] = [
+      ["build", "root"],
+      ["plan", "plan-root"],
+    ];
+    const children: Record<string, () => Promise<any>> = {
+      coder: async () => request("coder-owned.txt"),
+      scribe: async () => ({ ...request("scribe-owned.md"), role: "scribe" }),
+      explore: async () => ({
+        ...request("explore"),
+        role: "explore",
+        ownership: [],
+      }),
+      researcher: async () => ({
+        ...request("research"),
+        role: "researcher",
+        ownership: [],
+      }),
+      reviewer: async () => ({
+        ...request("review"),
+        role: "reviewer",
+        ownership: [],
+        sourceVersion: await hooks.tool.review_snapshot.execute(
+          { directory },
+          { sessionID: "root" },
+        ),
+      }),
+    };
+    for (const [role, delegation] of Object.entries(children)) {
+      const row = await manager.start("root", await delegation());
+      await manager.stop("root", row.id);
+      sessions.push([role, row.child]);
+    }
+
+    // worktree_list stands for any tool a plugin update adds under the prefix.
+    for (const [role, sessionID] of sessions) {
+      const permissions = rolePermissions(role);
+      const root = role === "build" || role === "plan";
+      for (const tool of [...rootTools, ...sharedTools, "task", "worktree_list"]) {
+        const allowed =
+          sharedTools.includes(tool) || (root && rootTools.includes(tool));
+        const label = `${role} ${tool}`;
+        expect(nativeAnswer(permissions, tool), label).toBe(
+          allowed ? "allow" : "deny",
+        );
+        const admission = hooks["tool.execute.before"](
+          { sessionID, tool, callID: `${sessionID}-${tool}` },
+          { args: tool === "memory" ? { mode: "search" } : {} },
+        );
+        if (allowed) await expect(admission, label).resolves.toBeUndefined();
+        else await expect(admission, label).rejects.toThrow();
+      }
+    }
+  }));
+
+test("delegation listing stays with the root at every entry point", () =>
+  fixture(async ({ hooks, manager, request, messages }: any) => {
+    const reader = await manager.start("root", {
+      ...request("read-evidence"),
+      role: "explore",
+      ownership: [],
+    });
+    const writer = await manager.start("root", request("finished.txt"));
+    const unrelated = await manager.start("another-root", {
+      ...request("unrelated"),
+      role: "explore",
+      ownership: [],
+    });
+    messages.get(writer.child).push({
+      info: {
+        role: "assistant",
+        finish: "stop",
+        time: { completed: Date.now() },
+      },
+      parts: [{ type: "text", text: "Retained evidence." }],
+    });
+
+    expect(nativeAnswer(rolePermissions("explore"), "delegation_list")).toBe(
+      "deny",
+    );
+    await expect(
+      hooks["tool.execute.before"](
+        { sessionID: reader.child, tool: "delegation_list", callID: "list" },
+        { args: {} },
+      ),
+    ).rejects.toThrow("Only the root orchestrator");
+    // A direct call skips the hook, and a claimed root agent is not identity.
+    await expect(
+      hooks.tool.delegation_list.execute({}, {
+        sessionID: reader.child,
+        agent: "build",
+      }),
+    ).rejects.toThrow("Leaf sessions");
+    // Recovery would have settled the finished writer; the refusal came first.
+    expect(manager.get("root", writer.id).status).toBe("running");
+
+    const rows = JSON.parse(
+      await hooks.tool.delegation_list.execute({}, {
+        sessionID: "root",
+        agent: "build",
+      }),
+    );
+    expect(rows.map((row: any) => row.id).sort()).toEqual(
+      [reader.id, writer.id].sort(),
+    );
+    expect(rows.every((row: any) => !Object.hasOwn(row, "result"))).toBe(true);
+    expect(rows.find((row: any) => row.id === writer.id).status).toBe(
+      "completed",
+    );
+
+    // Reading a known delegation of the same root stays available to a child.
+    const retained = JSON.parse(
+      await hooks.tool.delegation_read.execute(
+        { id: writer.id },
+        { sessionID: reader.child },
+      ),
+    );
+    expect(retained.result).toBe("Retained evidence.");
+    await expect(
+      hooks.tool.delegation_read.execute(
+        { id: unrelated.id },
+        { sessionID: reader.child },
+      ),
+    ).rejects.toThrow("not found in this root");
+  }));
+
+test("memory admission accepts queries and refuses writes for every role", () =>
+  fixture(async ({ hooks, manager, request }: any) => {
+    const writer = await manager.start("root", request("memory-writer.txt"));
+    for (const sessionID of ["root", writer.child]) {
+      const admit = (args: Record<string, unknown>) =>
+        hooks["tool.execute.before"](
+          { sessionID, tool: "memory", callID: `${sessionID}-memory` },
+          { args },
+        );
+      for (const mode of ["search", "list", "profile", "help"])
+        await expect(admit({ mode, query: "auth" })).resolves.toBeUndefined();
+      await expect(admit({})).resolves.toBeUndefined();
+      for (const mode of ["add", "forget", "migrate", "export", "delete"])
+        await expect(admit({ mode }), mode).rejects.toThrow("retrieval-only");
+      await expect(
+        admit({ mode: "search", content: "Store this" }),
+      ).rejects.toThrow("retrieval-only");
+      await expect(admit({ content: "Store this" })).rejects.toThrow(
+        "retrieval-only",
+      );
+    }
   }));
 
 test("a pending stop wakes the existing root once and preserves ownership until acknowledgement", () =>

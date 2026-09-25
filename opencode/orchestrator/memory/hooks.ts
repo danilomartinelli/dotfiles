@@ -5,6 +5,7 @@ import {
   type ToolContext,
 } from "@opencode-ai/plugin";
 import { commitMemoryOutcome, type MemoryStorage } from "./store.ts";
+import { assertMemoryQuery, memoryQueryModes } from "../permissions.ts";
 import { randomUUID } from "node:crypto";
 
 export interface RegularMemoryOptions {
@@ -24,19 +25,11 @@ export function createRegularMemoryHooks(
   if (!memory)
     throw new Error("The pinned memory plugin did not expose its memory tool");
   const injected = new Set<string>();
-  const readable = new Set(["search", "list", "profile", "help"]);
   const readMemory = async (
     args: Record<string, unknown>,
     context: ToolContext,
   ) => {
-    if (
-      !readable.has(String(args.mode ?? "help")) ||
-      args.content !== undefined
-    ) {
-      throw new Error(
-        "Regular memory is read-only here; the root orchestrator commits durable outcomes with memory_commit",
-      );
-    }
+    assertMemoryQuery(args);
     return memory.execute(args, context);
   };
   return {
@@ -47,9 +40,7 @@ export function createRegularMemoryHooks(
         description:
           "Read existing project memories: search, list, profile (read only), or help. Durable outcomes are written with memory_commit after review.",
         args: {
-          mode: tool.schema
-            .enum(["search", "list", "profile", "help"])
-            .optional(),
+          mode: tool.schema.enum(memoryQueryModes).optional(),
           query: tool.schema.string().optional(),
           limit: tool.schema.number().int().min(1).max(20).optional(),
           scope: tool.schema.enum(["project", "all-projects"]).optional(),

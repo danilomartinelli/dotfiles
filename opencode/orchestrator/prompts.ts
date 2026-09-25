@@ -1,5 +1,7 @@
 import {
   mcpQueryTools,
+  orchestrationTools,
+  roleMayOrchestrate,
   roleMayRunBash,
   roleMayWrite,
   writeTools,
@@ -149,7 +151,6 @@ export function rolePermissions(
   mcp: Record<string, unknown> = {},
   ...declared: unknown[]
 ): Record<string, unknown> {
-  const root = role === "build" || role === "plan";
   const writePermissions = Object.fromEntries(
     [...writeTools].map((tool) => [
       tool,
@@ -167,23 +168,16 @@ export function rolePermissions(
     // guardBash decides who reaches them from this same answer.
     bash: roleMayRunBash(role) ? "allow" : "deny",
     ...writePermissions,
-    task: "deny",
-    compress: root ? "allow" : "deny",
-    delegate: root ? "allow" : "deny",
-    delegation_read: "allow",
-    delegation_list: root ? "allow" : "deny",
-    delegation_cancel: root ? "allow" : "deny",
-    review_snapshot: root ? "allow" : "deny",
-    plan_save: root ? "allow" : "deny",
-    plan_read: "allow",
-    todowrite: root ? "allow" : "deny",
-    todoread: "allow",
-    question: root ? "allow" : "deny",
-    memory: "allow",
-    memory_commit: root ? "allow" : "deny",
+    // Runtime admission enforces this same answer, and memory's query-only
+    // arguments, which a native permission cannot express.
+    ...Object.fromEntries(
+      orchestrationTools.map((tool) => [
+        tool,
+        roleMayOrchestrate(role, tool) ? "allow" : "deny",
+      ]),
+    ),
     webfetch: "allow",
     ...Object.fromEntries(mcpQueryTools.map((name) => [name, "allow"])),
-    "worktree_*": root ? "allow" : "deny",
     // A profile launch cannot read a project's configuration, so the device
     // tools a terminal session needs are granted where the server is declared.
     // Evaluating arbitrary JavaScript inside a running app stays a decision.

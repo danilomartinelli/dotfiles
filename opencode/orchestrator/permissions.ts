@@ -20,6 +20,108 @@ export function roleMayWrite(role: string, tool: string): boolean {
   return writerRoles.has(role) && writeTools.has(tool);
 }
 
+const rootRoles = new Set(["build", "plan"]);
+const declaredRoles = new Set([...readOnlyRoles, ...writerRoles]);
+
+export type OrchestrationAccess = "none" | "root" | "every";
+
+/**
+ * Which roles may call each orchestration and memory tool, stated once.
+ *
+ * rolePermissions() renders the native table from this and the runtime
+ * admission hook enforces it. They used to keep two lists, and they disagreed:
+ * the table reserved delegation_list for the root while the hook admitted it
+ * for every child. A role answer is not identity: the caller still proves a
+ * root session is one, and ownership still bounds what a writer may change.
+ */
+const orchestrationAccess = {
+  task: "none",
+  compress: "root",
+  delegate: "root",
+  delegation_list: "root",
+  delegation_cancel: "root",
+  review_snapshot: "root",
+  plan_save: "root",
+  memory_commit: "root",
+  todowrite: "root",
+  question: "root",
+  worktree_create: "root",
+  worktree_delete: "root",
+  delegation_read: "every",
+  plan_read: "every",
+  todoread: "every",
+  memory: "every",
+} as const satisfies Record<string, OrchestrationAccess>;
+
+export const orchestrationTools = Object.keys(orchestrationAccess);
+
+/**
+ * Who may call an orchestration or memory tool, or undefined for a tool this
+ * policy does not govern, which keeps its existing guards. The worktree
+ * plugin's unlisted tools are governed and denied, so an update cannot grant
+ * capability through its prefix alone.
+ */
+function orchestrationScope(tool: string): OrchestrationAccess | undefined {
+  if (Object.hasOwn(orchestrationAccess, tool))
+    return orchestrationAccess[tool as keyof typeof orchestrationAccess];
+  return tool.startsWith("worktree_") ? "none" : undefined;
+}
+
+export function roleMayOrchestrate(role: string, tool: string): boolean {
+  const scope = orchestrationScope(tool);
+  if (scope === "root") return rootRoles.has(role);
+  return scope === "every" && declaredRoles.has(role);
+}
+
+/** The memory modes that only retrieve; the tool schema enumerates the same list. */
+export const memoryQueryModes = ["search", "list", "profile", "help"] as const;
+
+/**
+ * Both the admission hook and the memory executor call this: automatic
+ * retrieval reaches the executor without passing through the hook.
+ */
+export function assertMemoryQuery(args: Record<string, unknown>): void {
+  const mode = String(args.mode ?? "help");
+  if (
+    !(memoryQueryModes as readonly string[]).includes(mode) ||
+    args.content !== undefined
+  )
+    throw new Error(
+      "Memory is retrieval-only here; the root orchestrator commits durable outcomes with memory_commit.",
+    );
+}
+
+/**
+ * Admits an orchestration or memory call by role and arguments. Returns the
+ * tool's scope, so the caller can prove a root-only call comes from a root
+ * session, or undefined for a tool outside this policy.
+ */
+export function admitOrchestration(
+  role: string,
+  tool: string,
+  args: Record<string, unknown>,
+): OrchestrationAccess | undefined {
+  const scope = orchestrationScope(tool);
+  if (!scope) return undefined;
+  if (!roleMayOrchestrate(role, tool)) {
+    if (tool === "task")
+      throw new Error(
+        "Use delegate with a declared profile role; native task routing is disabled.",
+      );
+    if (scope === "none")
+      throw new Error(
+        `${tool} is not an admitted worktree operation; only worktree_create and worktree_delete are.`,
+      );
+    throw new Error(
+      scope === "root"
+        ? "Only the root orchestrator can use this tool."
+        : "Unknown agent has no orchestration access.",
+    );
+  }
+  if (tool === "memory") assertMemoryQuery(args);
+  return scope;
+}
+
 /** Shared by native role permissions and the runtime query guard. */
 export const mcpQueryTools = [
   "codegraph_codegraph_explore",
@@ -594,7 +696,7 @@ export function guardBash(role: string, args: Record<string, unknown>): void {
 /**
  * Throws before an unsupported tool executes. Pass the actual mutable tool args:
  * accepted shell queries are normalized to disable configured Git programs/pagers.
- * The caller owns authorization of orchestration and memory tools separately.
+ * Orchestration and memory tools are admitted by admitOrchestration() first.
  */
 export function assertReadOnlyTool(
   role: string,

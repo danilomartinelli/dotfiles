@@ -15,7 +15,11 @@ import {
   sourceVersion,
   type Routes,
 } from "./delegations";
-import { assertReadOnlyTool, roleMayWrite } from "./permissions";
+import {
+  admitOrchestration,
+  assertReadOnlyTool,
+  roleMayWrite,
+} from "./permissions";
 import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
@@ -84,18 +88,6 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
       );
     return role;
   }
-  const rootOnly = new Set([
-    "compress",
-    "delegate",
-    "delegation_cancel",
-    "review_snapshot",
-    "plan_save",
-    "memory_commit",
-    "todowrite",
-    "question",
-    "worktree_create",
-    "worktree_delete",
-  ]);
   async function notifyRoot(root: string, rootDirectory: string) {
     const manager = await managerFor(root);
     const notices = manager.notifications(root, true);
@@ -208,7 +200,8 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         args: {},
         async execute(_args, context) {
           const manager = await managerFor(context.sessionID);
-          const root = await rootFor(context.sessionID);
+          await manager.assertRoot(context.sessionID);
+          const root = context.sessionID;
           await manager.recover(root);
           return JSON.stringify(
             manager.list(root).map(({ result, ...row }) => row),
@@ -387,37 +380,9 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     "tool.execute.before": async (input, output) => {
       const manager = await managerFor(input.sessionID);
       const role = await resolveRole(input.sessionID);
-      if (input.tool === "task")
-        throw new Error(
-          "Use delegate with a declared profile role; native task routing is disabled.",
-        );
-      if (rootOnly.has(input.tool)) {
-        if (role !== "plan" && role !== "build")
-          throw new Error("Only the root orchestrator can use this tool.");
-        await manager.assertRoot(input.sessionID);
-        return;
-      }
-      if (
-        [
-          "delegation_read",
-          "delegation_list",
-          "plan_read",
-          "todoread",
-        ].includes(input.tool)
-      )
-        return;
-      if (input.tool === "memory") {
-        if (
-          !["search", "list", "help", "profile"].includes(
-            output.args.mode ?? "help",
-          ) ||
-          output.args.content !== undefined
-        )
-          throw new Error(
-            "Memory is retrieval-only here; the root uses memory_commit for consolidated outcomes.",
-          );
-        return;
-      }
+      const scope = admitOrchestration(role, input.tool, output.args);
+      if (scope === "root") await manager.assertRoot(input.sessionID);
+      if (scope) return;
       const child = manager.forChild(input.sessionID);
       const mcpExecution =
         role === "coder" &&
