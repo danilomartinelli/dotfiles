@@ -1,20 +1,22 @@
 # Shared generated-region reader
 
 Accepted design from the Candidate 03 interview, confirmed by the repository
-owner. Implementation has not started.
+owner. Implemented in `_scripts/generated-region.sh`, covered by
+`tests/generated_region_test.sh` and, at the renderer commands,
+`tests/generated_renderer_test.sh`.
 
 Canonical implementation spec:
 [issue #40](https://github.com/danilomartinelli/dotfiles/issues/40), labelled
 `ready-for-agent`.
 
-Markdown and JSONC currently duplicate the state machine that replaces generated
-regions inside hand-authored files. Share that responsibility while keeping
-content generation in the renderers and comparison, writing, and `--check` in
+Markdown and JSONC duplicated the state machine that replaces generated regions
+inside hand-authored files. That responsibility is now shared, while content
+generation stays in the renderers and comparison, writing, and `--check` stay in
 `_scripts/generated-file.sh`.
 
 ## Interface and ownership
 
-The private module `_scripts/generated-region.sh` will expose one entrypoint:
+The private module `_scripts/generated-region.sh` exposes one entrypoint:
 
 ```bash
 generated_regions_render <markdown|jsonc> <source-file> <handler>
