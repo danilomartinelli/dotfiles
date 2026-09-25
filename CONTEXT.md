@@ -99,6 +99,10 @@ _Avoid_: generated, generated state
 The declared responsibility of an agent, independent of the model selected by
 its profile. It participates in determining the agent's permitted operations.
 
+**Root orchestrator**:
+The agent responsible for coordinating a work item and the delegations it
+creates.
+
 **Delegation ownership**:
 The scope of paths in which a writer delegation may modify files. Permission to
 use a tool does not authorize writing outside that scope.
