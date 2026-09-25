@@ -505,6 +505,16 @@ test_an_unreadable_source_is_a_render_failure() {
     "$format" "$fixture/directory" render_fixture_region || RENDER_STATUS=$?
   assert_refused "$fixture/not-a-file"
   assert_handler_calls "$fixture/not-a-file"
+
+  # A file that exists but cannot be read is as unavailable as an absent one.
+  stale_region "$format" fruit >"$fixture/sealed"
+  chmod 000 "$fixture/sealed"
+  RENDER_STATUS=0
+  scenario_capture "$fixture/unreadable" generated_regions_render \
+    "$format" "$fixture/sealed" render_fixture_region || RENDER_STATUS=$?
+  chmod 600 "$fixture/sealed"
+  assert_refused "$fixture/unreadable"
+  assert_handler_calls "$fixture/unreadable"
 }
 
 # Names reach the handler exactly as written between the marker's fixed parts.
