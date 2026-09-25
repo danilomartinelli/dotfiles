@@ -8,8 +8,8 @@
 # that a version was right, not that a purpose still described the package, not
 # that a row still had a declaration behind it. The names, versions, groups and
 # descriptions now come from Brewfile and mise/config.toml, where a trailing
-# comment is the entry's catalog description. Prose outside the marked blocks is
-# never touched.
+# comment is the entry's catalog description. Prose outside the generated
+# regions is never touched.
 
 set -euo pipefail
 
@@ -57,6 +57,10 @@ fail() {
 # shellcheck source=_scripts/markdown-table.sh
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/markdown-table.sh"
+
+# shellcheck source=_scripts/generated-region.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/generated-region.sh"
 
 # shellcheck source=_scripts/generated-file.sh
 # shellcheck disable=SC1091
@@ -210,7 +214,10 @@ emit_mise_rows() {
   ' "$mise_config"
 }
 
-render_block() {
+# The content handler for README.md's generated regions. It owns which region
+# names exist; a name it does not know fails the render instead of emptying the
+# region.
+render_region() {
   case "$1" in
     homebrew-formulae)
       emit_formula_rows | markdown_table "$(printf 'Formula\tPurpose')"
@@ -225,7 +232,8 @@ render_block() {
       emit_mise_rows | markdown_table "$(printf 'Tool\tDeclared version\tRole')"
       ;;
     *)
-      fail "unknown generated block: $1"
+      printf 'render-software-catalog: unknown generated region: %s\n' "$1" >&2
+      return 1
       ;;
   esac
 }
@@ -235,7 +243,7 @@ trap 'rm -rf -- "$work_dir"' EXIT
 
 rendered=$work_dir/README.md
 
-markdown_render_blocks "$readme" render_block >"$rendered" \
+generated_regions_render markdown "$readme" render_region >"$rendered" \
   || fail "cannot render $readme"
 
 if [ "$check_only" = true ]; then

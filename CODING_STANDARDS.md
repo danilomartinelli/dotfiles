@@ -220,6 +220,19 @@ not. A composed name that silently resolves to nothing is worse than the
 enumeration it replaced, because a half-added row then does nothing at all
 instead of failing.
 
+A generated region inside a hand-authored file is read through
+`_scripts/generated-region.sh`, which `_scripts/render-software-catalog` and
+`_scripts/render-opencode-profiles` source directly. Call
+`generated_regions_render <markdown|jsonc> <source-file> <handler>` and write a
+handler that prints one region's body for a name, or returns non-zero for a
+name it does not know; do not write a marker loop of your own. The module owns
+both formats' marker syntax, the refusal of a file with no region or a
+malformed one, byte-for-byte preservation of everything outside a region's
+interior, and the blank lines Markdown puts around a body. It returns `2` for
+invalid usage and `1` for any render failure. Output streams as it is
+produced, so render into a staging file and pass it to `generated_file_sync`
+only when the render returned zero.
+
 A tool's configuration directory is `installer_config_dir <tool>`, which
 resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
 not reintroduce that variable in an installer, a `*.zsh` file, or a tracked
@@ -391,6 +404,7 @@ A second fixture needing either reads it from there rather than restating it.
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                               |
+| Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                         |
 | Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                               |
 | Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |

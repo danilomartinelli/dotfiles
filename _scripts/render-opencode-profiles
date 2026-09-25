@@ -64,6 +64,10 @@ fail() {
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/markdown-table.sh"
 
+# shellcheck source=_scripts/generated-region.sh
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/generated-region.sh"
+
 # shellcheck source=_scripts/generated-file.sh
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/generated-file.sh"
@@ -290,7 +294,8 @@ collect_condition_row() {
   return 0
 }
 
-render_readme_block() {
+# The content handler for the topic README's generated regions.
+render_readme_region() {
   local profile header row
 
   case "$1" in
@@ -307,7 +312,8 @@ render_readme_block() {
       done | markdown_table $'State\tDoctor\tWhy it accumulates'
       ;;
     *)
-      fail "unknown generated block: $1"
+      printf 'render-opencode-profiles: unknown generated region: %s\n' "$1" >&2
+      return 1
       ;;
   esac
 }
@@ -356,43 +362,16 @@ render_default_profile() {
     | sed '$s/$/,/'
 }
 
-# Replace what sits between the markers in a JSONC file, the way
-# markdown_render_blocks does for a Markdown one. The markers are `//` line
-# comments, so the file stays valid JSONC whether or not a block has been
-# rendered into it yet.
-# Usage: jsonc_render_blocks <jsonc-file> <handler>
-jsonc_render_blocks() {
-  local source_path=$1 handler=$2 block='' line
-
-  grep -Fq '// generated: ' "$source_path" \
-    || fail "no generated blocks in $source_path"
-
-  while IFS= read -r line; do
-    case "${line#"${line%%[![:space:]]*}"}" in
-      '// generated: '*)
-        [ -z "$block" ] || fail "nested generated marker: $line"
-        block=${line#*'// generated: '}
-        printf '%s\n' "$line"
-        "$handler" "$block" || return 1
-        ;;
-      '// generated-end')
-        [ -n "$block" ] || fail "generated-end without an opening marker"
-        block=''
-        printf '%s\n' "$line"
-        ;;
-      *)
-        [ -n "$block" ] || printf '%s\n' "$line"
-        ;;
-    esac
-  done <"$source_path"
-
-  [ -z "$block" ] || fail "unterminated generated block: $block"
-}
-
-render_jsonc_block() {
+# The content handler for the global config's generated regions. The markers
+# are `//` line comments, so the file stays valid JSONC whether or not a region
+# has been rendered into it yet.
+render_global_region() {
   case "$1" in
     default-profile) render_default_profile ;;
-    *) fail "unknown generated block: $1" ;;
+    *)
+      printf 'render-opencode-profiles: unknown generated region: %s\n' "$1" >&2
+      return 1
+      ;;
   esac
 }
 
@@ -444,14 +423,14 @@ done
 # The global config carries the default profile's routing for hosts that cannot
 # select one. It is the same declaration as that profile's payload, so it is
 # rendered from the same records rather than copied.
-jsonc_render_blocks "$global_config" render_jsonc_block \
+generated_regions_render jsonc "$global_config" render_global_region \
   >"$work_dir/global.jsonc" || fail "cannot render $global_config"
 generated_file_sync "$work_dir/global.jsonc" "$global_config" "$repository_root"
 
 # The routing table in the topic README is the same declaration in the shape a
 # person reads. It was maintained by hand beside the catalog that drives the
 # payloads, with nothing holding the two together.
-markdown_render_blocks "$topic_dir/README.md" render_readme_block \
+generated_regions_render markdown "$topic_dir/README.md" render_readme_region \
   >"$work_dir/README.md" || fail "cannot render $topic_dir/README.md"
 generated_file_sync "$work_dir/README.md" "$topic_dir/README.md" "$repository_root"
 
