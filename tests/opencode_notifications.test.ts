@@ -4,6 +4,7 @@ import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { regularHooks } from "../opencode/orchestrator/regular";
 import { CodeGraphProjects } from "../opencode/orchestrator/codegraph";
+import { expireDelegation } from "./_support/delegation-journal";
 import { rolePermissions } from "../opencode/orchestrator/prompts";
 
 // The agreed classification, written out here rather than read back from the
@@ -36,26 +37,8 @@ function nativeAnswer(permissions: Record<string, unknown>, tool: string) {
   return answer;
 }
 
-/** Moves a recorded deadline into the past, as if the process had been away. */
-async function expire(home: string, id: string) {
-  const { Database } = await import("bun:sqlite");
-  const db = new Database(
-    path.join(home, ".local/share/opencode/orchestrator/fixture.sqlite"),
-  );
-  try {
-    const stored = db
-      .query("SELECT record FROM delegations WHERE id=?")
-      .get(id) as { record: string };
-    const record = JSON.parse(stored.record);
-    record.deadline = Date.now() - 1;
-    db.query("UPDATE delegations SET record=? WHERE id=?").run(
-      JSON.stringify(record),
-      id,
-    );
-  } finally {
-    db.close();
-  }
-}
+const journal = (home: string) =>
+  path.join(home, ".local/share/opencode/orchestrator/fixture.sqlite");
 
 function finish(messages: Map<string, any[]>, child: string, text: string) {
   messages.get(child)!.push({
@@ -389,14 +372,7 @@ test("delegation listing stays with the root at every entry point", () =>
       role: "explore",
       ownership: [],
     });
-    messages.get(writer.child).push({
-      info: {
-        role: "assistant",
-        finish: "stop",
-        time: { completed: Date.now() },
-      },
-      parts: [{ type: "text", text: "Retained evidence." }],
-    });
+    finish(messages, writer.child, "Retained evidence.");
 
     expect(nativeAnswer(rolePermissions("explore"), "delegation_list")).toBe(
       "deny",
@@ -478,7 +454,7 @@ test("identity and permission lookups leave expired work to prepared operations"
       ownership: [],
     });
     const writer = await manager.start("root", request("expired.txt"));
-    await expire(directory, writer.id);
+    expireDelegation(journal(directory), writer.id);
     const aborts: string[] = [];
     const abort = client.session.abort;
     client.session.abort = async (args: any) => {
@@ -516,25 +492,34 @@ test("identity and permission lookups leave expired work to prepared operations"
   }));
 
 test("recovery delivers the stop it causes without recovering again", () =>
-  fixture(async ({ hooks, manager, request, requests, client, directory }: any) => {
+  fixture(async ({ hooks, manager, request, requests, client, directory, messages }: any) => {
     const first = await manager.start("root", request("first.txt"));
-    await expire(directory, first.id);
+    const finished = await manager.start("root", request("finished.txt"));
+    expireDelegation(journal(directory), first.id);
+    // The sweep reaches the finished sibling only after the stop's callback,
+    // so a callback that recovered again would batch its success in the wake.
+    finish(messages, finished.child, "Finished evidence.");
     const rows = JSON.parse(
       await hooks.tool.delegation_list.execute({}, {
         sessionID: "root",
         agent: "build",
       }),
     );
-    expect(rows.map((row: any) => row.status)).toEqual(["timed_out"]);
+    expect(rows.map((row: any) => row.status)).toEqual([
+      "timed_out",
+      "completed",
+    ]);
     const wakes = () => requests.filter((r: any) => r.path.id === "root");
     expect(wakes()).toHaveLength(1);
     expect(wakes()[0].body.parts[0].text).toContain(
       `${first.id}: coder timed_out`,
     );
+    expect(wakes()[0].body.parts[0].text).not.toContain(finished.id);
+    expect(manager.get("root", finished.id).notified).toBe(false);
 
     // A failed delivery restores the notice for the next root message.
     const second = await manager.start("root", request("second.txt"));
-    await expire(directory, second.id);
+    expireDelegation(journal(directory), second.id);
     const send = client.session.promptAsync;
     client.session.promptAsync = async (args: any) =>
       args.path.id === "root" ? { error: "unavailable" } : send(args);

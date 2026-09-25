@@ -20,22 +20,16 @@ its tools, inspect its live `tools/list` response and input schemas, then update
 the approved queries and isolated fixtures together. Do not infer capabilities
 from a server prefix or a `readOnlyHint` annotation alone.
 
-Orchestration and memory tools are classified once in `permissions.ts` too, and
-the native role permissions and the runtime admission hook both read that
-classification. Native `task` routing is denied to every role. The root
-orchestrator alone may delegate, list, cancel, snapshot for review, save plans,
-write todos, ask questions, compress, call `memory_commit`, and create or
-delete worktrees. Every role may read a known delegation of its own root, the
-saved plan and todos, and query memory. A role answer is not identity: the
-hook and `delegation_list` still prove a root-only call comes from a root
-session before recovering or enumerating anything, and delegation ownership
-still bounds what a writer may change. `memory` accepts `search`, `list`,
-`profile` and `help` without `content`, and its schema enumerates the same
-modes. The hook and the memory executor both enforce that rule, because
-automatic retrieval calls the executor directly. The worktree plugin's two
-tools are granted by name, so a tool added under that prefix stays denied at
-both boundaries until it is classified deliberately. Tools outside this
-classification keep their existing guards.
+Orchestration and memory tool access is also declared once in `permissions.ts`,
+and both the native role permissions and the runtime admission hook read it.
+A role answer is not identity: root-only calls still prove their session is a
+root, `delegation_list` does so before recovering or enumerating anything, and
+delegation ownership still bounds what a writer may change. Memory's query rule
+is enforced by the hook and again by the memory executor, because automatic
+retrieval calls the executor directly; its schema enumerates the same modes.
+The worktree plugin's tools are granted by name, so a tool added under that
+prefix stays denied at both boundaries until it is declared deliberately. Tools
+the declaration does not name keep their existing guards.
 
 OpenCode's native MCP resource listing, template listing and resource reading
 use the `read` permission. The runtime query guard recognizes all three
@@ -108,8 +102,9 @@ settlement or deadline expiry releases them.
 Recovery belongs to the `Delegations` operations that need it, not to their
 callers. Starting or resuming a delegation, refreshed listing and reading,
 review snapshots, collecting notifications for a root message, compaction
-context and memory consolidation each recover the journal before their own
-checks, so an adapter never runs a separate preparation step. Resolving a
+context and memory consolidation each recover the journal themselves, after any
+root-identity check and before their other checks, so an adapter never runs a
+separate preparation step. Resolving a
 session's journal, a child's identity, a role or a permission is a local
 observation: it reads the journal as recorded and never stops an expired child
 or delivers a notice. A notice delivered because recovery stopped a child
@@ -117,6 +112,7 @@ consumes the recorded state without recovering again. Consolidation recovers
 before its lifecycle reservation, outside the transaction, so a failed memory
 write cannot undo recovery. Preparing an operation does not serialize it with
 another root's.
+
 For remote MCP calls, OpenCode 1.18.30 forwards abort to the client. That can
 reject the local promise before the server finishes, suppressing the native
 completion hook. A cancelled MCP call then remains `stopping` even if the server

@@ -16,6 +16,7 @@ import {
   type Request,
 } from "../opencode/orchestrator/delegations";
 import { SessionJournals } from "../opencode/orchestrator/session-journals";
+import { expireDelegation } from "./_support/delegation-journal";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
@@ -34,24 +35,6 @@ function deferred<T>() {
     resolve = done;
   });
   return { promise, resolve };
-}
-/** Moves a recorded deadline into the past, as if the process had been away. */
-async function expire(filename: string, id: string) {
-  const { Database } = await import("bun:sqlite");
-  const db = new Database(filename);
-  try {
-    const stored = db
-      .query("SELECT record FROM delegations WHERE id=?")
-      .get(id) as { record: string };
-    const record = JSON.parse(stored.record);
-    record.deadline = Date.now() - 1;
-    db.query("UPDATE delegations SET record=? WHERE id=?").run(
-      JSON.stringify(record),
-      id,
-    );
-  } finally {
-    db.close();
-  }
 }
 async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   const directory = await mkdtemp(
@@ -907,7 +890,7 @@ test("start releases a destroyed child while its root session remains", async ()
 test("start times out another root's expired writer without replacing it", async () => {
   const f = await fixture(60_000);
   const writer = await f.manager.start("abandoned-root", f.request());
-  await expire(f.filename, writer.id);
+  expireDelegation(f.filename, writer.id);
   await f.manager.start("live-root", f.request());
   const released = f.manager.get("abandoned-root", writer.id);
   expect(released.status).toBe("timed_out");
@@ -1043,13 +1026,20 @@ test("review snapshots prepare enabled integration after writer checks and befor
     await new Promise((done) => setTimeout(done, 5));
     prepared.push({ directory: target, hashedBefore: f.hashed.length });
   };
-  const writer = await f.manager.start("root", f.request());
+  // Root identity comes first: recovery would have settled this child.
+  const finished = await f.manager.start("root", f.request());
+  f.result(finished.child!);
+  await expect(
+    f.manager.reviewSnapshot(finished.child!, f.directory, prepare),
+  ).rejects.toThrow("Leaf sessions");
+  expect(f.manager.get("root", finished.id).status).toBe("running");
+  const writer = await f.manager.start(
+    "root",
+    f.request({ ownership: ["lib"] }),
+  );
   await expect(
     f.manager.reviewSnapshot("root", f.directory, prepare),
   ).rejects.toThrow(writer.id);
-  await expect(
-    f.manager.reviewSnapshot(writer.child!, f.directory, prepare),
-  ).rejects.toThrow("Leaf sessions");
   expect(prepared).toEqual([]);
   expect(f.hashed).toEqual([]);
   await f.manager.stop("root", writer.id);
@@ -1073,7 +1063,7 @@ test("a reopened journal keeps recorded deadlines for prepared operations", asyn
   const f = await fixture(60_000);
   const expired = await f.manager.start("root", f.request());
   const live = await f.manager.start("root", f.request({ ownership: ["lib"] }));
-  await expire(f.filename, expired.id);
+  expireDelegation(f.filename, expired.id);
   const reopened = new Delegations(f.filename, f.client as any, routes);
   try {
     const rows = await reopened.reconciledList("root");
