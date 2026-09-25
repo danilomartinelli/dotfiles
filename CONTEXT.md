@@ -94,10 +94,15 @@ says about what accumulates there.
 _Avoid_: check, issue, problem, health check
 
 **Runtime path**:
-A path a tool owns entirely, which this repository never links, backs up, or
-removes. Distinct from a generated target: both are written by the tool, but
-only a generated target is ours to destroy.
+A path whose contents belong to the tool, outside this repository's managed
+configuration. The repository neither links nor backs it up; removal is limited
+to a declared runtime condition under explicitly requested repair.
 _Avoid_: generated, generated state
+
+**Directory retirement**:
+The confirmed removal of a directory selected for an explicitly requested
+runtime repair. Distinct from eligibility for removal and from maintenance
+that remains after the directory is gone.
 
 ### Delegation
 
