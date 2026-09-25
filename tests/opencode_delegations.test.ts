@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, setSystemTime, test } from "bun:test";
 import {
   mkdtemp,
   rm,
@@ -898,6 +898,19 @@ test("start times out another root's expired writer without replacing it", async
   expect(f.created).toHaveLength(2);
 });
 
+// That sweep reaches every root's writers, so start proves its caller first.
+// Recovering before the root check let a refused leaf time one out.
+test("start proves its root before recovering another root's writers", async () => {
+  const f = await fixture(60_000);
+  const writer = await f.manager.start("abandoned-root", f.request());
+  expireDelegation(f.filename, writer.id);
+  await expect(
+    f.manager.start("child-99", f.request({ ownership: ["lib"] })),
+  ).rejects.toThrow("Leaf sessions");
+  expect(f.manager.get("abandoned-root", writer.id).status).toBe("running");
+  expect(f.aborts).toEqual([]);
+});
+
 // Same gap when the child already finished with an abort: complete never ran
 // because only the owning root's recover inspected it.
 test("review preparation settles another root's finished child", async () => {
@@ -1016,6 +1029,46 @@ test("consolidation reconciles settled work before its lifecycle reservation", a
     f.manager.consolidate("root", async () => "never stored"),
   ).rejects.toThrow("active delegations");
   expect(f.manager.get("root", third.id).status).toBe("running");
+});
+
+// The capture's transaction shares the journal connection. A release recorded
+// inside it rolled back with a failed write, and a stop it attempted was
+// refused, failing every refreshed read while any writer was past its deadline.
+test("recovery waits out a consolidation's lifecycle reservation", async () => {
+  const f = await fixture(60_000);
+  const orphan = await f.manager.start("other-root", f.request());
+  const expired = await f.manager.start(
+    "other-root",
+    f.request({ ownership: ["lib"] }),
+  );
+  const entered = deferred<void>();
+  const gate = deferred<void>();
+  const capture = f.manager
+    .consolidate("root", async () => {
+      entered.resolve();
+      await gate.promise;
+      throw new Error("storage failure");
+    })
+    .catch((error) => error);
+  await entered.promise;
+  f.destroy(orphan.child!);
+  cleanup.push(() => setSystemTime());
+  setSystemTime(Date.now() + 120_000);
+  await expect(
+    f.manager.start("root", f.request({ ownership: ["docs"] })),
+  ).rejects.toThrow("Finish memory consolidation");
+  expect(await f.manager.reconciledNotifications("root")).toEqual([]);
+  expect(f.manager.get("other-root", orphan.id).status).toBe("running");
+  expect(f.manager.get("other-root", expired.id).status).toBe("running");
+
+  gate.resolve();
+  expect(String(await capture)).toContain("storage failure");
+  const settled = await f.manager.reconciledList("other-root");
+  expect(settled.map(({ id, status }) => [id, status])).toEqual([
+    [orphan.id, "failed"],
+    [expired.id, "timed_out"],
+  ]);
+  expect(f.aborts).toEqual([expired.child!]);
 });
 
 test("review snapshots prepare enabled integration after writer checks and before hashing", async () => {

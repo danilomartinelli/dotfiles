@@ -110,8 +110,10 @@ observation: it reads the journal as recorded and never stops an expired child
 or delivers a notice. A notice delivered because recovery stopped a child
 consumes the recorded state without recovering again. Consolidation recovers
 before its lifecycle reservation, outside the transaction, so a failed memory
-write cannot undo recovery. Preparing an operation does not serialize it with
-another root's.
+write cannot undo recovery. Every other recovery waits while that reservation
+is held, because the transaction shares the journal connection: an operation
+prepared during a capture reads the journal as recorded, and a start is
+refused. Preparing an operation does not serialize it with another root's.
 
 For remote MCP calls, OpenCode 1.18.30 forwards abort to the client. That can
 reject the local promise before the server finishes, suppressing the native

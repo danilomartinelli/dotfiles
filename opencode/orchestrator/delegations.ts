@@ -484,6 +484,7 @@ export class Delegations {
    */
   private async reconcileOrphans() {
     for (const row of this.all().filter((item) => active.has(item.status))) {
+      if (this.consolidations.size) return;
       const rootAlive = await this.sessionExists(row.root, row.directory);
       if (!rootAlive) {
         this.releaseOrphan(
@@ -517,12 +518,12 @@ export class Delegations {
     this.save(current);
   }
   async start(root: string, request: Request): Promise<Delegation> {
+    const rootSession = await this.assertRoot(root);
     await this.recover();
     if (this.consolidations.size)
       throw new Error(
         "Finish memory consolidation before starting another delegation.",
       );
-    const rootSession = await this.assertRoot(root);
     if (
       !childRoles.includes(request.role as (typeof childRoles)[number]) ||
       !this.routes[request.role]
@@ -960,13 +961,18 @@ export class Delegations {
    * Idempotent recovery: inspect existing children, never create replacements.
    * The journal defines the sweep; each operation's root only scopes what it
    * returns. Callbacks it triggers consume notifications without recovering.
+   * It waits out a consolidation: that transaction shares this connection, so
+   * a transition recorded now would roll back with a failed memory write, and
+   * stop refuses to run at all.
    */
   private async recover() {
+    if (this.consolidations.size) return;
     await this.reconcileOrphans();
     // Sweep the whole journal, not only this root. An abandoned root whose
     // sessions still exist never recovers itself; its expired or finished
     // writers would otherwise pin review_snapshot for every other root.
     for (const row of this.all().filter((item) => active.has(item.status))) {
+      if (this.consolidations.size) return;
       if (row.child) await this.complete(row.child);
       const current = this.get(row.root, row.id);
       if (!active.has(current.status)) continue;
