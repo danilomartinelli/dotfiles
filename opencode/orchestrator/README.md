@@ -4,7 +4,7 @@
 standalone memory plugin entry. `regular.ts` coordinates the authored
 workflow. `session-journals.ts` resolves native parent/project identities,
 `delegations.ts` owns the persisted lifecycle, `artifacts.ts` prepares coder evidence storage, `permissions.ts`
-enforces query capabilities, `redirect-bounds.ts` keeps writer shell logs
+classifies orchestration tools and enforces query capabilities, `redirect-bounds.ts` keeps writer shell logs
 bounded, `prompts.ts` states role responsibilities, and
 `memory/` adapts the pinned memory storage without automatic extraction.
 
@@ -19,6 +19,23 @@ native role permissions and the runtime guard. When a configured server changes
 its tools, inspect its live `tools/list` response and input schemas, then update
 the approved queries and isolated fixtures together. Do not infer capabilities
 from a server prefix or a `readOnlyHint` annotation alone.
+
+Orchestration and memory tools are classified once in `permissions.ts` too, and
+the native role permissions and the runtime admission hook both read that
+classification. Native `task` routing is denied to every role. The root
+orchestrator alone may delegate, list, cancel, snapshot for review, save plans,
+write todos, ask questions, compress, call `memory_commit`, and create or
+delete worktrees. Every role may read a known delegation of its own root, the
+saved plan and todos, and query memory. A role answer is not identity: the
+hook and `delegation_list` still prove a root-only call comes from a root
+session before recovering or enumerating anything, and delegation ownership
+still bounds what a writer may change. `memory` accepts `search`, `list`,
+`profile` and `help` without `content`, and its schema enumerates the same
+modes. The hook and the memory executor both enforce that rule, because
+automatic retrieval calls the executor directly. The worktree plugin's two
+tools are granted by name, so a tool added under that prefix stays denied at
+both boundaries until it is classified deliberately. Tools outside this
+classification keep their existing guards.
 
 OpenCode's native MCP resource listing, template listing and resource reading
 use the `read` permission. The runtime query guard recognizes all three

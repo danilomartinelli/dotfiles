@@ -341,6 +341,10 @@ test("test_commit_requires_root_build_and_terminal_children_before_storage", asy
   await expect(
     f.hooks.tool!.memory_commit.execute(args, test_context("coder", "child")),
   ).rejects.toThrow("root build");
+  // Claiming a root role does not make a child session the root.
+  await expect(
+    f.hooks.tool!.memory_commit.execute(args, test_context("build", "child")),
+  ).rejects.toThrow("root build");
   f.setChildren(true);
   await expect(
     f.hooks.tool!.memory_commit.execute(args, test_context()),
@@ -360,13 +364,65 @@ test("test_commit_requires_root_build_and_terminal_children_before_storage", asy
       { mode: "profile", content: "Infer my preferences" },
       test_context(),
     ),
-  ).rejects.toThrow("read-only");
+  ).rejects.toThrow("retrieval-only");
   await expect(
     f.hooks.tool!.memory.execute(
       { mode: "add", content: "Bypass commit" },
       test_context(),
     ),
-  ).rejects.toThrow("read-only");
+  ).rejects.toThrow("retrieval-only");
+});
+
+test("test_memory_executor_accepts_only_the_shared_query_modes", async () => {
+  const f = test_hooks((await test_storage()).storage);
+  const memory = f.hooks.tool!.memory;
+  const queries = ["search", "list", "profile", "help"];
+  const refused = [
+    "add",
+    "forget",
+    "migrate",
+    "list-shards",
+    "export",
+    "import",
+    "delete",
+  ];
+  for (const mode of queries)
+    await memory.execute({ mode, query: "auth", limit: 3 }, test_context());
+  // An omitted mode keeps the baseline's help behavior.
+  await memory.execute({}, test_context("coder", "child"));
+  expect(f.calls).toEqual([...queries, "undefined"]);
+  for (const mode of refused)
+    await expect(
+      memory.execute({ mode }, test_context()),
+      mode,
+    ).rejects.toThrow("retrieval-only");
+  for (const args of [
+    { mode: "search", content: "Store this" },
+    { content: "" },
+  ])
+    await expect(memory.execute(args, test_context())).rejects.toThrow(
+      "retrieval-only",
+    );
+  expect(f.calls).toEqual([...queries, "undefined"]);
+
+  const schema = memory.args as Record<
+    string,
+    { safeParse(value: unknown): { success: boolean } }
+  >;
+  expect(Object.keys(schema).sort()).toEqual([
+    "limit",
+    "mode",
+    "query",
+    "scope",
+  ]);
+  for (const mode of [...queries, undefined])
+    expect(schema.mode.safeParse(mode).success, String(mode)).toBe(true);
+  for (const mode of refused)
+    expect(schema.mode.safeParse(mode).success, mode).toBe(false);
+  expect(schema.query.safeParse("auth").success).toBe(true);
+  expect(schema.limit.safeParse(20).success).toBe(true);
+  expect(schema.limit.safeParse(21).success).toBe(false);
+  expect(schema.scope.safeParse("all-projects").success).toBe(true);
 });
 
 test("test_consolidation_lease_covers_embedding_and_releases_after_failed_write", async () => {

@@ -468,7 +468,9 @@ globally instead of by the project.
 ### Worktrees
 
 `kdco/worktree` exposes `worktree_create` and `worktree_delete`; the installer
-provisions it alongside `kdco/notify`. Its per-project configuration is
+provisions it alongside `kdco/notify`. Only the root orchestrator may call
+them, and they are granted by name: a tool the plugin adds later stays denied
+until the orchestrator's classification includes it. Its per-project configuration is
 `.opencode/worktree.jsonc`, and the plugin writes its own empty template into a
 checkout that has none, so a repository that needs worktree bootstrapping should
 track the file deliberately.

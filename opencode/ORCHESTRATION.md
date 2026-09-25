@@ -101,6 +101,14 @@ changes.
 Unknown tools are denied by default, including new tools under those server
 names; a server prefix alone does not authorize a query.
 
+Discovering the full delegation set belongs to the root: `delegation_list` is
+denied to delegated roles by the native permission, the runtime hook and the
+tool itself. A child may still read a delegation of its own root by ID.
+Every role may query memory, but only the root writes it, through
+`memory_commit`. The worktree plugin's tools are granted to the root by name,
+so a tool it adds later stays denied until it is classified deliberately. See
+[the runtime](orchestrator/README.md) for the shared classification.
+
 Native LSP navigation is enabled in the profiles and permitted for every role.
 CodeGraph queries select the session's actual Git checkout explicitly, including
 linked worktrees. Prompts use these tools when they answer the current question;
