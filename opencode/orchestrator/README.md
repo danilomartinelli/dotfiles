@@ -104,6 +104,19 @@ active row in the journal: a finished child is settled and a past-deadline
 writer is timed out even when a different root triggered recovery. A living
 session still cannot cancel another root's in-deadline writers; only absence,
 settlement or deadline expiry releases them.
+
+Recovery belongs to the `Delegations` operations that need it, not to their
+callers. Starting or resuming a delegation, refreshed listing and reading,
+review snapshots, collecting notifications for a root message, compaction
+context and memory consolidation each recover the journal before their own
+checks, so an adapter never runs a separate preparation step. Resolving a
+session's journal, a child's identity, a role or a permission is a local
+observation: it reads the journal as recorded and never stops an expired child
+or delivers a notice. A notice delivered because recovery stopped a child
+consumes the recorded state without recovering again. Consolidation recovers
+before its lifecycle reservation, outside the transaction, so a failed memory
+write cannot undo recovery. Preparing an operation does not serialize it with
+another root's.
 For remote MCP calls, OpenCode 1.18.30 forwards abort to the client. That can
 reject the local promise before the server finishes, suppressing the native
 completion hook. A cancelled MCP call then remains `stopping` even if the server
@@ -148,7 +161,8 @@ cleanup or external-directory write access is granted.
 
 `review_snapshot` waits for writers affecting that checkout, including pending
 stops. Read-only investigations and writers in unrelated checkouts do not block
-it. The snapshot hashes HEAD, tracked changes and non-ignored untracked content;
+it. An enabled CodeGraph prepares the checkout only after that check passes and
+before hashing, so a refused snapshot neither indexes nor hashes anything. The snapshot hashes HEAD, tracked changes and non-ignored untracked content;
 a changed snapshot invalidates the review verdict. Pass the full returned value
 unchanged to every reviewer of that version.
 

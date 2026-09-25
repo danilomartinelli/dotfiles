@@ -261,8 +261,30 @@ export class Delegations {
     );
   }
 
+  // Local observations read the journal as recorded. A refreshed consultation
+  // (the reconciled* methods, compactionContext and reviewSnapshot), like start
+  // and consolidate, recovers first: recovery can update records, stop expired
+  // children and deliver notifications, so a lookup never implies it.
   list(root: string): Delegation[] {
     return this.all().filter((row) => row.root === root);
+  }
+  async reconciledList(root: string): Promise<Delegation[]> {
+    await this.recover();
+    return this.list(root);
+  }
+  async reconciledRecord(root: string, id: string): Promise<Delegation> {
+    await this.recover();
+    return this.get(root, id);
+  }
+  async reconciledNotifications(root: string): Promise<Notification[]> {
+    await this.recover();
+    return this.notifications(root);
+  }
+  async compactionContext(
+    root: string,
+  ): Promise<{ plan: string; records: Delegation[] }> {
+    await this.recover();
+    return { plan: this.readPlan(root), records: this.list(root) };
   }
   private all(): Delegation[] {
     return (
@@ -390,6 +412,9 @@ export class Delegations {
       );
   }
   async consolidate<T>(root: string, run: () => Promise<T>): Promise<T> {
+    // Recovery stays outside the transaction: settled work must not keep a
+    // capture from starting, and a failed write must not roll recovery back.
+    await this.recover();
     if (this.consolidations.size)
       throw new Error("Memory consolidation is already active.");
     // SQLite releases this reservation on process death. No durable flag can
@@ -419,6 +444,23 @@ export class Delegations {
       throw new Error(
         `Review a stable version after writers finish. Delegation ${writer.id} (${writer.role}, ${writer.status}) still reserves ${writer.directory}; collect its completion notification before retrying.`,
       );
+  }
+  /**
+   * The source version a reviewer is bound to. `prepare` runs only once the
+   * checkout's writers are known to be finished and before hashing, so an
+   * enabled integration never prepares a checkout that review would refuse.
+   */
+  async reviewSnapshot(
+    root: string,
+    directory: string,
+    prepare?: (directory: string) => Promise<unknown>,
+  ): Promise<string> {
+    await this.assertRoot(root);
+    await this.recover();
+    const checkout = await realpath(directory);
+    this.assertReviewReady(checkout);
+    await prepare?.(checkout);
+    return this.snapshot(checkout);
   }
   private async sessionExists(id: string, directory: string): Promise<boolean> {
     try {
@@ -475,6 +517,7 @@ export class Delegations {
     this.save(current);
   }
   async start(root: string, request: Request): Promise<Delegation> {
+    await this.recover();
     if (this.consolidations.size)
       throw new Error(
         "Finish memory consolidation before starting another delegation.",
@@ -913,8 +956,12 @@ export class Delegations {
     }
   }
 
-  /** Idempotent recovery: inspect existing children, never create replacements. */
-  async recover(root: string) {
+  /**
+   * Idempotent recovery: inspect existing children, never create replacements.
+   * The journal defines the sweep; each operation's root only scopes what it
+   * returns. Callbacks it triggers consume notifications without recovering.
+   */
+  private async recover() {
     await this.reconcileOrphans();
     // Sweep the whole journal, not only this root. An abandoned root whose
     // sessions still exist never recovers itself; its expired or finished

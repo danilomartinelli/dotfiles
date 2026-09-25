@@ -35,6 +35,24 @@ function deferred<T>() {
   });
   return { promise, resolve };
 }
+/** Moves a recorded deadline into the past, as if the process had been away. */
+async function expire(filename: string, id: string) {
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(filename);
+  try {
+    const stored = db
+      .query("SELECT record FROM delegations WHERE id=?")
+      .get(id) as { record: string };
+    const record = JSON.parse(stored.record);
+    record.deadline = Date.now() - 1;
+    db.query("UPDATE delegations SET record=? WHERE id=?").run(
+      JSON.stringify(record),
+      id,
+    );
+  } finally {
+    db.close();
+  }
+}
 async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   const directory = await mkdtemp(
     path.join(tmpdir(), "orchestrator-delegations-"),
@@ -47,6 +65,7 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   const parents = new Map<string, string>();
   const messages = new Map<string, any[]>();
   let snapshot = "source:1";
+  const hashed: string[] = [];
   const client = {
     session: {
       status: async () => ({ data: {} }),
@@ -93,7 +112,10 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
     client as any,
     structuredClone(routes),
     timeoutMs,
-    async () => snapshot,
+    async (directory: string) => {
+      hashed.push(directory);
+      return snapshot;
+    },
     stopGraceMs,
   );
   cleanup.push(() => manager.close());
@@ -134,6 +156,7 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
     aborts,
     messages,
     result,
+    hashed,
     destroy(...ids: string[]) {
       for (const id of ids) destroyed.add(id);
     },
@@ -412,11 +435,10 @@ test("completed tool-call steps retain their execution reservation", async () =>
   const row = await f.manager.start("root", f.request());
   f.result(row.child!);
   f.messages.get(row.child!)!.at(-1).info.finish = "tool-calls";
-  await f.manager.recover("root");
-  expect(f.manager.get("root", row.id).status).toBe("running");
   await expect(f.manager.start("root", f.request())).rejects.toThrow(
     "overlaps",
   );
+  expect(f.manager.get("root", row.id).status).toBe("running");
 });
 
 test("deadline aborts execution without deleting or restarting the child", async () => {
@@ -600,8 +622,9 @@ test("reopened state recovers results without creating new sessions", async () =
   f.result(row.child!);
   const recovered = new Delegations(f.filename, f.client as any, routes);
   try {
-    await recovered.recover("root");
-    expect(recovered.get("root", row.id).status).toBe("completed");
+    expect((await recovered.reconciledRecord("root", row.id)).status).toBe(
+      "completed",
+    );
     expect(recovered.notifications("root")).toHaveLength(1);
     expect(recovered.notifications("root")).toHaveLength(0);
     expect(f.created).toHaveLength(1);
@@ -841,18 +864,19 @@ test("review preparation waits for writers in that checkout and identifies their
   expect(() => f.manager.assertSettled("root")).toThrow("active delegations");
 });
 
-test("recover releases a destroyed root's writer so another root can review", async () => {
+test("review preparation releases a destroyed root's writer without manual recovery", async () => {
   const f = await fixture();
   const writer = await f.manager.start("destroyed-root", f.request());
   expect(() => f.manager.assertReviewReady(writer.directory)).toThrow(
     writer.id,
   );
   f.destroy("destroyed-root", writer.child!);
-  await f.manager.recover("live-root");
+  expect(await f.manager.reviewSnapshot("live-root", f.directory)).toBe(
+    "source:1",
+  );
   const released = f.manager.get("destroyed-root", writer.id);
   expect(released.status).toBe("failed");
   expect(released.result).toContain("no longer exists");
-  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
   await f.manager.start(
     "live-root",
     f.request({
@@ -861,59 +885,208 @@ test("recover releases a destroyed root's writer so another root can review", as
       sourceVersion: "source:1",
     }),
   );
+  expect(f.created).toHaveLength(2);
 });
 
-test("recover releases a destroyed child while its root session remains", async () => {
+test("start releases a destroyed child while its root session remains", async () => {
   const f = await fixture();
   const writer = await f.manager.start("root", f.request());
   f.destroy(writer.child!);
-  await f.manager.recover("root");
+  const next = await f.manager.start("root", f.request());
   const released = f.manager.get("root", writer.id);
   expect(released.status).toBe("failed");
   expect(released.result).toContain("no longer exists");
-  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+  expect(released.child).toBe(writer.child);
+  expect(next.child).not.toBe(writer.child);
+  expect(f.created).toHaveLength(2);
 });
 
 // An abandoned root whose sessions still exist never calls recover again. Its
 // past-deadline writer must not pin review_snapshot for every other root that
 // shares the journal; only the caller's children used to be swept.
-test("recover times out another root's expired writer so review can proceed", async () => {
+test("start times out another root's expired writer without replacing it", async () => {
   const f = await fixture(60_000);
   const writer = await f.manager.start("abandoned-root", f.request());
-  expect(() => f.manager.assertReviewReady(writer.directory)).toThrow(
-    writer.id,
-  );
-  const { Database } = await import("bun:sqlite");
-  const db = new Database(f.filename);
-  const stored = db
-    .query("SELECT record FROM delegations WHERE id=?")
-    .get(writer.id) as { record: string };
-  const record = JSON.parse(stored.record);
-  record.deadline = Date.now() - 1;
-  db.query("UPDATE delegations SET record=? WHERE id=?").run(
-    JSON.stringify(record),
-    writer.id,
-  );
-  db.close();
-  await f.manager.recover("live-root");
+  await expire(f.filename, writer.id);
+  await f.manager.start("live-root", f.request());
   const released = f.manager.get("abandoned-root", writer.id);
   expect(released.status).toBe("timed_out");
-  expect(f.aborts).toContain(writer.child!);
-  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+  expect(f.aborts).toEqual([writer.child!]);
+  expect(f.created).toHaveLength(2);
 });
 
 // Same gap when the child already finished with an abort: complete never ran
 // because only the owning root's recover inspected it.
-test("recover settles another root's finished child before review", async () => {
+test("review preparation settles another root's finished child", async () => {
   const f = await fixture();
   const writer = await f.manager.start("abandoned-root", f.request());
   f.result(writer.child!, "aborted", {
     error: { name: "MessageAbortedError" },
   });
-  await f.manager.recover("live-root");
-  const released = f.manager.get("abandoned-root", writer.id);
-  expect(released.status).toBe("failed");
-  expect(() => f.manager.assertReviewReady(writer.directory)).not.toThrow();
+  expect(await f.manager.reviewSnapshot("live-root", f.directory)).toBe(
+    "source:1",
+  );
+  expect(f.manager.get("abandoned-root", writer.id).status).toBe("failed");
+});
+
+test("prepared operations keep another root's live and stopping writers reserved", async () => {
+  const f = await fixture();
+  const live = await f.manager.start("other-root", f.request());
+  const refusals = async () => {
+    await expect(f.manager.reviewSnapshot("root", f.directory)).rejects.toThrow(
+      live.id,
+    );
+    await expect(f.manager.start("root", f.request())).rejects.toThrow(
+      "overlaps",
+    );
+  };
+  await refusals();
+  expect(f.manager.get("other-root", live.id).status).toBe("running");
+  f.manager.toolStarted(live.child!, "pending-operation");
+  expect((await f.manager.stop("other-root", live.id)).status).toBe("stopping");
+  await refusals();
+  expect(f.manager.get("other-root", live.id).status).toBe("stopping");
+  expect(f.hashed).toEqual([]);
+  await f.manager.start("root", f.request({ role: "explore", ownership: [] }));
+  await f.manager.start("root", f.request({ ownership: ["docs"] }));
+  await f.manager.toolFinished(live.child!, "pending-operation");
+  expect(f.manager.get("other-root", live.id).status).toBe("cancelled");
+  expect(f.aborts).toEqual([live.child!]);
+});
+
+test("refreshed listing and reading reconcile before returning root-scoped records", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  const other = await f.manager.start(
+    "other-root",
+    f.request({ ownership: ["lib"] }),
+  );
+  f.result(row.child!, "Retained evidence");
+  expect(f.manager.get("root", row.id).status).toBe("running");
+  const listed = await f.manager.reconciledList("root");
+  expect(listed.map(({ id, status }) => [id, status])).toEqual([
+    [row.id, "completed"],
+  ]);
+  expect((await f.manager.reconciledRecord("root", row.id)).result).toBe(
+    "Retained evidence",
+  );
+  await expect(f.manager.reconciledRecord("root", other.id)).rejects.toThrow(
+    "not found in this root",
+  );
+  expect(f.created).toHaveLength(2);
+});
+
+test("notification collection and compaction context observe settled work", async () => {
+  const f = await fixture();
+  const first = await f.manager.start("root", f.request());
+  const second = await f.manager.start(
+    "root",
+    f.request({ ownership: ["lib"] }),
+  );
+  f.result(first.child!);
+  const notices = await f.manager.reconciledNotifications("root");
+  expect(notices.map(({ id, status }) => [id, status])).toEqual([
+    [first.id, "completed"],
+  ]);
+  expect(await f.manager.reconciledNotifications("root")).toEqual([]);
+  f.manager.savePlan("root", "Keep the documented scope.");
+  f.result(second.child!);
+  const context = await f.manager.compactionContext("root");
+  expect(context.plan).toBe("Keep the documented scope.");
+  expect(context.records.map(({ id, status }) => [id, status])).toEqual([
+    [first.id, "completed"],
+    [second.id, "completed"],
+  ]);
+  expect(f.created).toHaveLength(2);
+});
+
+test("consolidation reconciles settled work before its lifecycle reservation", async () => {
+  const f = await fixture();
+  const first = await f.manager.start("root", f.request());
+  f.result(first.child!);
+  const stored = await f.manager.consolidate("root", async () => {
+    expect(f.manager.get("root", first.id).status).toBe("completed");
+    await expect(
+      f.manager.start("root", f.request({ ownership: ["lib"] })),
+    ).rejects.toThrow("consolidation");
+    return "stored";
+  });
+  expect(stored).toBe("stored");
+
+  // Recovery precedes the transaction, so a failed write cannot roll it back.
+  const second = await f.manager.start(
+    "root",
+    f.request({ ownership: ["lib"] }),
+  );
+  f.result(second.child!);
+  await expect(
+    f.manager.consolidate("root", async () => {
+      throw new Error("storage failure");
+    }),
+  ).rejects.toThrow("storage failure");
+  expect(f.manager.get("root", second.id).status).toBe("completed");
+  const third = await f.manager.start(
+    "root",
+    f.request({ ownership: ["docs"] }),
+  );
+  await expect(
+    f.manager.consolidate("root", async () => "never stored"),
+  ).rejects.toThrow("active delegations");
+  expect(f.manager.get("root", third.id).status).toBe("running");
+});
+
+test("review snapshots prepare enabled integration after writer checks and before hashing", async () => {
+  const f = await fixture();
+  const directory = await realpath(f.directory);
+  const prepared: { directory: string; hashedBefore: number }[] = [];
+  const prepare = async (target: string) => {
+    await new Promise((done) => setTimeout(done, 5));
+    prepared.push({ directory: target, hashedBefore: f.hashed.length });
+  };
+  const writer = await f.manager.start("root", f.request());
+  await expect(
+    f.manager.reviewSnapshot("root", f.directory, prepare),
+  ).rejects.toThrow(writer.id);
+  await expect(
+    f.manager.reviewSnapshot(writer.child!, f.directory, prepare),
+  ).rejects.toThrow("Leaf sessions");
+  expect(prepared).toEqual([]);
+  expect(f.hashed).toEqual([]);
+  await f.manager.stop("root", writer.id);
+
+  expect(await f.manager.reviewSnapshot("root", f.directory, prepare)).toBe(
+    "source:1",
+  );
+  expect(prepared).toEqual([{ directory, hashedBefore: 0 }]);
+  expect(f.hashed).toEqual([directory]);
+  expect(await f.manager.reviewSnapshot("root", f.directory)).toBe("source:1");
+  expect(prepared).toHaveLength(1);
+  await expect(
+    f.manager.reviewSnapshot("root", f.directory, async () => {
+      throw new Error("index preparation failed");
+    }),
+  ).rejects.toThrow("index preparation failed");
+  expect(f.hashed).toEqual([directory, directory]);
+});
+
+test("a reopened journal keeps recorded deadlines for prepared operations", async () => {
+  const f = await fixture(60_000);
+  const expired = await f.manager.start("root", f.request());
+  const live = await f.manager.start("root", f.request({ ownership: ["lib"] }));
+  await expire(f.filename, expired.id);
+  const reopened = new Delegations(f.filename, f.client as any, routes);
+  try {
+    const rows = await reopened.reconciledList("root");
+    expect(rows.map(({ id, status }) => [id, status])).toEqual([
+      [expired.id, "timed_out"],
+      [live.id, "running"],
+    ]);
+    expect(rows[1].deadline).toBe(live.deadline);
+    expect(f.aborts).toEqual([expired.child!]);
+    expect(f.created).toHaveLength(2);
+  } finally {
+    reopened.close();
+  }
 });
 
 test("resume errors distinguish active execution, mismatched identity and profile changes", async () => {
