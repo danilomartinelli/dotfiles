@@ -5,16 +5,10 @@ import {
   type PluginInput,
 } from "@opencode-ai/plugin";
 import { randomUUID } from "node:crypto";
-import { realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  assertWriteTargets,
-  childRoles,
-  sourceVersion,
-  type Routes,
-} from "./delegations";
+import { assertWriteTargets, childRoles, type Routes } from "./delegations";
 import {
   admitOrchestration,
   assertReadOnlyTool,
@@ -190,7 +184,6 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         },
         async execute(args, context) {
           const manager = await managerFor(context.sessionID);
-          await manager.recover(context.sessionID);
           return JSON.stringify(await manager.start(context.sessionID, args));
         },
       }),
@@ -200,11 +193,13 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         args: {},
         async execute(_args, context) {
           const manager = await managerFor(context.sessionID);
+          // Root identity precedes recovery: a child cannot enumerate, nor
+          // trigger the recovery that enumeration prepares.
           await manager.assertRoot(context.sessionID);
-          const root = context.sessionID;
-          await manager.recover(root);
           return JSON.stringify(
-            manager.list(root).map(({ result, ...row }) => row),
+            (await manager.reconciledList(context.sessionID)).map(
+              ({ result, ...row }) => row,
+            ),
           );
         },
       }),
@@ -215,8 +210,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         async execute(args, context) {
           const manager = await managerFor(context.sessionID);
           const root = await rootFor(context.sessionID);
-          await manager.recover(root);
-          return JSON.stringify(manager.get(root, args.id));
+          return JSON.stringify(await manager.reconciledRecord(root, args.id));
         },
       }),
       delegation_cancel: tool({
@@ -235,12 +229,13 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         args: { directory: tool.schema.string() },
         async execute(args, context) {
           const manager = await managerFor(context.sessionID);
-          await manager.assertRoot(context.sessionID);
-          await manager.recover(context.sessionID);
-          const directory = await realpath(args.directory);
-          manager.assertReviewReady(directory);
-          if (codegraphEnabled) await codegraph.prepare(directory);
-          return sourceVersion(directory);
+          return manager.reviewSnapshot(
+            context.sessionID,
+            args.directory,
+            codegraphEnabled
+              ? (directory) => codegraph.prepare(directory)
+              : undefined,
+          );
         },
       }),
       plan_save: tool({
@@ -341,8 +336,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
               });
           }
         }
-        await manager.recover(input.sessionID);
-        const notices = manager.notifications(input.sessionID);
+        const notices = await manager.reconciledNotifications(input.sessionID);
         if (notices.length)
           output.parts.push({
             id: `prt_${randomUUID().replaceAll("-", "")}`,
@@ -421,10 +415,10 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
     "experimental.session.compacting": async (input, output) => {
       const manager = await managerFor(input.sessionID);
       const root = await rootFor(input.sessionID);
-      await manager.recover(root);
+      const { plan, records } = await manager.compactionContext(root);
       output.context.push(
         directoryContext((await journals.session(input.sessionID)).directory),
-        `Orchestration recovery:\n${manager.readPlan(root)}\n${JSON.stringify(manager.list(root).map(({ result, ...row }) => row))}\nRead retained results by delegation ID; resume only the same work item/role/focus. Do not recreate children after compaction.`,
+        `Orchestration recovery:\n${plan}\n${JSON.stringify(records.map(({ result, ...row }) => row))}\nRead retained results by delegation ID; resume only the same work item/role/focus. Do not recreate children after compaction.`,
       );
     },
     event: async ({ event }) => {

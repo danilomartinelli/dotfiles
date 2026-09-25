@@ -3,6 +3,7 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os, { tmpdir } from "node:os";
 import path from "node:path";
 import { regularHooks } from "../opencode/orchestrator/regular";
+import { CodeGraphProjects } from "../opencode/orchestrator/codegraph";
 import { rolePermissions } from "../opencode/orchestrator/prompts";
 
 // The agreed classification, written out here rather than read back from the
@@ -33,6 +34,34 @@ function nativeAnswer(permissions: Record<string, unknown>, tool: string) {
     if (new RegExp(`^${glob}$`).test(tool)) answer = value;
   }
   return answer;
+}
+
+/** Moves a recorded deadline into the past, as if the process had been away. */
+async function expire(home: string, id: string) {
+  const { Database } = await import("bun:sqlite");
+  const db = new Database(
+    path.join(home, ".local/share/opencode/orchestrator/fixture.sqlite"),
+  );
+  try {
+    const stored = db
+      .query("SELECT record FROM delegations WHERE id=?")
+      .get(id) as { record: string };
+    const record = JSON.parse(stored.record);
+    record.deadline = Date.now() - 1;
+    db.query("UPDATE delegations SET record=? WHERE id=?").run(
+      JSON.stringify(record),
+      id,
+    );
+  } finally {
+    db.close();
+  }
+}
+
+function finish(messages: Map<string, any[]>, child: string, text: string) {
+  messages.get(child)!.push({
+    info: { role: "assistant", finish: "stop", time: { completed: Date.now() } },
+    parts: [{ type: "text", text }],
+  });
 }
 
 async function fixture(run: (f: any) => Promise<void>) {
@@ -174,6 +203,38 @@ test("the review snapshot tool allows read-only children while enforcing writer 
     expect(await snapshot()).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
   });
 });
+
+test("the review snapshot tool prepares CodeGraph only when enabled and review is allowed", () =>
+  fixture(async ({ hooks, directory, manager, request, checkout }: any) => {
+    await checkout();
+    const prepared: string[] = [];
+    const prepare = spyOn(
+      CodeGraphProjects.prototype,
+      "prepare",
+    ).mockImplementation(async (target: string) => {
+      prepared.push(target);
+      return { ready: true, notice: "" };
+    });
+    try {
+      const snapshot = () =>
+        hooks.tool.review_snapshot.execute(
+          { directory },
+          { sessionID: "root" },
+        );
+      await hooks.config({ agent: {}, mcp: { codegraph: { enabled: false } } });
+      expect(await snapshot()).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+      expect(prepared).toEqual([]);
+      await hooks.config({ agent: {}, mcp: { codegraph: {} } });
+      const writer = await manager.start("root", request("implement"));
+      await expect(snapshot()).rejects.toThrow(writer.id);
+      expect(prepared).toEqual([]);
+      await manager.stop("root", writer.id);
+      expect(await snapshot()).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+      expect(prepared).toEqual([directory]);
+    } finally {
+      prepare.mockRestore();
+    }
+  }));
 
 test("regular tool admission preserves role gates, ordering, and query effects", () =>
   fixture(async ({ hooks, manager, request }: any) => {
@@ -407,6 +468,138 @@ test("memory admission accepts queries and refuses writes for every role", () =>
         "retrieval-only",
       );
     }
+  }));
+
+test("identity and permission lookups leave expired work to prepared operations", () =>
+  fixture(async ({ hooks, manager, request, requests, client, directory }: any) => {
+    const reader = await manager.start("root", {
+      ...request("lookup"),
+      role: "explore",
+      ownership: [],
+    });
+    const writer = await manager.start("root", request("expired.txt"));
+    await expire(directory, writer.id);
+    const aborts: string[] = [];
+    const abort = client.session.abort;
+    client.session.abort = async (args: any) => {
+      aborts.push(args.path.id);
+      return abort(args);
+    };
+
+    await hooks["tool.execute.before"](
+      { sessionID: reader.child, tool: "todoread", callID: "todo" },
+      { args: {} },
+    );
+    await hooks["chat.params"](
+      {
+        sessionID: reader.child,
+        agent: "explore",
+        model: { providerID: "openai", id: "gpt-5.6-luna" },
+        message: {},
+      },
+      { options: {} },
+    );
+    expect(
+      await hooks.tool.plan_read.execute({}, { sessionID: reader.child }),
+    ).toBe("No plan saved for this session.");
+    expect(manager.get("root", writer.id).status).toBe("running");
+    expect(aborts).toEqual([]);
+    expect(requests.filter((r: any) => r.path.id === "root")).toHaveLength(0);
+
+    // Reading a record is a refreshed consultation, which applies the deadline.
+    await hooks.tool.delegation_read.execute(
+      { id: writer.id },
+      { sessionID: reader.child },
+    );
+    expect(manager.get("root", writer.id).status).toBe("timed_out");
+    expect(aborts).toEqual([writer.child]);
+  }));
+
+test("recovery delivers the stop it causes without recovering again", () =>
+  fixture(async ({ hooks, manager, request, requests, client, directory }: any) => {
+    const first = await manager.start("root", request("first.txt"));
+    await expire(directory, first.id);
+    const rows = JSON.parse(
+      await hooks.tool.delegation_list.execute({}, {
+        sessionID: "root",
+        agent: "build",
+      }),
+    );
+    expect(rows.map((row: any) => row.status)).toEqual(["timed_out"]);
+    const wakes = () => requests.filter((r: any) => r.path.id === "root");
+    expect(wakes()).toHaveLength(1);
+    expect(wakes()[0].body.parts[0].text).toContain(
+      `${first.id}: coder timed_out`,
+    );
+
+    // A failed delivery restores the notice for the next root message.
+    const second = await manager.start("root", request("second.txt"));
+    await expire(directory, second.id);
+    const send = client.session.promptAsync;
+    client.session.promptAsync = async (args: any) =>
+      args.path.id === "root" ? { error: "unavailable" } : send(args);
+    await hooks.tool.delegation_read.execute(
+      { id: second.id },
+      { sessionID: "root" },
+    );
+    expect(manager.get("root", second.id).status).toBe("timed_out");
+    expect(manager.get("root", second.id).notified).toBe(false);
+    client.session.promptAsync = send;
+    const output = {
+      message: { id: "msg-root" },
+      parts: [{ type: "text", text: "Continue." }],
+    };
+    await hooks["chat.message"]({ sessionID: "root", agent: "build" }, output);
+    expect(output.parts.at(-1)).toMatchObject({ synthetic: true });
+    expect((output.parts.at(-1) as any).text).toContain(
+      `${second.id}: coder timed_out`,
+    );
+    expect(manager.get("root", second.id).notified).toBe(true);
+    expect(wakes()).toHaveLength(1);
+  }));
+
+test("root messages and compaction observe settled work without recreating children", () =>
+  fixture(async ({ hooks, manager, request, messages, client }: any) => {
+    let created = 0;
+    const create = client.session.create;
+    client.session.create = async (args: any) => {
+      created++;
+      return create(args);
+    };
+    const first = await manager.start("root", request("first.txt"));
+    finish(messages, first.child, "First evidence.");
+    const output = {
+      message: { id: "msg-root" },
+      parts: [{ type: "text", text: "Continue." }],
+    };
+    await hooks["chat.message"]({ sessionID: "root", agent: "build" }, output);
+    expect((output.parts.at(-1) as any).text).toContain(
+      `${first.id}: coder completed`,
+    );
+
+    const second = await manager.start("root", request("second.txt"));
+    finish(messages, second.child, "Second evidence.");
+    await hooks.tool.plan_save.execute(
+      { content: "Keep both scopes." },
+      { sessionID: "root" },
+    );
+    const compacted = { context: [] as string[] };
+    await hooks["experimental.session.compacting"](
+      { sessionID: "root" },
+      compacted,
+    );
+    const [heading, plan, json, guidance] = compacted.context[1].split("\n");
+    expect([heading, plan]).toEqual(["Orchestration recovery:", "Keep both scopes."]);
+    const records = JSON.parse(json);
+    expect(records.map((row: any) => [row.id, row.status])).toEqual([
+      [first.id, "completed"],
+      [second.id, "completed"],
+    ]);
+    expect(records.every((row: any) => !Object.hasOwn(row, "result"))).toBe(
+      true,
+    );
+    expect(guidance).toContain("Do not recreate children after compaction.");
+    expect(created).toBe(2);
   }));
 
 test("a pending stop wakes the existing root once and preserves ownership until acknowledgement", () =>
