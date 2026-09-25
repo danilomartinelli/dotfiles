@@ -678,18 +678,19 @@ test_fixture_schema_satisfies_the_store_declaration() {
 # Each wrapper has the fixture's root written into it and acts only on paths
 # below that root. Every other call, and every call no fault names, reaches the
 # real tool, so nothing outside the fixture can be touched. Faults arrive per
-# run through fixture_run, one table_row per path, under the stub convention:
-# FAIL_<COMMAND> names the calls that fail and FAKE_DU_KILOBYTES is the size du
-# prints.
+# run through fixture_run, one table_row per path. They are tables keyed by
+# path, not the stubs' single exit status or output, so they carry their own
+# FAULT_<COMMAND> prefix rather than bending FAIL_ and FAKE_ to mean something
+# else.
 #
-#   FAIL_RM            <path> persistent | partial | claimed | read-only
-#   FAIL_CHMOD         <path>
-#   FAIL_DU            <path> failed | incomplete | malformed | first
-#   FAKE_DU_KILOBYTES  <path> <kilobytes of its own contents>
-#   FAIL_GIT           <path> <another argument of the same call>
-#   REPLACE_AFTER_GIT  <path> <another argument> gone | file | symlink | dangling
-#   FAIL_RMDIR         <path>
-#   FAIL_SQLITE3       <database written to>
+#   FAULT_RM            <path> persistent | partial | claimed | read-only
+#   FAULT_CHMOD         <path>
+#   FAULT_DU            <path> failed | incomplete | malformed | first
+#   FAULT_DU_KILOBYTES  <path> <kilobytes of its own contents>
+#   FAULT_GIT           <path> <another argument of the same call>
+#   FAULT_GIT_REPLACE   <path> <another argument> gone | file | symlink | dangling
+#   FAULT_RMDIR         <path>
+#   FAULT_SQLITE3       <database written to>
 #
 # Every call a wrapper sees on a fixture path goes to the event log in the
 # stubs' shape, so a scenario can count what the doctor attempted.
@@ -748,7 +749,7 @@ EOF
 fault_wrapper_rm() {
   cat <<'EOF'
 inside_fixture "$target" && record "rm $*"
-case $(fault_for "${FAIL_RM:-}" "$target") in
+case $(fault_for "${FAULT_RM:-}" "$target") in
   persistent) exit 1 ;;
   claimed) exit 0 ;;
   partial)
@@ -772,7 +773,7 @@ EOF
 fault_wrapper_chmod() {
   cat <<'EOF'
 inside_fixture "$target" && record "chmod $*"
-[ -z "$(fault_for "${FAIL_CHMOD:-}" "$target")" ] || exit 1
+[ -z "$(fault_for "${FAULT_CHMOD:-}" "$target")" ] || exit 1
 exec /bin/chmod "$@"
 EOF
 }
@@ -781,7 +782,7 @@ fault_wrapper_du() {
   cat <<'EOF'
 inside_fixture "$target" || exec /usr/bin/du "$@"
 
-fault=$(fault_for "${FAIL_DU:-}" "$target")
+fault=$(fault_for "${FAULT_DU:-}" "$target")
 if [ "$fault" = first ]; then
   fault=failed
   if grep -Fqx -- "du $*" "$SCENARIO_EVENT_LOG" 2>/dev/null; then
@@ -811,7 +812,7 @@ while IFS=$tab read -r sized_path sized_kilobytes; do
       ;;
   esac
 done <<ROWS
-${FAKE_DU_KILOBYTES:-}
+${FAULT_DU_KILOBYTES:-}
 ROWS
 
 status=0
@@ -844,13 +845,13 @@ matching_row() {
   done
 }
 
-if [ -n "$(matching_row "${FAIL_GIT:-}" "$@")" ]; then
+if [ -n "$(matching_row "${FAULT_GIT:-}" "$@")" ]; then
   record "git $*"
   printf 'fatal: injected failure\n' >&2
   exit 128
 fi
 
-replacement=$(matching_row "${REPLACE_AFTER_GIT:-}" "$@")
+replacement=$(matching_row "${FAULT_GIT_REPLACE:-}" "$@")
 [ -n "$replacement" ] || exec /usr/bin/git "$@"
 
 # The call is answered, and then the path changes underneath the doctor, once,
@@ -874,7 +875,7 @@ EOF
 fault_wrapper_rmdir() {
   cat <<'EOF'
 inside_fixture "$target" && record "rmdir $*"
-if [ -n "$(fault_for "${FAIL_RMDIR:-}" "$target")" ]; then
+if [ -n "$(fault_for "${FAULT_RMDIR:-}" "$target")" ]; then
   printf 'rmdir: %s: Operation not permitted\n' "$target" >&2
   exit 1
 fi
@@ -885,7 +886,7 @@ EOF
 fault_wrapper_sqlite3() {
   cat <<'EOF'
 # A read opens the database through a read-only URI; a write names the file.
-if [ -n "$(fault_for "${FAIL_SQLITE3:-}" "${1:-}")" ]; then
+if [ -n "$(fault_for "${FAULT_SQLITE3:-}" "${1:-}")" ]; then
   printf 'Error: injected write failure\n' >&2
   exit 1
 fi
@@ -963,7 +964,7 @@ test_each_condition_recovers_with_one_permission_repair() {
   backdate "$artifact"
 
   invoke_doctor "$fixture" \
-    FAIL_RM="$(
+    FAULT_RM="$(
       table_row "$snapshot" read-only
       table_row "$artifact" read-only
       table_row "$checkout" read-only
@@ -979,6 +980,36 @@ test_each_condition_recovers_with_one_permission_repair() {
   assert_not_contains "$fixture/stderr.log" 'could not retire'
 }
 
+# When the permission repair itself fails, the second attempt meets the same
+# read-only subtree. The directory is kept, and the diagnostic names the step
+# that failed rather than only the removal that followed it.
+test_a_failed_permission_repair_keeps_the_directory_and_says_so() {
+  local fixture snapshot artifact checkout
+  fixture=$(make_fixture)
+  make_worktree_checkouts "$fixture"
+  install_fault_wrappers "$fixture"
+  restore_write_permission_on_exit "$fixture"
+  set_retirement_targets "$fixture"
+
+  mkdir -p "$artifact/cache/locked"
+  printf 'signed\n' >"$artifact/cache/locked/bundle"
+  chmod a-w "$artifact/cache/locked"
+  backdate "$artifact"
+
+  assert_fails_with_status 1 invoke_doctor "$fixture" \
+    FAULT_RM="$(table_row "$artifact" read-only)" \
+    FAULT_CHMOD="$(table_row "$artifact")" \
+    --fix
+
+  [ -f "$artifact/cache/locked/bundle" ] || scenario_fail 'the read-only subtree was removed'
+  assert_equal 2 "$(calls_on "$fixture/events.log" rm "$artifact")" "removals of $artifact"
+  assert_equal 1 "$(calls_on "$fixture/events.log" chmod "$artifact")" "permission repairs of $artifact"
+  assert_contains "$fixture/stderr.log" \
+    "could not retire $artifact: it survived removal, and its write permission could not be restored"
+  assert_not_contains "$fixture/stdout.log" 'retired 1 delegation artifact directory(ies)'
+  [ ! -e "$snapshot" ] || scenario_fail 'the independent snapshot was not retired'
+}
+
 # A removal that keeps failing is attempted twice around one permission repair,
 # named, and counted against the run, while every repair that does not depend
 # on it -- another checkout, a later condition -- still happens.
@@ -991,7 +1022,7 @@ test_each_condition_fails_a_persistent_removal_and_continues() {
   printf 'a log line\n' >"$fixture/data/log/opencode.log"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_RM="$(
+    FAULT_RM="$(
       table_row "$snapshot" persistent
       table_row "$artifact" persistent
       table_row "$checkout" persistent
@@ -1032,12 +1063,12 @@ test_a_partial_removal_counts_neither_directory_nor_bytes() {
   done
 
   assert_fails_with_status 1 invoke_doctor "$fixture" LC_ALL=C \
-    FAKE_DU_KILOBYTES="$(
+    FAULT_DU_KILOBYTES="$(
       table_row "$artifact_root/idle" 16
       table_row "$artifact_root/partial" 32
       table_row "$artifact_root/other" 64
     )" \
-    FAIL_RM="$(table_row "$artifact_root/partial" partial)" \
+    FAULT_RM="$(table_row "$artifact_root/partial" partial)" \
     --fix
 
   [ ! -e "$artifact_root/idle" ] || scenario_fail 'an idle artifact directory survived'
@@ -1061,7 +1092,7 @@ test_a_removal_that_claims_success_is_not_a_retirement() {
   set_retirement_targets "$fixture"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_RM="$(
+    FAULT_RM="$(
       table_row "$snapshot" claimed
       table_row "$artifact" claimed
     )" \
@@ -1078,7 +1109,7 @@ test_a_removal_that_claims_success_is_not_a_retirement() {
 
 # An unknown size is not zero, and a directory whose measurement failed once is
 # not retired on the strength of a later one that succeeds: "first" fails only
-# the inventory's measurement of an artifact and a checkout.
+# the report's measurement of an artifact and a checkout.
 test_an_unmeasured_directory_is_kept_for_the_whole_run() {
   local mode fixture snapshot artifact checkout target
   for mode in failed incomplete malformed first; do
@@ -1088,7 +1119,7 @@ test_an_unmeasured_directory_is_kept_for_the_whole_run() {
     set_retirement_targets "$fixture"
 
     assert_fails_with_status 1 invoke_doctor "$fixture" \
-      FAIL_DU="$(
+      FAULT_DU="$(
         table_row "$snapshot" "$mode"
         table_row "$artifact" "$mode"
         table_row "$checkout" "$mode"
@@ -1125,7 +1156,7 @@ test_a_directory_gone_before_action_is_neither_counted_nor_failed() {
   checkout=$fixture/data/worktree/project/agent
 
   invoke_doctor "$fixture" \
-    REPLACE_AFTER_GIT="$(
+    FAULT_GIT_REPLACE="$(
       table_row "$snapshot" config gone
       table_row "$checkout" log gone
     )" \
@@ -1147,8 +1178,8 @@ test_a_directory_gone_before_action_is_neither_counted_nor_failed() {
   checkout=$fixture/data/worktree/project/agent
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_RM="$(table_row "$artifact" persistent)" \
-    REPLACE_AFTER_GIT="$(table_row "$checkout" log gone)" \
+    FAULT_RM="$(table_row "$artifact" persistent)" \
+    FAULT_GIT_REPLACE="$(table_row "$checkout" log gone)" \
     --fix
 
   assert_not_contains "$fixture/stderr.log" "could not retire $checkout"
@@ -1171,7 +1202,7 @@ test_a_directory_replaced_before_action_is_kept() {
     # A zero-day window, because the replacement is new and would otherwise
     # keep the checkout inside the retention window before retirement is asked.
     assert_fails_with_status 1 invoke_doctor "$fixture" \
-      REPLACE_AFTER_GIT="$(
+      FAULT_GIT_REPLACE="$(
         table_row "$snapshot" config "$kind"
         table_row "$checkout" log "$kind"
       )" \
@@ -1207,8 +1238,8 @@ test_a_failed_artifact_keeps_its_checkout_under_zero_retention() {
   install_fault_wrappers "$fixture"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_RM="$(table_row "$root/pushed-copy/.opencode-artifacts/run" persistent)" \
-    FAIL_DU="$(table_row "$root/spaced name/.opencode-artifacts/run" failed)" \
+    FAULT_RM="$(table_row "$root/pushed-copy/.opencode-artifacts/run" persistent)" \
+    FAULT_DU="$(table_row "$root/spaced name/.opencode-artifacts/run" failed)" \
     --fix --days 0
 
   [ -d "$root/pushed-copy/.opencode-artifacts/run" ] || scenario_fail 'a failed artifact was removed with its checkout'
@@ -1235,7 +1266,7 @@ test_an_artifact_retired_before_its_checkout_is_counted_once() {
   install_fault_wrappers "$fixture"
 
   invoke_doctor "$fixture" LC_ALL=C \
-    FAKE_DU_KILOBYTES="$(
+    FAULT_DU_KILOBYTES="$(
       table_row "$artifact_root/fresh" 4
       table_row "$artifact_root/idle" 4
       table_row "$artifact_root/bulky" 8
@@ -1281,7 +1312,7 @@ test_an_unidentified_owner_keeps_the_linked_checkout() {
   checkout=$fixture/data/worktree/project/agent
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_GIT="$(table_row "$checkout" --git-common-dir)" \
+    FAULT_GIT="$(table_row "$checkout" --git-common-dir)" \
     --fix
 
   [ -f "$checkout/file.txt" ] || scenario_fail 'the checkout lost its content'
@@ -1306,8 +1337,8 @@ test_a_failed_registration_cleanup_keeps_the_retirement_and_fails() {
   printf 'a log line\n' >"$fixture/data/log/opencode.log"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" LC_ALL=C \
-    FAIL_GIT="$(table_row "$owner" worktree)" \
-    FAKE_DU_KILOBYTES="$(
+    FAULT_GIT="$(table_row "$owner" worktree)" \
+    FAULT_DU_KILOBYTES="$(
       table_row "$root/agent" 32
       table_row "$root/pushed" 16
       table_row "$root/spaced name" 8
@@ -1337,7 +1368,7 @@ test_a_registration_left_behind_is_named_only_by_the_run_that_knew_it() {
   owner=$fixture/owner/.git
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_GIT="$(table_row "$owner" worktree)" \
+    FAULT_GIT="$(table_row "$owner" worktree)" \
     --fix
   assert_contains "$fixture/stderr.log" "git --git-dir '$owner' worktree list"
   assert_contains "$fixture/stderr.log" 'a later run cannot find this owner'
@@ -1374,7 +1405,7 @@ test_a_kept_snapshot_parent_does_not_undo_the_retirement() {
   install_fault_wrappers "$fixture"
   snapshots=$fixture/data/snapshot
 
-  invoke_doctor "$fixture" FAIL_RMDIR="$(table_row "$snapshots/alone")" --fix
+  invoke_doctor "$fixture" FAULT_RMDIR="$(table_row "$snapshots/alone")" --fix
 
   [ ! -e "$snapshots/project/lost" ] || scenario_fail 'a lost snapshot survived'
   [ ! -e "$snapshots/alone/lost" ] || scenario_fail 'a lost snapshot alone in its parent survived'
@@ -1405,7 +1436,7 @@ test_a_partial_removal_is_not_resumed_by_a_later_run() {
   owner=$fixture/owner/.git
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_RM="$(
+    FAULT_RM="$(
       table_row "$snapshot" partial
       table_row "$checkout" partial
     )" \
@@ -1440,7 +1471,7 @@ test_a_fatal_condition_still_stops_the_run() {
   set_retirement_targets "$fixture"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
-    FAIL_SQLITE3="$(table_row "$fixture/data/opencode.db")" \
+    FAULT_SQLITE3="$(table_row "$fixture/data/opencode.db")" \
     --fix
 
   [ -d "$snapshot" ] || scenario_fail 'a condition after the fatal one ran'
@@ -1543,6 +1574,7 @@ scenario_run 'a missing database is an operational error' test_missing_database_
 scenario_run 'the fixture schema satisfies what the store declares' test_fixture_schema_satisfies_the_store_declaration
 scenario_run 'each condition confirms a complete retirement' test_each_condition_confirms_a_complete_retirement
 scenario_run 'each condition recovers with one permission repair' test_each_condition_recovers_with_one_permission_repair
+scenario_run 'a failed permission repair keeps the directory and says so' test_a_failed_permission_repair_keeps_the_directory_and_says_so
 scenario_run 'each condition fails a persistent removal and continues' test_each_condition_fails_a_persistent_removal_and_continues
 scenario_run 'a partial removal counts neither directory nor bytes' test_a_partial_removal_counts_neither_directory_nor_bytes
 scenario_run 'a removal that claims success is not a retirement' test_a_removal_that_claims_success_is_not_a_retirement

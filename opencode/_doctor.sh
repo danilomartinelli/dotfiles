@@ -178,7 +178,7 @@ $1
 # still prints a total after failing to read part of a tree, and an empty or
 # garbled answer read as arithmetic is zero; both used to reach the totals as if
 # they were measurements. A failure is remembered for the rest of the run, so a
-# directory the inventory could not measure is never retired on the strength of
+# directory that could not be measured is never retired on the strength of
 # a later attempt that happened to succeed.
 MEASUREMENT_REFUSED=''
 
@@ -308,8 +308,8 @@ RETIREMENT_FAILURES=0
 REGISTRATION_FAILURES=0
 
 # Record a directory repair that did not finish and say what is left of it.
-# Usage: retirement_unresolved <path> <what went wrong> <what to do about it>
-retirement_unresolved() {
+# Usage: record_unretired <path> <what went wrong> <what to do about it>
+record_unretired() {
   RETIREMENT_UNRESOLVED="$RETIREMENT_UNRESOLVED$1
 "
   RETIREMENT_FAILURES=$((RETIREMENT_FAILURES + 1))
@@ -372,32 +372,34 @@ retire_directory() {
   # Deciding that a directory may go does not authorize deleting whatever has
   # taken its place, and nothing here follows a link.
   if [ -L "$retiring" ] || [ ! -d "$retiring" ]; then
-    retirement_unresolved "$retiring" 'it is no longer a directory' \
+    record_unretired "$retiring" 'it is no longer a directory' \
       'Nothing was removed or followed; inspect what replaced it by hand.'
     return 1
   fi
   if retirement_blocker "$retiring"; then
-    retirement_unresolved "$retiring" "$RETIREMENT_BLOCKER inside it was not retired" \
+    record_unretired "$retiring" "$RETIREMENT_BLOCKER inside it was not retired" \
       'It is kept for the rest of this run; see what was reported for the path inside it.'
     return 1
   fi
   if [ "$#" -gt 1 ] && ! "$2" "$retiring"; then
-    retirement_unresolved "$retiring" "$RETIREMENT_REFUSAL" "$RETIREMENT_REFUSAL_HINT"
+    record_unretired "$retiring" "$RETIREMENT_REFUSAL" "$RETIREMENT_REFUSAL_HINT"
     return 1
   fi
   if ! measure_directory "$retiring"; then
-    retirement_unresolved "$retiring" 'its size could not be measured' \
+    record_unretired "$retiring" 'its size could not be measured' \
       "Nothing was removed.${RETIREMENT_NOTE:+ $RETIREMENT_NOTE} Check that everything inside it is readable, then inspect it by hand."
     return 1
   fi
 
-  rm -rf -- "$retiring" 2>/dev/null || :
+  survival='it survived removal'
+  rm -rf -- "$retiring" 2>/dev/null || true
   if [ -e "$retiring" ] || [ -L "$retiring" ]; then
-    chmod -R u+w -- "$retiring" 2>/dev/null || :
-    rm -rf -- "$retiring" 2>/dev/null || :
+    chmod -R u+w -- "$retiring" 2>/dev/null \
+      || survival='it survived removal, and its write permission could not be restored'
+    rm -rf -- "$retiring" 2>/dev/null || true
   fi
   if [ -e "$retiring" ] || [ -L "$retiring" ]; then
-    retirement_unresolved "$retiring" 'it survived removal' \
+    record_unretired "$retiring" "$survival" \
       "Part of it may already be gone, including what a later run would need to recognize it.${RETIREMENT_NOTE:+ $RETIREMENT_NOTE} Inspect and recover it by hand."
     return 1
   fi
@@ -714,15 +716,15 @@ runtime_condition_snapshots() {
     case $snapshot_dir in
       "$SNAPSHOT_ROOT"/*) ;;
       *)
-        retirement_unresolved "$snapshot_dir" 'it lies outside the snapshot root' \
-          'Nothing was removed.'
+        record_unretired "$snapshot_dir" 'it lies outside the snapshot root' \
+          'Nothing was removed. This condition only cleans below its own root; inspect how the path was selected by hand.'
         continue
         ;;
     esac
     retire_directory "$snapshot_dir" || continue
     removed=$((removed + 1))
     removed_bytes=$((removed_bytes + RETIRED_BYTES))
-    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || :
+    rmdir -- "$(dirname -- "$snapshot_dir")" 2>/dev/null || true
   done <<EOF
 $snapshots
 EOF
@@ -751,7 +753,7 @@ runtime_condition_artifacts() {
     if measure_directory "$artifact_dir"; then
       artifact_bytes=$MEASURED_BYTES
     else
-      installer_warn "could not measure $artifact_dir; its size is left out of the totals"
+      installer_warn "could not measure $artifact_dir; its size is left out of the reported total"
     fi
     artifact_total=$((artifact_total + artifact_bytes))
     if artifact_is_retired "$artifact_dir"; then
@@ -781,8 +783,8 @@ EOF
     case $artifact_dir in
       "$WORKTREE_ROOT"/*/.opencode-artifacts/*) ;;
       *)
-        retirement_unresolved "$artifact_dir" 'it lies outside the worktree root' \
-          'Nothing was removed.'
+        record_unretired "$artifact_dir" 'it lies outside the worktree root' \
+          'Nothing was removed. This condition only cleans below its own root; inspect how the path was selected by hand.'
         continue
         ;;
     esac
@@ -824,7 +826,7 @@ runtime_condition_worktrees() {
     if measure_directory "$checkout"; then
       checkout_total=$((checkout_total + MEASURED_BYTES))
     else
-      installer_warn "could not measure $checkout; its size is left out of the total"
+      installer_warn "could not measure $checkout; its size is left out of the reported total"
     fi
     checkout_state=0
     worktree_state "$checkout" || checkout_state=$?
@@ -872,8 +874,8 @@ EOF
     case $checkout in
       "$WORKTREE_ROOT"/*/*) ;;
       *)
-        retirement_unresolved "$checkout" 'it lies outside the worktree root' \
-          'Nothing was removed.'
+        record_unretired "$checkout" 'it lies outside the worktree root' \
+          'Nothing was removed. This condition only cleans below its own root; inspect how the path was selected by hand.'
         continue
         ;;
     esac
