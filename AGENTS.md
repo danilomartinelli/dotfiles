@@ -110,8 +110,9 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Public lifecycle and commands                   | `README.md`                      |
 | Coding and validation rules                     | `CODING_STANDARDS.md`            |
 
-Never edit `mise/mise.lock` manually. Regenerate it through Mise from the
-repository root and review the generated diff narrowly.
+Never edit `mise/mise.lock` manually. Regenerate it with `mise lock --global`
+from the repository root and review the generated diff narrowly. `dot` installs
+with `--locked` and never writes it.
 
 ## Core implementation contracts
 

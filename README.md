@@ -279,9 +279,16 @@ run-once step.
 ### Mise runtimes and global CLIs
 
 Versions may be floating declarations such as `latest`, `lts`, or a minor
-series. Reproducibility comes from the generated `mise/mise.lock`. Run
-`mise install` to reconcile the lock and `mise upgrade` to advance it
-deliberately.
+series. Reproducibility comes from the generated `mise/mise.lock`, and `dot`
+installs exactly what it records with `mise install --locked`, so an update run
+never rewrites it.
+
+`mise lock --global`, run from the checkout, is the one command that writes the
+lock. After changing a declaration, run it and commit the lock with the
+declaration; until then `dot` stops at the Mise topic and names that command.
+`mise lock --global --bump` advances the floating declarations deliberately. A
+plain `mise install` or `mise upgrade` still writes the lock in a shape of its
+own, and `mise lock --global` settles it again.
 
 <!-- generated: mise-tools -->
 
@@ -299,6 +306,7 @@ deliberately.
 | `npm:@agentclientprotocol/claude-agent-acp` | `0.81.0`         | Claude ACP agent                                |
 | `npm:@agentclientprotocol/codex-acp`        | `1.12.0`         | Codex ACP agent                                 |
 | `npm:@earendil-works/pi-coding-agent`       | `0.87.1`         | Pi coding agent                                 |
+| `npm:@moonshot-ai/kimi-code`                | `2.1.1`          | Kimi Code CLI                                   |
 | `npm:@colbymchenry/codegraph`               | `1.6.0`          | Repository code graph CLI                       |
 | `npm:@swmansion/argent`                     | `0.25.2`         | Device and simulator control MCP                |
 | `npm:@openai/codex`                         | `0.156.0`        | Codex CLI                                       |
@@ -309,7 +317,6 @@ deliberately.
 | `npm:skills`                                | `1.7.0`          | Agent skills CLI                                |
 | `npm:wrangler`                              | `4.136.3`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
-| `pipx:kimi-cli`                             | `1.52.0`         | Kimi CLI                                        |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
 | `pnpm`                                      | `12.5.1`         | JavaScript package manager                      |
 | `python`                                    | `3.14.7`         | Python runtime                                  |

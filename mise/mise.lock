@@ -136,7 +136,7 @@ checksum = "sha256:7863c546cda13fecc949e562e326042451dacf8fd8698a36783cb71eeb223
 url = "https://builds.hex.pm/builds/elixir/v1.20.4-otp-29.zip"
 
 [tools.elixir."platforms.macos-arm64"]
-checksum = "blake3:cfddef5f170efc103420c845ee627c6eb80f9b61c25691d50bc99fec0738b560"
+checksum = "sha256:7863c546cda13fecc949e562e326042451dacf8fd8698a36783cb71eeb223b46"
 url = "https://builds.hex.pm/builds/elixir/v1.20.4-otp-29.zip"
 
 [tools.elixir."platforms.macos-x64"]
@@ -180,6 +180,7 @@ install = "source"
 [tools.erlang."platforms.macos-arm64"]
 checksum = "sha256:f588fd647dcbbbc0039465ce667f8691a075953f178d3422d3d6b63d444f0595"
 url = "https://github.com/erlef/otp_builds/releases/download/OTP-29.1/otp-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/erlef/otp_builds/releases/assets/567801096"
 
 [tools.erlang."platforms.macos-x64"]
 checksum = "sha256:f4857836de068b7e31c134dcb19c5bea77320caf1c412e0d6ac449e206f62a51"
@@ -391,6 +392,10 @@ backend = "npm:@colbymchenry/codegraph"
 version = "0.87.1"
 backend = "npm:@earendil-works/pi-coding-agent"
 
+[[tools."npm:@moonshot-ai/kimi-code"]]
+version = "2.1.1"
+backend = "npm:@moonshot-ai/kimi-code"
+
 [[tools."npm:@openai/codex"]]
 version = "0.156.0"
 backend = "npm:@openai/codex"
@@ -432,10 +437,6 @@ backend = "pipx:aider-chat"
 
 [tools."pipx:aider-chat".options]
 uvx_args = "--python /opt/homebrew/bin/python3.12"
-
-[[tools."pipx:kimi-cli"]]
-version = "1.52.0"
-backend = "pipx:kimi-cli"
 
 [[tools."pipx:mdformat"]]
 version = "1.0.0"

@@ -322,8 +322,11 @@ the dependent installer.
   applications, fonts, MAS apps, and taps in Homebrew.
 - A third-party Homebrew formula requires both its tap declaration and a narrow
   trust entry in `homebrew/_bundle.sh`.
-- Regenerate `mise/mise.lock` with Mise from the repository root. Never edit its
-  versions, checksums, or generated structure by hand.
+- Regenerate `mise/mise.lock` with `mise lock --global` from the repository
+  root, in the same change as the declaration. Never edit its versions,
+  checksums, or generated structure by hand, and never commit the shape a plain
+  `mise install` leaves; see
+  `docs/adr/0020-dot-installs-what-the-mise-lock-records.md`.
 - Keep other comments limited to ownership, compatibility, or non-obvious safety
   rationale, on their own line so they are not read as a catalog description.
 
@@ -415,6 +418,7 @@ A second fixture needing either reads it from there rather than restating it.
 | Aider                                                           | `tests/aider_install_test.sh`                                                                                |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
+| Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                 |
 | OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
 | OpenCode orchestration plugin                                   | `tests/opencode_orchestrator_test.sh`                                                                        |
 | OpenCode runtime state maintenance                              | `tests/opencode_doctor_test.sh`                                                                              |

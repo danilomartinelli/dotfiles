@@ -88,17 +88,28 @@ exit "${FAKE_XCODEBUILD_STATUS:-0}"
 EOF
 }
 
-# Mise's Java lookup. The caller supplies the fixture path through
-# FAKE_MISE_JAVA_HOME so this never exposes a host installation to a test.
+# Mise, as mobile-setup and the mise topic reach it. The caller supplies the
+# Java path through FAKE_MISE_JAVA_HOME so this never exposes a host
+# installation to a test; every other tool is not installed, so `mise where`
+# fails for it as Mise does. FAKE_MISE_INSTALL_STATUS is the exit status of
+# `mise install`.
 # Usage: stub_mise <bin-dir>
 stub_mise() {
   _stub_write "$1/mise" <<'EOF'
 #!/bin/sh
-if [ "$*" = 'where java' ]; then
-  printf '%s\n' "$FAKE_MISE_JAVA_HOME"
-  exit 0
-fi
-exit 1
+printf 'mise %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+case "$*" in
+  'where java')
+    printf '%s\n' "$FAKE_MISE_JAVA_HOME"
+    ;;
+  'trust '* | 'prune '*) ;;
+  'install' | 'install '*)
+    exit "${FAKE_MISE_INSTALL_STATUS:-0}"
+    ;;
+  *)
+    exit 1
+    ;;
+esac
 EOF
 }
 
