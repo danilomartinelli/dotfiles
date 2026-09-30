@@ -623,68 +623,109 @@ test("a pending stop wakes the existing root once and preserves ownership until 
     expect(resumed.child).toBe(row.child);
   }));
 
-test("a failed child wakes the root while successful siblings remain batched", () =>
-  fixture(async (f) => {
-    const first = await f.manager.start("root", f.request("first"));
-    const second = await f.manager.start("root", f.request("second"));
-    const successful = await f.manager.start("root", f.request("third"));
-    f.messages.get(successful.child).push({
-      info: {
-        role: "assistant",
-        finish: "stop",
-        time: { completed: Date.now() },
-      },
-      parts: [{ type: "text", text: "Verified scope." }],
-    });
-    await f.idle(successful.child);
-    expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(0);
-    f.messages.get(first.child).push({
-      info: {
-        role: "assistant",
-        time: { completed: Date.now() },
-        error: { name: "ProviderError" },
-      },
-      parts: [],
-    });
-    await f.idle(first.child);
-    expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(1);
-    expect(f.manager.get("root", second.id).status).toBe("running");
-    await f.idle(first.child);
-    expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(1);
-    expect(f.manager.get("root", successful.id).notified).toBe(false);
-    f.messages.get(second.child).push({
-      info: {
-        role: "assistant",
-        finish: "stop",
-        time: { completed: Date.now() },
-      },
-      parts: [{ type: "text", text: "Verified remaining scope." }],
-    });
-    await f.idle(second.child);
-    expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(2);
-    expect(f.manager.get("root", successful.id).notified).toBe(true);
-  }));
+test.each(["build", "plan"])(
+  "native wake and inline notices preserve the %s route, text and placement",
+  (role) =>
+    fixture(async (f) => {
+      f.messages.set("root", [
+        { info: { role: "assistant", agent: role }, parts: [] },
+      ]);
+      const first = await f.manager.start("root", f.request("first"));
+      finish(f.messages, first.child, "Wake evidence.");
+      await f.idle(first.child);
+      const wakes = f.requests.filter((r: any) => r.path.id === "root");
+      expect(wakes).toEqual([
+        {
+          path: { id: "root" },
+          query: { directory: f.directory },
+          body: {
+            agent: role,
+            model: { providerID: "openai", modelID: "gpt-6-astra" },
+            variant: "max",
+            parts: [
+              {
+                type: "text",
+                text: `Delegation results ready:\n${first.id}: coder completed (openai/gpt-5.6-luna/high); use delegation_read for evidence.\nRead the records and continue authorized work. Respect stopping reservations; resume terminal failures on the same delegation.`,
+              },
+            ],
+          },
+        },
+      ]);
 
-test("a delivery failure retains its notice without rearming a resumed generation", () =>
-  fixture(async (f) => {
-    const first = await f.manager.start("root", f.request("first"));
-    const send = f.client.session.promptAsync;
-    f.client.session.promptAsync = async () => {
-      throw new Error("Temporary transport failure");
-    };
-    await f.manager.stop("root", first.id, "timed_out");
-    expect(f.manager.get("root", first.id).notified).toBe(false);
-    const oldNotices = f.manager.notifications("root");
-    f.manager.restoreNotifications("root", oldNotices);
-    f.client.session.promptAsync = send;
-    await f.idle(first.child);
-    expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(1);
-    expect(f.manager.get("root", first.id).notified).toBe(true);
-    const resumed = await f.manager.start("root", {
-      ...f.request("first"),
-      resume: first.id,
-    });
-    await f.manager.stop("root", resumed.id, "timed_out");
-    f.manager.restoreNotifications("root", oldNotices);
-    expect(f.manager.get("root", first.id).notified).toBe(true);
-  }));
+      const second = await f.manager.start("root", f.request("second"));
+      finish(f.messages, second.child, "Inline evidence.");
+      const original = { type: "text", text: "Continue." };
+      const output = { message: { id: "msg-root" }, parts: [original] };
+      await f.hooks["chat.message"]({ sessionID: "root", agent: role }, output);
+      expect(output.message).toEqual({
+        id: "msg-root",
+        agent: role,
+        model: { providerID: "openai", modelID: "gpt-6-astra", variant: "max" },
+      });
+      expect(output.parts).toHaveLength(3);
+      expect(output.parts[0]).toBe(original);
+      expect(output.parts[1]).toMatchObject({ synthetic: true });
+      expect(output.parts[1].text).toContain(f.directory);
+      expect(output.parts[2]).toEqual({
+        id: expect.stringMatching(/^prt_[a-f0-9]+$/),
+        sessionID: "root",
+        messageID: "msg-root",
+        type: "text",
+        text: `${second.id}: coder completed (openai/gpt-5.6-luna/high); use delegation_read for evidence.`,
+        synthetic: true,
+      });
+      const next = { message: { id: "msg-next" }, parts: [original] };
+      await f.hooks["chat.message"]({ sessionID: "root", agent: role }, next);
+      expect(next.parts).toEqual([original]);
+      await f.idle(second.child);
+      expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(
+        1,
+      );
+    }),
+);
+
+test.each(["returned error", "transport exception", "role resolution"])(
+  "a native %s restores notices for the next root message",
+  (failure) =>
+    fixture(async (f) => {
+      const row = await f.manager.start("root", f.request("first"));
+      const send = f.client.session.promptAsync;
+      const messages = f.client.session.messages;
+      if (failure === "role resolution") {
+        f.client.session.messages = async (args: any) =>
+          args.path.id === "root"
+            ? { error: "Cannot resolve role" }
+            : messages(args);
+      } else {
+        f.client.session.promptAsync = async (args: any) => {
+          if (args.path.id !== "root") return send(args);
+          if (failure === "transport exception")
+            throw new Error("Transport failed");
+          return { error: "Transport rejected" };
+        };
+      }
+      finish(f.messages, row.child, "Retained evidence.");
+      await f.idle(row.child);
+      expect(f.requests.filter((r: any) => r.path.id === "root")).toHaveLength(
+        0,
+      );
+      f.client.session.promptAsync = send;
+      f.client.session.messages = messages;
+      const output = { message: { id: "msg-root" }, parts: [] as any[] };
+      await f.hooks["chat.message"](
+        { sessionID: "root", agent: "build" },
+        output,
+      );
+      expect(output.parts.at(-1)).toMatchObject({
+        synthetic: true,
+        text: `${row.id}: coder completed (openai/gpt-5.6-luna/high); use delegation_read for evidence.`,
+      });
+      const next = { message: { id: "msg-next" }, parts: [] };
+      await f.hooks["chat.message"](
+        { sessionID: "root", agent: "build" },
+        next,
+      );
+      expect(next.parts).toEqual([]);
+      expect(f.manager.get("root", row.id).result).toBe("Retained evidence.");
+    }),
+);

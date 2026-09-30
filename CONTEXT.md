@@ -129,6 +129,13 @@ confirmed terminal state. Distinct from recovery, which reconciles work already
 recorded rather than executing another attempt.
 _Avoid_: recovery, replacement delegation
 
+**Delegation notice**:
+A report to the root orchestrator of a particular delegation attempt's pending
+stop or terminal state. Distinct from the delegation's result and evidence;
+delivery does not imply that the root has inspected them or that delegation
+ownership has been released.
+_Avoid_: completion receipt, result acknowledgement
+
 ### Credentials
 
 **Key provisioning**:

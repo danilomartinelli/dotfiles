@@ -14,9 +14,13 @@ import {
   Delegations,
   sourceVersion,
   type Request,
+  type RootNotice,
 } from "../opencode/orchestrator/delegations";
 import { SessionJournals } from "../opencode/orchestrator/session-journals";
-import { expireDelegation } from "./_support/delegation-journal";
+import {
+  expireDelegation,
+  refuseDelegationWrites,
+} from "./_support/delegation-journal";
 
 const cleanup: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
@@ -149,6 +153,394 @@ async function fixture(timeoutMs?: number, stopGraceMs?: number) {
   };
 }
 
+async function wakeNotices(manager: Delegations, root = "root") {
+  let delivered: readonly RootNotice[] = [];
+  await manager.wakeRoot(root, async (notices) => {
+    delivered = notices;
+    return true;
+  });
+  return delivered;
+}
+
+async function inlineNotices(manager: Delegations, root = "root") {
+  let delivered: readonly RootNotice[] = [];
+  await manager.includeInRootMessage(root, (notices) => {
+    delivered = notices;
+  });
+  return delivered;
+}
+
+test("a wake delivers presentation records once and leaves result evidence readable", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  f.result(row.child!, "Retained evidence");
+  await f.manager.complete(row.child!);
+  const batches: (readonly RootNotice[])[] = [];
+  const send = async (notices: readonly RootNotice[]) => {
+    batches.push(notices);
+    return true;
+  };
+  await f.manager.wakeRoot("root", send);
+  await f.manager.wakeRoot("root", send);
+  await f.manager.includeInRootMessage("root", (notices) => {
+    batches.push(notices);
+  });
+  expect(batches).toEqual([
+    [{ id: row.id, role: "coder", status: "completed", route: routes.coder }],
+  ]);
+  expect(f.manager.get("root", row.id).result).toBe("Retained evidence");
+  expect(f.created).toHaveLength(1);
+});
+
+test("a root message recovers available results while siblings remain active", async () => {
+  const f = await fixture();
+  const first = await f.manager.start("root", f.request());
+  const sibling = await f.manager.start(
+    "root",
+    f.request({ ownership: ["lib"] }),
+  );
+  f.result(first.child!, "Retained inline evidence");
+  const batches: (readonly RootNotice[])[] = [];
+  const append = (notices: readonly RootNotice[]) => {
+    batches.push(notices);
+  };
+  await f.manager.includeInRootMessage("root", append);
+  await f.manager.includeInRootMessage("root", append);
+  await f.manager.wakeRoot("root", async (notices) => {
+    batches.push(notices);
+    return true;
+  });
+  expect(batches).toEqual([
+    [{ id: first.id, role: "coder", status: "completed", route: routes.coder }],
+  ]);
+  expect(f.manager.get("root", first.id).result).toBe(
+    "Retained inline evidence",
+  );
+  expect(f.manager.get("root", sibling.id).status).toBe("running");
+  expect(f.created).toHaveLength(2);
+});
+
+test.each(["failed", "timed_out"] as const)(
+  "%s notices wake the root while completed and cancelled notices wait for siblings",
+  async (status) => {
+    const f = await fixture();
+    const completed = await f.manager.start("root", f.request());
+    const cancelled = await f.manager.start(
+      "root",
+      f.request({ ownership: ["lib"] }),
+    );
+    const sibling = await f.manager.start(
+      "root",
+      f.request({ ownership: ["docs"] }),
+    );
+    f.result(completed.child!);
+    await f.manager.complete(completed.child!);
+    await f.manager.stop("root", cancelled.id);
+    expect(await wakeNotices(f.manager)).toEqual([]);
+
+    const urgent = await f.manager.start(
+      "root",
+      f.request({ ownership: ["tests"] }),
+    );
+    if (status === "failed") {
+      f.result(urgent.child!, "", { name: "ProviderError" });
+      await f.manager.complete(urgent.child!);
+    } else {
+      await f.manager.stop("root", urgent.id, "timed_out");
+    }
+    expect(
+      (await wakeNotices(f.manager)).map(({ id, status }) => [id, status]),
+    ).toEqual([[urgent.id, status]]);
+    expect(await wakeNotices(f.manager)).toEqual([]);
+    expect(f.manager.get("root", sibling.id).status).toBe("running");
+
+    f.result(sibling.child!);
+    await f.manager.complete(sibling.child!);
+    expect(
+      (await wakeNotices(f.manager)).map(({ id, status }) => [id, status]),
+    ).toEqual([
+      [completed.id, "completed"],
+      [cancelled.id, "cancelled"],
+      [sibling.id, "completed"],
+    ]);
+  },
+);
+
+test("empty and other-root collections invoke neither destination", async () => {
+  const f = await fixture();
+  const deliveries: (readonly RootNotice[])[] = [];
+  const send = async (notices: readonly RootNotice[]) => {
+    deliveries.push(notices);
+    return true;
+  };
+  const append = (notices: readonly RootNotice[]) => {
+    deliveries.push(notices);
+  };
+  await f.manager.wakeRoot("root", send);
+  await f.manager.includeInRootMessage("root", append);
+  const row = await f.manager.start("other-root", f.request());
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  await f.manager.wakeRoot("root", send);
+  await f.manager.includeInRootMessage("root", append);
+  expect(deliveries).toEqual([]);
+  expect(
+    (await wakeNotices(f.manager, "other-root")).map(({ id }) => id),
+  ).toEqual([row.id]);
+});
+
+test("pending-stop and terminal notices are separate and delivery preserves writer ownership", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  f.manager.toolStarted(row.child!, "pending-write");
+  await f.manager.stop("root", row.id);
+  expect(
+    (await wakeNotices(f.manager)).map(({ id, status }) => [id, status]),
+  ).toEqual([[row.id, "stopping"]]);
+  expect(await inlineNotices(f.manager)).toEqual([]);
+  expect(f.manager.get("root", row.id).ownership).toEqual(row.ownership);
+  expect(f.manager.get("root", row.id).status).toBe("stopping");
+  await expect(f.manager.start("root", f.request())).rejects.toThrow(
+    "overlaps",
+  );
+  await f.manager.toolFinished(row.child!, "pending-write");
+  expect(
+    (await inlineNotices(f.manager)).map(({ id, status }) => [id, status]),
+  ).toEqual([[row.id, "cancelled"]]);
+  expect(await wakeNotices(f.manager)).toEqual([]);
+});
+
+test("an in-flight wake reserves notices across journal instances and reopening", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  f.result(row.child!);
+  await f.manager.complete(row.child!);
+  const entered = deferred<readonly RootNotice[]>();
+  const sent = deferred<boolean>();
+  const wake = f.manager.wakeRoot("root", (notices) => {
+    entered.resolve(notices);
+    return sent.promise;
+  });
+  expect((await entered.promise).map(({ id }) => id)).toEqual([row.id]);
+  const peer = new Delegations(f.filename, f.client as any, routes);
+  try {
+    expect(await inlineNotices(peer)).toEqual([]);
+    expect(await wakeNotices(peer)).toEqual([]);
+  } finally {
+    peer.close();
+    sent.resolve(true);
+    await wake;
+  }
+  const reopened = new Delegations(f.filename, f.client as any, routes);
+  try {
+    expect(await inlineNotices(reopened)).toEqual([]);
+    expect(reopened.get("root", row.id).result).toBe("Verified result");
+  } finally {
+    reopened.close();
+  }
+});
+
+test.each(["reject", "throw"])(
+  "a %s from the wake adapter restores notices for the next message",
+  async (failure) => {
+    const f = await fixture();
+    const row = await f.manager.start("root", f.request());
+    f.result(row.child!);
+    await f.manager.complete(row.child!);
+    await expect(
+      f.manager.wakeRoot("root", async () => {
+        if (failure === "throw") throw new Error("Adapter unavailable");
+        return false;
+      }),
+    ).resolves.toBeUndefined();
+    expect((await inlineNotices(f.manager)).map(({ id }) => id)).toEqual([
+      row.id,
+    ]);
+    expect(await wakeNotices(f.manager)).toEqual([]);
+  },
+);
+
+test.each(["pending", "delivered"])(
+  "a late wake rejection leaves a resumed attempt's notice unchanged (%s)",
+  async (delivery) => {
+    const delivered = delivery === "delivered";
+    const f = await fixture();
+    const row = await f.manager.start("root", f.request());
+    await f.manager.stop("root", row.id, "timed_out");
+    const entered = deferred<void>();
+    const sent = deferred<boolean>();
+    const wake = f.manager.wakeRoot("root", () => {
+      entered.resolve();
+      return sent.promise;
+    });
+    await entered.promise;
+    try {
+      await f.manager.start("root", f.request({ resume: row.id }));
+      await f.manager.stop("root", row.id, "timed_out");
+      if (delivered)
+        expect((await wakeNotices(f.manager)).map(({ id }) => id)).toEqual([
+          row.id,
+        ]);
+    } finally {
+      sent.resolve(false);
+      await wake;
+    }
+    expect(
+      (await inlineNotices(f.manager)).map(({ id, status }) => [id, status]),
+    ).toEqual(delivered ? [] : [[row.id, "timed_out"]]);
+    expect(f.manager.get("root", row.id).attempt).toBe(2);
+    expect(f.created).toHaveLength(1);
+  },
+);
+
+test.each(["pending", "delivered"])(
+  "a late pending-stop rejection leaves the terminal notice unchanged (%s)",
+  async (delivery) => {
+    const delivered = delivery === "delivered";
+    const f = await fixture();
+    const row = await f.manager.start("root", f.request());
+    f.manager.toolStarted(row.child!, "pending-write");
+    await f.manager.stop("root", row.id);
+    const entered = deferred<void>();
+    const sent = deferred<boolean>();
+    const wake = f.manager.wakeRoot("root", () => {
+      entered.resolve();
+      return sent.promise;
+    });
+    await entered.promise;
+    try {
+      await f.manager.toolFinished(row.child!, "pending-write");
+      if (delivered)
+        expect((await wakeNotices(f.manager)).map(({ id }) => id)).toEqual([
+          row.id,
+        ]);
+    } finally {
+      sent.resolve(false);
+      await wake;
+    }
+    expect(
+      (await inlineNotices(f.manager)).map(({ id, status }) => [id, status]),
+    ).toEqual(delivered ? [] : [[row.id, "cancelled"]]);
+    expect(await wakeNotices(f.manager)).toEqual([]);
+  },
+);
+
+test("inline recovery can await a wake without recursively recovering or consuming its notices twice", async () => {
+  const f = await fixture();
+  const expired = await f.manager.start("root", f.request());
+  const finished = await f.manager.start(
+    "root",
+    f.request({ ownership: ["lib"] }),
+  );
+  expireDelegation(f.filename, expired.id);
+  f.result(finished.child!);
+  const wakes: (readonly RootNotice[])[] = [];
+  f.manager.onStopped = (row) =>
+    f.manager.wakeRoot(row.root, async (notices) => {
+      wakes.push(notices);
+      return true;
+    });
+  const inline = await inlineNotices(f.manager);
+  expect(
+    wakes.map((notices) => notices.map(({ id, status }) => [id, status])),
+  ).toEqual([[[expired.id, "timed_out"]]]);
+  expect(inline.map(({ id, status }) => [id, status])).toEqual([
+    [finished.id, "completed"],
+  ]);
+  expect(await inlineNotices(f.manager)).toEqual([]);
+  expect(f.aborts).toEqual([expired.child!]);
+  expect(f.created).toHaveLength(2);
+});
+
+test("inline append failures propagate after consuming notices", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  f.result(row.child!);
+  const failure = new Error("Cannot append to message");
+  await expect(
+    f.manager.includeInRootMessage("root", () => {
+      throw failure;
+    }),
+  ).rejects.toBe(failure);
+  expect(await inlineNotices(f.manager)).toEqual([]);
+  expect(await wakeNotices(f.manager)).toEqual([]);
+  expect(f.manager.get("root", row.id).result).toBe("Verified result");
+});
+
+test("inline recovery failures propagate without appending or losing available results", async () => {
+  const f = await fixture();
+  const row = await f.manager.start("root", f.request());
+  f.result(row.child!);
+  const failure = new Error("Cannot read native messages");
+  const messages = f.client.session.messages;
+  f.client.session.messages = async () => {
+    throw failure;
+  };
+  const appended: (readonly RootNotice[])[] = [];
+  await expect(
+    f.manager.includeInRootMessage("root", (notices) => {
+      appended.push(notices);
+    }),
+  ).rejects.toBe(failure);
+  expect(appended).toEqual([]);
+  f.client.session.messages = messages;
+  expect((await inlineNotices(f.manager)).map(({ id }) => id)).toEqual([
+    row.id,
+  ]);
+});
+
+test.each(["wakeRoot", "includeInRootMessage"] as const)(
+  "%s propagates journal reservation failures without invoking its destination",
+  async (destination) => {
+    const f = await fixture();
+    const row = await f.manager.start("root", f.request());
+    f.result(row.child!);
+    await f.manager.complete(row.child!);
+    const allowWrites = refuseDelegationWrites(f.filename);
+    const delivered: (readonly RootNotice[])[] = [];
+    try {
+      const delivery =
+        destination === "wakeRoot"
+          ? f.manager.wakeRoot("root", async (notices) => {
+              delivered.push(notices);
+              return true;
+            })
+          : f.manager.includeInRootMessage("root", (notices) => {
+              delivered.push(notices);
+            });
+      await expect(delivery).rejects.toThrow("Fixture journal write failure");
+      expect(delivered).toEqual([]);
+    } finally {
+      allowWrites();
+    }
+    expect((await inlineNotices(f.manager)).map(({ id }) => id)).toEqual([
+      row.id,
+    ]);
+  },
+);
+
+test.each(["reject", "throw"])(
+  "journal restoration failures remain observable after an adapter %s",
+  async (failure) => {
+    const f = await fixture();
+    const row = await f.manager.start("root", f.request());
+    f.result(row.child!);
+    await f.manager.complete(row.child!);
+    let allowWrites: (() => void) | undefined;
+    try {
+      await expect(
+        f.manager.wakeRoot("root", async () => {
+          allowWrites = refuseDelegationWrites(f.filename);
+          if (failure === "throw") throw new Error("Adapter unavailable");
+          return false;
+        }),
+      ).rejects.toThrow("Fixture journal write failure");
+    } finally {
+      allowWrites?.();
+    }
+  },
+);
+
 test("invalid roles and leaf recursion create no child", async () => {
   const f = await fixture();
   await expect(
@@ -229,12 +621,12 @@ test("cross-project hooks recover the root journal, retain reservations on cance
   f.result(row.child!);
   await childManager.complete(row.child!);
   expect(manager.get("root", row.id).status).toBe("completed");
-  expect(manager.notifications("root")).toHaveLength(1);
-  expect(childManager.notifications("root")).toEqual([]);
+  expect(await wakeNotices(manager)).toHaveLength(1);
+  expect(await inlineNotices(childManager)).toEqual([]);
   await childInstance.close();
   const recovered = await instance().forSession(row.child!);
   expect(recovered.forChild(row.child!)?.result).toBe("Verified result");
-  expect(recovered.get("root", row.id).notified).toBe(true);
+  expect(await wakeNotices(recovered)).toEqual([]);
   await expect(rootInstance.forSession("unregistered")).rejects.toThrow(
     "no matching root delegation",
   );
@@ -608,8 +1000,8 @@ test("reopened state recovers results without creating new sessions", async () =
     expect((await recovered.reconciledRecord("root", row.id)).status).toBe(
       "completed",
     );
-    expect(recovered.notifications("root")).toHaveLength(1);
-    expect(recovered.notifications("root")).toHaveLength(0);
+    expect(await inlineNotices(recovered)).toHaveLength(1);
+    expect(await wakeNotices(recovered)).toHaveLength(0);
     expect(f.created).toHaveLength(1);
   } finally {
     recovered.close();
@@ -980,11 +1372,11 @@ test("notification collection and compaction context observe settled work", asyn
     f.request({ ownership: ["lib"] }),
   );
   f.result(first.child!);
-  const notices = await f.manager.reconciledNotifications("root");
+  const notices = await inlineNotices(f.manager);
   expect(notices.map(({ id, status }) => [id, status])).toEqual([
     [first.id, "completed"],
   ]);
-  expect(await f.manager.reconciledNotifications("root")).toEqual([]);
+  expect(await inlineNotices(f.manager)).toEqual([]);
   f.manager.savePlan("root", "Keep the documented scope.");
   f.result(second.child!);
   const context = await f.manager.compactionContext("root");
@@ -1057,7 +1449,7 @@ test("recovery waits out a consolidation's lifecycle reservation", async () => {
   await expect(
     f.manager.start("root", f.request({ ownership: ["docs"] })),
   ).rejects.toThrow("Finish memory consolidation");
-  expect(await f.manager.reconciledNotifications("root")).toEqual([]);
+  expect(await inlineNotices(f.manager)).toEqual([]);
   expect(f.manager.get("other-root", orphan.id).status).toBe("running");
   expect(f.manager.get("other-root", expired.id).status).toBe("running");
 
