@@ -1608,6 +1608,43 @@ test_ordinary_preservation_survives_zero_days() {
   assert_empty "$fixture/stderr.log"
 }
 
+# Pruning a deleted remote branch leaves its upstream configured. The real
+# publish/delete/prune lifecycle must stay ordinary preservation, including
+# under zero retention, rather than failing every later report and repair.
+test_a_pruned_upstream_preserves_the_checkout_without_failing() {
+  local fixture checkout mode days status
+  local -a args
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" agent
+  checkout=$fixture/data/worktree/project/agent
+  git -C "$checkout" push --quiet -u origin agent
+  git --git-dir "$fixture/owner-origin.git" update-ref -d refs/heads/agent
+  git -C "$checkout" fetch --quiet --prune origin
+  backdate "$checkout"
+
+  assert_equal refs/remotes/origin/agent \
+    "$(git -C "$checkout" for-each-ref --format='%(upstream)' refs/heads/agent)" \
+    'configured upstream after pruning'
+  assert_fails_with_status 2 git -C "$checkout" show-ref --exists \
+    refs/remotes/origin/agent 2>/dev/null
+
+  for days in 7 0; do
+    for mode in report repair; do
+      args=(--days "$days")
+      [ "$mode" != repair ] || args+=(--fix)
+      status=0
+      invoke_doctor "$fixture" "${args[@]}" || status=$?
+
+      assert_equal 0 "$status" "$mode with a pruned upstream and --days $days"
+      assert_contains "$checkout/file.txt" 'source'
+      [ -d "$fixture/owner/.git/worktrees/agent" ] || scenario_fail 'pruned upstream lost registration'
+      assert_contains "$fixture/stdout.log" "preserved checkout $checkout: upstream ref is gone"
+      assert_contains "$fixture/stdout.log" "eligible checkouts (idle for $days days): 0"
+      assert_empty "$fixture/stderr.log"
+    done
+  done
+}
+
 test_offline_report_preserves_the_index_and_ignores_ignored_files() {
   local fixture checkout index before index_time
   fixture=$(make_fixture)
@@ -1955,12 +1992,14 @@ scenario_run 'failed age inspection preserves the checkout and continues' test_f
 scenario_run 'failed checkout identification is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git checkout identification' --is-inside-work-tree true
 scenario_run 'failed HEAD inspection is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git HEAD' symbolic-ref refs/heads/failed
 scenario_run 'failed upstream inspection is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git upstream' for-each-ref refs/heads/failed:refs/remotes/origin/main
+scenario_run 'failed upstream ref lookup is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git upstream' show-ref refs/remotes/origin/main
 scenario_run 'failed owner identification preserves the checkout and continues' test_failed_observation_preserves_the_checkout_and_continues 'its Git owner could not be identified' --git-common-dir /partial/git-dir
 scenario_run 'failed discovery selects no checkout' test_failed_discovery_selects_no_checkout
 
 scenario_run 'clones keep other branches and stashes' test_clones_keep_other_branches_and_stashes
 scenario_run 'retiring a linked checkout preserves the owners work' test_retiring_a_linked_checkout_preserves_the_owners_work
 scenario_run 'ordinary preservation survives zero days' test_ordinary_preservation_survives_zero_days
+scenario_run 'a pruned upstream preserves the checkout without failing' test_a_pruned_upstream_preserves_the_checkout_without_failing
 scenario_run 'offline report preserves the index and ignores ignored files' test_offline_report_preserves_the_index_and_ignores_ignored_files
 scenario_run 'artifact activity keeps a checkout recent' test_artifact_activity_keeps_a_checkout_recent
 scenario_run 'empty checkout roots are normal' test_empty_checkout_roots_are_normal

@@ -442,7 +442,7 @@ worktree_git() {
 # One assessment owns selection, without presentation or removal. Every return
 # carries an explicit result and reason; failure is the default so a missing
 # observation cannot turn into permission to retire. Ordinary preservation
-# (including a detached HEAD or no configured upstream) is not an error.
+# (including a detached HEAD or a missing upstream) is not an error.
 CHECKOUT_FAILURES=0
 
 assess_checkout() {
@@ -505,6 +505,21 @@ assess_checkout() {
       return 0
       ;;
     "$checkout_head:refs/"*) ;;
+    *) return 0 ;;
+  esac
+
+  # A pruned remote branch still has a configured upstream name. Only a
+  # confirmed missing ref is ordinary preservation; lookup errors still fail.
+  checkout_upstream=${checkout_upstream#"$checkout_head:"}
+  checkout_upstream_status=0
+  worktree_git "$1" show-ref --exists "$checkout_upstream" >/dev/null 2>&1 || checkout_upstream_status=$?
+  case $checkout_upstream_status in
+    0) ;;
+    2)
+      CHECKOUT_RESULT=preserved
+      CHECKOUT_REASON='upstream ref is gone'
+      return 0
+      ;;
     *) return 0 ;;
   esac
 

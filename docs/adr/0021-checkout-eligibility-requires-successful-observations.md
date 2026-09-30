@@ -10,7 +10,9 @@ continues independent assessments and repairs. Both report and repair finish
 with exit status 1 when an assessment failed; preserving a checkout does not
 make an incomplete assessment successful. A detached HEAD or a branch without
 an upstream remains an ordinary reason to preserve a checkout, not an
-operational failure.
+operational failure. The same applies when a configured upstream ref is gone
+after pruning a deleted remote branch. A failed ref lookup remains an
+operational failure; only confirmed absence is ordinary preservation.
 
 One assessment owns the Git observations, inactivity check and eligibility
 decision for each checkout, including the owner required for a linked
