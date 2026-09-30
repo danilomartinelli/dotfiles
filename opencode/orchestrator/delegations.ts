@@ -53,8 +53,12 @@ export type Delegation = {
   abortAcknowledged?: boolean;
   stoppingNotified?: boolean;
 };
-type Notification = Pick<Delegation, "id" | "messageID" | "status"> & {
-  text: string;
+export type RootNotice = Readonly<
+  Pick<Delegation, "id" | "role" | "status" | "route">
+>;
+type NoticeClaim = {
+  messageID: string;
+  notice: RootNotice;
 };
 export type Request = {
   role: string;
@@ -261,10 +265,10 @@ export class Delegations {
     );
   }
 
-  // Local observations read the journal as recorded. A refreshed consultation
-  // (the reconciled* methods, compactionContext and reviewSnapshot), like start
-  // and consolidate, recovers first: recovery can update records, stop expired
-  // children and deliver notifications, so a lookup never implies it.
+  // Local observations read the journal as recorded. Refreshed consultations
+  // (reconciled*, includeInRootMessage, compactionContext and reviewSnapshot),
+  // like start and consolidate, recover first: recovery can update records,
+  // stop expired children and deliver notices, so a lookup never implies it.
   list(root: string): Delegation[] {
     return this.all().filter((row) => row.root === root);
   }
@@ -275,10 +279,6 @@ export class Delegations {
   async reconciledRecord(root: string, id: string): Promise<Delegation> {
     await this.recover();
     return this.get(root, id);
-  }
-  async reconciledNotifications(root: string): Promise<Notification[]> {
-    await this.recover();
-    return this.notifications(root);
   }
   async compactionContext(
     root: string,
@@ -986,7 +986,32 @@ export class Delegations {
       else this.arm(current);
     }
   }
-  notifications(root: string, batchSuccess = false): Notification[] {
+  async wakeRoot(
+    root: string,
+    send: (notices: readonly RootNotice[]) => Promise<boolean>,
+  ): Promise<void> {
+    // Recovery can await this wake from a stop callback. Read recorded state
+    // only; recovering here would re-enter the operation waiting for delivery.
+    const claims = this.reserveNotices(root, true);
+    if (!claims.length) return;
+    let accepted = false;
+    try {
+      accepted = await send(claims.map(({ notice }) => notice));
+    } catch {
+      // Adapter failures leave the claims eligible for a later opportunity.
+    }
+    // Journal failures must propagate, including a failed restoration.
+    if (!accepted) this.restoreNotices(root, claims);
+  }
+  async includeInRootMessage(
+    root: string,
+    append: (notices: readonly RootNotice[]) => void,
+  ): Promise<void> {
+    await this.recover();
+    const claims = this.reserveNotices(root, false);
+    if (claims.length) append(claims.map(({ notice }) => notice));
+  }
+  private reserveNotices(root: string, batchSuccess: boolean): NoticeClaim[] {
     return this.db
       .transaction(() => {
         const rows = this.list(root);
@@ -1007,24 +1032,24 @@ export class Delegations {
             else row.notified = true;
             this.save(row);
             return {
-              id: row.id,
               messageID: row.messageID,
-              status: row.status,
-              text: `${row.id}: ${row.role} ${row.status} (${row.route.model}/${row.route.variant}); use delegation_read for evidence.`,
+              notice: {
+                id: row.id,
+                role: row.role,
+                status: row.status,
+                route: row.route,
+              },
             };
           });
       })
       .immediate();
   }
-  restoreNotifications(root: string, notices: Notification[]) {
+  private restoreNotices(root: string, claims: NoticeClaim[]) {
     this.db
       .transaction(() => {
-        for (const notice of notices) {
+        for (const { messageID, notice } of claims) {
           const row = this.get(root, notice.id);
-          if (
-            row.messageID !== notice.messageID ||
-            row.status !== notice.status
-          )
+          if (row.messageID !== messageID || row.status !== notice.status)
             continue;
           if (row.status === "stopping") row.stoppingNotified = false;
           else row.notified = false;

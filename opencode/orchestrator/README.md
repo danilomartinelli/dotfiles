@@ -122,14 +122,35 @@ later responds. Inspect the remote operation and confirm termination before
 explicit reconciliation; a returned abort or elapsed time is not proof. Normal
 MCP completion acknowledges the ledger and releases the reservation.
 
-Results remain readable after compaction. Successful results are batched when all
-children settle. Failures, timeouts and pending stops wake the existing root even
-while siblings remain active. A pending stop is reported once, then terminal
+Results remain readable after compaction. Completed and cancelled notices are
+batched until all children settle. Failures, timeouts and pending stops wake the
+existing root even while siblings remain active. A pending stop is reported once, then terminal
 status receives its own notice after acknowledgments arrive. Notification claims
 include the generation and status so a failed delivery cannot rearm an older
 resume. These notifications create no extra session and never release ownership.
 The root inspects partial work and resumes the same terminal delegation within
 existing authorization; an unresolved stop allows only independent work.
+
+`Delegations` owns notice delivery through two operations. `wakeRoot` reserves
+recorded notices and passes presentation records to an asynchronous send
+callback. `includeInRootMessage` recovers first, then reserves available notices
+without the spontaneous grouping delay and passes them to a synchronous append
+callback. Recovery can itself wake the root; inline delivery then includes only
+notices still available. Both destinations share an immediate SQLite reservation
+across journal instances, and neither callback runs for an empty batch. The
+native adapter in `regular.ts` owns shared notice text, role and route resolution,
+model selection, directory and transport; reservation identities stay private.
+
+A rejected send or adapter exception restores only claims whose delegation,
+attempt and status still match. Adapter failures are absorbed; journal failures
+remain observable. Restoration cannot rearm a resumed attempt or a later
+terminal state, but does not cancel an in-flight native delivery. Inline recovery
+and append errors propagate, and an append failure leaves its notices consumed.
+Transport acceptance and inline append do not prove that the root inspected a
+result or that a message was persisted. Failed wakes wait for another existing
+collection opportunity: there is no scheduled retry or crash recovery between
+reservation and sending. The journal format and existing records are unchanged.
+
 The first root message, each delegated generation and compaction supply the
 native session directory. `read-context.ts` anchors relative file queries there
 and reports missing targets with rediscovery guidance. Existing external paths

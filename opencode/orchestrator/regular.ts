@@ -8,7 +8,12 @@ import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { assertWriteTargets, childRoles, type Routes } from "./delegations";
+import {
+  assertWriteTargets,
+  childRoles,
+  type RootNotice,
+  type Routes,
+} from "./delegations";
 import {
   admitOrchestration,
   assertReadOnlyTool,
@@ -18,6 +23,15 @@ import { prompts, rolePermissions } from "./prompts";
 import { SessionJournals } from "./session-journals";
 import { directoryContext, prepareRead } from "./read-context";
 import { CodeGraphProjects } from "./codegraph";
+
+function noticeText(notices: readonly RootNotice[]): string {
+  return notices
+    .map(
+      (notice) =>
+        `${notice.id}: ${notice.role} ${notice.status} (${notice.route.model}/${notice.route.variant}); use delegation_read for evidence.`,
+    )
+    .join("\n");
+}
 
 export async function regularHooks(ctx: PluginInput, declared: Config) {
   const profile = process.env.DOTFILES_OPENCODE_PROFILE_CONFIG;
@@ -84,10 +98,8 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
   }
   async function notifyRoot(root: string, rootDirectory: string) {
     const manager = await managerFor(root);
-    const notices = manager.notifications(root, true);
-    if (!notices.length) return;
     // One batch wakes the existing root; no metadata or notification session.
-    try {
+    await manager.wakeRoot(root, async (notices) => {
       const role = await resolveRole(root);
       const route = routes[role];
       const [providerID, ...modelID] = route.model.split("/");
@@ -98,7 +110,7 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         parts: [
           {
             type: "text" as const,
-            text: `Delegation results ready:\n${notices.map((notice) => notice.text).join("\n")}\nRead the records and continue authorized work. Respect stopping reservations; resume terminal failures on the same delegation.`,
+            text: `Delegation results ready:\n${noticeText(notices)}\nRead the records and continue authorized work. Respect stopping reservations; resume terminal failures on the same delegation.`,
           },
         ],
       };
@@ -107,10 +119,8 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
         query: { directory: rootDirectory },
         body,
       });
-      if (response.error) manager.restoreNotifications(root, notices);
-    } catch {
-      manager.restoreNotifications(root, notices);
-    }
+      return !response.error;
+    });
   }
   journals.onStopped = (row) => notifyRoot(row.root, row.rootDirectory);
 
@@ -336,16 +346,16 @@ export async function regularHooks(ctx: PluginInput, declared: Config) {
               });
           }
         }
-        const notices = await manager.reconciledNotifications(input.sessionID);
-        if (notices.length)
+        await manager.includeInRootMessage(input.sessionID, (notices) => {
           output.parts.push({
             id: `prt_${randomUUID().replaceAll("-", "")}`,
             sessionID: input.sessionID,
             messageID: output.message.id,
             type: "text",
-            text: notices.map((notice) => notice.text).join("\n"),
+            text: noticeText(notices),
             synthetic: true,
           });
+        });
       }
     },
     "chat.params": async (input, output) => {
