@@ -652,6 +652,9 @@ commits absent from the locally recorded upstream, recent activity, detached
 HEAD and missing upstreams preserve the checkout. Independent clones are also
 preserved: a clean, published HEAD says nothing about work in another branch or
 stash stored in that repository. Non-Git directories are kept normally.
+An upstream still configured after its remote branch was deleted and pruned is
+reported as `upstream ref is gone`; it preserves the checkout without failing
+the report or repair, including with `--days 0`.
 
 Assessment stays offline: no fetch or remote verification occurs, and locally
 recorded upstream history may be stale. Ignored files do not prevent retirement;
