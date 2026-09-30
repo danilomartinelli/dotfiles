@@ -412,32 +412,17 @@ retire_directory() {
 # itself, so a retired session left its node_modules and build output behind
 # permanently.
 #
-# Which of them may go is decided in runtime_condition_worktrees, from
-# worktree_state and worktree_is_idle. Processes are not consulted here: the
-# processes condition runs first in the catalog and has already reaped anything
-# living inside one by the time this is asked.
+# Checkout eligibility is decided by assess_checkout. Processes are not
+# consulted here: the processes condition runs first in the catalog and has
+# already reaped anything living inside one by the time this is asked.
 #
 # The depth is the one artifact_directories already assumes: a worktree root
 # holds one directory per checkout.
 worktree_checkouts() {
-  [ -d "$WORKTREE_ROOT" ] || return 0
+  [ -e "$WORKTREE_ROOT" ] || [ -L "$WORKTREE_ROOT" ] || return 0
+  [ -d "$WORKTREE_ROOT" ] || return 1
   find "$WORKTREE_ROOT" -mindepth 2 -maxdepth 2 -type d 2>/dev/null
 }
-
-# What a checkout is: reconstructible, holding work, or not judgeable here.
-#
-# Reconstructible means every byte in it exists somewhere else -- no
-# uncommitted change, nothing untracked that Git would report, and no commit
-# an upstream does not already have. Only such a directory may be retired.
-#
-# Holding work is the opposite, and a retention window has no standing to
-# discard it. A directory that is not a Git checkout, or one whose branch
-# tracks nothing, is neither: this module cannot tell a scratch directory from
-# something deliberate, so it says so and leaves it, the way stale_snapshots
-# leaves a snapshot whose config names no worktree.
-WORKTREE_RECONSTRUCTIBLE=0
-WORKTREE_HOLDS_WORK=1
-WORKTREE_UNJUDGEABLE=2
 
 # Git, in the checkout this condition is asking about. It is a function rather
 # than a command held in a variable because the checkout path is one of the
@@ -445,45 +430,107 @@ WORKTREE_UNJUDGEABLE=2
 # two of them.
 #
 # --no-optional-locks because a plain `git status` refreshes the index and
-# writes it back. Asking the question would then be what made the answer to
-# worktree_is_idle wrong: the checkout looked written-to a moment ago, every
-# time, so no checkout was ever idle and the condition retired nothing.
+# writes it back. Asking the question would then make the inactivity observation
+# wrong: the checkout looked written-to a moment ago, every time, so no checkout
+# was ever idle and the condition retired nothing.
 worktree_git() {
   _worktree_checkout=$1
   shift
   git -C "$_worktree_checkout" --no-optional-locks -c core.fsmonitor=false "$@"
 }
 
-worktree_state() {
-  worktree_git "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-    || return "$WORKTREE_UNJUDGEABLE"
-  [ -z "$(worktree_git "$1" status --porcelain --untracked-files=normal 2>/dev/null)" ] \
-    || return "$WORKTREE_HOLDS_WORK"
-  worktree_git "$1" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1 \
-    || return "$WORKTREE_UNJUDGEABLE"
-  [ -z "$(worktree_git "$1" log --oneline '@{u}..HEAD' 2>/dev/null)" ] \
-    || return "$WORKTREE_HOLDS_WORK"
-  return "$WORKTREE_RECONSTRUCTIBLE"
-}
+# One assessment owns selection, without presentation or removal. Every return
+# carries an explicit result and reason; failure is the default so a missing
+# observation cannot turn into permission to retire. Ordinary preservation
+# (including a detached HEAD or no configured upstream) is not an error.
+CHECKOUT_FAILURES=0
 
-# Nothing has written source here inside the window. `.git` is excluded on
-# purpose: Git rewrites its own bookkeeping whenever anything reads the
-# repository, including this module, so those timestamps answer "was this
-# checkout inspected" and never "is an agent still working in it".
-#
-# `.opencode-artifacts` is deliberately NOT excluded. The artifacts condition
-# runs first and, having just retired a directory inside it, leaves the
-# artifact root looking written-to, so a checkout whose artifacts went in this
-# run is retired by the next one instead. That is the conservative order:
-# recent artifacts are the evidence that a delegation recently worked here, and
-# a window that retires the checkout anyway would be deciding on the strength
-# of a timestamp this module had itself just moved. A zero-day window is
-# unaffected -- it retires everything without consulting an mtime at all.
-worktree_is_idle() {
-  if [ "$RETENTION_DAYS" -eq 0 ]; then
+assess_checkout() {
+  CHECKOUT_RESULT=failed
+  CHECKOUT_REASON='Git checkout identification failed'
+
+  # Git otherwise searches parents and can answer for an enclosing checkout.
+  # Existence tests also read denied access as absence, so inspect successfully
+  # before concluding that this directory has no Git metadata of its own.
+  checkout_marker=$(find "$1" -mindepth 1 -maxdepth 1 -name .git -print 2>/dev/null) || return 0
+  if [ -z "$checkout_marker" ]; then
+    CHECKOUT_RESULT=preserved
+    CHECKOUT_REASON='not a Git checkout'
     return 0
   fi
-  [ -z "$(find "$1" -name .git -prune -o -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null)" ]
+  checkout_inside=$(worktree_git "$1" rev-parse --is-inside-work-tree 2>/dev/null) || return 0
+  [ "$checkout_inside" = true ] || return 0
+
+  if ! identify_checkout_owner "$1"; then
+    CHECKOUT_REASON=$RETIREMENT_REFUSAL
+    return 0
+  fi
+  if [ -z "$CHECKOUT_OWNER" ]; then
+    CHECKOUT_RESULT=preserved
+    CHECKOUT_REASON='independent clone; its repository may hold other branches or stash'
+    return 0
+  fi
+
+  CHECKOUT_REASON='Git status failed'
+  checkout_changes=$(worktree_git "$1" status --porcelain --untracked-files=normal 2>/dev/null) || return 0
+  if [ -n "$checkout_changes" ]; then
+    CHECKOUT_RESULT=preserved
+    CHECKOUT_REASON='tracked or non-ignored untracked changes'
+    return 0
+  fi
+
+  CHECKOUT_REASON='Git HEAD inspection failed'
+  checkout_head_status=0
+  checkout_head=$(worktree_git "$1" symbolic-ref -q HEAD 2>/dev/null) || checkout_head_status=$?
+  case $checkout_head_status in
+    0) [ -n "$checkout_head" ] || return 0 ;;
+    1)
+      [ -z "$checkout_head" ] || return 0
+      CHECKOUT_RESULT=preserved
+      CHECKOUT_REASON='detached HEAD'
+      return 0
+      ;;
+    *) return 0 ;;
+  esac
+
+  # for-each-ref succeeds with an empty upstream for a branch that tracks
+  # nothing. rev-parse @{u} fails in that ordinary state as well as on errors,
+  # so it cannot by itself distinguish preservation from failed inspection.
+  CHECKOUT_REASON='Git upstream inspection failed'
+  checkout_upstream=$(worktree_git "$1" for-each-ref --format='%(refname):%(upstream)' "$checkout_head" 2>/dev/null) || return 0
+  case $checkout_upstream in
+    "$checkout_head:")
+      CHECKOUT_RESULT=preserved
+      CHECKOUT_REASON='no upstream'
+      return 0
+      ;;
+    "$checkout_head:refs/"*) ;;
+    *) return 0 ;;
+  esac
+
+  CHECKOUT_REASON='Git history inspection failed'
+  checkout_commits=$(worktree_git "$1" log --oneline '@{u}..HEAD' 2>/dev/null) || return 0
+  if [ -n "$checkout_commits" ]; then
+    CHECKOUT_RESULT=preserved
+    CHECKOUT_REASON='HEAD commits absent from the locally recorded upstream'
+    return 0
+  fi
+
+  # Ignore Git bookkeeping, but keep artifact activity in the age observation.
+  # The artifact condition runs first; removing artifacts can therefore keep
+  # their checkout recent until a later run. Zero days bypasses only this step.
+  if [ "$RETENTION_DAYS" -ne 0 ]; then
+    CHECKOUT_REASON='filesystem age inspection failed'
+    checkout_recent=$(find "$1" -name .git -prune -o -mtime -"$RETENTION_DAYS" -print -quit 2>/dev/null) || return 0
+    if [ -n "$checkout_recent" ]; then
+      CHECKOUT_RESULT=preserved
+      CHECKOUT_REASON='recent activity'
+      return 0
+    fi
+  fi
+
+  CHECKOUT_RESULT=eligible
+  CHECKOUT_REASON='idle linked worktree with no changes or HEAD commits absent from the locally recorded upstream'
 }
 
 # Who else holds a record of this checkout, asked while it still exists.
@@ -492,12 +539,10 @@ worktree_is_idle() {
 # only thing naming that repository is the checkout's own .git file, which
 # leaves with the checkout. So the owner is established before removal, and a
 # linked checkout whose owner cannot be established is kept rather than
-# retired into a registration nobody can find again. An ordinary clone carries
-# its repository inside it and leaves nothing behind to clean.
+# retired into a registration nobody can find again. An independent repository
+# is identified by its matching Git and common directories; assessment keeps it.
 #
-# This is retire_directory's <admit> for checkouts. It runs only once the
-# checkout is known to exist, so one that vanished first is not mistaken for
-# one whose owner could not be found.
+# Assessment and removal-time admission share this read-only observation.
 identify_checkout_owner() {
   CHECKOUT_OWNER=''
   CHECKOUT_REGISTRATION=''
@@ -515,20 +560,37 @@ identify_checkout_owner() {
   [ "$identity_git_dir" != "$identity_common_dir" ] || return 0
 
   RETIREMENT_REFUSAL="its Git owner $identity_common_dir could not be verified"
+  identity_common_dir=$(CDPATH='' cd -P -- "$identity_common_dir" 2>/dev/null && pwd) || return 1
+  identity_git_dir=$(CDPATH='' cd -P -- "$identity_git_dir" 2>/dev/null && pwd) || return 1
+  identity_worktree_root=$(CDPATH='' cd -P -- "$WORKTREE_ROOT" 2>/dev/null && pwd) || return 1
+  # An owner inside the checkout inventory could disappear with a different
+  # checkout or its artifacts. Only an external owner is known to be preserved.
   case $identity_common_dir in
-    "$1" | "$1"/*) return 1 ;;
+    "$identity_worktree_root" | "$identity_worktree_root"/*) return 1 ;;
   esac
   case $identity_git_dir in
     "$identity_common_dir"/worktrees/*) ;;
     *) return 1 ;;
   esac
-  if [ ! -d "$identity_common_dir" ] || [ ! -d "$identity_git_dir" ]; then
-    return 1
-  fi
+  identity_bare=$(git --git-dir "$identity_common_dir" --no-optional-locks \
+    -c core.fsmonitor=false rev-parse --is-bare-repository 2>/dev/null) || return 1
+  case $identity_bare in
+    true | false) ;;
+    *) return 1 ;;
+  esac
 
   CHECKOUT_OWNER=$identity_common_dir
   CHECKOUT_REGISTRATION=$identity_git_dir
   RETIREMENT_NOTE="Its Git owner is $CHECKOUT_OWNER."
+}
+
+# Recheck the owner at removal time without repeating the eligibility policy.
+# A checkout replaced with an independent repository is no longer admitted.
+admit_linked_checkout() {
+  identify_checkout_owner "$1" || return 1
+  [ -n "$CHECKOUT_OWNER" ] && return 0
+  RETIREMENT_REFUSAL='it is no longer a linked worktree'
+  return 1
 }
 
 # The maintenance a retired linked worktree owes its owner: dropping the one
@@ -799,28 +861,25 @@ EOF
     || installer_item "retired $retired delegation artifact directory(ies), $(human_bytes "$retired_bytes")"
 }
 
-# The checkout an agent worktree is made of. Retiring one takes its build
-# output with it, which is the point: a worktree is reconstructed from the
-# repository it links to, and nothing here is a source of truth. A checkout
-# holding uncommitted, untracked or unpushed work is named and left alone,
-# because a retention window is not standing to discard work that exists
-# nowhere else.
-#
-# Git keeps a registration for a linked worktree in the repository it belongs
-# to. Removing the directory alone leaves that registration behind, so the
-# owner is identified before the checkout goes and its registration is removed
-# right after; see identify_checkout_owner and remove_checkout_registration.
+# Assessment selects candidates; only retire_directory confirms removal.
+# Discovery must succeed in full before even one checkout enters assessment.
 runtime_condition_worktrees() {
-  checkouts=$(worktree_checkouts)
+  if ! checkouts=$(worktree_checkouts); then
+    CHECKOUT_FAILURES=$((CHECKOUT_FAILURES + 1))
+    installer_warn "could not discover checkouts at $WORKTREE_ROOT: filesystem discovery failed"
+    installer_hint 'No checkout was selected. Check directory access, then rerun inspection.'
+    return 0
+  fi
   if [ -z "$checkouts" ]; then
     installer_note 'no agent worktree checkouts'
     return 0
   fi
 
   checkout_total=0
-  idle=''
-  held=''
-  unjudged=0
+  eligible=0
+  preserved=0
+  retired=0
+  retired_bytes=0
   while IFS= read -r checkout; do
     [ -n "$checkout" ] || continue
     if measure_directory "$checkout"; then
@@ -828,49 +887,24 @@ runtime_condition_worktrees() {
     else
       installer_warn "could not measure $checkout; its size is left out of the reported total"
     fi
-    checkout_state=0
-    worktree_state "$checkout" || checkout_state=$?
-    case $checkout_state in
-      "$WORKTREE_HOLDS_WORK")
-        held="$held$checkout
-"
+    assess_checkout "$checkout"
+    case $CHECKOUT_RESULT in
+      preserved)
+        preserved=$((preserved + 1))
+        installer_note "preserved checkout $checkout: $CHECKOUT_REASON"
         continue
         ;;
-      "$WORKTREE_UNJUDGEABLE")
-        unjudged=$((unjudged + 1))
+      eligible)
+        eligible=$((eligible + 1))
+        ;;
+      *)
+        CHECKOUT_FAILURES=$((CHECKOUT_FAILURES + 1))
+        installer_warn "could not assess $checkout: $CHECKOUT_REASON"
+        installer_hint 'Checkout preserved. Inspect the failed step and repository by hand.'
         continue
         ;;
     esac
-    worktree_is_idle "$checkout" || continue
-    idle="$idle$checkout
-"
-  done <<EOF
-$checkouts
-EOF
-
-  # line_count answers about a list with no trailing newline, which is what a
-  # command substitution hands it. These two were built a line at a time, so
-  # they carry one, and counting one directly reported one entry too many.
-  held=$(printf '%s' "$held")
-  idle=$(printf '%s' "$idle")
-
-  installer_note "agent worktree checkouts: $(line_count "$checkouts"), $(human_bytes "$checkout_total")"
-  [ "$unjudged" -eq 0 ] \
-    || installer_note "checkouts nothing here can judge, and so keeps: $unjudged"
-  # The newline stripped above is put back for the read loop, which drops a
-  # final line that has no terminator.
-  printf '%s\n' "$held" | while IFS= read -r checkout; do
-    [ -n "$checkout" ] || continue
-    installer_warn "worktree holds work that is not on a remote: $checkout"
-    installer_hint 'Push or discard it there, then rerun to retire the checkout.'
-  done
-  installer_note "retired checkouts (idle for $RETENTION_DAYS days): $(line_count "$idle")"
-  [ "$1" = repair ] || return 0
-
-  retired=0
-  retired_bytes=0
-  while IFS= read -r checkout; do
-    [ -n "$checkout" ] || continue
+    [ "$1" = repair ] || continue
     case $checkout in
       "$WORKTREE_ROOT"/*/*) ;;
       *)
@@ -879,15 +913,18 @@ EOF
         continue
         ;;
     esac
-    CHECKOUT_OWNER=''
-    retire_directory "$checkout" identify_checkout_owner || continue
+    retire_directory "$checkout" admit_linked_checkout || continue
     retired=$((retired + 1))
     retired_bytes=$((retired_bytes + RETIRED_BYTES))
-    [ -z "$CHECKOUT_OWNER" ] || remove_checkout_registration "$checkout"
+    remove_checkout_registration "$checkout"
   done <<EOF
-$idle
+$checkouts
 EOF
 
+  installer_note "agent worktree checkouts: $(line_count "$checkouts"), $(human_bytes "$checkout_total")"
+  installer_note "preserved checkouts: $preserved"
+  installer_note "eligible checkouts (idle for $RETENTION_DAYS days): $eligible"
+  installer_note 'Checkout eligibility uses locally recorded upstream history, which may be stale; no remote is queried. Ignored files, including local configuration, do not prevent retirement.'
   [ "$retired" -eq 0 ] \
     || installer_item "retired $retired agent worktree checkout(s), $(human_bytes "$retired_bytes")"
 }
@@ -982,6 +1019,10 @@ installer_note "database $(human_bytes "$(file_bytes "$(runtime_store_path)")") 
 catalog_each_row "$RUNTIME_CONDITIONS" run_condition
 
 if [ "$FIX" -eq 0 ]; then
+  if [ "$CHECKOUT_FAILURES" -gt 0 ]; then
+    installer_error "OpenCode report incomplete: $CHECKOUT_FAILURES checkout discovery or assessment failure(s)"
+    exit 1
+  fi
   installer_success 'OpenCode state reported; rerun with --fix to repair'
   exit 0
 fi
@@ -989,8 +1030,8 @@ fi
 # A directory repair that did not finish lets every independent one go ahead,
 # and then keeps the run from calling itself repaired. What did finish was
 # reported where it happened, so nothing here needs to repeat it.
-if [ "$RETIREMENT_FAILURES" -gt 0 ] || [ "$REGISTRATION_FAILURES" -gt 0 ]; then
-  installer_error "OpenCode repair incomplete: $RETIREMENT_FAILURES directory(ies) not retired, $REGISTRATION_FAILURES Git registration(s) left behind"
+if [ "$RETIREMENT_FAILURES" -gt 0 ] || [ "$REGISTRATION_FAILURES" -gt 0 ] || [ "$CHECKOUT_FAILURES" -gt 0 ]; then
+  installer_error "OpenCode repair incomplete: $RETIREMENT_FAILURES directory(ies) not retired, $REGISTRATION_FAILURES Git registration(s) left behind, $CHECKOUT_FAILURES checkout discovery or assessment failure(s)"
   installer_hint 'Every step reported as done above is done. Inspect each path named above by hand: a later run judges eligibility afresh and does not resume this one.'
   exit 1
 fi
