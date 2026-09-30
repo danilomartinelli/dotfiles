@@ -367,6 +367,7 @@ test_profiles_trust_project_configuration() {
   jsonc_to_json "$opencode_config" | jq -e '
     (.mcp | keys) == ["argent", "codegraph", "context7", "exa", "gh_grep"] and
     all(.mcp[]; .enabled == true) and
+    .mcp.context7.headers == {"CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"} and
     .mcp.codegraph.type == "local" and
     .mcp.codegraph.command == ["codegraph", "serve", "--mcp"] and
     .mcp.codegraph.environment.CODEGRAPH_TELEMETRY == "0" and

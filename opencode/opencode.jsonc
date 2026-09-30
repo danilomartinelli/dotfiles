@@ -66,7 +66,9 @@
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "enabled": true
+      "enabled": true,
+      // Unset sends an empty header, which Context7 serves at the anonymous quota.
+      "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" }
     },
     "exa": {
       "type": "remote",

@@ -18,6 +18,7 @@ TEST_HOME="$TEST_ROOT/home"
 BREW_PREFIX="$TEST_ROOT/homebrew"
 MAIN_ARTIFACTS="$TEST_ROOT/main"
 OPTIONAL_ARTIFACTS="$TEST_ROOT/optional"
+AGENT_ARTIFACTS="$TEST_ROOT/agent"
 
 mkdir -p \
   "$FIXTURE/alpha/_private" \
@@ -45,6 +46,7 @@ cp "$REPOSITORY_ROOT/zsh/prompt.zsh" "$FIXTURE/zsh/prompt.zsh"
 cp "$REPOSITORY_ROOT/zsh/window.zsh" "$FIXTURE/zsh/window.zsh"
 cp "$REPOSITORY_ROOT/system/env.zsh" "$FIXTURE/system/env.zsh"
 cp "$REPOSITORY_ROOT/system/grc.zsh" "$FIXTURE/system/grc.zsh"
+cp "$REPOSITORY_ROOT/system/aliases.zsh" "$FIXTURE/system/aliases.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
@@ -71,6 +73,13 @@ scenario_write_executable "$BREW_PREFIX/bin/grc" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
+
+for replacement in eza bat; do
+  scenario_write_executable "$BREW_PREFIX/bin/$replacement" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+done
 
 scenario_write_file "$BREW_PREFIX/etc/grc.bashrc" <<'EOF'
 print -r -- grc >> "$SCENARIO_EVENT_LOG"
@@ -339,6 +348,32 @@ test_optional_homebrew_integration() {
   assert_not_contains "$events" syntax-highlighting
 }
 
+test_agent_shells_keep_standard_file_commands() {
+  local marker
+  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS -u CLAUDECODE -u CODEX_SHELL
+    HOME="$TEST_HOME"
+    PATH="$STARTUP_PATH"
+    MANPATH='/base/man:'
+    STARTUP_FIXTURE_ROOT="$FIXTURE"
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX")
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+  if ! scenario_capture "$AGENT_ARTIFACTS/person" "${startup[@]}" \
+    "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ ${aliases[ls]-} == "eza --icons=auto" && ${aliases[cat]-} == bat ]]'; then
+    scenario_fail "a person's shell must keep the eza and bat replacements"
+  fi
+  # Claude Code and Codex replay this startup into their tool shells.
+  for marker in CLAUDECODE CODEX_SHELL; do
+    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+    if ! scenario_capture "$AGENT_ARTIFACTS/$marker" "${startup[@]}" "$marker=1" \
+      "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; (( ! $+aliases[ls] && ! $+aliases[cat] ))'; then
+      scenario_fail "$marker shells must keep the standard ls and cat"
+    fi
+  done
+}
+
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
+scenario_run 'coding agent shells keep the standard ls and cat' test_agent_shells_keep_standard_file_commands
 scenario_finish

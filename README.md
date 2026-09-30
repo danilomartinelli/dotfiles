@@ -424,7 +424,9 @@ implementations.
 | `pi`      | `pi [args...]`: invoke the Pi coding agent                         |
 | `pubkey`  | Copy the default SSH public key, preferring Ed25519                |
 
-Arguments provided after an alias are passed to the expanded command.
+Arguments provided after an alias are passed to the expanded command. The Files
+aliases are for a person's shell: Claude Code (`CLAUDECODE`) and Codex
+(`CODEX_SHELL`) tool shells keep the standard `ls` and `cat`.
 
 | Area                      | Aliases                                                                                                                              |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
