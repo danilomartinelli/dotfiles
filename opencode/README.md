@@ -645,12 +645,35 @@ Repairs that do not depend on it still run. The run then ends with
 `OpenCode repair incomplete` and exit status 1 instead of reporting success; what
 it did complete is reported above that line.
 
+Checkout eligibility requires successful Git and inactivity observations. Only
+linked worktrees with an identified external Git owner that will be preserved
+can qualify. Tracked edits, staged changes, non-ignored untracked files, HEAD
+commits absent from the locally recorded upstream, recent activity, detached
+HEAD and missing upstreams preserve the checkout. Independent clones are also
+preserved: a clean, published HEAD says nothing about work in another branch or
+stash stored in that repository. Non-Git directories are kept normally.
+
+Assessment stays offline: no fetch or remote verification occurs, and locally
+recorded upstream history may be stale. Ignored files do not prevent retirement;
+build output and ignored local configuration disappear with a repaired checkout.
+Eligibility therefore does not promise a backup of every byte. Git inspection
+avoids optional index writes, excludes Git bookkeeping from age checks, and
+includes activity in delegation artifacts. `--days 0` bypasses age only.
+
+A failed observation preserves the affected checkout and reports its path and
+failed step. Failed discovery selects no checkout, even if listing produced
+partial output. Independent assessments and later conditions continue, but both
+report and repair end with exit status 1 and an incomplete summary. Eligible
+candidate counts describe selection; only confirmed removals count as retired.
+An absent or successfully inspected empty checkout root is a normal empty result.
+
 A linked worktree is registered in the repository it was added from. The doctor
-identifies that owner before removing the checkout, keeps the checkout when it
-cannot, and afterwards removes that one registration and no other. A
-registration it cannot remove is reported with its owner and fails the run,
-although the checkout stays counted as retired. An ordinary clone leaves no
-registration to remove.
+checks that owner again before removal and afterwards removes that one
+registration and no other. The owner, its branches and stash, and sibling
+worktrees remain intact. A registration it cannot remove is reported with its
+owner and fails the run, although the checkout stays counted as retired. An
+assessment is made once per checkout; these checks do not promise atomic
+protection from concurrent external edits or replacements.
 
 Recovery from an incomplete repair is manual. A partial removal can take the
 metadata that identified a snapshot or checkout, and a removed checkout can no

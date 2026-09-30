@@ -340,12 +340,9 @@ test_fix_removes_only_snapshots_whose_directory_is_gone() {
     'removed 1 session snapshot(s) describing a missing directory'
 }
 
-# Three agent worktree checkouts beside the fixture's existing non-Git one:
-# one reconstructible (clean and fully pushed to a bare origin), one holding a
-# commit the origin has never seen, and one holding an uncommitted change. The
-# origin is a real bare repository rather than a stub, because the whole
-# question the condition asks -- does every byte here exist somewhere else --
-# is one only Git can answer.
+# Linked checkouts beside the fixture's existing non-Git directory: two
+# eligible, one with unpublished commits and one with an uncommitted change.
+# Git and the locally recorded upstream are real, backed by a local bare origin.
 #
 # Their mtimes are pushed a month back so the default retention window treats
 # them as idle; the `live-worktree` the other scenarios use stays untouched.
@@ -353,9 +350,7 @@ make_worktree_checkouts() {
   local fixture=$1 root checkout
   root=$fixture/data/worktree/project
 
-  for checkout in pushed unpushed dirty 'spaced name'; do
-    make_pushed_checkout "$fixture" "$checkout"
-  done
+  make_linked_worktrees "$fixture" pushed unpushed dirty 'spaced name'
 
   printf 'local only\n' >"$root/unpushed/file.txt"
   git -C "$root/unpushed" commit --quiet -am 'local only'
@@ -403,21 +398,23 @@ make_linked_worktrees() {
   local fixture=$1 owner=$1/owner name
   shift
 
-  git -c init.defaultBranch=main init --quiet --bare "$fixture/owner-origin.git"
-  git -c init.defaultBranch=main init --quiet "$owner"
-  git -C "$owner" config user.email fixture@example.invalid
-  git -C "$owner" config user.name Fixture
-  printf 'source\n' >"$owner/file.txt"
-  git -C "$owner" add file.txt
-  git -C "$owner" commit --quiet -m 'fixture'
-  git -C "$owner" remote add origin "$fixture/owner-origin.git"
-  git -C "$owner" push --quiet -u origin main
-  mkdir -p "$owner/.git/info"
-  printf '.opencode-artifacts/\n' >>"$owner/.git/info/exclude"
+  if [ ! -d "$owner" ]; then
+    git -c init.defaultBranch=main init --quiet --bare "$fixture/owner-origin.git"
+    git -c init.defaultBranch=main init --quiet "$owner"
+    git -C "$owner" config user.email fixture@example.invalid
+    git -C "$owner" config user.name Fixture
+    printf 'source\n' >"$owner/file.txt"
+    git -C "$owner" add file.txt
+    git -C "$owner" commit --quiet -m 'fixture'
+    git -C "$owner" remote add origin "$fixture/owner-origin.git"
+    git -C "$owner" push --quiet -u origin main
+    mkdir -p "$owner/.git/info"
+    printf '.opencode-artifacts/\n' >>"$owner/.git/info/exclude"
 
-  git -C "$owner" worktree add --quiet --track -b sibling "$fixture/sibling" origin/main
+    git -C "$owner" worktree add --quiet --track -b sibling "$fixture/sibling" origin/main
+  fi
   for name in "$@"; do
-    git -C "$owner" worktree add --quiet --track -b "$name" \
+    git -C "$owner" worktree add --quiet --track -b "${name// /-}" \
       "$fixture/data/worktree/project/$name" origin/main
     backdate "$fixture/data/worktree/project/$name"
   done
@@ -687,7 +684,9 @@ test_fixture_schema_satisfies_the_store_declaration() {
 #   FAULT_CHMOD         <path>
 #   FAULT_DU            <path> failed | incomplete | malformed | first
 #   FAULT_DU_KILOBYTES  <path> <kilobytes of its own contents>
-#   FAULT_GIT           <path> <another argument of the same call>
+#   FAULT_GIT           <path> <another argument of the same call> [partial stdout]
+#   FAULT_FIND          <path> discovery | age [partial stdout]
+#   FAULT_FIND_GONE     <checkout removed after a successful age observation>
 #   FAULT_GIT_REPLACE   <path> <another argument> gone | file | symlink | dangling
 #   FAULT_RMDIR         <path>
 #   FAULT_SQLITE3       <database written to>
@@ -697,7 +696,7 @@ test_fixture_schema_satisfies_the_store_declaration() {
 install_fault_wrappers() {
   local fixture=$1 command
 
-  for command in rm chmod du git rmdir sqlite3; do
+  for command in rm chmod du git find rmdir sqlite3; do
     {
       printf '#!/bin/sh\nfixture_root=%s\n' "'$fixture'"
       fault_wrapper_prelude
@@ -845,8 +844,19 @@ matching_row() {
   done
 }
 
-if [ -n "$(matching_row "${FAULT_GIT:-}" "$@")" ]; then
+if [ "${FAULT_GIT_NETWORK:-0}" = 1 ]; then
+  for word in fetch pull push ls-remote; do
+    if has_argument "$word" "$@"; then
+      record 'network attempted'
+      exit 128
+    fi
+  done
+fi
+
+failure=$(matching_row "${FAULT_GIT:-}" "$@")
+if [ -n "$failure" ]; then
   record "git $*"
+  [ -z "${failure#*"$tab"}" ] || printf '%s\n' "${failure#*"$tab"}"
   printf 'fatal: injected failure\n' >&2
   exit 128
 fi
@@ -869,6 +879,27 @@ if ! grep -Fqx -- "replaced $replaced" "$SCENARIO_EVENT_LOG" 2>/dev/null; then
   esac
 fi
 exit "$status"
+EOF
+}
+
+fault_wrapper_find() {
+  cat <<'EOF'
+find_root=$1
+fault=$(fault_for "${FAULT_FIND:-}" "$find_root")
+step=${fault%%"$tab"*}
+if { [ "$step" = discovery ] && has_argument 2 "$@"; } \
+  || { [ "$step" = age ] && has_argument -mtime "$@"; }; then
+  [ "$fault" = "$step" ] || printf '%s\n' "${fault#*"$tab"}"
+  record "find $*"
+  printf 'find: injected failure\n' >&2
+  exit 1
+fi
+if [ "$find_root" = "${FAULT_FIND_GONE:-}" ] && has_argument -mtime "$@"; then
+  /usr/bin/find "$@" || exit "$?"
+  /bin/rm -rf -- "$find_root"
+  exit 0
+fi
+exec /usr/bin/find "$@"
 EOF
 }
 
@@ -938,7 +969,7 @@ test_each_condition_confirms_a_complete_retirement() {
   invoke_doctor "$fixture" --fix
   [ ! -e "$snapshot" ] || scenario_fail 'a lost snapshot survived'
   [ ! -e "$artifact" ] || scenario_fail 'an idle artifact directory survived'
-  [ ! -e "$checkout" ] || scenario_fail 'a reconstructible checkout survived'
+  [ ! -e "$checkout" ] || scenario_fail 'an eligible checkout survived'
   assert_contains "$fixture/stdout.log" 'removed 1 session snapshot(s) describing a missing directory'
   assert_contains "$fixture/stdout.log" 'retired 1 delegation artifact directory(ies)'
   assert_contains "$fixture/stdout.log" 'retired 2 agent worktree checkout(s)'
@@ -956,12 +987,14 @@ test_each_condition_recovers_with_one_permission_repair() {
   restore_write_permission_on_exit "$fixture"
   set_retirement_targets "$fixture"
 
-  for target in "$snapshot" "$artifact" "$checkout/.git"; do
+  printf 'cache/\n' >>"$fixture/owner/.git/info/exclude"
+  for target in "$snapshot" "$artifact" "$checkout/cache"; do
     mkdir -p "$target/cache/locked"
     printf 'signed\n' >"$target/cache/locked/bundle"
     chmod a-w "$target/cache/locked"
   done
   backdate "$artifact"
+  backdate "$checkout"
 
   invoke_doctor "$fixture" \
     FAULT_RM="$(
@@ -1158,8 +1191,8 @@ test_a_directory_gone_before_action_is_neither_counted_nor_failed() {
   invoke_doctor "$fixture" \
     FAULT_GIT_REPLACE="$(
       table_row "$snapshot" config gone
-      table_row "$checkout" log gone
     )" \
+    FAULT_FIND_GONE="$checkout" \
     --fix
 
   [ ! -e "$snapshot" ] || scenario_fail 'the snapshot never vanished'
@@ -1179,7 +1212,7 @@ test_a_directory_gone_before_action_is_neither_counted_nor_failed() {
 
   assert_fails_with_status 1 invoke_doctor "$fixture" \
     FAULT_RM="$(table_row "$artifact" persistent)" \
-    FAULT_GIT_REPLACE="$(table_row "$checkout" log gone)" \
+    FAULT_FIND_GONE="$checkout" \
     --fix
 
   assert_not_contains "$fixture/stderr.log" "could not retire $checkout"
@@ -1231,7 +1264,7 @@ test_a_failed_artifact_keeps_its_checkout_under_zero_retention() {
   local fixture root
   fixture=$(make_fixture)
   make_worktree_checkouts "$fixture"
-  make_pushed_checkout "$fixture" pushed-copy
+  make_linked_worktrees "$fixture" pushed-copy
   root=$fixture/data/worktree/project
   make_artifact "$root/pushed-copy" run
   make_artifact "$root/spaced name" run
@@ -1319,9 +1352,9 @@ test_an_unidentified_owner_keeps_the_linked_checkout() {
   [ -f "$checkout/.git" ] || scenario_fail 'the checkout lost what names its owner'
   [ -d "$fixture/owner/.git/worktrees/agent" ] || scenario_fail 'its registration was touched'
   assert_equal 0 "$(calls_on "$fixture/events.log" rm "$checkout")" 'removals of an unidentified checkout'
-  assert_contains "$fixture/stderr.log" "could not retire $checkout: its Git owner could not be identified"
-  assert_contains "$fixture/stderr.log" 'Nothing was removed.'
-  assert_contains "$fixture/stderr.log" 'OpenCode repair incomplete: 1 directory(ies) not retired'
+  assert_contains "$fixture/stderr.log" "could not assess $checkout: its Git owner could not be identified"
+  assert_contains "$fixture/stderr.log" 'Checkout preserved.'
+  assert_contains "$fixture/stderr.log" '1 checkout discovery or assessment failure(s)'
 }
 
 # The checkout is gone and stays counted; the registration its owner still
@@ -1337,7 +1370,7 @@ test_a_failed_registration_cleanup_keeps_the_retirement_and_fails() {
   printf 'a log line\n' >"$fixture/data/log/opencode.log"
 
   assert_fails_with_status 1 invoke_doctor "$fixture" LC_ALL=C \
-    FAULT_GIT="$(table_row "$owner" worktree)" \
+    FAULT_GIT="$(table_row "$root/agent" worktree)" \
     FAULT_DU_KILOBYTES="$(
       table_row "$root/agent" 32
       table_row "$root/pushed" 16
@@ -1380,16 +1413,18 @@ test_a_registration_left_behind_is_named_only_by_the_run_that_knew_it() {
   [ -d "$owner/worktrees/agent" ] || scenario_fail 'a later run rediscovered the owner'
 }
 
-test_a_retired_clone_owes_no_registration_cleanup() {
+test_an_independent_clone_is_preserved() {
   local fixture root
   fixture=$(make_fixture)
-  make_worktree_checkouts "$fixture"
+  make_pushed_checkout "$fixture" pushed
+  backdate "$fixture/data/worktree/project/pushed"
   install_fault_wrappers "$fixture"
   root=$fixture/data/worktree/project
 
   invoke_doctor "$fixture" --fix
 
-  [ ! -e "$root/pushed" ] || scenario_fail 'a pushed clone survived'
+  [ -f "$root/pushed/file.txt" ] || scenario_fail 'an independent clone was removed'
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/pushed: independent clone"
   assert_not_contains "$fixture/stderr.log" 'registration'
   assert_not_contains "$fixture/stderr.log" 'could not retire'
   assert_contains "$fixture/stdout.log" 'OpenCode state repaired'
@@ -1456,7 +1491,7 @@ test_a_partial_removal_is_not_resumed_by_a_later_run() {
 
   [ -d "$snapshot" ] || scenario_fail 'an unidentifiable snapshot was removed'
   [ -d "$checkout" ] || scenario_fail 'an unidentifiable checkout was removed'
-  assert_contains "$fixture/second/stdout.log" 'checkouts nothing here can judge, and so keeps: 2'
+  assert_contains "$fixture/second/stdout.log" 'preserved checkouts: 2'
   assert_not_contains "$fixture/second/stdout.log" 'removed 1 session snapshot(s)'
   assert_not_contains "$fixture/second/stdout.log" 'agent worktree checkout(s),'
   assert_not_contains "$fixture/second/stderr.log" 'could not retire'
@@ -1481,6 +1516,260 @@ test_a_fatal_condition_still_stops_the_run() {
   assert_not_contains "$fixture/stderr.log" 'OpenCode repair incomplete'
 }
 
+# Independent clones hold their own object store, including work absent from
+# HEAD. They are preserved even when that HEAD matches the upstream exactly.
+test_clones_keep_other_branches_and_stashes() {
+  local fixture root branch_commit stash_commit
+  fixture=$(make_fixture)
+  root=$fixture/data/worktree/project
+  make_pushed_checkout "$fixture" branch-clone
+  make_pushed_checkout "$fixture" stash-clone
+  git -C "$root/branch-clone" checkout --quiet -b private-work
+  printf 'exclusive branch\n' >"$root/branch-clone/file.txt"
+  git -C "$root/branch-clone" commit --quiet -am 'exclusive branch'
+  branch_commit=$(git -C "$root/branch-clone" rev-parse HEAD)
+  git -C "$root/branch-clone" checkout --quiet main
+  printf 'exclusive stash\n' >"$root/stash-clone/file.txt"
+  git -C "$root/stash-clone" stash push --quiet
+  stash_commit=$(git -C "$root/stash-clone" rev-parse refs/stash)
+  backdate "$root"
+
+  invoke_doctor "$fixture" --fix --days 0
+
+  assert_equal "$branch_commit" "$(git -C "$root/branch-clone" rev-parse private-work)" 'clone branch survives'
+  assert_equal "$stash_commit" "$(git -C "$root/stash-clone" rev-parse refs/stash)" 'clone stash survives'
+  assert_equal 'exclusive branch' "$(git -C "$root/branch-clone" show private-work:file.txt)" 'branch object survives'
+  assert_equal 'exclusive stash' "$(git -C "$root/stash-clone" show refs/stash:file.txt)" 'stash object survives'
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/branch-clone: independent clone"
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/stash-clone: independent clone"
+  assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 0 days): 0'
+}
+
+test_retiring_a_linked_checkout_preserves_the_owners_work() {
+  local fixture owner branch_commit stash_commit
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" agent
+  owner=$fixture/owner
+  git -C "$owner" checkout --quiet -b private-work
+  printf 'exclusive branch\n' >"$owner/file.txt"
+  git -C "$owner" commit --quiet -am 'exclusive branch'
+  branch_commit=$(git -C "$owner" rev-parse HEAD)
+  git -C "$owner" checkout --quiet main
+  printf 'exclusive stash\n' >"$owner/file.txt"
+  git -C "$owner" stash push --quiet
+  stash_commit=$(git -C "$owner" rev-parse refs/stash)
+
+  invoke_doctor "$fixture" --fix
+
+  [ ! -e "$fixture/data/worktree/project/agent" ] || scenario_fail 'eligible checkout survived'
+  assert_equal "$branch_commit" "$(git -C "$owner" rev-parse private-work)" 'owner branch survives'
+  assert_equal "$stash_commit" "$(git -C "$owner" rev-parse refs/stash)" 'owner stash survives'
+  assert_equal 'exclusive branch' "$(git -C "$owner" show private-work:file.txt)" 'owner branch object survives'
+  assert_equal 'exclusive stash' "$(git -C "$owner" show refs/stash:file.txt)" 'owner stash object survives'
+  [ -f "$fixture/sibling/file.txt" ] || scenario_fail 'sibling source was removed'
+  [ -d "$owner/.git/worktrees/sibling" ] || scenario_fail 'sibling registration was removed'
+  [ ! -e "$owner/.git/worktrees/agent" ] || scenario_fail 'retired registration survived'
+
+  invoke_doctor "$fixture" --artifacts "$fixture/second" --fix
+  assert_not_contains "$fixture/second/stdout.log" 'retired 1 agent worktree checkout(s)'
+}
+
+test_ordinary_preservation_survives_zero_days() {
+  local fixture root name
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" staged dirty untracked unpublished detached no-upstream recent
+  root=$fixture/data/worktree/project
+  printf 'staged\n' >"$root/staged/file.txt"
+  git -C "$root/staged" add file.txt
+  printf 'dirty\n' >"$root/dirty/file.txt"
+  printf 'untracked\n' >"$root/untracked/new.txt"
+  printf 'unpublished\n' >"$root/unpublished/file.txt"
+  git -C "$root/unpublished" commit --quiet -am 'unpublished'
+  git -C "$root/detached" checkout --quiet --detach
+  git -C "$root/no-upstream" branch --unset-upstream
+  for name in staged dirty untracked unpublished detached no-upstream; do
+    backdate "$root/$name"
+  done
+  touch "$root/recent/file.txt"
+
+  invoke_doctor "$fixture" --fix
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/recent: recent activity"
+  [ -f "$root/recent/file.txt" ] || scenario_fail 'recent source was removed'
+
+  invoke_doctor "$fixture" --fix --days 0
+  [ ! -e "$root/recent" ] || scenario_fail 'zero days did not bypass age'
+  for name in staged dirty untracked unpublished detached no-upstream; do
+    [ -f "$root/$name/file.txt" ] || scenario_fail "zero days removed $name"
+    assert_contains "$fixture/stdout.log" "preserved checkout $root/$name:"
+  done
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/detached: detached HEAD"
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/no-upstream: no upstream"
+  assert_contains "$fixture/stdout.log" 'retired 1 agent worktree checkout(s)'
+  assert_empty "$fixture/stderr.log"
+}
+
+test_offline_report_preserves_the_index_and_ignores_ignored_files() {
+  local fixture checkout index before index_time
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" 'spaced name'
+  install_fault_wrappers "$fixture"
+  checkout=$fixture/data/worktree/project/spaced\ name
+  printf '.local-config\nbuild/\n' >>"$fixture/owner/.git/info/exclude"
+  mkdir "$checkout/build"
+  printf 'disposable\n' >"$checkout/build/output"
+  printf 'ignored configuration\n' >"$checkout/.local-config"
+  backdate "$checkout"
+  index=$(git -C "$checkout" rev-parse --path-format=absolute --git-path index)
+  before=$(shasum "$index")
+  index_time=$(stat -f '%m:%c' "$index")
+  # The server no longer holds the recorded branch; assessment uses the local
+  # upstream. Then make even that local server unavailable before repair.
+  git --git-dir "$fixture/owner-origin.git" update-ref -d refs/heads/main
+
+  invoke_doctor "$fixture" FAULT_GIT_NETWORK=1
+
+  assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 7 days): 1'
+  assert_contains "$fixture/stdout.log" 'locally recorded upstream history, which may be stale'
+  assert_contains "$fixture/stdout.log" 'Ignored files, including local configuration'
+  assert_equal "$before" "$(shasum "$index")" 'report preserves index content'
+  assert_equal "$index_time" "$(stat -f '%m:%c' "$index")" 'report preserves index timestamps'
+  assert_contains "$checkout/.local-config" 'ignored configuration'
+  [ -f "$checkout/build/output" ] || scenario_fail 'report removed ignored build output'
+  [ -d "$fixture/owner/.git/worktrees/spaced-name" ] || scenario_fail 'report removed registration'
+  assert_not_contains "$fixture/events.log" 'network attempted'
+
+  mv "$fixture/owner-origin.git" "$fixture/unavailable-origin.git"
+  invoke_doctor "$fixture" FAULT_GIT_NETWORK=1 --fix
+  [ ! -e "$checkout" ] || scenario_fail 'ignored files prevented retirement'
+  assert_contains "$fixture/stdout.log" 'retired 1 agent worktree checkout(s)'
+  assert_not_contains "$fixture/events.log" 'network attempted'
+}
+
+test_artifact_activity_keeps_a_checkout_recent() {
+  local fixture checkout
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" agent
+  checkout=$fixture/data/worktree/project/agent
+  make_artifact "$checkout" fresh
+  backdate "$checkout"
+  touch "$checkout/.opencode-artifacts/fresh/evidence.log"
+  invoke_doctor "$fixture" --fix
+  [ -f "$checkout/file.txt" ] || scenario_fail 'recent artifact did not protect checkout'
+  assert_contains "$fixture/stdout.log" "preserved checkout $checkout: recent activity"
+
+  backdate "$checkout"
+  invoke_doctor "$fixture" --fix
+  [ ! -e "$checkout/.opencode-artifacts/fresh" ] || scenario_fail 'old artifact survived'
+  [ -f "$checkout/file.txt" ] || scenario_fail 'removing artifact did not protect checkout this run'
+
+  backdate "$checkout"
+  invoke_doctor "$fixture" --fix
+  [ ! -e "$checkout" ] || scenario_fail 'old checkout survived a later run'
+}
+
+test_empty_checkout_roots_are_normal() {
+  local fixture state
+  for state in absent empty nested; do
+    fixture=$(make_fixture)
+    rm -rf "$fixture/data/worktree"
+    [ "$state" = absent ] || mkdir "$fixture/data/worktree"
+    if [ "$state" = nested ]; then
+      git -c init.defaultBranch=main init --quiet "$fixture/data"
+      mkdir -p "$fixture/data/worktree/project/scratch"
+    fi
+    invoke_doctor "$fixture"
+    assert_empty "$fixture/stderr.log"
+    if [ "$state" = nested ]; then
+      assert_contains "$fixture/stdout.log" 'scratch: not a Git checkout'
+    else
+      assert_contains "$fixture/stdout.log" 'no agent worktree checkouts'
+    fi
+  done
+}
+
+test_an_unreadable_checkout_fails_instead_of_looking_non_git() {
+  local fixture checkout mode
+  local -a args
+  for mode in report repair; do
+    fixture=$(make_fixture)
+    make_linked_worktrees "$fixture" agent
+    checkout=$fixture/data/worktree/project/agent
+    # shellcheck disable=SC2064 # Restore this fixture even if an assertion fails.
+    trap "chmod u+rwx '$checkout'" EXIT
+    chmod 000 "$checkout"
+    args=()
+    [ "$mode" != repair ] || args=(--fix --days 0)
+
+    assert_fails_with_status 1 invoke_doctor "$fixture" "${args[@]}"
+    chmod u+rwx "$checkout"
+    trap - EXIT
+    [ -f "$checkout/file.txt" ] || scenario_fail 'unreadable checkout lost content'
+    assert_contains "$fixture/stderr.log" "could not assess $checkout: Git checkout identification"
+    assert_not_contains "$fixture/stdout.log" "$checkout: not a Git checkout"
+    assert_not_contains "$fixture/stdout.log" 'OpenCode state repaired'
+    assert_not_contains "$fixture/stdout.log" 'OpenCode state reported;'
+  done
+}
+
+test_zero_days_bypasses_only_the_age_observation() {
+  local fixture checkout word mode
+  local -a args
+  for mode in report repair; do
+    fixture=$(make_fixture)
+    make_linked_worktrees "$fixture" agent
+    install_fault_wrappers "$fixture"
+    checkout=$fixture/data/worktree/project/agent
+    args=(--days 0)
+    [ "$mode" != repair ] || args+=(--fix)
+    for word in status log; do
+      assert_fails_with_status 1 invoke_doctor "$fixture" \
+        FAULT_GIT="$(table_row "$checkout" "$word" partial)" "${args[@]}"
+      [ -f "$checkout/file.txt" ] || scenario_fail 'zero days bypassed failed observation'
+      assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 0 days): 0'
+    done
+    invoke_doctor "$fixture" FAULT_FIND="$(table_row "$checkout" age partial)" "${args[@]}"
+    assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 0 days): 1'
+  done
+}
+
+test_an_owner_inside_the_checkout_inventory_is_not_external() {
+  local fixture root checkout
+  fixture=$(make_fixture)
+  make_linked_worktrees "$fixture" agent
+  root=$fixture/data/worktree/project
+  checkout=$root/agent
+  mv "$fixture/owner" "$root/owner"
+  git -C "$root/owner" worktree repair "$checkout" "$fixture/sibling" >/dev/null 2>&1
+  backdate "$checkout"
+
+  assert_fails_with_status 1 invoke_doctor "$fixture" --fix --days 0
+  [ -f "$checkout/file.txt" ] || scenario_fail 'checkout with an internal owner was removed'
+  [ -f "$root/owner/file.txt" ] || scenario_fail 'independent owner was removed'
+  assert_contains "$fixture/stderr.log" "could not assess $checkout: its Git owner"
+  assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 0 days): 0'
+}
+
+test_failed_owner_verification_is_a_failure_even_with_zero_days() {
+  local fixture mode output checkout
+  local -a args
+  for mode in report repair; do
+    for output in '' false; do
+      fixture=$(make_fixture)
+      make_linked_worktrees "$fixture" agent
+      install_fault_wrappers "$fixture"
+      checkout=$fixture/data/worktree/project/agent
+      args=(--days 0)
+      [ "$mode" != repair ] || args+=(--fix)
+      assert_fails_with_status 1 invoke_doctor "$fixture" \
+        FAULT_GIT="$(table_row "$fixture/owner/.git" --is-bare-repository "$output")" "${args[@]}"
+      [ -f "$checkout/file.txt" ] || scenario_fail 'unverified owner lost checkout'
+      assert_contains "$fixture/stderr.log" "could not assess $checkout: its Git owner"
+      assert_contains "$fixture/stderr.log" 'could not be verified'
+      assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 0 days): 0'
+    done
+  done
+}
+
 scenario_run 'a report names state without changing it' test_report_names_state_without_changing_it
 scenario_run 'an untracked shadowing config is reported' test_untracked_shadowing_config_is_reported
 scenario_run 'a clean config directory reports nothing' test_clean_config_directory_is_not_reported
@@ -1494,6 +1783,75 @@ scenario_run 'a repair removes only snapshots whose directory is gone' test_fix_
 # reaches inside a worktree -- the processes, the snapshots, the artifacts --
 # and none of them removed the directory holding them, so a retired session's
 # node_modules stayed forever. A report still changes nothing.
+test_failed_observation_preserves_the_checkout_and_continues() {
+  local step=$1 word=$2 partial=$3 mode output fixture checkout failure
+  local -a args
+  for mode in report repair; do
+    for output in '' "$partial"; do
+      fixture=$(make_fixture)
+      make_linked_worktrees "$fixture" failed eligible
+      install_fault_wrappers "$fixture"
+      checkout=$fixture/data/worktree/project/failed
+      printf 'later condition\n' >"$fixture/data/log/opencode.log"
+      args=()
+      [ "$mode" != repair ] || args=(--fix --clear-logs)
+      failure="FAULT_GIT=$(table_row "$checkout" "$word" "$output")"
+      if [ "$word" = age ]; then
+        failure="FAULT_FIND=$(table_row "$checkout" age "$output")"
+      fi
+
+      assert_fails_with_status 1 invoke_doctor "$fixture" "$failure" "${args[@]}"
+
+      [ -f "$checkout/file.txt" ] || scenario_fail 'failed observation lost source work'
+      [ -d "$fixture/owner/.git/worktrees/failed" ] || scenario_fail 'failed observation lost registration'
+      assert_contains "$fixture/stderr.log" "could not assess $checkout: $step"
+      assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 7 days): 1'
+      assert_not_contains "$fixture/stdout.log" 'OpenCode state repaired'
+      assert_not_contains "$fixture/stdout.log" 'OpenCode state reported;'
+      if [ "$mode" = repair ]; then
+        [ ! -e "$fixture/data/worktree/project/eligible" ] || scenario_fail 'independent checkout survived'
+        [ ! -e "$fixture/data/log/opencode.log" ] || scenario_fail 'later condition did not run'
+        assert_contains "$fixture/stdout.log" 'retired 1 agent worktree checkout(s)'
+      else
+        [ -f "$fixture/data/worktree/project/eligible/file.txt" ] || scenario_fail 'report changed checkout'
+        assert_contains "$fixture/data/log/opencode.log" 'later condition'
+        assert_contains "$fixture/stdout.log" "at $fixture/data/log/opencode.log"
+      fi
+    done
+  done
+}
+
+test_failed_discovery_selects_no_checkout() {
+  local mode output fixture root
+  local -a args
+  for mode in report repair; do
+    for output in empty partial; do
+      fixture=$(make_fixture)
+      make_linked_worktrees "$fixture" first second
+      install_fault_wrappers "$fixture"
+      root=$fixture/data/worktree
+      printf 'later condition\n' >"$fixture/data/log/opencode.log"
+      args=()
+      [ "$mode" != repair ] || args=(--fix --clear-logs --days 0)
+      [ "$output" != empty ] || output=''
+      [ "$output" != partial ] || output="$root/project/first"
+
+      assert_fails_with_status 1 invoke_doctor "$fixture" \
+        FAULT_FIND="$(table_row "$root" discovery "$output")" "${args[@]}"
+
+      [ -f "$root/project/first/file.txt" ] || scenario_fail 'partial discovery retired a checkout'
+      [ -f "$root/project/second/file.txt" ] || scenario_fail 'discovery failure retired an unlisted checkout'
+      assert_contains "$fixture/stderr.log" "could not discover checkouts at $root"
+      assert_not_contains "$fixture/stdout.log" 'eligible checkouts'
+      assert_not_contains "$fixture/stdout.log" 'agent worktree checkouts'
+      assert_contains "$fixture/stdout.log" "at $fixture/data/log/opencode.log"
+      if [ "$mode" = repair ]; then
+        [ ! -e "$fixture/data/log/opencode.log" ] || scenario_fail 'later repair did not run'
+      fi
+    done
+  done
+}
+
 test_report_names_worktree_checkouts_without_retiring_them() {
   local fixture root
   fixture=$(make_fixture)
@@ -1502,18 +1860,17 @@ test_report_names_worktree_checkouts_without_retiring_them() {
   invoke_doctor "$fixture"
 
   assert_contains "$fixture/stdout.log" 'agent worktree checkouts: 5'
-  assert_contains "$fixture/stdout.log" 'retired checkouts (idle for 7 days): 2'
+  assert_contains "$fixture/stdout.log" 'eligible checkouts (idle for 7 days): 2'
   # live-worktree is not a Git checkout, so nothing here can judge it.
-  assert_contains "$fixture/stdout.log" 'checkouts nothing here can judge, and so keeps: 1'
-  assert_contains "$fixture/stderr.log" "worktree holds work that is not on a remote: $root/unpushed"
-  assert_contains "$fixture/stderr.log" "worktree holds work that is not on a remote: $root/dirty"
+  assert_contains "$fixture/stdout.log" 'preserved checkouts: 3'
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/unpushed: HEAD commits absent from the locally recorded upstream"
+  assert_contains "$fixture/stdout.log" "preserved checkout $root/dirty: tracked or non-ignored untracked changes"
   [ -d "$root/pushed" ] || scenario_fail 'a report must not retire anything'
 }
 
-# Only the checkout whose every byte exists on the origin goes. An unpushed
-# commit and an uncommitted change are both work that exists nowhere else, and
-# a retention window has no standing to discard either.
-test_fix_retires_only_reconstructible_worktree_checkouts() {
+# An eligible linked checkout goes; unpublished commits and local changes
+# survive regardless of the retention window.
+test_fix_retires_only_eligible_linked_checkouts() {
   local fixture root
   fixture=$(make_fixture)
   make_worktree_checkouts "$fixture"
@@ -1560,7 +1917,7 @@ scenario_run 'a repair retires only idle artifact directories' test_fix_retires_
 scenario_run 'zero retention retires every artifact directory' test_days_zero_retires_every_artifact_directory
 scenario_run 'a repair removes only workspaces whose directory is gone' test_fix_removes_only_workspaces_whose_directory_is_gone
 scenario_run 'a report names worktree checkouts without retiring them' test_report_names_worktree_checkouts_without_retiring_them
-scenario_run 'a repair retires only reconstructible worktree checkouts' test_fix_retires_only_reconstructible_worktree_checkouts
+scenario_run 'a repair retires only eligible linked checkouts' test_fix_retires_only_eligible_linked_checkouts
 scenario_run 'a repair reports only the artifacts it could remove' test_fix_reports_only_the_artifacts_it_could_remove
 scenario_run 'a repair reaps a process left inside a worktree' test_fix_reaps_a_process_left_inside_a_worktree
 scenario_run 'a repair refuses while the database is held' test_fix_refuses_while_the_database_is_held
@@ -1587,9 +1944,31 @@ scenario_run 'a retired linked worktree leaves no registration' test_a_retired_l
 scenario_run 'an unidentified owner keeps the linked checkout' test_an_unidentified_owner_keeps_the_linked_checkout
 scenario_run 'a failed registration cleanup keeps the retirement and fails' test_a_failed_registration_cleanup_keeps_the_retirement_and_fails
 scenario_run 'a registration left behind is named only by the run that knew it' test_a_registration_left_behind_is_named_only_by_the_run_that_knew_it
-scenario_run 'a retired clone owes no registration cleanup' test_a_retired_clone_owes_no_registration_cleanup
+scenario_run 'an independent clone is preserved' test_an_independent_clone_is_preserved
 scenario_run 'a kept snapshot parent does not undo the retirement' test_a_kept_snapshot_parent_does_not_undo_the_retirement
 scenario_run 'a partial removal is not resumed by a later run' test_a_partial_removal_is_not_resumed_by_a_later_run
 scenario_run 'a fatal condition still stops the run' test_a_fatal_condition_still_stops_the_run
+
+scenario_run 'failed status preserves the checkout and continues' test_failed_observation_preserves_the_checkout_and_continues 'Git status' status ' M file.txt'
+scenario_run 'failed history preserves the checkout and continues' test_failed_observation_preserves_the_checkout_and_continues 'Git history' log 'abc123 local work'
+scenario_run 'failed age inspection preserves the checkout and continues' test_failed_observation_preserves_the_checkout_and_continues 'filesystem age' age recent-file
+scenario_run 'failed checkout identification is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git checkout identification' --is-inside-work-tree true
+scenario_run 'failed HEAD inspection is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git HEAD' symbolic-ref refs/heads/failed
+scenario_run 'failed upstream inspection is not ordinary preservation' test_failed_observation_preserves_the_checkout_and_continues 'Git upstream' for-each-ref refs/heads/failed:refs/remotes/origin/main
+scenario_run 'failed owner identification preserves the checkout and continues' test_failed_observation_preserves_the_checkout_and_continues 'its Git owner could not be identified' --git-common-dir /partial/git-dir
+scenario_run 'failed discovery selects no checkout' test_failed_discovery_selects_no_checkout
+
+scenario_run 'clones keep other branches and stashes' test_clones_keep_other_branches_and_stashes
+scenario_run 'retiring a linked checkout preserves the owners work' test_retiring_a_linked_checkout_preserves_the_owners_work
+scenario_run 'ordinary preservation survives zero days' test_ordinary_preservation_survives_zero_days
+scenario_run 'offline report preserves the index and ignores ignored files' test_offline_report_preserves_the_index_and_ignores_ignored_files
+scenario_run 'artifact activity keeps a checkout recent' test_artifact_activity_keeps_a_checkout_recent
+scenario_run 'empty checkout roots are normal' test_empty_checkout_roots_are_normal
+scenario_run 'failed owner verification is a failure even with zero days' test_failed_owner_verification_is_a_failure_even_with_zero_days
+
+scenario_run 'zero days bypasses only the age observation' test_zero_days_bypasses_only_the_age_observation
+scenario_run 'an owner inside the checkout inventory is not external' test_an_owner_inside_the_checkout_inventory_is_not_external
+
+scenario_run 'an unreadable checkout fails instead of looking non-Git' test_an_unreadable_checkout_fails_instead_of_looking_non_git
 
 scenario_finish

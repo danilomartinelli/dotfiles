@@ -104,6 +104,13 @@ The confirmed removal of a directory selected for an explicitly requested
 runtime repair. Distinct from eligibility for removal and from maintenance
 that remains after the directory is gone.
 
+**Checkout eligibility**:
+The permission for an agent checkout to enter Directory retirement, based on
+successfully observed evidence of its work and inactivity. It is not a promise
+that every byte has another copy: ignored files and changes to remote history
+since the last local observation are outside that claim.
+_Avoid_: reconstructible checkout, backed-up checkout
+
 ### Delegation
 
 **Agent role**:
