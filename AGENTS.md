@@ -26,6 +26,23 @@ reviewers, approvers, teams, or external stakeholders.
 Explicit user instructions take precedence. For a file below a nested
 `AGENTS.md`, also follow the closest applicable instructions.
 
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues for `danilomartinelli/dotfiles`, managed
+with `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels already present in GitHub.
+See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout: root `GLOSSARY.md` and `docs/adr/`.
+See `docs/agents/domain.md`.
+
 ## Repository map
 
 ```text
