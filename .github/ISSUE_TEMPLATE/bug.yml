@@ -1,0 +1,50 @@
+name: Bug report
+description: Something in the setup, a command, or shell startup is broken.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: >-
+        The command or step you ran and what it did. Paste the full error
+        output, with any account identifiers, hostnames, or secrets removed.
+      placeholder: "`dot` stopped in the homebrew topic with ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The commands that show the problem, from a fresh shell.
+      render: shell
+    validations:
+      required: false
+  - type: input
+    id: area
+    attributes:
+      label: Topic or command
+      description: The topic directory, `bin/` command, or Zsh function involved.
+      placeholder: homebrew, dot, zsh startup
+    validations:
+      required: false
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 26.0, Apple silicon
+    validations:
+      required: false
+  - type: input
+    id: commit
+    attributes:
+      label: Dotfiles commit
+      description: The output of `git -C ~/.dotfiles rev-parse --short HEAD`.
+    validations:
+      required: false

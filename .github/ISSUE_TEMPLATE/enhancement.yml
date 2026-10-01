@@ -1,0 +1,33 @@
+name: Enhancement
+description: Add, change, or remove something the setup declares.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing, slow, or awkward today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: The behavior you want, and any alternative you considered.
+    validations:
+      required: true
+  - type: dropdown
+    id: owner
+    attributes:
+      label: Owning source
+      description: Where the change would be declared.
+      options:
+        - Homebrew declaration (Brewfile)
+        - Mise runtime or CLI (mise/config.toml)
+        - macOS preference (_macos/defaults.tsv)
+        - Topic configuration or installer
+        - Zsh startup, command, or function
+        - Coding-agent configuration
+        - Not sure
+    validations:
+      required: true

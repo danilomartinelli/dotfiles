@@ -430,18 +430,26 @@ _scripts/test link_config
 Run applicable static checks:
 
 ```bash
-git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
   | xargs -0 shellcheck
-git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
   | xargs -0 shfmt -d -i 2 -ci -bn
-git ls-files -z '*.zsh' | xargs -0 zsh -n
+git ls-files -z -- '*.zsh' | xargs -0 -n1 zsh -n
 while IFS= read -r -d '' markdown_path; do
   [ ! -f "$markdown_path" ] || mdformat --check "$markdown_path"
 done < <(
-  git ls-files -z --cached --others --exclude-standard -- '*.md'
+  git ls-files -z --cached --others --exclude-standard -- '*.md' ':!.agents/'
 )
 git diff --check
 ```
+
+`zsh -n` reads one script and treats any further path as that script's
+argument, so each file needs its own invocation. The agent skills under
+`.agents/` are upstream payloads recorded in `skills-lock.json`; the checks
+skip them rather than reformat what the next skills update would restore.
+
+`.github/workflows/ci.yml` runs the same checks and `_scripts/test` on macOS for
+every pull request and every push to `main`. Change the two together.
 
 All applicable formatters, linters, and tests must finish without errors or
 warnings introduced by the change.

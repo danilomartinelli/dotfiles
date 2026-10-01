@@ -33,6 +33,7 @@ dotfiles/
 ├── bin/                  # Public executables added to PATH
 ├── functions/            # Public Zsh autoload functions
 ├── tests/                # Isolated behavioral and contract tests
+├── .github/              # CI workflow, issue forms, PR template
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
 ├── <topic>/              # Tool-specific shell files and optional installer
@@ -187,6 +188,10 @@ Run all applicable static checks from `CODING_STANDARDS.md`. At minimum, review
 `git diff --check`; lint and format changed Shell, Zsh, Markdown, JSON/JSONC,
 and Nix files with their declared repository tools. Never run `shfmt` on
 Zsh-only syntax.
+
+`.github/workflows/ci.yml` runs those static checks and `_scripts/test` on
+macOS for every pull request and push to `main`. A local run is still required;
+CI confirms it on a clean machine.
 
 ## Documentation ownership
 
