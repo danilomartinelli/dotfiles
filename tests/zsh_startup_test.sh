@@ -19,6 +19,70 @@ BREW_PREFIX="$TEST_ROOT/homebrew"
 MAIN_ARTIFACTS="$TEST_ROOT/main"
 OPTIONAL_ARTIFACTS="$TEST_ROOT/optional"
 AGENT_ARTIFACTS="$TEST_ROOT/agent"
+LOCALE_HOME="$TEST_ROOT/locale-home"
+
+mkdir -p "$LOCALE_HOME"
+ln -s "$REPOSITORY_ROOT/zsh/zshenv.symlink" "$LOCALE_HOME/.zshenv"
+
+# A child process checks that the locale is exported, without loading .zshrc.
+scenario_write_file "$TEST_ROOT/locale.sh" <<'EOF'
+printf '%s\n' "${LC_MESSAGES-unset}|$LANG|$LC_TIME"
+EOF
+
+test_conductor_shells_export_english_messages() {
+  local mode
+  for mode in -c -ilc; do
+    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+    scenario_capture "$TEST_ROOT/locale-conductor" env -i \
+      HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb \
+      LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 \
+      __CFBundleIdentifier=com.conductor.app \
+      "$ZSH_BIN" -d "$mode" '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
+    assert_equal 'C|pt_BR.UTF-8|pt_BR.UTF-8' \
+      "$(cat "$TEST_ROOT/locale-conductor/stdout.log")" 'Conductor message locale'
+    assert_empty "$TEST_ROOT/locale-conductor/stderr.log"
+  done
+}
+
+test_other_shells_preserve_message_locale() {
+  local bundle messages
+  for bundle in '' com.apple.Terminal; do
+    for messages in unset pt_BR.UTF-8; do
+      local -a startup=(env -i
+        HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin
+        LANG=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 "__CFBundleIdentifier=$bundle")
+      if [ "$messages" != unset ]; then
+        startup+=("LC_MESSAGES=$messages")
+      fi
+      # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+      scenario_capture "$TEST_ROOT/locale-other" "${startup[@]}" \
+        "$ZSH_BIN" -d -c '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
+      assert_equal "$messages|pt_BR.UTF-8|pt_BR.UTF-8" \
+        "$(cat "$TEST_ROOT/locale-other/stdout.log")" 'non-Conductor message locale'
+      assert_empty "$TEST_ROOT/locale-other/stderr.log"
+    done
+  done
+}
+
+test_conductor_git_reports_missing_upstream_in_english() {
+  local git_bin
+  git_bin=$(command -v git)
+  scenario_write_file "$TEST_ROOT/git-upstream.zsh" <<'EOF'
+set -e
+"$1" init -q -b locale-test "$HOME/repository"
+"$1" -C "$HOME/repository" -c user.name=Fixture -c user.email=fixture@example.invalid \
+  -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m Fixture
+"$1" -C "$HOME/repository" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}'
+EOF
+  assert_fails_with_status 128 scenario_capture "$TEST_ROOT/locale-git" env -i \
+    HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin \
+    LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 \
+    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    __CFBundleIdentifier=com.conductor.app \
+    "$ZSH_BIN" -d "$TEST_ROOT/git-upstream.zsh" "$git_bin"
+  assert_empty "$TEST_ROOT/locale-git/stdout.log"
+  assert_contains "$TEST_ROOT/locale-git/stderr.log" "no upstream configured for branch 'locale-test'"
+}
 
 mkdir -p \
   "$FIXTURE/alpha/_private" \
@@ -431,6 +495,9 @@ EOF
 }
 
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
+scenario_run 'Conductor exports English messages in command and login shells' test_conductor_shells_export_english_messages
+scenario_run 'other shells preserve their message locale' test_other_shells_preserve_message_locale
+scenario_run 'Conductor Git reports a missing upstream in English' test_conductor_git_reports_missing_upstream_in_english
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
 scenario_run 'coding agent shells keep the standard ls and cat' test_agent_shells_keep_standard_file_commands
 scenario_run 'nested topic additions, renames and removals refresh cached startup' \

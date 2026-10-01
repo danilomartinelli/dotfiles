@@ -1,0 +1,5 @@
+# Conductor 0.93.3 parses Git diagnostics in English, including missing upstreams.
+# Keep this early, silent setup available to its non-interactive shells too.
+if [[ ${__CFBundleIdentifier:-} == com.conductor.app ]]; then
+  export LC_MESSAGES=C
+fi

@@ -556,6 +556,12 @@ phases so failures have clear ownership.
 
 ### Zsh loading order
 
+`zsh/zshenv.symlink` is linked as `~/.zshenv` and sets `LC_MESSAGES=C` only
+when `__CFBundleIdentifier=com.conductor.app`. This keeps Git diagnostics in
+English for Conductor 0.93.3's parser, including the missing-upstream error,
+without changing `LANG` or other locale categories. It runs in non-interactive
+shells too and leaves shells from other apps unchanged.
+
 `zsh/zshrc.symlink` resolves the physical checkout and loads
 `zsh/_startup.zsh` once. Startup then:
 
@@ -616,7 +622,12 @@ precedence.
 - **Conductor** links `~/.conductor/settings.toml`, the user layer its Settings
   window writes. This repository's own `.conductor/settings.toml` adds a run
   script for `_scripts/test`; Conductor reads it from the default branch on the
-  remote, so a change to it applies once merged.
+  remote, so a change to it applies once merged. The Git message workaround is
+  owned by `zsh/zshenv.symlink` (see [Zsh loading order](#zsh-loading-order)).
+  When replacing an existing local `~/.zshenv`, use the linker's backup option
+  and preserve any unrelated settings. Fully quit and reopen Conductor after
+  applying the change to refresh its
+  [captured shell environment](https://www.conductor.build/docs/reference/shells).
 - **OpenCode** runs from Mise, and the desktop app comes from the
   `opencode-desktop` cask. `opencode.jsonc` declares the models, the CodeGraph,
   Context7, Exa, grep.app and Argent MCP servers, and three plugins;
