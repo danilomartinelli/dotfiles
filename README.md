@@ -329,8 +329,10 @@ must not be committed.
 
 ## Public commands
 
-`bin/` is added to `PATH`. Executables named `git-*` can be called directly or
-through their preferred Git subcommand form.
+`bin/` is added to `PATH` ahead of Homebrew, so a package that ships a command
+of the same name, such as Graphviz's `dot`, cannot shadow one of these.
+Executables named `git-*` can be called directly or through their preferred Git
+subcommand form.
 
 ### General utilities
 

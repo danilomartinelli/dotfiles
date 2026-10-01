@@ -15,13 +15,16 @@ export HOMEBREW_PREFIX
 
 # Establish the portable baseline before topics extend it. Zsh's unique path
 # array removes repeated entries without changing the first entry's precedence.
+# The repository's own commands come first: Graphviz installs a `dot` of its
+# own, and behind Homebrew ours was never reached, so `dot` sat waiting for a
+# graph on stdin instead of updating anything.
 typeset -gU path
 path=(
+  "$DOTFILES_ROOT/bin"
   "$HOMEBREW_PREFIX/bin"
   "$HOMEBREW_PREFIX/sbin"
   /usr/local/bin
   /usr/local/sbin
-  "$DOTFILES_ROOT/bin"
   $path
 )
 export PATH
