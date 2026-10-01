@@ -27,15 +27,15 @@ Prompt each sub-agent with a separate technical brief (file paths, coupling deta
 - Agent 3: "Optimise for the most common caller: make the default case trivial."
 - Agent 4 (if applicable): "Design around ports & adapters for cross-seam dependencies."
 
-Include both [SKILL.md](SKILL.md) vocabulary and CONTEXT.md vocabulary in the brief so each sub-agent names things consistently with the architecture language and the project's domain language.
+Include both [SKILL.md](SKILL.md) vocabulary and GLOSSARY.md vocabulary in the brief so each sub-agent names things consistently with the architecture language and the project's domain language.
 
 Each sub-agent outputs:
 
 1. Interface (types, methods, params, plus invariants, ordering, error modes)
-1. Usage example showing how callers use it
-1. What the implementation hides behind the seam
-1. Dependency strategy and adapters (see [DEEPENING.md](DEEPENING.md))
-1. Trade-offs: where leverage is high, where it's thin
+2. Usage example showing how callers use it
+3. What the implementation hides behind the seam
+4. Dependency strategy and adapters (see [DEEPENING.md](DEEPENING.md))
+5. Trade-offs: where leverage is high, where it's thin
 
 ### 3. Present and compare
 
