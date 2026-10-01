@@ -319,6 +319,13 @@ the dependent installer.
   root, in the same change as the declaration. Never edit its versions,
   checksums, or generated structure by hand, and never commit the shape a plain
   `mise install` leaves.
+- Interactive upgrades use that generator against staged config and lock
+  copies, preserve channels and tool options, and verify that unselected lock
+  entries did not change. Publish declarations, lock, and rendered catalog only
+  after selected installs succeed and the source snapshot still matches.
+- Homebrew reconciliation uses `--no-upgrade`. Only an explicitly confirmed
+  selection may request new releases; never use an unqualified `brew upgrade`
+  or `mise upgrade` in the maintenance flow.
 - Keep other comments limited to ownership, compatibility, or non-obvious safety
   rationale, on their own line so they are not read as a catalog description.
 
@@ -412,6 +419,7 @@ it reads it from there rather than restating it.
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                               |
 | Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                               |
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                 |
+| Interactive upgrades and source preservation                    | `tests/software_upgrades_test.sh`                                                                            |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 
 `_scripts/test` runs every safe suite and returns a single verdict. It discovers
@@ -451,7 +459,10 @@ argument, so each file needs its own invocation. The agent skills under
 skip them rather than reformat what the next skills update would restore.
 
 `.github/workflows/ci.yml` runs the same checks and `_scripts/test` on macOS for
-every pull request and every push to `main`. Change the two together.
+every pull request and every push to `main`. Change the two together. Its check
+tools consume the repository's Mise lock, formatter extras have explicit pins,
+actions use full commit SHAs, and the runner uses a named macOS major. The
+hosted image and transitive language-package dependencies are not immutable.
 
 All applicable formatters, linters, and tests must finish without errors or
 warnings introduced by the change.

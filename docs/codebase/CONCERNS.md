@@ -7,9 +7,9 @@ operational boundaries.
 
 ## 1) Top Risks (Prioritized)
 
-| Severity                         | Concern                                                                                                          | Evidence                                                               | Impact                                                                    | Suggested action                                                                            |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Medium, reproducibility boundary | Homebrew declarations and CI lint installations are not locked to the same resolved versions as local Mise tools | `Brewfile`, `.gitignore`, `.github/workflows/ci.yml`, `mise/mise.lock` | Different installation dates can produce different packages/check results | Use the README's explicit version-policy distinction; record versions when diagnosing drift |
+| Severity                         | Concern                                                                                                         | Evidence                                                               | Impact                                                                                                        | Suggested action                                                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Medium, reproducibility boundary | Homebrew installations, hosted runner images, and transitive language-package dependencies are not fully frozen | `Brewfile`, `.gitignore`, `.github/workflows/ci.yml`, `mise/mise.lock` | New installations and transitive resolutions can still differ despite controlled upgrades and locked CI tools | Use the controlled-upgrade ADR and README boundaries when diagnosing drift |
 
 ### Resolved: nested Zsh cache invalidation
 
@@ -127,8 +127,9 @@ modules or tests. Current OpenCode link coverage is in
 - **Fixture convention:** failure controls and their consumers now agree on
   numeric `FAIL_*` values, with output/state supplied separately.
 - **Reproducibility:** the README now describes the actual declarative setup:
-  Mise installations are locked, while Homebrew and CI tooling remain floating.
-  No package-version policy was changed as part of this diagnosis.
+  Mise and CI validation tools share the lock, formatter extras are pinned, and
+  Homebrew upgrades require explicit selection. This subsequent policy decision
+  is recorded in `docs/adr/0001-controlled-software-upgrades.md`.
 - **Scanner expectations:** the generic upstream scanner does not recognize
   `Brewfile`, Mise or the shell entrypoints. The map supplements it with tracked
   source inventory; the vendored scanner was not changed.

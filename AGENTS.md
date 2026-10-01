@@ -105,8 +105,10 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Coding and validation rules                     | `CODING_STANDARDS.md`        |
 
 Never edit `mise/mise.lock` manually. Regenerate it with `mise lock --global`
-from the repository root and review the generated diff narrowly. `dot` installs
-with `--locked` and never writes it.
+from the repository root and review the generated diff narrowly. Normal
+reconciliation installs with `--locked` without rewriting it. Only explicitly
+selected interactive upgrades stage and regenerate the selected tools' lock
+entries before publishing their config, lock, and rendered catalog together.
 
 ## Core implementation contracts
 

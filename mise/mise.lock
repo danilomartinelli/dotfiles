@@ -422,6 +422,13 @@ backend = "pipx:mdformat"
 [tools."pipx:mdformat".options]
 uvx_args = "--with mdformat-gfm --with mdformat-frontmatter"
 
+[[tools."pipx:mdformat"]]
+version = "1.0.0"
+backend = "pipx:mdformat"
+
+[tools."pipx:mdformat".options]
+uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.1.2"
+
 [[tools.pnpm]]
 version = "12.8.1"
 backend = "aqua:pnpm/pnpm"

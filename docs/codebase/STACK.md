@@ -1,7 +1,7 @@
 # Technology Stack
 
 Source baseline: `9acba575`, inspected on 2026-10-01 and updated with the local
-cache and fixture corrections from that diagnosis. These documents describe
+cache/fixture corrections and the controlled-upgrade decision. These documents describe
 repository source; they do not establish installed versions or successful
 application to a Mac. `README.md` remains the public operating guide and
 `CODING_STANDARDS.md` remains normative.
@@ -17,8 +17,8 @@ application to a Mac. `README.md` remains the public operating guide and
 | Target platform     | macOS with Git and Xcode Command Line Tools; some individual helpers also handle non-Darwin hosts                     | `README.md`, `homebrew/install.sh`, `_scripts/installer-preamble.sh`                |
 
 Mise's checked-in lock resolves Node to `24.21.0`, Bun to `1.3.9`, and Python to
-`3.14.7`. These are provisioned development tools, not an application's runtime
-requirements. The Android system image and OpenCode native-binary repair name
+`3.14.7`. These are provisioned development tools. The upgrade coordinator and formatter
+plugin reconciliation also use the declared Python interpreter. The Android system image and OpenCode native-binary repair name
 `arm64`; Aider's Python path names `/opt/homebrew`. See
 `_scripts/mobile-setup-android.sh`, `mise/install.sh`, and `mise/config.toml`.
 
@@ -55,8 +55,9 @@ explicitly distinguishes configuration reproducibility from a frozen machine ima
 | Custom Bash scenario harness          | Isolated behavioral tests                            | `tests/_support/shell-scenario.sh`                      |
 | CodeGraph                             | Per-checkout index; CLI declaration `1.6.1`          | `mise/config.toml`, `agents/instructions.md`            |
 
-CI installs its own linters and Markdown packages; the workflow does not install
-them from the Mise lock. See `TESTING.md` for the distinction.
+CI consumes the same Mise lock for its check tools and explicitly pins formatter
+extras, the Mise client, actions, and macOS major. The hosted image and transitive
+language-package dependencies still evolve. See `TESTING.md`.
 
 ## 4) Key Commands
 

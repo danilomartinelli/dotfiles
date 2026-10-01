@@ -66,9 +66,10 @@ test_trust_advisory_bundle_critical() {
     -- --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"
   assert_contains "$fixture/stderr.log" 'trust vultr/vultr-cli failed'
   assert_contains "$fixture/events.log" 'brew bundle --file'
+  assert_contains "$fixture/events.log" '--no-upgrade'
 
   fixture=$(make_fixture)
-  if invoke_bundle "$fixture" --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"; then
+  if invoke_bundle "$fixture" FAIL_BREW_BUNDLE=1 -- --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"; then
     return 1
   fi
 }

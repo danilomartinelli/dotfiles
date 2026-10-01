@@ -1,0 +1,540 @@
+#!/usr/bin/env python3
+"""Offer declared software upgrades after reconciling the committed environment."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import tomllib
+import urllib.request
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Candidate:
+    manager: str
+    name: str
+    current: str
+    latest: str
+    display_name: str = ""
+
+    def label(self):
+        major = ""
+        old = re.match(r"v?(\d+)\.", self.current)
+        new = re.match(r"v?(\d+)\.", self.latest)
+        if old and new and old[1] != new[1]:
+            major = " [major]"
+        return f"{self.manager:12} {self.display_name or self.name}  {self.current} -> {self.latest}{major}"
+
+
+def warn(message):
+    print(f"Warning: {message}", file=sys.stderr)
+
+
+def run(args, *, cwd, env, statuses=(0,), timeout=180):
+    result = subprocess.run(
+        args, cwd=cwd, env=env, text=True, capture_output=True, timeout=timeout
+    )
+    if result.returncode not in statuses:
+        raise RuntimeError(f"{' '.join(args)} failed: {result.stderr.strip()}")
+    if result.stderr.strip():
+        warn(result.stderr.strip())
+    return result.stdout
+
+
+def read_toml(path):
+    return tomllib.loads(path.read_text())
+
+
+def execute(args, *, cwd, env):
+    # Installs can need sudo and take minutes. Keep their progress and terminal
+    # interaction visible instead of capturing it like a discovery query.
+    result = subprocess.run(args, cwd=cwd, env=env)
+    if result.returncode:
+        raise RuntimeError(
+            f"{' '.join(args)} failed; earlier upgrades may already have completed"
+        )
+
+
+def requested(value):
+    version = value.get("version") if isinstance(value, dict) else value
+    if not isinstance(version, str):
+        raise ValueError("interactive upgrades require one version per declaration")
+    return version
+
+
+def exact(version):
+    return bool(re.fullmatch(r"v?\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", version))
+
+
+def mise_environment(root, env):
+    return {
+        **env,
+        "MISE_CONFIG_DIR": str(root / "mise"),
+        "MISE_GLOBAL_CONFIG_FILE": str(root / "mise/config.toml"),
+        "MISE_TRUSTED_CONFIG_PATHS": str(root / "mise"),
+    }
+
+
+def brew_candidates(root, brew, env):
+    candidates = []
+    for kind, key in (("formula", "formulae"), ("cask", "casks")):
+        names = run(
+            [brew, "bundle", "list", f"--{kind}", f"--file={root / 'Brewfile'}"],
+            cwd=root,
+            env=env,
+        ).splitlines()
+        if not names:
+            continue
+        args = [brew, "outdated", "--json=v2", f"--{kind}"]
+        if kind == "cask":
+            args.append("--greedy")
+        # Named outdated queries return 1 when updates exist. Malformed or
+        # missing JSON remains an error rather than an empty candidate set.
+        data = json.loads(run(args + names, cwd=root, env=env, statuses=(0, 1)))
+        for item in data[key]:
+            matches = [
+                name
+                for name in names
+                if name == item["name"] or name.split("/")[-1] == item["name"]
+            ]
+            if len(matches) != 1:
+                raise ValueError(
+                    f"undeclared or ambiguous Homebrew candidate: {item['name']}"
+                )
+            if item.get("pinned"):
+                print(f"Keeping Homebrew pin: {item['name']}")
+                continue
+            candidates.append(
+                Candidate(
+                    f"brew-{kind}",
+                    matches[0],
+                    ", ".join(item["installed_versions"]),
+                    item["current_version"],
+                )
+            )
+    return candidates
+
+
+def mas_candidates(root, env):
+    # Bundle's --mas list contains display names, not the IDs that mas uses.
+    # Match this repository's literal declarations, never evaluate Brewfile Ruby.
+    ids = set(
+        re.findall(
+            r"^mas\s+['\"][^'\"]+['\"],\s*id:\s*(\d+)\s*(?:#.*)?$",
+            (root / "Brewfile").read_text(),
+            re.MULTILINE,
+        )
+    )
+    if not ids:
+        return []
+    output = run(
+        ["mas", "outdated", "--inaccurate", *sorted(ids)],
+        cwd=root,
+        env={**env, "MAS_NO_AUTO_INDEX": "1"},
+    )
+    candidates = []
+    for line in output.splitlines():
+        match = re.fullmatch(r"(\d+)\s+(.+?)\s+\((.+?)\s+->\s+(.+?)\)", line.strip())
+        if match and match[1] in ids:
+            candidates.append(
+                Candidate(
+                    "mas", match[1], match[3], match[4], f"{match[2]} ({match[1]})"
+                )
+            )
+    return candidates
+
+
+def mise_candidates(root, env):
+    tools = read_toml(root / "mise/config.toml")["tools"]
+    candidates = []
+    for bump in (False, True):
+        names = [
+            name for name, value in tools.items() if exact(requested(value)) == bump
+        ]
+        if not names:
+            continue
+        args = ["mise", "outdated", "--json"] + (["--bump"] if bump else []) + names
+        data = json.loads(run(args, cwd=root, env=mise_environment(root, env)))
+        for name, item in data.items():
+            if name not in names:
+                # Mise can report a short backend name (e.g. shellcheck).
+                matches = [n for n in names if n.split(":")[-1].split("/")[-1] == name]
+                if len(matches) != 1:
+                    raise ValueError(f"cannot identify Mise candidate {name}")
+                name = matches[0]
+            if item.get("current") and item.get("latest"):
+                if name == "npm:opencode-ai" and not item["latest"].startswith("1."):
+                    warn(
+                        "OpenCode major migration requires reviewing its auth plugin; skipped"
+                    )
+                    continue
+                candidates.append(
+                    Candidate("mise", name, item["current"], item["latest"])
+                )
+    return candidates
+
+
+def audit(root, brew, env, candidates):
+    print("\nVulnerability report (advisory; does not block upgrades)")
+    try:
+        output = run(
+            [
+                brew,
+                "vulns",
+                f"--brewfile={root / 'Brewfile'}",
+                "--deps",
+                "--list-skipped",
+                "--json",
+            ],
+            cwd=root,
+            env=env,
+            statuses=(0, 1),
+        )
+        report = json.loads(output)
+        for finding in report["findings"]:
+            for vuln in finding["vulnerabilities"]:
+                print(f"  Brew {finding['formula']} {finding['version']}: {vuln['id']}")
+        print(
+            f"  Brew: {len(report['findings'])} formula findings; "
+            f"skipped: {json.dumps(report['skipped_formulae'])}"
+        )
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        RuntimeError,
+        subprocess.TimeoutExpired,
+    ) as error:
+        warn(f"Homebrew vulnerability coverage unavailable: {error}")
+
+    # OSV accepts package ecosystem identities. The legacy Mise lock does not
+    # contain an auditable dependency graph; do not claim a transitive scan.
+    queries, labels, uncovered = [], [], []
+    tools = read_toml(root / "mise/config.toml")["tools"]
+    locked = read_toml(root / "mise/mise.lock")["tools"]
+    for name in tools:
+        ecosystem = (
+            "npm"
+            if name.startswith("npm:")
+            else "PyPI"
+            if name.startswith("pipx:")
+            else None
+        )
+        if ecosystem is None:
+            uncovered.append(name)
+            continue
+        entries = locked.get(name, [])
+        versions = {entry["version"] for entry in entries}
+        versions.update(
+            c.latest for c in candidates if c.manager == "mise" and c.name == name
+        )
+        for version in sorted(versions):
+            queries.append(
+                {
+                    "package": {"ecosystem": ecosystem, "name": name.split(":", 1)[1]},
+                    "version": version,
+                }
+            )
+            labels.append(f"{name} {version}")
+    if queries:
+        try:
+            request = urllib.request.Request(
+                "https://api.osv.dev/v1/querybatch",
+                data=json.dumps({"queries": queries}).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=30) as response:
+                results = json.load(response)["results"]
+            if len(results) != len(queries):
+                raise ValueError("incomplete OSV response")
+            count = 0
+            for label, result in zip(labels, results):
+                findings = result.get("vulns", [])
+                count += len(findings)
+                if findings:
+                    print(f"  {label}: {', '.join(v['id'] for v in findings)}")
+                if result.get("next_page_token"):
+                    warn(f"{label}: additional findings exist; report is incomplete")
+            print(
+                f"  OSV: {count} known findings across {len(queries)} direct npm/PyPI version queries."
+            )
+        except (OSError, ValueError, KeyError) as error:
+            warn(f"Mise vulnerability coverage unavailable: {error}")
+    print(
+        "  Not covered: casks, App Store apps, transitive Mise dependencies, "
+        "formatter extras, and " + ", ".join(uncovered)
+    )
+
+
+def choose(candidates, env):
+    rows = [f"{i}\t{c.label()}" for i, c in enumerate(candidates)]
+    picker_env = {**env, "FZF_DEFAULT_OPTS": "", "FZF_DEFAULT_OPTS_FILE": ""}
+    result = subprocess.run(
+        [
+            "fzf",
+            "--multi",
+            "--delimiter=\t",
+            "--with-nth=2..",
+            "--no-sort",
+            "--wrap",
+            "--bind=space:toggle,ctrl-a:select-all,ctrl-d:deselect-all",
+            "--header=Upgrades | Tab/Space: select | Ctrl-A: all | Enter: review | Esc: skip",
+            "--prompt=Upgrade> ",
+        ],
+        input="\n".join(rows),
+        text=True,
+        capture_output=True,
+        env=picker_env,
+    )
+    if result.returncode in (1, 130):
+        return []
+    if result.returncode != 0:
+        raise RuntimeError(f"upgrade picker failed: {result.stderr.strip()}")
+    selected = []
+    for row in result.stdout.splitlines():
+        if row not in rows:
+            raise ValueError("picker returned an unknown candidate")
+        candidate = candidates[int(row.split("\t", 1)[0])]
+        if candidate not in selected:
+            selected.append(candidate)
+    if not selected:
+        return []
+    print("\nSelected upgrades (required dependencies may also change):")
+    for candidate in selected:
+        print("  " + candidate.label())
+    return (
+        selected
+        if input("Apply selected upgrades? [y/N] ").strip().lower() in ("y", "yes")
+        else []
+    )
+
+
+def update_declarations(text, replacements):
+    """Change only version values in the repository's one-line tool declarations."""
+    lines, found, in_tools = [], set(), False
+    for line in text.splitlines(keepends=True):
+        if line.lstrip().startswith("["):
+            in_tools = line.strip() == "[tools]"
+        if in_tools and "=" in line and not line.lstrip().startswith("#"):
+            entry = tomllib.loads(line)
+            name = next(iter(entry))
+            if name in replacements:
+                prefix, value = line.split("=", 1)
+                if isinstance(entry[name], dict):
+                    value, count = re.subn(
+                        r'(\bversion\s*=\s*)"[^"\\]*"',
+                        lambda m: m[1] + json.dumps(replacements[name]),
+                        value,
+                        count=1,
+                    )
+                else:
+                    value, count = re.subn(
+                        r'^(\s*)"[^"\\]*"',
+                        lambda m: m[1] + json.dumps(replacements[name]),
+                        value,
+                        count=1,
+                    )
+                if count != 1:
+                    raise ValueError(f"unsupported declaration syntax: {name}")
+                line = prefix + "=" + value
+                found.add(name)
+        lines.append(line)
+    if found != set(replacements):
+        raise ValueError("a selected declaration disappeared")
+    return "".join(lines)
+
+
+def write_source(path, content):
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(content)
+        os.chmod(temporary, path.stat().st_mode & 0o777)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def apply_mise(root, env, selected):
+    paths = [Path("mise/config.toml"), Path("mise/mise.lock"), Path("README.md")]
+    original = {path: (root / path).read_bytes() for path in paths}
+    tools = tomllib.loads(original[paths[0]].decode())["tools"]
+    old_lock = tomllib.loads(original[paths[1]].decode())["tools"]
+    chosen = {c.name: c.latest for c in selected}
+    with tempfile.TemporaryDirectory(prefix="dotfiles-upgrade-") as temporary:
+        stage = Path(temporary)
+        (stage / "mise").mkdir()
+        for path, content in original.items():
+            (stage / path).write_bytes(content)
+        shutil.copyfile(root / "Brewfile", stage / "Brewfile")
+        stage_config = stage / paths[0]
+        stage_env = mise_environment(stage, env)
+        stage_config.write_text(
+            update_declarations(original[paths[0]].decode(), chosen)
+        )
+        run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
+        # Keep channels such as lts and temurin-25 while advancing their lock.
+        persistent = {
+            name: version if exact(requested(tools[name])) else requested(tools[name])
+            for name, version in chosen.items()
+        }
+        stage_config.write_text(
+            update_declarations(original[paths[0]].decode(), persistent)
+        )
+        run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
+        new_lock = read_toml(stage / paths[1])["tools"]
+        for name in old_lock.keys() | new_lock.keys():
+            if name in chosen:
+                # Mise owns backend defaults and platform-specific variants
+                # (Ruby, for example). Ask its resolver which version is active.
+                active = json.loads(
+                    run(
+                        ["mise", "ls", "--json", "--current", name],
+                        cwd=stage,
+                        env=stage_env,
+                    )
+                )
+                valid = [entry["version"] for entry in active] == [chosen[name]]
+            else:
+                valid = new_lock.get(name) == old_lock.get(name)
+            if not valid:
+                raise ValueError(
+                    f"lock changed outside the selection or missed its target: {name}"
+                )
+        run(
+            [str(root / "_scripts/render-software-catalog"), str(stage)],
+            cwd=stage,
+            env=env,
+        )
+        execute(["mise", "install", "--locked", *chosen], cwd=stage, env=stage_env)
+        if any(
+            (root / path).read_bytes() != content for path, content in original.items()
+        ):
+            raise RuntimeError(
+                "source changed during upgrade; installed tools were not activated; retry"
+            )
+        # Preserve the repository-owned files and global symlinks. Restore the
+        # source snapshot if publishing any file fails; installed copies remain.
+        written = []
+        try:
+            for path in paths:
+                write_source(root / path, (stage / path).read_bytes())
+                written.append(path)
+        except OSError:
+            for path in written:
+                write_source(root / path, original[path])
+            raise
+    print(
+        "Mise declarations, lock, and README updated; review the Git diff and commit when ready."
+    )
+    # The normal installer also repairs agent binaries after their postinstall.
+    execute([str(root / "mise/install.sh")], cwd=root, env=mise_environment(root, env))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--brew", required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    env = {
+        **os.environ,
+        "HOMEBREW_NO_AUTO_UPDATE": "1",
+        "HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK": "1",
+    }
+    candidates = []
+    for label, discover in (
+        ("Homebrew", lambda: brew_candidates(root, args.brew, env)),
+        ("App Store", lambda: mas_candidates(root, env)),
+        ("Mise", lambda: mise_candidates(root, env)),
+    ):
+        try:
+            candidates.extend(discover())
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            RuntimeError,
+            subprocess.TimeoutExpired,
+        ) as error:
+            warn(f"{label} update discovery unavailable: {error}")
+    audit(root, args.brew, env, candidates)
+    if not candidates:
+        print("No upgrade candidates found in the successfully queried declarations.")
+        return 0
+    print("\nAvailable upgrades:")
+    for candidate in candidates:
+        print("  " + candidate.label())
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        print("Non-interactive run: upgrades were not selected or applied.")
+        return 0
+    if not shutil.which("fzf"):
+        warn(
+            "fzf unavailable; no upgrades applied. Restore the declared fzf package and retry."
+        )
+        return 0
+    selected = choose(candidates, env)
+    if not selected:
+        print("No upgrades selected.")
+        return 0
+    # Requery the selected managers before any install. Homebrew and App Store
+    # install the current catalog version, so never knowingly apply a changed plan.
+    current = []
+    if any(c.manager.startswith("brew-") for c in selected):
+        current.extend(brew_candidates(root, args.brew, env))
+    if any(c.manager == "mas" for c in selected):
+        current.extend(mas_candidates(root, env))
+    if any(c.manager == "mise" for c in selected):
+        current.extend(mise_candidates(root, env))
+    if any(candidate not in current for candidate in selected):
+        raise RuntimeError(
+            "upgrade candidates changed while selecting; rerun dot to review them"
+        )
+    mise_selection = [c for c in selected if c.manager == "mise"]
+    if mise_selection:
+        apply_mise(root, env, mise_selection)
+    for candidate in selected:
+        if candidate.manager.startswith("brew-"):
+            kind = candidate.manager.removeprefix("brew-")
+            command = [args.brew, "upgrade", f"--{kind}"]
+            if kind == "cask":
+                command.append("--greedy")
+            execute(command + [candidate.name], cwd=root, env=env)
+        elif candidate.manager == "mas":
+            mas = shutil.which("mas")
+            if mas is None:
+                raise RuntimeError("mas became unavailable; restore it and retry")
+            command = (["sudo"] if os.geteuid() != 0 else []) + [
+                mas,
+                "upgrade",
+                "--inaccurate",
+                candidate.name,
+            ]
+            execute(command, cwd=root, env=env)
+    print(
+        "Selected upgrades completed. Package-manager operations are not an atomic rollback."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        RuntimeError,
+        subprocess.TimeoutExpired,
+    ) as error:
+        warn(str(error))
+        sys.exit(1)
+    except (KeyboardInterrupt, EOFError):
+        print("\nUpgrade interaction stopped.")
+        sys.exit(1)

@@ -30,6 +30,11 @@ values, not a live connectivity claim. Likewise, installing cloud/database CLIs
 in `Brewfile` or Mise does not make this repository an application connected to
 those services.
 
+The upgrade coordinator additionally queries OSV for direct npm/PyPI package
+versions. Reports are advisory and explicitly exclude unsupported ecosystems and
+transitive Mise dependencies. No vulnerability check is a CI gate. See
+`_scripts/upgrade-software` and the controlled-upgrade ADR.
+
 ## 2) Data Stores
 
 | Store                                            | Role                                   | Access layer                             | Key risk                                                  | Evidence                                                |
