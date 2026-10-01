@@ -378,8 +378,8 @@ test_link_tool_config_ignores_xdg_config_home() {
   scenario_capture "$home" env HOME="$home" XDG_CONFIG_HOME="$checkout/xdg" \
     "$checkout/sample/install.sh"
 
-  # The helper resolves through installer_config_dir, so ADR 0003 holds here
-  # too rather than only where a topic spells the resolver out.
+  # The helper resolves through installer_config_dir, so XDG_CONFIG_HOME is
+  # ignored here too rather than only where a topic spells the resolver out.
   assert_equal "$checkout/sample/settings.json" \
     "$(readlink "$home/.config/sampletool/settings.json")" \
     'linked tool config with XDG_CONFIG_HOME set'
@@ -417,7 +417,7 @@ test_config_dir_ignores_xdg_config_home() {
     "$checkout/sample/install.sh"
   # Deliberate, not an oversight: honouring XDG_CONFIG_HOME is each tool's fact
   # to state, and Zed hardcodes ~/.config/zed on macOS. This assertion is what
-  # keeps docs/adr/0003-tool-config-directories-are-not-xdg-derived.md true.
+  # keeps tool config directories from becoming XDG-derived.
   assert_equal "$home/.config/zed" "$(cat "$home/config_dir")" \
     'tool config directory with XDG_CONFIG_HOME set'
   [[ ! -e $checkout/xdg ]] \

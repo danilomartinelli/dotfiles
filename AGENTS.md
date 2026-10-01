@@ -33,7 +33,6 @@ dotfiles/
 ├── bin/                  # Public executables added to PATH
 ├── functions/            # Public Zsh autoload functions
 ├── tests/                # Isolated behavioral and contract tests
-├── docs/agents/          # Issue tracker, triage, and domain conventions
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
 ├── <topic>/              # Tool-specific shell files and optional installer
@@ -105,8 +104,7 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 - Read every tab-separated catalog *file* through `catalog_each_row` from
   `_scripts/catalog.sh`, which the preamble sources. No such consumer writes
   its own `read` loop. A catalog arriving as a command's stdout, such as
-  `_scripts/topic-catalog` output, is read directly; see
-  `docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md`.
+  `_scripts/topic-catalog` output, is read directly.
 - Do not duplicate checkout resolution, Darwin detection, dependency hints,
   output conventions, or conflict handling in individual topics.
 - Only `*.symlink` files and directories are linked automatically.
@@ -215,8 +213,7 @@ the same change as the public surface.
   repository. Any installer may repair safe links, directories, and
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
-  `_scripts/key-provisioning.sh`. See
-  `docs/adr/0011-topic-installers-do-not-create-credentials.md`.
+  `_scripts/key-provisioning.sh`.
 - Tracked Zed, OpenCode, Claude Code, Conductor and Kimi Code configuration
   must not contain plaintext credentials or pretend that settings interpolate
   `$VARIABLE` when they do not.

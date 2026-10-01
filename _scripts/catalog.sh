@@ -24,8 +24,7 @@
 # reason this module exists: a handler that runs duti or dockutil would
 # otherwise let that command consume the rows still to be read, and every
 # consumer had to rediscover the hazard and pick its own guard. It is also why
-# the catalog is a path and never stdin; see
-# docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md.
+# the catalog is a path and never stdin.
 #
 # The handler runs in the calling shell, so it may set variables the caller
 # reads afterwards. It must return zero: consumers run under `set -e`, and a
@@ -80,8 +79,7 @@ catalog_each_row() {
 #
 # A name is passed with its replacement rather than read out of the environment
 # on the caller's behalf. Indirect expansion needs `eval` under `set -u`, and
-# docs/adr/0002-one-reset-variable-for-run-once-steps.md already declined to put
-# that line in a module everything sources.
+# that line does not belong in a module everything sources.
 #
 # Names apply left to right, so a replacement may contain a token a later name
 # expands. No replacement is rescanned for the name that produced it.

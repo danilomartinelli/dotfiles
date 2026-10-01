@@ -219,8 +219,7 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
         # produce one: the single backup slot this policy owns is occupied, so
         # honouring the request would destroy the earlier backup. Reported as a
         # failure rather than a warning because exiting zero here told every
-        # caller the link existed — see
-        # docs/adr/0010-a-link-the-linker-could-not-make-is-a-failure.md.
+        # caller the link existed.
         if [ -e "$backup" ] || [ -L "$backup" ]; then
           installer_error "$target_path and $backup exist; cannot link $label"
           installer_hint "Move or remove $backup, then rerun"

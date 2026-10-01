@@ -24,8 +24,7 @@ fi
 # The declared layout wipes the Dock before rebuilding it, so it only runs on
 # the first apply (or when forced). Daily `dot` runs must never destroy manual
 # Dock arrangements — every other installer in this repo preserves user state.
-# Editing the catalog therefore does not reapply it; see
-# docs/adr/0004-a-catalog-edit-does-not-re-arm-the-dock-rebuild.md.
+# Editing the catalog therefore does not reapply it.
 installer_skip_if_applied dock "dock layout" "dock configured"
 
 WORKSPACE_ROOT=$(installer_workspace_root)

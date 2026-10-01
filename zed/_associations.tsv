@@ -11,7 +11,7 @@
 #
 # Applying this catalog is a run-once step, so editing a row changes what the
 # next apply would set without setting it. DOTFILES_RESET=zed-associations dot
-# applies it. See docs/adr/0005-file-type-associations-apply-once.md.
+# applies it.
 
 .txt	editor	report	-
 .md	editor	report	-

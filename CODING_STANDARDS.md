@@ -162,8 +162,7 @@ is reached. A `bin/` adapter or a `*.zsh` startup file is reached through
 `PATH`, so it sources `_scripts/adapter-checkout.sh` and resolves through
 `dotfiles-root.symlink`. A topic installer is always
 `<checkout>/<topic>/install.sh`, so the preamble resolves `$0/..` and consults
-no resolver. See
-`docs/adr/0009-checkout-resolution-has-two-spellings-on-purpose.md`.
+no resolver.
 
 `_scripts/link-config --status <source> <target>` reports what an existing
 target is — `current`, `conflict`, or `absent` — and changes nothing. It is how
@@ -173,8 +172,7 @@ derives that classification for itself.
 On the acting path the linker's exit status is its outcome: `0` when the target
 matches the declaration or the policy kept it deliberately, `1` when the link
 could not be made, and `2` for invalid usage or a removal it refuses to perform.
-A caller does not parse the prose to learn which happened. See
-`docs/adr/0010-a-link-the-linker-could-not-make-is-a-failure.md`.
+A caller does not parse the prose to learn which happened.
 
 Every tab-separated catalog file is read through `_scripts/catalog.sh`, which
 the preamble sources for installers and which `_macos/set-defaults.sh`,
@@ -203,11 +201,12 @@ component, so a checkout path spliced in raw is a value `jq` refuses to parse,
 and `tests/catalog_test.sh` holds the module to that.
 
 A catalog that arrives as a command's stdout rather than a file is read
-directly by its consumer. `_scripts/topic-catalog` output is the only one, and
-`docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md` records
-why routing it through the reader would cost the property the reader exists
-for. Widening a catalog past seven columns means widening the reader first; a
-wider row packs its tail into the last argument instead of failing.
+directly by its consumer. `_scripts/topic-catalog` output is the only one.
+Accepting stdin would surrender, for every consumer, the file descriptor 3 that
+lets a handler run `duti` or `dockutil` without consuming the remaining rows,
+and no consumer of that output runs such a handler. Widening a catalog past
+seven columns means widening the reader first; a wider row packs its tail into
+the last argument instead of failing.
 
 A catalog row that names behaviour binds to it by convention rather than by a
 `case` listing every pair, the way `_scripts/mobile-setup` composes
@@ -234,8 +233,7 @@ resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
 not reintroduce that variable in an installer, a `*.zsh` file, or a tracked
 config payload: whether a tool honours it is the tool's fact to state, and Zed
 does not on macOS. A single tool moves through its own variable, such as
-`SOPS_AGE_KEY_FILE`. See
-`docs/adr/0003-tool-config-directories-are-not-xdg-derived.md`.
+`SOPS_AGE_KEY_FILE`.
 
 A run-once step rebuilds state a person may have rearranged by hand, so it
 applies on first run only. Gate it with `installer_skip_if_applied` and record
@@ -254,8 +252,7 @@ it alone; no installer writes its own association loop. A row whose failure mode
 because Launch Services does not recognise every identifier on every macOS
 version, and only `report` rows are named and counted. Applying a catalog is a run-once
 step in every topic that claims file types, so editing a row changes what the
-next apply would set without setting it; `DOTFILES_RESET=<topic>-associations dot` applies it. See
-`docs/adr/0005-file-type-associations-apply-once.md`.
+next apply would set without setting it; `DOTFILES_RESET=<topic>-associations dot` applies it.
 
 A missing `duti` skips a topic's associations through
 `installer_optional_command` rather than stopping the run. A default
@@ -321,8 +318,7 @@ the dependent installer.
 - Regenerate `mise/mise.lock` with `mise lock --global` from the repository
   root, in the same change as the declaration. Never edit its versions,
   checksums, or generated structure by hand, and never commit the shape a plain
-  `mise install` leaves; see
-  `docs/adr/0020-dot-installs-what-the-mise-lock-records.md`.
+  `mise install` leaves.
 - Keep other comments limited to ownership, compatibility, or non-obvious safety
   rationale, on their own line so they are not read as a catalog description.
 

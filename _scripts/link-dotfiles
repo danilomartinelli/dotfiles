@@ -108,9 +108,9 @@ choose_link_action() {
 
 # This module decides *which* action a conflict gets — from a batch flag, a
 # remembered all-answer, or the prompt. The config linker performs it. Every
-# removal belongs to the linker, which is what ADR 0001 settled for installers
-# and what this caller now honours too: the linker refuses to clobber an
-# existing backup and guards the paths an unattended rm -rf must never take.
+# removal belongs to the linker, for installers and for this caller alike: the
+# linker refuses to clobber an existing backup and guards the paths an
+# unattended rm -rf must never take.
 link_action_policy() {
   case "$1" in
     overwrite) printf '%s\n' replace-confirmed ;;

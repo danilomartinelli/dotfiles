@@ -131,8 +131,7 @@ setup_gitconfig() {
 #
 # The rows are still read the way topic-catalog's stdout is read, not through
 # catalog_each_row: what changes here is where the classification comes from, not
-# which shape it has. See
-# docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md.
+# which shape it has.
 # install_topics executes column 2 of every installer row, so a supplied catalog
 # decides what this run runs. An exported value survives into a real bootstrap,
 # and nothing else here would notice, so every path it names must be inside the
