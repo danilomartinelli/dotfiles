@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The checks below are the static checks and the safe suite that
+# CODING_STANDARDS.md documents; change them together. Vendored agent skills
+# under .agents/ are upstream payloads recorded in skills-lock.json, so the
+# checks skip them.
+jobs:
+  check:
+    # The fixtures fake every external command but assume the macOS userland
+    # the repository configures.
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install linters
+        run: brew install shellcheck shfmt
+
+      - name: ShellCheck
+        run: |
+          git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
+            | xargs -0 shellcheck
+
+      - name: shfmt
+        run: |
+          git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
+            | xargs -0 shfmt -d -i 2 -ci -bn
+
+      # zsh -n reads one script and treats further paths as its arguments, so
+      # each file gets its own invocation.
+      - name: Zsh syntax
+        run: git ls-files -z -- '*.zsh' | xargs -0 -n1 zsh -n
+
+      # Bare mdformat damages GFM tables and frontmatter; the plugins are the
+      # ones mise/config.toml declares.
+      - name: Markdown format
+        run: |
+          python3 -m venv "$RUNNER_TEMP/mdformat"
+          "$RUNNER_TEMP/mdformat/bin/pip" install --quiet \
+            mdformat mdformat-gfm mdformat-frontmatter
+          git ls-files -z -- '*.md' ':!.agents/' \
+            | xargs -0 "$RUNNER_TEMP/mdformat/bin/mdformat" --check
+
+      - name: Tests
+        run: _scripts/test

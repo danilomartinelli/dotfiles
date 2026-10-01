@@ -609,21 +609,25 @@ repository-wide work.
 Static checks used by this repository include:
 
 ```bash
-git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
   | xargs -0 shellcheck
-git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' \
+git grep -IlzE '^#!.*(bin/sh|bash)([[:space:]]|$)' -- ':!*.md' ':!.agents/' \
   | xargs -0 shfmt -d -i 2 -ci -bn
-git ls-files -z '*.zsh' | xargs -0 zsh -n
+git ls-files -z -- '*.zsh' | xargs -0 -n1 zsh -n
 while IFS= read -r -d '' markdown_path; do
   [ ! -f "$markdown_path" ] || mdformat --check "$markdown_path"
 done < <(
-  git ls-files -z --cached --others --exclude-standard -- '*.md'
+  git ls-files -z --cached --others --exclude-standard -- '*.md' ':!.agents/'
 )
 git diff --check
 ```
 
 The Mise-managed `mdformat` includes the GFM and frontmatter plugins required
-to preserve tables and skill metadata.
+to preserve tables and skill metadata. The checks skip the vendored agent
+skills under `.agents/`, which `skills-lock.json` records.
+
+GitHub Actions runs the same checks and `_scripts/test` on macOS for every pull
+request and every push to `main`; see `.github/workflows/ci.yml`.
 
 ## Extend the setup
 
