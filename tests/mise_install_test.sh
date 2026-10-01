@@ -55,6 +55,17 @@ test_a_lock_behind_its_declarations_names_the_refresh() {
   assert_not_contains "$fixture/events.log" 'mise prune'
 }
 
+# Pruning rewrites the lock in the install shape just as a plain install
+# does, so the run that never writes the lock turns lockfile writes off for it.
+test_pruning_leaves_the_lock_alone() {
+  local fixture
+  fixture=$(new_fixture)
+
+  invoke_mise "$fixture"
+
+  assert_contains "$fixture/events.log" 'mise prune lockfile=false'
+}
+
 # The postinstall repairs look their tool up with `mise where`, which fails for a
 # tool that is not installed. Under `set -e` that substitution used to end the
 # run on the spot, silently and with a failing status, so a machine without
@@ -76,6 +87,7 @@ scenario_run 'the run installs what the lock records' \
   test_the_run_installs_what_the_lock_records
 scenario_run 'a lock behind its declarations names the refresh' \
   test_a_lock_behind_its_declarations_names_the_refresh
+scenario_run 'pruning leaves the lock alone' test_pruning_leaves_the_lock_alone
 scenario_run 'an absent agent CLI does not stop the run' \
   test_an_absent_agent_cli_does_not_stop_the_run
 

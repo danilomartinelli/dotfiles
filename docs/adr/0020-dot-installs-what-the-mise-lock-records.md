@@ -41,6 +41,10 @@ the error names `mise lock --global`. That is the failure the lock exists to
 catch: before, the install resolved the change silently and the lock drifted
 from what had been reviewed.
 
+`mise prune` writes the lock in that same install shape, so the installer
+prunes with `MISE_LOCKFILE=false`; without it, every `dot` dropped the Erlang
+variant again even though the install itself was locked.
+
 A plain `mise install` or `mise upgrade` typed in a shell still rewrites the
 lock in its own shape. That is not a run this repository owns;
 `mise lock --global` settles the file again. The `mi` alias stays a plain

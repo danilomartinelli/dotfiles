@@ -92,7 +92,7 @@ EOF
 # Java path through FAKE_MISE_JAVA_HOME so this never exposes a host
 # installation to a test; every other tool is not installed, so `mise where`
 # fails for it as Mise does. FAKE_MISE_INSTALL_STATUS is the exit status of
-# `mise install`.
+# `mise install`, and `mise prune` records whether lockfile writes were on.
 # Usage: stub_mise <bin-dir>
 stub_mise() {
   _stub_write "$1/mise" <<'EOF'
@@ -102,7 +102,10 @@ case "$*" in
   'where java')
     printf '%s\n' "$FAKE_MISE_JAVA_HOME"
     ;;
-  'trust '* | 'prune '*) ;;
+  'trust '*) ;;
+  'prune '*)
+    printf 'mise prune lockfile=%s\n' "${MISE_LOCKFILE-unset}" >>"$SCENARIO_EVENT_LOG"
+    ;;
   'install' | 'install '*)
     exit "${FAKE_MISE_INSTALL_STATUS:-0}"
     ;;
