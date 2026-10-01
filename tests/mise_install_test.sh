@@ -47,7 +47,7 @@ test_a_lock_behind_its_declarations_names_the_refresh() {
   local fixture status=0
   fixture=$(new_fixture)
 
-  invoke_mise "$fixture" FAKE_MISE_INSTALL_STATUS=1 || status=$?
+  invoke_mise "$fixture" FAIL_MISE_INSTALL=1 || status=$?
 
   assert_equal 1 "$status" 'failed install status'
   assert_contains "$fixture/stderr.log" 'Failed to install Mise runtimes'

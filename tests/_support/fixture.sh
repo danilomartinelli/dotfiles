@@ -34,7 +34,8 @@ installer_fixture() {
 
 # Run a command against a fixture, capturing stdout, stderr, and the event log.
 #
-#   fixture_run "$fixture" FAIL_DUTI=zip -- "$REPOSITORY_ROOT/skim/install.sh"
+#   fixture_run "$fixture" FAIL_DUTI=1 FAKE_DUTI_IDENTIFIERS=zip \
+#     -- "$REPOSITORY_ROOT/skim/install.sh"
 #
 # Everything before `--` is a KEY=value passed to this run only. That is the
 # whole point: failure injection used to be `export FAIL_X` before the call and

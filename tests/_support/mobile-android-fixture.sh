@@ -147,7 +147,7 @@ if [ "${FAKE_SDKMANAGER_REJECT_STDIN:-0}" -eq 1 ]; then
     exit 66
   fi
 fi
-exit "${FAKE_SDKMANAGER_STATUS:-0}"
+exit "${FAIL_SDKMANAGER:-0}"
 EOF
 
   scenario_write_executable "$root/cmdline-tools/latest/bin/avdmanager" <<'EOF'
@@ -159,8 +159,8 @@ if [ -n "${FAKE_EXPECT_JAVA_HOME:-}" ] && [ "${JAVA_HOME:-}" != "$FAKE_EXPECT_JA
 fi
 case "$1 ${2-}" in
   'list device')
-    if [ "${FAKE_AVDMANAGER_LIST_STATUS:-0}" -ne 0 ]; then
-      exit "$FAKE_AVDMANAGER_LIST_STATUS"
+    if [ "${FAIL_AVDMANAGER_LIST:-0}" -ne 0 ]; then
+      exit "$FAIL_AVDMANAGER_LIST"
     fi
     cat <<'DEVICES'
 id: 28 or "pixel"
@@ -197,7 +197,7 @@ DEVICES
     fi
     ;;
 esac
-exit "${FAKE_AVDMANAGER_STATUS:-0}"
+exit "${FAIL_AVDMANAGER:-0}"
 EOF
 
   mkdir -p "$root/licenses"

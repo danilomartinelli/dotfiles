@@ -170,7 +170,7 @@ test_a_bailed_run_leaves_the_step_armed() {
 test_individual_association_failures_are_aggregated() {
   local fixture
   fixture=$(make_fixture)
-  invoke_archiver "$fixture" FAIL_DUTI=public.zip-archive
+  invoke_archiver "$fixture" FAIL_DUTI=1 FAKE_DUTI_IDENTIFIERS=public.zip-archive
 
   assert_contains "$fixture/stderr.log" 'Failed to set Archiver as default for .zip'
   assert_contains "$fixture/stderr.log" \

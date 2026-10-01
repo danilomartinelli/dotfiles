@@ -2,7 +2,7 @@
 
 # dotfiles
 
-Personal, reproducible macOS setup for software development, operations, and
+Personal, declarative macOS setup for software development, operations, and
 infrastructure work.
 
 [![CI](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
@@ -153,6 +153,10 @@ macOS defaults.
 `Brewfile` is the source of truth for system packages and applications.
 `mise/config.toml` declares language runtimes and language-distributed CLIs;
 `mise/mise.lock` pins their resolved versions and checksums.
+
+Mise installs the versions recorded in that lock. Homebrew declarations remain
+unpinned, and updates can install newer packages. The repository reproduces the
+declared setup and configuration, not a frozen machine image.
 
 The tables below are rendered from those two files by
 `_scripts/render-software-catalog`, so a name, a version, a group, or a purpose
@@ -634,6 +638,10 @@ skills under `.agents/`, which `skills-lock.json` records.
 
 GitHub Actions runs the same checks and `_scripts/test` on macOS for every pull
 request and every push to `main`; see `.github/workflows/ci.yml`.
+
+CI installs ShellCheck and shfmt through Homebrew, and mdformat with its plugins
+through pip. Those versions are not taken from `mise/mise.lock`; record the
+local and CI tool versions when investigating a difference in check results.
 
 ## Extend the setup
 

@@ -373,7 +373,66 @@ test_agent_shells_keep_standard_file_commands() {
   done
 }
 
+test_nested_topic_changes_refresh_cached_startup() {
+  local fixture nested cache
+  fixture=$(scenario_tmpdir nested-cache)
+  nested="$FIXTURE/alpha/nested/deeper"
+  cache="$fixture/cache/dotfiles/topic-catalog${FIXTURE//\//%}"
+  mkdir -p "$nested" "$fixture/home"
+  ln -s "$FIXTURE/resolver" "$fixture/home/.dotfiles-root"
+
+  scenario_write_file "$fixture/start.zsh" <<'EOF'
+source "$STARTUP_FIXTURE_ROOT/zsh/zshrc.symlink" || exit 1
+print -r -- "nested=${STARTUP_NESTED:-absent}"
+EOF
+
+  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS
+    HOME="$fixture/home"
+    XDG_CACHE_HOME="$fixture/cache"
+    PATH="$STARTUP_PATH"
+    STARTUP_FIXTURE_ROOT="$FIXTURE"
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX"
+    "$ZSH_BIN" -d -f "$fixture/start.zsh")
+
+  scenario_capture "$fixture/initial" "${startup[@]}"
+  assert_contains "$fixture/initial/stdout.log" 'nested=absent'
+  [ -s "$cache" ] || scenario_fail 'startup did not populate the catalog cache'
+
+  # Only the directory changed by each operation may be newer than the cache.
+  # Fixed mtimes avoid sleeps and filesystem timestamp-resolution races.
+  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
+  touch -t 200001020000 "$cache"
+  scenario_write_file "$nested/added.zsh" <<'EOF'
+typeset -g STARTUP_NESTED=loaded
+EOF
+  scenario_capture "$fixture/added" "${startup[@]}"
+  assert_contains "$fixture/added/stdout.log" 'nested=loaded'
+
+  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
+  touch -t 200001020000 "$cache"
+  mv "$nested/added.zsh" "$nested/disabled.txt"
+  scenario_capture "$fixture/renamed" "${startup[@]}"
+  assert_contains "$fixture/renamed/stdout.log" 'nested=absent'
+  assert_empty "$fixture/renamed/stderr.log"
+
+  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
+  touch -t 200001020000 "$cache"
+  mv "$nested/disabled.txt" "$nested/restored.zsh"
+  scenario_capture "$fixture/restored" "${startup[@]}"
+  assert_contains "$fixture/restored/stdout.log" 'nested=loaded'
+
+  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
+  touch -t 200001020000 "$cache"
+  rm "$nested/restored.zsh"
+  scenario_capture "$fixture/removed" "${startup[@]}"
+  assert_contains "$fixture/removed/stdout.log" 'nested=absent'
+  assert_empty "$fixture/removed/stderr.log"
+}
+
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
 scenario_run 'coding agent shells keep the standard ls and cat' test_agent_shells_keep_standard_file_commands
+scenario_run 'nested topic additions, renames and removals refresh cached startup' \
+  test_nested_topic_changes_refresh_cached_startup
 scenario_finish

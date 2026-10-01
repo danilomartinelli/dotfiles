@@ -597,8 +597,10 @@ invoke_claim() {
 
 invoke_associations() {
   local checkout=$1
+  shift
   scenario_capture "$checkout/home" env \
     PATH="$checkout/home/fake-bin:/usr/bin:/bin" \
+    "$@" \
     "$checkout/sample/install.sh"
 }
 
@@ -630,9 +632,7 @@ test_associations_name_a_reported_failure_by_label() {
     'public.zip-archive\tviewer\treport\t.zip' \
     '.md\teditor\treport\t-')"
 
-  export FAIL_DUTI='public.zip-archive'
-  invoke_associations "$checkout"
-  unset FAIL_DUTI
+  invoke_associations "$checkout" FAIL_DUTI=1 FAKE_DUTI_IDENTIFIERS=public.zip-archive
 
   # The label column carries the human name; a "-" falls back to the identifier.
   assert_contains "$checkout/home/stderr.log" \
@@ -650,9 +650,7 @@ test_associations_count_every_reported_failure() {
     '.rst\teditor\treport\t-' \
     '.txt\teditor\treport\t-')"
 
-  export FAIL_DUTI='.md .rst'
-  invoke_associations "$checkout"
-  unset FAIL_DUTI
+  invoke_associations "$checkout" FAIL_DUTI=1 FAKE_DUTI_IDENTIFIERS='.md .rst'
 
   # A count of 2 is what proves the loop does not run in a subshell, which is
   # why the catalog is read by redirection rather than through a pipe.
@@ -669,10 +667,9 @@ test_associations_swallow_a_best_effort_failure() {
     'public.source-code\teditor\tignore\t-' \
     '.md\teditor\treport\t-')"
 
-  export FAIL_DUTI='public.source-code'
   status=0
-  invoke_associations "$checkout" || status=$?
-  unset FAIL_DUTI
+  invoke_associations "$checkout" FAIL_DUTI=1 \
+    FAKE_DUTI_IDENTIFIERS=public.source-code || status=$?
 
   # Best-effort rows keep running under set -e and never reach the count.
   assert_equal 0 "$status" 'exit status when only a best-effort row fails'

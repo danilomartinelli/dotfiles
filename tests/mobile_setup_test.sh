@@ -238,7 +238,7 @@ test_ios_install_reports_download_failure_without_cross_target_or_ready_state() 
   local fixture status=0
   fixture=$(new_fixture)
 
-  invoke_mobile "$fixture" FAKE_XCODEBUILD_STATUS=1 -- ios || status=$?
+  invoke_mobile "$fixture" FAIL_XCODEBUILD=1 -- ios || status=$?
 
   assert_equal 1 "$status" 'iOS runtime download failure status'
   assert_contains "$fixture/events.log" 'xcodebuild -downloadPlatform iOS'
@@ -568,7 +568,7 @@ test_android_install_reports_a_failed_package_action_without_creating_an_avd() {
   root=$(android_root "$fixture")
   rm -rf "$root/platforms/android-36"
 
-  invoke_mobile "$fixture" FAKE_SDKMANAGER_STATUS=1 -- android || status=$?
+  invoke_mobile "$fixture" FAIL_SDKMANAGER=1 -- android || status=$?
 
   assert_equal 1 "$status" 'failed package action status'
   assert_contains "$fixture/stderr.log" 'Android SDK package installation failed'
@@ -603,7 +603,7 @@ test_all_install_continues_after_an_ios_failure() {
     "$root/system-images/android-36/google_apis/arm64-v8a"
 
   invoke_mobile "$fixture" \
-    FAKE_XCODEBUILD_STATUS=1 \
+    FAIL_XCODEBUILD=1 \
     FAKE_SDKMANAGER_INSTALL=1 \
     -- all || status=$?
 
@@ -618,7 +618,7 @@ test_android_install_reports_an_avdmanager_list_failure() {
   write_android_tools "$fixture"
   install_android_packages "$fixture"
 
-  invoke_mobile "$fixture" FAKE_AVDMANAGER_LIST_STATUS=1 -- android || status=$?
+  invoke_mobile "$fixture" FAIL_AVDMANAGER_LIST=1 -- android || status=$?
 
   assert_equal 1 "$status" 'avdmanager list failure status'
   assert_contains "$fixture/stderr.log" \

@@ -60,14 +60,15 @@ _dotfiles_completion_files=()
 
 # Memoized catalog. Classification only changes when files are added,
 # removed, or renamed, and those always bump a directory mtime; content
-# edits never change the catalog. The cache is keyed by checkout path so
-# parallel worktrees never share entries, and the classifier stays the
-# single source of truth.
+# edits never change the catalog. Check nested directories too: adding a file
+# there does not update the topic directory's mtime. The cache is keyed by
+# checkout path so parallel worktrees never share entries, and the classifier
+# stays the single source of truth.
 typeset -g _dotfiles_catalog_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/topic-catalog${DOTFILES_ROOT//\//%}"
 typeset -g _dotfiles_catalog=''
 if [[ -r $_dotfiles_catalog_cache ]]; then
   typeset -g _dotfiles_catalog_stale=''
-  for _dotfiles_dir in "$DOTFILES_ROOT" "$DOTFILES_ROOT"/*(N/); do
+  for _dotfiles_dir in "$DOTFILES_ROOT" "$DOTFILES_ROOT"/**/*(N/); do
     if [[ $_dotfiles_dir -nt $_dotfiles_catalog_cache ]]; then
       _dotfiles_catalog_stale=1
       break

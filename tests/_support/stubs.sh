@@ -84,14 +84,14 @@ printf 'xcodebuild %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
 if [ "$*" = '-downloadPlatform iOS' ] && [ "${FAKE_XCODEBUILD_INSTALL:-0}" -eq 1 ]; then
   : >"$HOME/.ios-runtime-ready"
 fi
-exit "${FAKE_XCODEBUILD_STATUS:-0}"
+exit "${FAIL_XCODEBUILD:-0}"
 EOF
 }
 
 # Mise, as mobile-setup and the mise topic reach it. The caller supplies the
 # Java path through FAKE_MISE_JAVA_HOME so this never exposes a host
 # installation to a test; every other tool is not installed, so `mise where`
-# fails for it as Mise does. FAKE_MISE_INSTALL_STATUS is the exit status of
+# fails for it as Mise does. FAIL_MISE_INSTALL is the exit status of
 # `mise install`, and `mise prune` records whether lockfile writes were on.
 # Usage: stub_mise <bin-dir>
 stub_mise() {
@@ -107,7 +107,7 @@ case "$*" in
     printf 'mise prune lockfile=%s\n' "${MISE_LOCKFILE-unset}" >>"$SCENARIO_EVENT_LOG"
     ;;
   'install' | 'install '*)
-    exit "${FAKE_MISE_INSTALL_STATUS:-0}"
+    exit "${FAIL_MISE_INSTALL:-0}"
     ;;
   *)
     exit 1
@@ -116,16 +116,19 @@ esac
 EOF
 }
 
-# Launch Services default-application assignment. FAIL_DUTI holds a
-# space-separated list of identifiers whose assignment fails, so one contract
-# covers both a single failing row and several.
+# Launch Services default-application assignment. FAIL_DUTI is the exit status;
+# FAKE_DUTI_IDENTIFIERS optionally limits it to a space-separated identifier
+# list, so a fixture can distinguish failed rows from successful ones.
 # Usage: stub_duti <bin-dir>
 stub_duti() {
   _stub_write "$1/duti" <<'EOF'
 #!/bin/sh
 printf 'duti %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-for failing in ${FAIL_DUTI:-}; do
-  [ "$failing" != "$3" ] || exit 1
+if [ -z "${FAKE_DUTI_IDENTIFIERS:-}" ]; then
+  exit "${FAIL_DUTI:-0}"
+fi
+for failing in $FAKE_DUTI_IDENTIFIERS; do
+  [ "$failing" != "$3" ] || exit "${FAIL_DUTI:-0}"
 done
 exit 0
 EOF
