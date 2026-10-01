@@ -5,6 +5,8 @@
 Personal, reproducible macOS setup for software development, operations, and
 infrastructure work.
 
+[![CI](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
+
 [Install](#install-on-a-new-mac) · [Update](#keep-the-machine-current) ·
 [Software](#software-catalog) · [Commands](#public-commands) ·
 [Architecture](#how-the-repository-works) · [Validation](#validation)
