@@ -199,8 +199,8 @@ assert_equal() {
 
 source "$HOME/.zshrc"
 
-expected_path="$FAKE_HOMEBREW_PREFIX/bin:$FAKE_HOMEBREW_PREFIX/sbin"
-expected_path+=":/usr/local/bin:/usr/local/sbin:$STARTUP_FIXTURE_ROOT/bin"
+expected_path="$STARTUP_FIXTURE_ROOT/bin:$FAKE_HOMEBREW_PREFIX/bin"
+expected_path+=":$FAKE_HOMEBREW_PREFIX/sbin:/usr/local/bin:/usr/local/sbin"
 expected_path+=":/base/bin:/usr/bin:/bin:/local/bin:/common/bin"
 expected_path+=":/alpha/bin:/bravo/bin:$HOME/.local/bin"
 expected_manpath="$FAKE_HOMEBREW_PREFIX/man:/usr/local/man:/usr/local/mysql/man:/usr/local/git/man:/base/man:"
