@@ -22,28 +22,9 @@ reviewers, approvers, teams, or external stakeholders.
 - `opencode/README.md` owns OpenCode configuration details.
 - `agents/instructions.md` is a payload: every coding agent on this machine
   reads it as its global `AGENTS.md`. It does not replace this root guide.
-- `docs/agents/*.md` record the issue tracker, triage labels, and domain
-  documentation conventions that the engineering skills read.
 
 Explicit user instructions take precedence. For a file below a nested
 `AGENTS.md`, also follow the closest applicable instructions.
-
-## Agent skills
-
-### Issue tracker
-
-Issues live in GitHub Issues at `danilomartinelli/dotfiles`, driven by the `gh`
-CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles, each label string equal to its name. See
-`docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one root `CONTEXT.md` plus `docs/adr/`. See
-`docs/agents/domain.md`.
 
 ## Repository map
 

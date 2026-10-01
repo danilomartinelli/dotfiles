@@ -80,7 +80,7 @@ Good interfaces make testing natural:
    }
    ```
 
-1. **Return results, don't produce side effects.**
+2. **Return results, don't produce side effects.**
 
    ```typescript
    // Testable
@@ -92,7 +92,7 @@ Good interfaces make testing natural:
    }
    ```
 
-1. **Small surface area.** Fewer methods = fewer tests needed. Fewer params = simpler test setup.
+3. **Small surface area.** Fewer methods = fewer tests needed. Fewer params = simpler test setup.
 
 ## Relationships
 
