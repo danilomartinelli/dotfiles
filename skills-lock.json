@@ -25,6 +25,12 @@
       "skillPath": "skills/engineering/diagnosing-bugs/SKILL.md",
       "computedHash": "b35c6a6e37c61ca3169532fbab2300dea26f2ad190e1d2dac065800b8b2bb0aa"
     },
+    "docs-sync-audit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/docs-sync-audit/SKILL.md",
+      "computedHash": "7b61d48fffc05b1e6e023b9928550f88f68deae51f44d700607592140e85d873"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -84,6 +90,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/prototype/SKILL.md",
       "computedHash": "d3fc74689bd993e39c44bfae510d014eecffbeec2922764b065377fd1327c0f6"
+    },
+    "repo-standardizer": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/repo-standardizer/SKILL.md",
+      "computedHash": "cfd60e67af66d41187a83905c7dda6e22d175b92b2208f22fe7afa1b8c3f94ae"
     },
     "research": {
       "source": "mattpocock/skills",
