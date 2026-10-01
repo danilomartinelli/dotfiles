@@ -1,6 +1,6 @@
 name: Bug report
 description: Something in the setup, a command, or shell startup is broken.
-labels: ["bug"]
+labels: ["bug", "needs-triage"]
 body:
   - type: textarea
     id: what-happened
