@@ -46,7 +46,10 @@ assert_documented_in() {
     haystack=$(cat "$doc_path")
   fi
 
-  if ! printf '%s\n' "$haystack" | grep -Fq -- "\`$name\`"; then
+  # A here-string, not a pipe: grep -q exits at its first match, and under
+  # pipefail a printf still writing a document larger than the pipe buffer
+  # dies of SIGPIPE, which reads as "missing".
+  if ! grep -Fq -- "\`$name\`" <<<"$haystack"; then
     printf '%s is missing %s: %s\n' "$where" "$kind" "$name" >&2
     failures=$((failures + 1))
   fi
