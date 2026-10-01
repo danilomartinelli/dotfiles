@@ -1,13 +1,7 @@
 #!/bin/zsh
 #
-# Pi wrapper that always injects the shared AGENTS.md as a system-prompt
-# appendix. Use this instead of the bare `pi` binary so the
-# "ABC — Always Be Coaching" philosophy and the PM skills library are
-# available to every Pi session, matching what we already do for OpenCode,
-# Codex, Claude Code, and Aider.
-#
-# Defined as a Zsh function so it overrides PATH binaries by name
-# (functions/ is autoloaded at startup, before PATH lookup).
+# Zsh autoload wrapper that forwards all arguments to the Pi executable.
+# `command` bypasses this function so invoking Pi does not recurse.
 
 emulate -L zsh
 

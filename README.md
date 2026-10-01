@@ -390,11 +390,11 @@ opens an app, or boots an emulator.
 | `git-all`                 | `git all`: stage every change                                             |
 | `git-amend`               | `git amend`: amend while preserving the commit message                    |
 | `git-copy-branch-name`    | `git copy-branch-name`: copy the current branch name                      |
-| `git-credit`              | `git credit "Name" email`: add another author to the last commit          |
+| `git-credit`              | `git credit "Name" email`: replace the author of the last commit          |
 | `git-delete-local-merged` | `git delete-local-merged`: remove merged local branches safely            |
 | `git-edit-new`            | `git edit-new`: open untracked files in `$EDITOR`                         |
 | `git-nuke`                | `git nuke branch`: force-delete a local and matching remote branch        |
-| `git-promote`             | `git promote`: push and track the current branch                          |
+| `git-promote`             | `git promote`: publish a new branch and configure tracking                |
 | `git-rank-contributors`   | `git rank-contributors [-v] [-o] [-h]`: rank authors by changed lines     |
 | `git-track`               | `git track`: track the matching branch on `origin`                        |
 | `git-undo`                | `git undo`: soft-reset the latest commit                                  |
@@ -402,6 +402,10 @@ opens an app, or boots an emulator.
 | `git-unpushed-stat`       | `git unpushed-stat`: summarize the unpushed diff and commit count         |
 | `git-up`                  | `git up [pull options]`: pull and list received commits                   |
 | `git-wtf`                 | `git wtf [options]`: summarize branch relationships                       |
+
+`git promote` pushes the current branch only when it does not exist on
+`origin`. If it already exists, the command only configures tracking; use
+`git push` to publish subsequent commits.
 
 > [!CAUTION]
 > `git nuke` changes local and remote state. `git credit`, `git amend`, and
