@@ -55,8 +55,10 @@ else
   exit 1
 fi
 
-# Remove runtimes no longer declared and stale patch versions.
-mise prune --yes >/dev/null 2>&1 || true
+# Remove runtimes no longer declared and stale patch versions. Pruning writes
+# the lock in the same install shape, so lockfile writes are off for it and the
+# lock stays what `mise lock --global` produced.
+MISE_LOCKFILE=false mise prune --yes >/dev/null 2>&1 || true
 
 # Run the claude-code postinstall to place the native arm64 binary.
 # npm install -g does not run postinstall scripts automatically when mise
