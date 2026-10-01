@@ -2,11 +2,11 @@
 #
 # Rendering generated tables into hand-written Markdown.
 #
-# Two renderers write tables into documentation this repository also edits by
-# hand — the software catalog into README.md and the profile routing into
-# opencode/README.md — so the shape of a table is decided once here. Where a
-# table lands, and what happens to the prose around it, is the generated-region
-# reader's: see _scripts/generated-region.sh.
+# _scripts/render-software-catalog writes the software catalog's tables into
+# README.md, which this repository also edits by hand, and the shape of a table
+# is decided here rather than in the renderer. Where a table lands, and what
+# happens to the prose around it, is the generated-region reader's: see
+# _scripts/generated-region.sh.
 
 # Read tab-separated rows on stdin and print a Markdown table with <header>,
 # itself tab-separated. Cells are padded to the widest in their column, which

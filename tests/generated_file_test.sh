@@ -82,8 +82,8 @@ generated_file_verdict 'payload is' render
   assert_equal 'fresh' "$(cat "$fixture/nested/deep/stored")" 'nested file written'
 }
 
-# The write path used to be unreachable from any suite: both renderers are only
-# ever run with --check against tracked files that are already current.
+# The write path used to be unreachable from any suite: the renderers were only
+# ever run with --check against tracked files that were already current.
 test_check_reports_without_writing_and_fails_the_verdict() {
   local fixture
   fixture=$(scenario_tmpdir check)
@@ -130,21 +130,21 @@ test_two_payloads_under_one_root_report_distinguishable_paths() {
   local fixture
   fixture=$(scenario_tmpdir roots)
 
-  mkdir -p "$fixture/opencode"
+  mkdir -p "$fixture/topic"
   printf 'new\n' >"$fixture/rendered"
   printf 'old\n' >"$fixture/README.md"
-  printf 'old\n' >"$fixture/opencode/README.md"
+  printf 'old\n' >"$fixture/topic/README.md"
 
   invoke_module "$fixture" "
 generated_file_mode check
 generated_file_sync '$fixture/rendered' '$fixture/README.md' '$fixture'
-generated_file_sync '$fixture/rendered' '$fixture/opencode/README.md' '$fixture'
+generated_file_sync '$fixture/rendered' '$fixture/topic/README.md' '$fixture'
 generated_file_verdict 'payload is' render
 "
 
   assert_equal 1 "$SCENARIO_STATUS" 'two stale payloads status'
   assert_contains "$fixture/stderr.log" 'stale: README.md'
-  assert_contains "$fixture/stderr.log" 'stale: opencode/README.md'
+  assert_contains "$fixture/stderr.log" 'stale: topic/README.md'
   assert_contains "$fixture/stderr.log" 'payload is out of date (2 file(s)); run render'
 }
 

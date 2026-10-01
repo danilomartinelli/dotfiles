@@ -1,0 +1,8 @@
+theme = "dark"
+
+[editor]
+command = ""
+
+[notifications]
+enabled = true
+notification_condition = "unfocused"

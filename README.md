@@ -27,7 +27,7 @@ sync with the declarations.
 - Language runtimes and globally installed language-package CLIs through Mise.
 - Deterministic, worktree-aware linking of dotfiles and application config.
 - Idempotent topic installers for Git, Zsh, editors, terminal tools, SSH, SOPS,
-  OpenCode/OCX, and macOS applications.
+  coding agents, and macOS applications.
 - A private-machine boundary for credentials and account-specific settings.
 - Fixture-based tests for setup, linking, shell startup, package contracts, and
   application provisioning.
@@ -134,18 +134,17 @@ dependency and installer failures stop the run.
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
 
-| Command                             | Purpose                                                           |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| `dot`                               | Update the checkout, dependencies, links, and topic configuration |
-| `dot --edit`                        | Open the active physical checkout in `$EDITOR`                    |
-| `dot --help`                        | Print supported lifecycle options                                 |
-| `_scripts/bootstrap`                | Run the complete first-machine installation                       |
-| `_scripts/setup bootstrap`          | Invoke the canonical bootstrap implementation                     |
-| `_scripts/setup update`             | Invoke the canonical daily-update implementation                  |
-| `dotfiles-root.symlink --install`   | Repair `~/.dotfiles-root` for this checkout                       |
-| `set-defaults`                      | Explicitly reapply tracked macOS preferences                      |
-| `_scripts/render-opencode-profiles` | Rewrite the managed OpenCode profile payloads from their sources  |
-| `_scripts/render-software-catalog`  | Rewrite the README software catalog from the declarations         |
+| Command                            | Purpose                                                           |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| `dot`                              | Update the checkout, dependencies, links, and topic configuration |
+| `dot --edit`                       | Open the active physical checkout in `$EDITOR`                    |
+| `dot --help`                       | Print supported lifecycle options                                 |
+| `_scripts/bootstrap`               | Run the complete first-machine installation                       |
+| `_scripts/setup bootstrap`         | Invoke the canonical bootstrap implementation                     |
+| `_scripts/setup update`            | Invoke the canonical daily-update implementation                  |
+| `dotfiles-root.symlink --install`  | Repair `~/.dotfiles-root` for this checkout                       |
+| `set-defaults`                     | Explicitly reapply tracked macOS preferences                      |
+| `_scripts/render-software-catalog` | Rewrite the README software catalog from the declarations         |
 
 ## Software catalog
 
@@ -219,7 +218,6 @@ is its description. Run the renderer after changing a declaration;
 | `stern`                   | Multi-pod Kubernetes log tailing                                  |
 | `tmux`                    | Terminal multiplexer                                              |
 | `psviderski/tap/uncloud`  | Uncloud deployment CLI (`uc`)                                     |
-| `vjeantet/tap/alerter`    | Send native macOS notifications from the CLI                      |
 | `usage`                   | Usage-spec support for CLI completions                            |
 | `watch`                   | Periodically rerun a command                                      |
 | `watchexec`               | Rerun commands on file changes                                    |
@@ -234,24 +232,24 @@ is its description. Run the renderer after changing a declaration;
 <!-- generated-end -->
 
 Third-party taps are declared in `Brewfile`. `homebrew/_bundle.sh` maintains a
-narrow trust list for `psviderski/tap`, `vjeantet/tap`, and `vultr/vultr-cli`
-before running `brew bundle`.
+narrow trust list for `psviderski/tap` and `vultr/vultr-cli` before running
+`brew bundle`.
 
 ### Applications and fonts
 
 <!-- generated: homebrew-casks -->
 
-| Group                     | Homebrew casks                                                                                              |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `conductor`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed`         |
-| Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                         |
-| Window and menu bar       | `bartender`, `keyclu`                                                                                       |
-| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim` |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                             |
-| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                             |
-| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                        |
-| Runtime and containers    | `orbstack`                                                                                                  |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                             |
+| Group                     | Homebrew casks                                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `chatgpt`, `claude`, `conductor`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed` |
+| Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                           |
+| Window and menu bar       | `bartender`, `keyclu`                                                                                         |
+| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`   |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                               |
+| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                               |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                          |
+| Runtime and containers    | `orbstack`                                                                                                    |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                               |
 
 <!-- generated-end -->
 
@@ -264,9 +262,9 @@ before running `brew bundle`.
 <!-- generated-end -->
 
 Topic installers configure Ghostty, Zed, Neovim, OrbStack, Bartender, KeyClu,
-Raycast script commands, Tailscale, OpenCode/OCX, Hermes, SOPS directories,
-SSH, Workspace, Mise, iOS Simulator and Android Emulator readiness, Archiver
-associations, and the Dock.
+Raycast script commands, Tailscale, OpenCode, Claude Code, Codex, Kimi Code,
+Conductor, direnv, Hermes, SOPS directories, SSH, Workspace, Mise, iOS Simulator
+and Android Emulator readiness, Archiver associations, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
 applied once so later manual changes survive: a Dock you rearranged and a
@@ -295,36 +293,34 @@ own, and `mise lock --global` settles it again.
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
 | `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
-| `bun`                                       | `1.4.2`          | JavaScript runtime and package manager          |
 | `elixir`                                    | `1.20`           | Elixir runtime                                  |
 | `erlang`                                    | `29`             | BEAM runtime                                    |
 | `go`                                        | `1.27.1`         | Go toolchain                                    |
 | `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
 | `java`                                      | `temurin-25`     | Java runtime                                    |
 | `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.280`        | Claude Code CLI                                 |
-| `npm:@agentclientprotocol/claude-agent-acp` | `0.81.0`         | Claude ACP agent                                |
-| `npm:@agentclientprotocol/codex-acp`        | `1.12.0`         | Codex ACP agent                                 |
-| `npm:@earendil-works/pi-coding-agent`       | `0.87.1`         | Pi coding agent                                 |
+| `npm:@anthropic-ai/claude-code`             | `2.1.285`        | Claude Code CLI                                 |
+| `npm:@agentclientprotocol/claude-agent-acp` | `0.84.0`         | Claude ACP agent                                |
+| `npm:@agentclientprotocol/codex-acp`        | `2.1.0`          | Codex ACP agent                                 |
+| `npm:@earendil-works/pi-coding-agent`       | `0.99.2`         | Pi coding agent                                 |
 | `npm:@moonshot-ai/kimi-code`                | `2.1.1`          | Kimi Code CLI                                   |
-| `npm:@colbymchenry/codegraph`               | `1.6.0`          | Repository code graph CLI                       |
-| `npm:@swmansion/argent`                     | `0.25.2`         | Device and simulator control MCP                |
-| `npm:@openai/codex`                         | `0.156.0`        | Codex CLI                                       |
-| `npm:eas-cli`                               | `24.7.0`         | Expo Application Services CLI                   |
-| `npm:neonctl`                               | `5.0.1`          | Neon CLI                                        |
-| `npm:ocx`                                   | `2.0.15`         | OpenCode extension and profile manager          |
-| `npm:opencode-ai`                           | `1.18.31`        | OpenCode CLI                                    |
+| `npm:@colbymchenry/codegraph`               | `1.6.1`          | Repository code graph CLI                       |
+| `npm:@swmansion/argent`                     | `0.26.0`         | Device and simulator control MCP                |
+| `npm:@openai/codex`                         | `0.159.3`        | Codex CLI                                       |
+| `npm:eas-cli`                               | `24.8.0`         | Expo Application Services CLI                   |
+| `npm:neonctl`                               | `7.0.1`          | Neon CLI                                        |
+| `npm:opencode-ai`                           | `1.18.34`        | OpenCode CLI                                    |
 | `npm:skills`                                | `1.7.0`          | Agent skills CLI                                |
-| `npm:wrangler`                              | `4.136.3`        | Cloudflare Workers CLI                          |
+| `npm:wrangler`                              | `4.145.0`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
-| `pnpm`                                      | `12.5.1`         | JavaScript package manager                      |
+| `pnpm`                                      | `12.8.1`         | JavaScript package manager                      |
 | `python`                                    | `3.14.7`         | Python runtime                                  |
 | `ruby`                                      | `4.0`            | Ruby runtime                                    |
 | `rust`                                      | `1.98.1`         | Rust toolchain                                  |
-| `terraform`                                 | `1.16.3`         | Infrastructure as code CLI                      |
+| `terraform`                                 | `1.16.4`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
-| `yarn`                                      | `4.18.0`         | JavaScript package manager                      |
+| `yarn`                                      | `4.18.1`         | JavaScript package manager                      |
 
 <!-- generated-end -->
 
@@ -338,21 +334,19 @@ through their preferred Git subcommand form.
 
 ### General utilities
 
-| Command            | Usage and purpose                                                                            |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| `battery-status`   | Print the macOS battery indicator used by the prompt                                         |
-| `dns-flush`        | Flush the macOS DNS cache with `sudo`                                                        |
-| `dot`              | Run normal dotfiles maintenance                                                              |
-| `e`                | `e [path]`: open a path or the current directory in `$EDITOR`                                |
-| `headers`          | `headers URL`: print HTTP response headers                                                   |
-| `keyclu-import`    | Open the tracked KeyClu shortcut collection for import                                       |
-| `mobile-setup`     | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators                    |
-| `nix-install`      | Explicitly install Nix; never runs during bootstrap or `dot`                                 |
-| `opencode-doctor`  | `opencode-doctor [--fix] [--days n] [--clear-logs]`: report or repair OpenCode runtime state |
-| `opencode-profile` | Run OpenCode with an OCX profile applied, for hosts that spawn the binary                    |
-| `set-defaults`     | Apply tracked macOS preferences                                                              |
-| `sops-key-create`  | `sops-key-create <role>`: create a non-overwriting age identity                              |
-| `ssh-key-create`   | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key                            |
+| Command           | Usage and purpose                                                         |
+| ----------------- | ------------------------------------------------------------------------- |
+| `battery-status`  | Print the macOS battery indicator used by the prompt                      |
+| `dns-flush`       | Flush the macOS DNS cache with `sudo`                                     |
+| `dot`             | Run normal dotfiles maintenance                                           |
+| `e`               | `e [path]`: open a path or the current directory in `$EDITOR`             |
+| `headers`         | `headers URL`: print HTTP response headers                                |
+| `keyclu-import`   | Open the tracked KeyClu shortcut collection for import                    |
+| `mobile-setup`    | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators |
+| `nix-install`     | Explicitly install Nix; never runs during bootstrap or `dot`              |
+| `set-defaults`    | Apply tracked macOS preferences                                           |
+| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity           |
+| `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key         |
 
 ### Mobile simulator provisioning
 
@@ -458,10 +452,6 @@ aliases are for a person's shell: Claude Code (`CLAUDECODE`) and Codex
 | AWS IAM/SSM               | `iamusers`, `iamroles`, `iamgroups`, `iampolicies`, `ssmls`, `ssmget`, `ssmput`, `ssmsession`                                        |
 | AWS CloudWatch/DynamoDB   | `cwlogs`, `cwtail`, `cwalarms`, `dynamols`, `dynamoscan`, `dynamoquery`                                                              |
 
-OpenCode is launched through OCX: `opencode` and `oc` use the `regular`
-profile selected by `OCX_PROFILE`; `oc:regular`, `oc:example`,
-`oc:anthropic`, `oc:go` and `oc:xing` select a profile explicitly.
-
 ## How the repository works
 
 ### Topic architecture
@@ -525,17 +515,22 @@ de-duplicated.
 
 ### Configuration ownership
 
-| Configuration          | Installed location            | Ownership rule                                                             |
-| ---------------------- | ----------------------------- | -------------------------------------------------------------------------- |
-| Private environment    | `~/.localrc`                  | Generated locally, mode `600`, never committed                             |
-| Shared shell defaults  | `.commonrc`                   | Tracked and secret-free                                                    |
-| Git identity           | `git/gitconfig.local.symlink` | Generated locally and gitignored                                           |
-| Git worktree overrides | `~/.gitconfig.worktree`       | Tracked; applied only to linked worktrees, above the machine-local include |
-| Private SSH hosts      | `~/.ssh/config_local`         | Preserved by the tracked SSH config                                        |
-| SOPS age identities    | `~/.config/sops/age/`         | Machine-private, mode `600`                                                |
-| Zed settings           | `~/.config/zed/settings.json` | Tracked JSONC-compatible config, no plaintext credentials                  |
-| OpenCode workspace     | `~/.config/opencode`          | Split between dotfiles-owned links and OCX runtime state                   |
-| Hermes state           | `~/.hermes`                   | Machine-local runtime state                                                |
+| Configuration          | Installed location             | Ownership rule                                                             |
+| ---------------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| Private environment    | `~/.localrc`                   | Generated locally, mode `600`, never committed                             |
+| Shared shell defaults  | `.commonrc`                    | Tracked and secret-free                                                    |
+| Git identity           | `git/gitconfig.local.symlink`  | Generated locally and gitignored                                           |
+| Git worktree overrides | `~/.gitconfig.worktree`        | Tracked; applied only to linked worktrees, above the machine-local include |
+| Private SSH hosts      | `~/.ssh/config_local`          | Preserved by the tracked SSH config                                        |
+| SOPS age identities    | `~/.config/sops/age/`          | Machine-private, mode `600`                                                |
+| Zed settings           | `~/.config/zed/settings.json`  | Tracked JSONC-compatible config, no plaintext credentials                  |
+| OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
+| Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
+| Conductor settings     | `~/.conductor/settings.toml`   | Tracked; the Settings window's writes land as a diff                       |
+| Kimi Code TUI settings | `~/.kimi-code/tui.toml`        | Tracked; `config.toml` holds credentials and stays machine-local           |
+| Codex configuration    | `~/.codex/config.toml`         | Machine-local: Codex records project trust and plugin state in it          |
+| direnv config          | `~/.config/direnv/direnv.toml` | Rendered locally from the trusted roots and gitignored                     |
+| Hermes state           | `~/.hermes`                    | Machine-local runtime state                                                |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth
@@ -545,55 +540,52 @@ Zed's [documented JSONC parser workaround](https://zed.dev/docs/languages/json#j
 to prevent trailing commas. Keep keys, kubeconfigs, auth receipts, and
 account-specific state outside this repository.
 
-### OpenCode and OCX
+### Coding agents
 
-OpenCode is a Mise-managed CLI launched through OCX. The installer initializes
-the `kdco` registry and links the dotfiles-owned `orchestrator/`, `ocx.jsonc`,
-`opencode.jsonc`, `opencode-mem.jsonc`,
-`tui.jsonc`, and the `regular`, `example`, `anthropic`, `go` and `xing`
-profile directories.
-`opencode/_managed-entries.tsv` is the one catalog behind that list: the
-installer and both test suites read it rather than keeping their own copy, and
-a check keeps this paragraph agreeing with it. The managed TUI
-follows the terminal's Catppuccin Macchiato theme and keeps audible
-notifications disabled. OCX retains `.ocx`, generated `plugins`,
-`package.json`, `.gitignore`, and `profiles/default`. The installer provisions
-worktree/notification plugins and installs the local orchestrator's pinned
-dependencies with Bun.
-OCX itself remains upstream; the orchestration plugin is authored here.
+One instruction file, `agents/instructions.md`, is every coding agent's global
+`AGENTS.md`: the `agents` installer links it as `~/.claude/CLAUDE.md`,
+`~/.codex/AGENTS.md`, `~/.agents/AGENTS.md` for Kimi Code, and
+`~/.config/opencode/AGENTS.md`. A project's own instructions still take
+precedence.
 
-The `regular` profile carries the active trusted-project model routing.
-Global `opencode.jsonc` owns common plugins, CodeGraph and research MCPs; each project
-declares additional integrations and explicit permissions. OpenCode has no
-Anthropic provider of its own, so that file also pins the Anthropic auth plugin
-on the release line matching the installed OpenCode; see the
-[Anthropic provider notes](opencode/README.md#anthropic-provider).
-OCX cannot layer one profile over another. `opencode/profiles/_shared/`
-owns profile instructions and OCX policy; `opencode/profiles/_routing.tsv`
-declares the models; `_scripts/render-opencode-profiles` composes the
-sources, plus optional `opencode/profiles/_overrides/` policy, into the managed
-payloads the installer links. `regular` uses Astra/xhigh for plan/build and Luna/high for
-coder, reviewer, scribe, explore and researcher. Each profile exists for the
-providers it reaches: `anthropic` routes Claude Fable 5.1 and Opus 5 over the
-same two tiers, and `go` spends the opencode-go plan on judgement rather than
-reading, with Kimi K3 orchestrating, GLM 5.3 writing and reviewing and GLM 5.3
-Flash exploring and researching. `xing` is that same split bought direct and
-the one profile created for two providers, taking Kimi K3 from the Kimi For
-Coding subscription and both GLM tiers from the Z.AI Coding Plan; it reads
-`KIMI_API_KEY` and `ZHIPU_API_KEY` from the environment and needs no plugin.
-The orchestrator assigns each delegation a focus, with bounded parallel work,
-resumable corrections and consolidated memory without auxiliary sessions.
-`example` has the same initial routing and demonstrates another profile.
-The shell default remains `regular`. Prompts prefer `gh`/`glab` after remote
-and CLI discovery. External home-level skills are not discovered automatically;
-project skills remain available.
-Every profile enables native LSP queries. CodeGraph initializes missing indices
-once per Git checkout and keeps `.codegraph/` ignored, without auxiliary LLM
-sessions. See the [code navigation guide](opencode/README.md#code-navigation-lsp-and-codegraph)
-for setup, project opt-out and recovery.
+- **Claude Code** runs from Mise; the `claude` cask is the desktop app, which
+  includes Claude Code on the desktop. `claude/settings.json` is linked, so a
+  change made through `/model` or `/config` shows up as a diff to keep or
+  discard. `~/.claude.json` and the rest of `~/.claude` stay machine-local.
+- **Codex** runs from Mise. Its `config.toml` records project trust, plugin
+  state and desktop preferences, so it is not versioned; `codex/completion.zsh`
+  caches the shell completion Codex generates.
+- **Kimi Code** runs from Mise. Only `tui.toml` is linked, because
+  `config.toml` holds provider credentials and every login rewrites it.
+- **Conductor** links `~/.conductor/settings.toml`, the user layer its Settings
+  window writes. This repository's own `.conductor/settings.toml` adds a run
+  script for `_scripts/test`; Conductor reads it from the default branch on the
+  remote, so a change to it applies once merged.
+- **OpenCode** runs from Mise, and the desktop app comes from the
+  `opencode-desktop` cask. `opencode.jsonc` declares the models, the CodeGraph,
+  Context7, Exa, grep.app and Argent MCP servers, and three plugins;
+  `tui.jsonc` holds the terminal defaults. OpenCode has no Anthropic
+  subscription login of its own, so that file pins the Anthropic auth plugin on
+  the release line matching the installed OpenCode; see the
+  [Anthropic provider notes](opencode/README.md#anthropic-provider). The topic
+  stays on OpenCode v1 for the reasons in
+  [`opencode/README.md`](opencode/README.md#staying-on-opencode-v1).
 
-See [`opencode/README.md`](opencode/README.md) for per-role model routing,
-profile maintenance, ownership, verification, and troubleshooting.
+CodeGraph indexes are per checkout and nothing builds them automatically: the
+shared instructions tell an agent to run `codegraph init` when `.codegraph/` is
+missing, and to list `.codegraph/**` among the files a repository copies into
+new worktrees.
+
+### Trusted roots
+
+A project's `.envrc`, `.env` and Mise configuration take effect without a
+per-project `direnv allow` or `mise trust` when the project lives beneath a
+trusted root: this checkout, `$WORKSPACE`, or `~/conductor`. Everywhere else,
+direnv and Mise still ask. `_scripts/trusted-roots` is the one declaration of
+that list. `direnv/install.sh` renders it into the whitelist of
+`~/.config/direnv/direnv.toml`, which also loads `.env` files, and
+`mise/mise.zsh` exports it as `MISE_TRUSTED_CONFIG_PATHS`. Moving `WORKSPACE`
+in `.localrc` therefore takes effect for direnv on the next `dot` run.
 
 ## Validation
 
@@ -628,8 +620,7 @@ git diff --check
 ```
 
 The Mise-managed `mdformat` includes the GFM and frontmatter plugins required
-to preserve tables and skill metadata. OCX registry payloads live outside the
-checkout; validate their integrity separately with `ocx verify`.
+to preserve tables and skill metadata.
 
 ## Extend the setup
 

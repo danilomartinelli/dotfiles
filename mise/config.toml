@@ -6,37 +6,35 @@
 
 [tools]
 "aqua:koalaman/shellcheck" = "latest"                           # Shell linting
-bun = "1.4.2"                                                   # JavaScript runtime and package manager
 elixir = "1.20"                                                 # Elixir runtime
 erlang = "29"                                                   # BEAM runtime
 go = "1.27.1"                                                   # Go toolchain
 "go:mvdan.cc/sh/v3/cmd/shfmt" = "latest"                        # Shell formatting
 java = "temurin-25"                                             # Java runtime
 node = "lts"                                                    # Node.js LTS
-"npm:@anthropic-ai/claude-code" = { version = "2.1.280", npm_args = "--ignore-scripts=false" } # Claude Code CLI
-"npm:@agentclientprotocol/claude-agent-acp" = "0.81.0"          # Claude ACP agent
-"npm:@agentclientprotocol/codex-acp" = "1.12.0"                 # Codex ACP agent
-"npm:@earendil-works/pi-coding-agent" = "0.87.1"                # Pi coding agent
+"npm:@anthropic-ai/claude-code" = { version = "2.1.285", npm_args = "--ignore-scripts=false" } # Claude Code CLI
+"npm:@agentclientprotocol/claude-agent-acp" = "0.84.0"          # Claude ACP agent
+"npm:@agentclientprotocol/codex-acp" = "2.1.0"                  # Codex ACP agent
+"npm:@earendil-works/pi-coding-agent" = "0.99.2"                # Pi coding agent
 "npm:@moonshot-ai/kimi-code" = "2.1.1"                          # Kimi Code CLI
-"npm:@colbymchenry/codegraph" = "1.6.0"                         # Repository code graph CLI
-"npm:@swmansion/argent" = "0.25.2"                              # Device and simulator control MCP
-"npm:@openai/codex" = "0.156.0"                                 # Codex CLI
-"npm:eas-cli" = "24.7.0"                                        # Expo Application Services CLI
-"npm:neonctl" = "5.0.1"                                         # Neon CLI
-"npm:ocx" = "2.0.15"                                            # OpenCode extension and profile manager
-"npm:opencode-ai" = { version = "1.18.31", npm_args = "--ignore-scripts=false" } # OpenCode CLI
+"npm:@colbymchenry/codegraph" = "1.6.1"                         # Repository code graph CLI
+"npm:@swmansion/argent" = "0.26.0"                              # Device and simulator control MCP
+"npm:@openai/codex" = "0.159.3"                                 # Codex CLI
+"npm:eas-cli" = "24.8.0"                                        # Expo Application Services CLI
+"npm:neonctl" = "7.0.1"                                         # Neon CLI
+"npm:opencode-ai" = { version = "1.18.34", npm_args = "--ignore-scripts=false" } # OpenCode CLI
 "npm:skills" = "1.7.0"                                          # Agent skills CLI
-"npm:wrangler" = "4.136.3"                                      # Cloudflare Workers CLI
+"npm:wrangler" = "4.145.0"                                      # Cloudflare Workers CLI
 "pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" } # Aider coding assistant
 # Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
 "pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm --with mdformat-frontmatter" } # Markdown formatter with GFM/frontmatter plugins
-pnpm = "12.5.1"                                                 # JavaScript package manager
+pnpm = "12.8.1"                                                 # JavaScript package manager
 python = "3.14.7"                                               # Python runtime
 ruby = "4.0"                                                    # Ruby runtime
 rust = "1.98.1"                                                 # Rust toolchain
-terraform = "1.16.3"                                            # Infrastructure as code CLI
+terraform = "1.16.4"                                            # Infrastructure as code CLI
 uv = "latest"                                                   # Python package and environment manager
-yarn = "4.18.0"                                                 # JavaScript package manager
+yarn = "4.18.1"                                                 # JavaScript package manager
 
 [settings]
 idiomatic_version_file_enable_tools = ["node"]

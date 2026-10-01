@@ -71,20 +71,20 @@ test_short_rows_pad_to_the_declared_width() {
   assert_contains "$fixture/stdout.log" '[alpha|one|two||||]'
 }
 
-# The widest catalog here is seven columns. Before the reader delivered them
-# all, that catalog needed a reader of its own, so the width is what keeps the
-# rule "one reader" true rather than aspirational.
-test_the_widest_catalog_arrives_whole() {
+# The reader delivers seven columns, wider than any catalog here declares. A
+# catalog wider than the reader once needed a reader of its own, so the width
+# is what keeps the rule "one reader" true rather than aspirational.
+test_a_row_as_wide_as_the_reader_arrives_whole() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
 
   printf '%s\n' \
-    'boost	default	model	-	-	high	low' \
-    'boost	plan	other	fast	0.2	-	-' >"$fixture/catalog.tsv"
+    'alpha	one	two	-	-	six	seven' \
+    'bravo	one	other	four	0.5	-	-' >"$fixture/catalog.tsv"
 
   invoke_reader "$fixture" "$fixture/catalog.tsv" "$echo_row_body"
-  assert_contains "$fixture/stdout.log" '[boost|default|model|-|-|high|low]'
-  assert_contains "$fixture/stdout.log" '[boost|plan|other|fast|0.2|-|-]'
+  assert_contains "$fixture/stdout.log" '[alpha|one|two|-|-|six|seven]'
+  assert_contains "$fixture/stdout.log" '[bravo|one|other|four|0.5|-|-]'
 }
 
 # A row wider than the declared width would pack its tail into the last
@@ -99,8 +99,8 @@ test_an_overwide_row_packs_its_tail() {
   assert_contains "$fixture/stdout.log" '[a|b|c|d|e|f|g	h]'
 }
 
-# The reason the module exists: a handler running duti, dockutil, or ocx must
-# not be able to swallow the rows still to be read.
+# The reason the module exists: a handler running duti or dockutil must not
+# be able to swallow the rows still to be read.
 test_a_handler_reading_stdin_cannot_consume_the_rows() {
   local fixture
   fixture=$(scenario_tmpdir fixture)
@@ -227,14 +227,14 @@ CONSUMER
   cat >>"$fixture/consumer.sh" <<'CONSUMER'
 root='/Users/a"b\c/dotfiles'
 escaped=$(jq -rn --arg root "$root" '$root | tojson[1:-1]')
-value=$(catalog_expand '"$DOTFILES_ROOT/bin/opencode-profile"' DOTFILES_ROOT "$escaped")
+value=$(catalog_expand '"$DOTFILES_ROOT/bin/example-tool"' DOTFILES_ROOT "$escaped")
 printf '%s' '{}' | jq -c --arg k binary --argjson value "$value" '.[$k] = $value'
 CONSUMER
   chmod +x "$fixture/consumer.sh"
   scenario_capture "$fixture" "$fixture/consumer.sh"
 
   assert_contains "$fixture/stdout.log" \
-    '{"binary":"/Users/a\"b\\c/dotfiles/bin/opencode-profile"}'
+    '{"binary":"/Users/a\"b\\c/dotfiles/bin/example-tool"}'
 }
 
 test_expansion_leaks_no_variables_on_either_exit() {
@@ -273,8 +273,8 @@ scenario_run 'a final row without a trailing newline is delivered' \
   test_a_final_row_without_a_newline_is_delivered
 scenario_run 'short rows pad to the declared width' \
   test_short_rows_pad_to_the_declared_width
-scenario_run 'the widest catalog arrives whole' \
-  test_the_widest_catalog_arrives_whole
+scenario_run 'a row as wide as the reader arrives whole' \
+  test_a_row_as_wide_as_the_reader_arrives_whole
 scenario_run 'an overwide row packs its tail into the last column' \
   test_an_overwide_row_packs_its_tail
 scenario_run 'a handler reading stdin cannot consume the rows' \

@@ -20,7 +20,7 @@ person reads under the installer's banner, and `installer_link_config` passes
 that straight through to the terminal. Adding a machine-readable word to the
 same stream would either displace the prose or force every caller to filter it.
 
-Exit status 2 would have matched the sibling refusals at `replace-generated`,
+Exit status 2 would have matched the sibling refusals at `replace-confirmed`,
 which already spell "I will not remove this" that way. `CODING_STANDARDS.md`
 reserves 2 for invalid CLI usage, and this is valid usage under a valid policy
 that the filesystem made impossible. 1 is the operational failure, and it makes

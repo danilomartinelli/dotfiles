@@ -9,21 +9,23 @@
 
 # Call <handler> once per data row of <catalog>, passing the row's columns as
 # arguments. A row is padded with empty strings to seven, so a handler always
-# receives seven and may read only the leading ones it declares. Seven is the
-# widest catalog here rather than the widest a consumer happens to need: an
-# arity that fits some catalogs and not others is what made the wide ones grow
-# readers of their own. A row with more columns than that packs its tail into
-# the last argument, so widening a catalog past seven means widening the read
-# below first.
+# receives seven and may read only the leading ones it declares. Seven is wider
+# than any catalog here declares, and deliberately not the widest a consumer
+# happens to need: an arity that fits some catalogs and not others is what once
+# made a wide catalog grow readers of its own. A row with more columns than
+# that packs its tail into the last argument, so widening a catalog past seven
+# means widening the read below first.
 #
 # Blank rows and rows whose first column starts with "#" are skipped. A final
 # row without a trailing newline is still delivered, which is the case a
 # hand-edited catalog reaches first.
 #
 # Rows arrive on file descriptor 3, leaving stdin free. That is the whole
-# reason this module exists: a handler that runs duti, dockutil, or ocx would
+# reason this module exists: a handler that runs duti or dockutil would
 # otherwise let that command consume the rows still to be read, and every
-# consumer had to rediscover the hazard and pick its own guard.
+# consumer had to rediscover the hazard and pick its own guard. It is also why
+# the catalog is a path and never stdin; see
+# docs/adr/0007-the-catalog-reader-reads-files-not-command-output.md.
 #
 # The handler runs in the calling shell, so it may set variables the caller
 # reads afterwards. It must return zero: consumers run under `set -e`, and a

@@ -8,7 +8,6 @@ cask_args appdir: '/Applications'
 
 # Third-party taps trusted by homebrew/_bundle.sh
 tap 'psviderski/tap'                # Uncloud CLI
-tap 'vjeantet/tap'                  # Alerter CLI for macOS notifications
 tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
 
 # Command line tools
@@ -66,7 +65,6 @@ brew 'spaceman-diff'                # Visual image diffs
 brew 'stern'                        # Multi-pod Kubernetes log tailing
 brew 'tmux'                         # Terminal multiplexer
 brew 'psviderski/tap/uncloud'       # Uncloud deployment CLI (`uc`)
-brew 'vjeantet/tap/alerter'         # Send native macOS notifications from the CLI
 brew 'usage'                        # Usage-spec support for CLI completions
 brew 'watch'                        # Periodically rerun a command
 brew 'watchexec'                    # Rerun commands on file changes
@@ -81,6 +79,7 @@ brew 'zsh-syntax-highlighting'      # Zsh command-line highlighting
 # Development
 cask 'android-studio'               # Android development IDE
 cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
+cask 'claude'                       # Anthropic desktop app, including Claude Code on the desktop
 cask 'conductor'                    # Parallel Claude Code agent workspaces
 cask 'lens'                         # Kubernetes IDE
 cask 'opencode-desktop'             # OpenCode desktop client for local and remote agent sessions

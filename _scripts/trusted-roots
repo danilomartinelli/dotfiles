@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Print the trusted roots, one absolute path per line: the directories beneath
+# which a project's own environment and tool configuration take effect on entry
+# without an approval per project. This is the one declaration of the list.
+# direnv/install.sh renders direnv's whitelist from it, and mise/mise.zsh hands
+# it to Mise, so the two tools cannot disagree about which projects they trust.
+#
+# Each root is printed physically resolved when it exists, because direnv
+# matches the resolved path of an .envrc: a root reached through a symbolic
+# link would never match anything beneath it.
+#
+# Usage: _scripts/trusted-roots
+
+set -eu
+
+dotfiles_root=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
+
+# WORKSPACE falls back the way .commonrc defaults it, for a caller that runs
+# before the shell has exported it.
+for root in "$dotfiles_root" "${WORKSPACE:-$HOME/Workspace}" "$HOME/conductor"; do
+  if resolved=$(CDPATH='' cd -P -- "$root" 2>/dev/null && pwd); then
+    root=$resolved
+  fi
+  printf '%s\n' "$root"
+done

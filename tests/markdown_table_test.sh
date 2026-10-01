@@ -2,7 +2,7 @@
 #
 # The Markdown tables generated regions are filled with.
 #
-# Both renderers build their tables through this module. Where a table lands
+# The software catalog builds its tables through this module. Where a table lands
 # inside a hand-written file is the generated-region reader's, and
 # tests/generated_region_test.sh drives that; this suite covers the shape of
 # the table itself.
