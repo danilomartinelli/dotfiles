@@ -698,10 +698,13 @@ test_shell_environment_uses_the_canonical_android_root() {
   local fixture
   fixture=$(new_fixture)
 
+  # DOTFILES_ROOT is what Zsh startup exports before topic files load; passing
+  # it keeps the caller's own checkout from standing in for this one.
   # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
   scenario_capture "$fixture" env \
     ANDROID_HOME=/custom/sdk \
     ANDROID_SDK_ROOT=/deprecated/sdk \
+    DOTFILES_ROOT="$REPOSITORY_ROOT" \
     HOME="$fixture/home" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
     zsh -d -f -c '
