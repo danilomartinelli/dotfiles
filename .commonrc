@@ -24,7 +24,6 @@ export PROJECTS="${PROJECTS:-$WORKSPACE/github.com}"
 # XDG_CONFIG_HOME is pinned rather than defaulted: topic installers link into
 # ~/.config unconditionally, so a tool that does honour the variable must not
 # be sent looking anywhere else.
-# See docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"

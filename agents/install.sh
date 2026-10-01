@@ -9,8 +9,7 @@ installer_require_darwin
 installer_banner "setting up global agent instructions"
 
 # One file, read under each agent's own name and from each agent's own
-# directory. The directories are the tools' contracts, not ours: see
-# docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
+# directory. The directories are the tools' contracts, not ours.
 link_instructions() {
   mkdir -p "$(dirname -- "$2")"
   installer_link_config --label "$1 instructions" \

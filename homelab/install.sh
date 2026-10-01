@@ -35,8 +35,7 @@ fi
 #    to ssh-key-create, not here: this installer runs unattended on every `dot`,
 #    and the key it used to generate landed at the ssh topic's own default path
 #    with a forced empty passphrase. Having created it silently, it also made a
-#    later `ssh-key-create default` refuse. See
-#    docs/adr/0011-topic-installers-do-not-create-credentials.md.
+#    later `ssh-key-create default` refuse.
 if [ -e "$HOMELAB_SSH_KEY" ]; then
   installer_note "homelab SSH key already at $HOMELAB_SSH_KEY"
 else

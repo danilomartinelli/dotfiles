@@ -93,7 +93,6 @@ installer_optional_app() {
 # spells it: XDG_CONFIG_HOME is deliberately ignored, because honouring it is
 # each tool's fact to state rather than ours to assume on its behalf. Resolves
 # only; the caller creates the directory, so the path stays safe to compute.
-# See docs/adr/0003-tool-config-directories-are-not-xdg-derived.md.
 # Usage: installer_config_dir <tool>
 installer_config_dir() {
   printf '%s\n' "$HOME/.config/$1"
@@ -207,11 +206,10 @@ _installer_apply_association() {
 
 # A topic claims its declared file types. This is the whole ritual the claiming
 # topics used to spell out in order: gate on the run-once marker, require duti,
-# apply TOPIC_DIR/_associations.tsv, then record the marker. The order carries
-# the decisions in docs/adr/0005-file-type-associations-apply-once.md — the
-# marker is written only after the apply returns, so a run that bailed leaves
-# the step armed — and it is implementation here rather than something each
-# topic has to re-honour.
+# apply TOPIC_DIR/_associations.tsv, then record the marker. The order is the
+# decision — the marker is written only after the apply returns, so a run that
+# bailed leaves the step armed — and it is implementation here rather than
+# something each topic has to re-honour.
 #
 # The run-once key is derived from the topic directory, so no installer spells
 # "<topic>-associations" by hand and no topic can gate on one key and mark

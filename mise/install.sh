@@ -45,7 +45,7 @@ mise trust "$MISE_CONFIG_DIR/config.toml" >/dev/null 2>&1 || true
 
 # Install exactly what the lock records and never write it. A plain install
 # rewrites the lock into a shape `mise lock` does not produce, so every run
-# dirtied the tree; see docs/adr/0020-dot-installs-what-the-mise-lock-records.md.
+# dirtied the tree.
 installer_banner "Installing Mise runtimes"
 if mise install --locked; then
   installer_success "Mise runtimes installed successfully"
