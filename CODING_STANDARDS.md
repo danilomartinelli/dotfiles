@@ -368,10 +368,12 @@ what it is, so two tests standing in for the same command cannot disagree
 about its interface. Add a stub there when a second fixture needs the same
 command, and leave a fake in place when it is genuinely specific to one test.
 
-Every faked command follows one convention: `FAIL_<COMMAND>_<SUBCOMMAND>` is an
-exit status and `FAKE_<COMMAND>_<NOUN>` is the output a subcommand prints. A
-subcommand with neither set succeeds silently, so a fixture declares only the
-behavior its scenario depends on.
+Failure controls use `FAIL_<COMMAND>` or `FAIL_<COMMAND>_<SUBCOMMAND>` for an
+exit status. `FAKE_<COMMAND>_<NOUN>` supplies output or simulated state; defaults
+are documented beside each stub. For example, `FAIL_DUTI=1` fails assignments,
+and `FAKE_DUTI_IDENTIFIERS='.md .rst'` limits that failure to selected rows.
+Keep status codes separate from selectors so a fixture declares exactly which
+operation fails and how.
 
 `tests/_support/fixture.sh` owns what an installer fixture is: the fake `$HOME`,
 the run-once marker directory, and the `fake-bin` first on `PATH`. Build one
