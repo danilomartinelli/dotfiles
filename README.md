@@ -293,6 +293,7 @@ own, and `mise lock --global` settles it again.
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
 | `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
+| `bun`                                       | `1.3.9`          | JavaScript runtime and toolkit                  |
 | `elixir`                                    | `1.20`           | Elixir runtime                                  |
 | `erlang`                                    | `29`             | BEAM runtime                                    |
 | `go`                                        | `1.27.1`         | Go toolchain                                    |
