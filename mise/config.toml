@@ -35,9 +35,10 @@ rust = "1.98.1"                                                 # Rust toolchain
 terraform = "1.16.4"                                            # Infrastructure as code CLI
 uv = "latest"                                                   # Python package and environment manager
 yarn = "4.18.1"                                                 # JavaScript package manager
+bun = "1.3.9"
 
 [settings]
-idiomatic_version_file_enable_tools = ["node"]
+idiomatic_version_file_enable_tools = ["node", "bun"]
 lockfile = true
 npm.shell_out = true
 python.uv_venv_auto = true
