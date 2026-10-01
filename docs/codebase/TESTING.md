@@ -37,7 +37,7 @@ failure. `CODING_STANDARDS.md` owns the focused validation matrix.
 - `tests/documentation_test.sh`: intentional harness exception that collects all
   missing public documentation in one report.
 
-At the inspected source snapshot the runner selects 31 suites, including the
+At the inspected source snapshot the runner selects 32 suites, including the
 checkout-root suite.
 
 ## 3) Test Scope Matrix
@@ -86,17 +86,22 @@ Host PATH/environment leakage can invalidate isolation; see the safeguards in
 - [TODO] Historical flakiness and remote CI results were not inspected. A local
   result does not establish remote CI status.
 
-GitHub Actions runs on `macos-latest` for PRs, pushes to `main` and manual
+GitHub Actions runs on `macos-15` for PRs, pushes to `main` and manual
 invocation, with a 20-minute job timeout. It runs ShellCheck, shfmt, Zsh syntax,
-Markdown formatting and `_scripts/test`. CI obtains ShellCheck/shfmt through
-Homebrew and mdformat/plugins through pip, rather than the checked-in Mise lock.
+Markdown formatting and `_scripts/test`. CI obtains its check tools through
+`mise install --locked` against the repository config and lock. Formatter extras
+have explicit versions, actions use full SHAs, and Mise has an explicit version.
 
 Local validation on 2026-10-01: `_scripts/test` completed successfully with
-**31 suites passed**. The seven-document section/link checks, Mise-managed
+**32 suites passed**. The seven-document section/link checks, Mise-managed
 `mdformat --check`, and `git diff --check` also passed. These checks do not
 include bootstrap, `dot`, live defaults, package mutations or credential creation
 against the real home. The original nested-cache reproduction now passes,
-and the durable startup regression covers the formerly missing case.
+and the durable startup regression covers the formerly missing case. Upgrade
+fixtures cover cancellation, unattended execution, selection boundaries, channel
+preservation, backend lock defaults, stale formatter extras, and failed installs
+without rewriting source. Native Mise lock generation and a cold formatter
+installation were also exercised separately in temporary directories.
 
 ## 6) Evidence
 

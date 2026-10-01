@@ -32,6 +32,7 @@ write_fixture_scripts() {
   stub_uname "$fixture/fake-bin"
   stub_xcrun "$fixture/fake-bin"
   stub_xcodebuild "$fixture/fake-bin"
+  stub_mise "$fixture/fake-bin"
 
   scenario_write_executable "$fixture/fake-bin/git" <<'EOF'
 #!/bin/sh
@@ -106,6 +107,12 @@ EOF
   scenario_write_executable "$fixture/fake-bin/editor" <<'EOF'
 #!/bin/sh
 printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
+EOF
+
+  scenario_write_executable "$fixture/_scripts/upgrade-software" <<'EOF'
+#!/bin/sh
+printf '%s\n' software-upgrades >> "$SCENARIO_EVENT_LOG"
+exit "${FAIL_SOFTWARE_UPGRADES:-0}"
 EOF
 
   stub_open "$fixture/fake-bin"
@@ -265,6 +272,7 @@ test_bootstrap_sequence() {
   assert_not_contains "$fixture/events.log" 'git '
   assert_not_contains "$fixture/events.log" 'brew update'
   assert_not_contains "$fixture/events.log" 'brew upgrade'
+  assert_not_contains "$fixture/events.log" 'software-upgrades'
   assert_not_contains "$fixture/events.log" ssh-keygen
   assert_not_contains "$fixture/events.log" topic-ignored
   assert_not_contains "$fixture/events.log" topic-bin
@@ -296,8 +304,9 @@ test_update_sequence_and_cwd_independence() {
   assert_before "$fixture/events.log" ' pull' homebrew-installer
   assert_before "$fixture/events.log" homebrew-installer 'brew update'
   assert_before "$fixture/events.log" 'brew tap' 'brew update'
-  assert_before "$fixture/events.log" 'brew update' 'brew upgrade'
-  assert_before "$fixture/events.log" 'brew upgrade' "brew tap $FIRST_TRUSTED_TAP"
+  assert_before "$fixture/events.log" 'brew update' "brew tap $FIRST_TRUSTED_TAP"
+  assert_before "$fixture/events.log" topic-zulu 'software-upgrades'
+  assert_not_contains "$fixture/events.log" 'brew upgrade'
   assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
   assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
   assert_not_contains "$fixture/events.log" macos-defaults
@@ -400,12 +409,12 @@ test_advisory_failures_continue() {
   assert_contains "$bootstrap_fixture/stdout.log" 'setup bootstrap complete'
 
   update_fixture=$(make_fixture)
-  export FAIL_GIT_PULL=1 FAIL_BREW_UPDATE=1 FAIL_BREW_UPGRADE=1
+  export FAIL_GIT_PULL=1 FAIL_BREW_UPDATE=1 FAIL_SOFTWARE_UPGRADES=1
   invoke "$update_fixture" "$update_fixture/_scripts/setup" update
-  unset FAIL_GIT_PULL FAIL_BREW_UPDATE FAIL_BREW_UPGRADE
+  unset FAIL_GIT_PULL FAIL_BREW_UPDATE FAIL_SOFTWARE_UPGRADES
   assert_contains "$update_fixture/stderr.log" 'checkout refresh failed; continuing'
   assert_contains "$update_fixture/stderr.log" 'Homebrew update failed; continuing'
-  assert_contains "$update_fixture/stderr.log" 'Homebrew upgrade failed; continuing'
+  assert_contains "$update_fixture/stderr.log" 'Declared software upgrades failed; continuing'
   assert_contains "$update_fixture/events.log" topic-zulu
   assert_contains "$update_fixture/stdout.log" 'setup update complete'
 

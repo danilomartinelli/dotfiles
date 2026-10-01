@@ -28,7 +28,7 @@ node = "lts"                                                    # Node.js LTS
 "npm:wrangler" = "4.145.0"                                      # Cloudflare Workers CLI
 "pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" } # Aider coding assistant
 # Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
-"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm --with mdformat-frontmatter" } # Markdown formatter with GFM/frontmatter plugins
+"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.1.2" } # Markdown formatter with GFM/frontmatter plugins
 pnpm = "12.8.1"                                                 # JavaScript package manager
 python = "3.14.7"                                               # Python runtime
 ruby = "4.0"                                                    # Ruby runtime

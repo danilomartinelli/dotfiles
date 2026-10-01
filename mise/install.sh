@@ -55,6 +55,17 @@ else
   exit 1
 fi
 
+# Mise's installation identity is the main package version, so changed extras
+# can otherwise remain stale even though the generated lock has new options.
+mdformat_install_dir=$(mise where pipx:mdformat 2>/dev/null) || mdformat_install_dir=''
+if [ -n "$mdformat_install_dir" ]; then
+  installer_banner "Reconciling Mise formatter plugins"
+  if ! mise exec --locked python -- python3 "$TOPIC_DIR/_extras.py" \
+    "$TOPIC_DIR/config.toml" "$mdformat_install_dir"; then
+    installer_fail "Failed to reconcile Mise formatter plugins"
+  fi
+fi
+
 # Remove runtimes no longer declared and stale patch versions. Pruning writes
 # the lock in the same install shape, so lockfile writes are off for it and the
 # lock stays what `mise lock --global` produced.

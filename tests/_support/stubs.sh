@@ -98,7 +98,22 @@ stub_mise() {
   _stub_write "$1/mise" <<'EOF'
 #!/bin/sh
 printf 'mise %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+if [ "$1" = -C ]; then
+  cd "$2" || exit 1
+  shift 2
+fi
 case "$*" in
+  'where pipx:mdformat')
+    [ -n "${FAKE_MISE_MDFORMAT_HOME:-}" ] || exit 1
+    printf '%s\n' "$FAKE_MISE_MDFORMAT_HOME"
+    ;;
+  'exec --locked python -- python3 '*)
+    exit "${FAIL_MISE_EXEC:-0}"
+    ;;
+  'exec --locked python -- '*)
+    shift 4
+    exec "$@"
+    ;;
   'where java')
     printf '%s\n' "$FAKE_MISE_JAVA_HOME"
     ;;

@@ -24,9 +24,10 @@ bin/dot
   -> adapter-checkout.sh -> dotfiles-root.symlink
   -> _scripts/setup update
       -> resolver link -> advisory git pull -> private template -> safe links
-      -> Homebrew availability -> advisory maintenance/update/upgrade
+      -> Homebrew availability -> advisory maintenance/update
       -> Brewfile reconciliation -> prerequisite topics -> remaining topics
           -> installer-preamble.sh -> catalogs/link-config/vendor commands
+      -> upgrade-software -> advisory audit -> interactive selection/confirmation
   -> phase output and exit status
 ```
 
@@ -35,7 +36,8 @@ bin/dot
 1. `_scripts/setup` repairs the resolver link, tries checkout refresh, creates a
    missing private environment template and links with `--batch skip`.
 1. Homebrew availability and declared dependencies are critical. Legacy cleanup,
-   `brew update`, `brew upgrade`, and checkout refresh are advisory.
+   `brew update`, interactive upgrades, and checkout refresh are advisory.
+   Bundle reconciliation uses `--no-upgrade`; new releases need selection.
 1. Discovery supplies installer paths. `workspace` runs first because subsequent
    topics consume the layout it creates; remaining installers follow catalog order.
 1. Each installer sources the preamble, checks its dependencies, and applies its

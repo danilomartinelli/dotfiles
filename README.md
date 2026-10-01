@@ -129,9 +129,49 @@ dot
 
 `dot` repairs the checkout-root link, attempts `git pull`, restores a missing
 private environment file from its template, conservatively recreates missing
-dotfile links, updates Homebrew, reconciles `Brewfile`, and reruns topic
-installers. Checkout refresh and Homebrew update/upgrade are advisory; declared
-dependency and installer failures stop the run.
+dotfile links, updates Homebrew, reconciles `Brewfile` without blanket upgrades,
+and reruns topic installers. It then reports available upgrades for declared
+software and opens an interactive picker. Checkout refresh, Homebrew refresh,
+and optional upgrade failures warn and continue; declared dependency and
+installer failures stop the run.
+
+Use Tab or Space to select packages, Ctrl-A to select all, and Enter to review
+the selection. The final `Apply selected upgrades? [y/N]` confirmation defaults
+to no. Escape cancels. Without an interactive terminal, `dot` reports candidates
+and advisory vulnerability results but does not apply newly discovered releases.
+If `fzf` is unavailable, selection is skipped with an actionable warning.
+
+The picker includes declared Homebrew formulae, casks, App Store apps, and Mise
+tools. Homebrew pins are respected. Packages installed outside the declarations
+are not independent upgrade targets, although selected packages or newly
+installed declarations can require dependency changes. Homebrew itself and its
+catalog are refreshed before selection. Apps may also update themselves outside
+this flow; this repository does not disable their own updaters.
+
+Versions already committed to the Mise lock, including those received by
+`git pull`, are applied before the picker. Selecting a new Mise release updates
+the appropriate declaration, regenerates its lock, installs the selected tools,
+and refreshes the README catalog. Review and commit that diff separately:
+`dot` does not commit or push. Channels such as Node `lts`, Java `temurin-25`,
+and Erlang `29` are retained; exact pins can advance across major versions,
+which the picker highlights. OpenCode remains on its configured v1 release line.
+The Mise installer also checks the installed formatter plugins against their
+pins and refreshes only mdformat when those versions differ.
+
+Vulnerability checks only advise in this CLI flow; they are not a CI gate.
+`brew vulns` checks declared installed formulae and their dependencies, reporting
+skipped coverage. OSV queries cover direct npm/PyPI packages in the Mise lock and
+their available candidates, not their transitive dependency trees. Casks, App
+Store apps, formatter extras, other backends, and runtimes are explicitly outside
+that scan. A failed query is reported as unavailable, never as a clean audit.
+The package names and versions queried are sent to the public OSV service.
+
+Candidates are checked again before applying. Mise prepares and validates its
+source changes in a temporary directory; failed preparation or installation
+leaves tracked declarations intact. A failed install may leave an inactive tool
+copy. Package-manager operations are not a transaction: an earlier successful
+upgrade is retained if a later one fails. Avoid running concurrent package
+upgrades against the same Mac.
 
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
@@ -154,9 +194,11 @@ macOS defaults.
 `mise/config.toml` declares language runtimes and language-distributed CLIs;
 `mise/mise.lock` pins their resolved versions and checksums.
 
-Mise installs the versions recorded in that lock. Homebrew declarations remain
-unpinned, and updates can install newer packages. The repository reproduces the
-declared setup and configuration, not a frozen machine image.
+Mise installs the versions recorded in that lock. Homebrew preserves installed
+packages during normal reconciliation and offers controlled upgrades, but a
+new installation still uses its current catalog. The repository reproduces the
+declared setup and configuration, not a frozen machine image. See the
+[controlled-upgrade decision](docs/adr/0001-controlled-software-upgrades.md).
 
 The tables below are rendered from those two files by
 `_scripts/render-software-catalog`, so a name, a version, a group, or a purpose
@@ -284,11 +326,12 @@ run-once step.
 
 Versions may be floating declarations such as `latest`, `lts`, or a minor
 series. Reproducibility comes from the generated `mise/mise.lock`, and `dot`
-installs exactly what it records with `mise install --locked`, so an update run
-never rewrites it.
+installs exactly what it records with `mise install --locked`. Reconciliation
+does not rewrite it; only explicitly selected new releases change it.
 
 `mise lock --global`, run from the checkout, is the one command that writes the
-lock. After changing a declaration, run it and commit the lock with the
+lock. The interactive updater runs it against staged copies for selected tools.
+After changing a declaration manually, run it and commit the lock with the
 declaration; until then `dot` stops at the Mise topic and names that command.
 `mise lock --global --bump` advances the floating declarations deliberately. A
 plain `mise install` or `mise upgrade` still writes the lock in a shape of its
@@ -639,9 +682,12 @@ skills under `.agents/`, which `skills-lock.json` records.
 GitHub Actions runs the same checks and `_scripts/test` on macOS for every pull
 request and every push to `main`; see `.github/workflows/ci.yml`.
 
-CI installs ShellCheck and shfmt through Homebrew, and mdformat with its plugins
-through pip. Those versions are not taken from `mise/mise.lock`; record the
-local and CI tool versions when investigating a difference in check results.
+CI installs only its required check tools through Mise with `--locked`, using
+the repository's config and lock: ShellCheck, shfmt, Go, Python, uv, and mdformat.
+The formatter's GFM and frontmatter plugins have explicit versions in the same
+declaration. Actions use full commit SHAs, Mise has an explicit version, and the
+runner names macOS 15. GitHub may still update that runner image, and the legacy
+Mise lock does not freeze all transitive language-package dependencies.
 
 ## Extend the setup
 

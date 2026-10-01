@@ -69,4 +69,4 @@ for tap in $TRUSTED_TAPS; do
   fi
 done
 
-"$BREW_BIN" bundle --file "$BREWFILE"
+HOMEBREW_NO_AUTO_UPDATE=1 "$BREW_BIN" bundle --file "$BREWFILE" --no-upgrade

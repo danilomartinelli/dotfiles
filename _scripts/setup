@@ -269,11 +269,18 @@ run_dependency_pipeline() {
 
   if [ "$mode" = update ]; then
     run_advisory 'Homebrew update' "$BREW_BIN" update
-    run_advisory 'Homebrew upgrade' "$BREW_BIN" upgrade
   fi
 
   install_declared_dependencies
   install_topics
+
+  if [ "$mode" = update ]; then
+    run_advisory 'Declared software upgrades' \
+      env MISE_CONFIG_DIR="$DOTFILES_ROOT/mise" \
+      MISE_GLOBAL_CONFIG_FILE="$DOTFILES_ROOT/mise/config.toml" \
+      mise -C "$DOTFILES_ROOT" exec --locked python -- \
+      "$DOTFILES_ROOT/_scripts/upgrade-software" --brew "$BREW_BIN"
+  fi
 }
 
 install_checkout_root_link() {
