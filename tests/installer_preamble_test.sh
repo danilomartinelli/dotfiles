@@ -540,7 +540,7 @@ test_fail_exits_from_inside_a_read_loop() {
 
   checkout=$(make_checkout)
   home=$checkout/home
-  # opencode/install.sh calls installer_fail from a `while read ... done 3<file`
+  # An installer may call installer_fail from a `while read ... done 3<file`
   # loop. That is a redirect rather than a pipeline, so exit must end the whole
   # installer instead of one iteration.
   write_synthetic_installer "$checkout/sample/install.sh" \

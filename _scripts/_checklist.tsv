@@ -25,7 +25,9 @@ app	/Applications/Bitwarden.app	Bitwarden	log in to unlock the vault
 app	/Applications/Bartender 6.app|/Applications/Bartender.app	Bartender	grant Screen Recording permission
 app	/Applications/Caffeine.app	Caffeine	click the coffee cup in the menu bar to activate
 app	/Applications/ChatGPT.app	ChatGPT	sign in; set Option+Space global shortcut
+app	/Applications/Claude.app	Claude	sign in; Claude Code on the desktop is its Code tab
 app	/Applications/CleanShot X.app	CleanShot X	grant Screen Recording + Accessibility permissions
+app	/Applications/Conductor.app	Conductor	sign in with GitHub; its settings come from $DOTFILES_ROOT/conductor/settings.toml
 app	/Applications/Dia.app	Dia	set as default browser: defaultbrowser dia
 app	/Applications/Discord.app	Discord	sign in to your account
 app	/Applications/OpenCode.app	OpenCode	sign in; it reads ~/.config/opencode and ~/.local/share/opencode like the CLI

@@ -1,19 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  // The payload of the profile opencode/env.zsh names as the default, rendered
-  // by _scripts/render-opencode-profiles from the same sources every other
-  // profile is rendered from. Do not edit inside the markers.
-  //
-  // It is here for hosts that cannot select a profile. `ocx opencode` and
-  // bin/opencode-profile both export OPENCODE_CONFIG, which merges the chosen
-  // profile OVER this file, so every profile still owns its own routes and the
-  // CLI is unaffected. A desktop app opened from the Dock inherits no
-  // environment and reaches only this file: without these keys it would start
-  // with no model and every delegated agent unrouted.
-  // generated: default-profile
+  // The OpenCode desktop app, opened from the Dock, inherits no environment and
+  // reads only this file, so the models are stated here rather than left to
+  // whichever one a session picked last.
   "model": "openai/gpt-6-astra",
   "small_model": "openai/gpt-5.6-luna",
   "lsp": true,
+  // Each agent names its model beside the variant: variants are model-specific,
+  // and OpenCode v2, which Conductor runs against this same file, drops a
+  // variant that arrives without one.
   "agent": {
     "plan": {
       "model": "openai/gpt-6-astra",
@@ -22,29 +17,8 @@
     "build": {
       "model": "openai/gpt-6-astra",
       "variant": "xhigh"
-    },
-    "coder": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high"
-    },
-    "explore": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high"
-    },
-    "researcher": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high"
-    },
-    "scribe": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high"
-    },
-    "reviewer": {
-      "model": "openai/gpt-5.6-luna",
-      "variant": "high"
     }
   },
-  // generated-end
   "mcp": {
     // An Android cold boot is a documented 2-10 minute operation and Argent
     // bounds it itself; OpenCode's own 60s request timeout cut every one of
@@ -82,18 +56,17 @@
     }
   },
   "plugin": [
-    // OpenCode ships no Anthropic provider of its own: without this plugin the
-    // stored Anthropic OAuth credential is listed by `opencode auth list` and
-    // the provider still resolves to "Provider not found". Every anthropic/*
-    // route in profiles/_routing.tsv depends on it.
+    // OpenCode ships no Anthropic subscription login of its own: without this
+    // plugin the stored Anthropic OAuth credential is listed by
+    // `opencode auth list` and the provider still resolves to "Provider not
+    // found".
     //
     // The two release lines of this package are not cross-compatible and share
     // one npm name: 1.x on `latest` is the OpenCode v1 plugin, 2.x on `next` is
     // the OpenCode v2 one, which OpenCode 1.x refuses with "must default export
     // an object with server()". Move this pin only with npm:opencode-ai.
-    "@ex-machina/opencode-anthropic-auth@1.8.5",
-    "@tarquinen/opencode-dcp@3.1.15",
-    "@franlol/opencode-md-table-formatter@0.0.6",
-    "./orchestrator/index.ts"
+    "@ex-machina/opencode-anthropic-auth@1.8.6",
+    "@tarquinen/opencode-dcp@3.2.0",
+    "@franlol/opencode-md-table-formatter@0.0.6"
   ]
 }

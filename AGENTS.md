@@ -19,9 +19,9 @@ reviewers, approvers, teams, or external stakeholders.
 - `AGENTS.md` defines repository-wide agent workflow.
 - `CODING_STANDARDS.md` defines normative implementation and validation rules.
 - `README.md` is the human-facing installation, operation, and command guide.
-- `opencode/README.md` owns detailed OCX/OpenCode procedures.
-- `opencode/profiles/*/AGENTS.md` files are versioned profile payloads. They
-  configure OpenCode sessions and do not replace this root guide.
+- `opencode/README.md` owns OpenCode configuration details.
+- `agents/instructions.md` is a payload: every coding agent on this machine
+  reads it as its global `AGENTS.md`. It does not replace this root guide.
 - `docs/agents/*.md` record the issue tracker, triage labels, and domain
   documentation conventions that the engineering skills read.
 
@@ -55,7 +55,6 @@ dotfiles/
 ├── docs/agents/          # Issue tracker, triage, and domain conventions
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
-├── opencode/             # Dotfiles-owned OpenCode and OCX configuration
 ├── <topic>/              # Tool-specific shell files and optional installer
 ├── Brewfile              # Homebrew declarations
 ├── mise/config.toml      # Runtime and language-package CLI declarations
@@ -91,24 +90,21 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 
 ## Sources of truth
 
-| Concern                                         | Source                           |
-| ----------------------------------------------- | -------------------------------- |
-| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                       |
-| README software catalog tables                  | rendered from declarations       |
-| Runtimes and language-package CLIs              | `mise/config.toml`               |
-| Mise versions and checksums                     | `mise/mise.lock` (generated)     |
-| macOS preferences                               | `_macos/defaults.tsv`            |
-| Dock layout                                     | `dock/_layout.tsv`               |
-| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`        |
-| Topic discovery and load classes                | `_scripts/topic-catalog`         |
-| Setup orchestration                             | `_scripts/setup`                 |
-| OpenCode and OCX workspace                      | `opencode/`                      |
-| Managed OpenCode entry catalog                  | `opencode/_managed-entries.tsv`  |
-| Shared OpenCode profile policy                  | `opencode/profiles/_shared/`     |
-| OpenCode profile model routing                  | `opencode/profiles/_routing.tsv` |
-| Agent worktree bootstrap                        | `.opencode/worktree.jsonc`       |
-| Public lifecycle and commands                   | `README.md`                      |
-| Coding and validation rules                     | `CODING_STANDARDS.md`            |
+| Concern                                         | Source                       |
+| ----------------------------------------------- | ---------------------------- |
+| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                   |
+| README software catalog tables                  | rendered from declarations   |
+| Runtimes and language-package CLIs              | `mise/config.toml`           |
+| Mise versions and checksums                     | `mise/mise.lock` (generated) |
+| macOS preferences                               | `_macos/defaults.tsv`        |
+| Dock layout                                     | `dock/_layout.tsv`           |
+| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`    |
+| Topic discovery and load classes                | `_scripts/topic-catalog`     |
+| Setup orchestration                             | `_scripts/setup`             |
+| Global coding-agent instructions                | `agents/instructions.md`     |
+| Trusted roots for direnv and Mise               | `_scripts/trusted-roots`     |
+| Public lifecycle and commands                   | `README.md`                  |
+| Coding and validation rules                     | `CODING_STANDARDS.md`        |
 
 Never edit `mise/mise.lock` manually. Regenerate it with `mise lock --global`
 from the repository root and review the generated diff narrowly. `dot` installs
@@ -150,122 +146,34 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   Run the renderer with the declaration change.
 - Do not run broad package-manager repair commands such as `npm audit fix`.
 
-### OpenCode and OCX
+### Coding agents
 
-`opencode/_managed-entries.tsv` is the catalog of dotfiles-owned entries.
-`opencode/install.sh` links what it declares into `~/.config/opencode`, and both
-`tests/opencode_install_test.sh` and `tests/documentation_test.sh` derive their
-expectations from it. No code carries a second copy of the list.
+Claude Code, Codex, Kimi Code and OpenCode run from Mise; Conductor, the Claude
+desktop app and the OpenCode desktop app are casks. An agent topic links only
+credential-free files:
 
-Dotfiles owns `orchestrator/`, `ocx.jsonc`, `opencode.jsonc`,
-`opencode-mem.jsonc`, `tui.jsonc`, and the managed `regular`, `example`,
-`anthropic`, `go` and `xing` profiles. OCX owns `.ocx/`, `plugins/`,
-`package.json`, `.gitignore`, and `profiles/default/`; never copy or version
-those runtime paths.
+- `claude/settings.json`, `conductor/settings.toml` and `kimi/tui.toml` are
+  linked files their apps also write, as Zed's settings are. A diff in one may
+  be the app's; keep or discard it deliberately rather than reverting it as
+  noise.
+- Codex's and Kimi Code's `config.toml` stay machine-local: they record project
+  trust, plugin state and provider credentials.
+- `agents/install.sh` links `agents/instructions.md` into every agent's own
+  directory. Change the shared instructions there, once.
 
-OCX remains upstream. `opencode/orchestrator/` is authored here, with pinned
-OpenCode SDK and memory dependencies. It owns prompts, permissions, delegation
-and direct memory capture. Project integrations stay project-local. Keep
-`scribe`, `explore` and `researcher` alongside `coder` and `reviewer`; assign
-specialized focuses in the delegation prompt instead of adding micro roles.
+`opencode/opencode.jsonc` stays in OpenCode v1 syntax: the desktop app runs v1,
+and Conductor's bundled OpenCode v2 reads the same file. Move the
+`@ex-machina/opencode-anthropic-auth` pin only with `npm:opencode-ai`; its two
+release lines serve the two OpenCode majors. Validate a model ID and its
+variants against the live `opencode models <provider> --verbose` catalog.
+Variants are model-specific, and `variant` is the only reasoning knob an agent
+accepts: `reasoningEffort` and `textVerbosity` are provider option names that
+OpenCode discards without a word.
 
-`opencode/orchestrator/safe-git.ts` owns what makes a git invocation safe to run
-inside someone's checkout: the global flags, the inherited variables to scrub,
-and which of those tokens a normalizer may drop. Four places had four answers.
-Do not spell `core.fsmonitor=false` or a `GIT_DIR` scrub at a call site; ask for
-the argv and the environment. Launching the process stays with the caller,
-because `permissions.ts` never launches one.
-
-The installer provisions worktree/notification components and rejects competing
-orchestration hooks before activation. Manage registry components through OCX
-and keep `ocx verify --cwd ~/.config/opencode --verbose` green; never edit its
-receipts. See `opencode/README.md` for installation and
-`opencode/orchestrator/README.md` for runtime recovery.
-
-The managed profile directories are rendered, not authored. OCX has no profile
-inheritance and `--clone` copies only `ocx.jsonc`, so shared policy lives in
-`opencode/profiles/_shared/`, routing lives in `opencode/profiles/_routing.tsv`,
-and optional profile policy lives in `opencode/profiles/_overrides/`.
-`_scripts/render-opencode-profiles` composes these into the payloads the
-installer links. Edit a source and rerun the renderer; never edit a profile
-directory directly. Adding a profile is a routing declaration plus a roster
-row, then the renderer.
-
-Adding or removing a managed entry starts in
-`opencode/_managed-entries.tsv`. Its documentation check then requires the same
-change in all three guides:
-
-- `opencode/README.md`
-- `README.md`
-- `AGENTS.md`
-
-A new profile also needs its `oc:<name>` shortcut in `opencode/aliases.zsh`,
-which the same check enforces.
-
-`~/.local/share/opencode` is runtime state, not configuration, and OpenCode
-prunes none of it. `opencode/_doctor.sh`, reached through `opencode-doctor`,
-owns reporting and repairing it. `opencode/_runtime-conditions.tsv` is the
-catalog of what it inspects, in run order, and the table in `opencode/README.md`
-is rendered from it; adding a condition is a row plus a
-`runtime_condition_<name>` function, and nothing else restates the list. A
-stranded workspace reference is the one that cannot wait: deleting or archiving
-resolves the workspace first, so the session cannot be removed through the
-interface at all until the reference is released. Each condition detects once
-per run and reports what it repaired, so a refused `--fix` prints no report; see
-`docs/adr/0015-the-doctor-reports-what-it-repaired.md`. Repairs need `--fix` and
-refuse to run while OpenCode holds the database.
-`opencode/_runtime-store.sh` is the one way into the database, it declares the
-schema it depends on, and it refuses every write until a caller has established
-that OpenCode is idle. Do not add a second cleanup path for that directory, and
-do not reach sqlite3 around the store.
-
-A coder owns two directories. Its artifact directory holds the evidence of one
-attempt and is preserved; the worktree's shared `workspace` holds everything
-disposable and is reused by every coder there, so a delegation no longer
-rebuilds the toolchain from nothing. The runtime does not serialize the
-workspace: overlapping source ownership stays refused, while sharing a build
-cache is the orchestrator's judgement. Retiring either is the doctor's, under
-`--days`; the report names the large ones so the cost is visible before
-anything is deleted.
-
-A delegation record carries its attempt count, which outlives the compaction
-the root's own recollection does not. It exists so a repeated resume changes
-method instead of repeating itself; it never stops the run.
-
-Validate model IDs and variants against the current live
-`opencode models <provider> --verbose` catalog, run through
-`bin/opencode-profile` so the profile's providers are in scope. Do not add
-`--pure`: it drops providers reached through the gateway and can report a
-configured provider as not found. Variants are model-specific; do not invent a universal reasoning or
-performance option, and remember that `variant` is the only reasoning knob
-`AgentConfig` accepts — `reasoningEffort` and `textVerbosity` are provider
-option names that OpenCode discards without a word.
-
-### The OpenCode desktop app
-
-`opencode-desktop` embeds the OpenCode runtime rather than spawning a CLI, and
-reads `~/.config/opencode` itself. MCP servers, plugins, the orchestrator and
-permissions therefore arrive already managed, and the app needs no adapter.
-
-What it cannot do is select a profile: it has no selector, and a `.app` opened
-from the Dock inherits no environment, so `OPENCODE_CONFIG` never reaches it.
-`opencode/opencode.jsonc` carries the default profile's payload for that reason,
-inside a `// generated: default-profile` block. `_scripts/render-opencode-profiles`
-writes it from `profiles/_routing.tsv` and the `OCX_PROFILE` that
-`opencode/env.zsh` declares, so the routing floor and the shell default cannot
-disagree and neither is written down twice. Never edit between the markers. See
-`docs/adr/0018-the-global-opencode-config-carries-the-default-profile.md`.
-
-It is a floor and not a second declaration: `OPENCODE_CONFIG` merges a profile
-over that file, so every profile still replaces every route and the CLI is
-unchanged. Its window and session state stays in `~/Library/Application Support`,
-machine-local and untracked.
-
-`bin/opencode-profile` remains the adapter for a host that does spawn the binary,
-and for `opencode models <provider> --verbose`. It runs the resolved binary
-through `mise exec --no-deps` and includes Homebrew paths so native MCP/LSP/shell
-children can find declared CLIs without a login shell. Preserve argument
-forwarding and clean version/help output.
+`_scripts/trusted-roots` is the one declaration of the trusted roots. direnv's
+whitelist is rendered from it by `direnv/install.sh` and Mise receives it
+through `mise/mise.zsh`; a project outside those roots keeps its explicit
+`direnv allow` or `mise trust`.
 
 ## Editing and simplification
 
@@ -321,15 +229,16 @@ the same change as the public surface.
 - Secrets belong only in gitignored `.localrc` with mode `600` or an
   appropriate system credential store.
 - Generated Git identity, SSH private keys, SOPS identities, kubeconfigs, auth
-  receipts, OCX runtime state, and account identifiers are machine-private.
+  receipts, agent runtime state, and account identifiers are machine-private.
 - `ssh-key-create` and `sops-key-create` are the only key-creation paths in the
   repository. Any installer may repair safe links, directories, and
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
   `_scripts/key-provisioning.sh`. See
   `docs/adr/0011-topic-installers-do-not-create-credentials.md`.
-- Tracked Zed and OpenCode configuration must not contain plaintext credentials
-  or pretend that settings interpolate `$VARIABLE` when they do not.
+- Tracked Zed, OpenCode, Claude Code, Conductor and Kimi Code configuration
+  must not contain plaintext credentials or pretend that settings interpolate
+  `$VARIABLE` when they do not.
 - Resolve the exact target and confirm user authorization before destructive or
   remote-changing operations.
 

@@ -2,18 +2,20 @@
 #
 # The verdict a renderer reaches about a file it generates.
 #
-# Both renderers answer the same question — is what is checked in still what
-# this would produce? — and answered it two different ways. One counted stale
-# payloads and named their paths; the other printed a unified diff and stopped
-# at the first. tests/documentation_test.sh runs both with --check and treats
-# the two as interchangeable, which they were not: only one of them showed you
-# what had drifted, and only one of them kept going to find the rest.
+# A renderer answers one question — is what is checked in still what this
+# would produce? — and the answer has two halves: show what drifted, and keep
+# going to find the rest. Renderers here once answered it two different ways,
+# one counting stale payloads and naming their paths, the other printing a
+# unified diff and stopping at the first, while tests/documentation_test.sh
+# treated them as interchangeable. _scripts/render-software-catalog is the one
+# caller now, and the verdict stays here so that a renderer gets both halves
+# without having to remember them.
 #
 # This is deliberately not the whole renderer shell. The flag loop, the usage
 # text, and the temp directory are boilerplate every Bash script has, and a
 # module holding them would be four calls a caller has to make in the right
-# order. What the two renderers actually disagreed about is the verdict, and
-# that is what lives here.
+# order. The verdict is what renderers disagreed about, and that is what lives
+# here.
 
 GENERATED_FILE_MODE='write'
 GENERATED_FILE_STALE=0
@@ -30,11 +32,10 @@ generated_file_mode() {
 # newline.
 #
 # The third argument is the root a reported path is shown relative to, not the
-# path itself. Both callers used to compute that string, against two different
-# roots, and both produced "README.md" — one for opencode/README.md and one for
-# the checkout's. A stale run named the same file twice and neither was the one
-# you had to look at. A path outside the root is reported whole, which is what a
-# fixture tree wants.
+# path itself. Callers used to compute that string against different roots,
+# and two of them produced "README.md" for two different files, so a stale run
+# named the same file twice and neither was the one you had to look at. A path
+# outside the root is reported whole, which is what a fixture tree wants.
 # Usage: generated_file_sync <rendered> <stored> <root>
 generated_file_sync() {
   local rendered=$1 stored=$2 root=$3

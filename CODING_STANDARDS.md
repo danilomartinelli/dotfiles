@@ -42,10 +42,8 @@ catalogs, validation lists, or subsystem runbooks between files.
 | Dock layout                          | `dock/_layout.tsv`                |
 | Topic discovery and load classes     | `_scripts/topic-catalog`          |
 | Setup orchestration                  | `_scripts/setup`                  |
-| OpenCode and OCX configuration       | `opencode/`                       |
-| Managed OpenCode entry catalog       | `opencode/_managed-entries.tsv`   |
-| Shared OpenCode profile policy       | `opencode/profiles/_shared/`      |
-| OpenCode profile model routing       | `opencode/profiles/_routing.tsv`  |
+| Global coding-agent instructions     | `agents/instructions.md`          |
+| Trusted roots for direnv and Mise    | `_scripts/trusted-roots`          |
 | Public commands and lifecycle        | `README.md`                       |
 | Agent workflow                       | `AGENTS.md`                       |
 
@@ -180,12 +178,12 @@ A caller does not parse the prose to learn which happened. See
 
 Every tab-separated catalog file is read through `_scripts/catalog.sh`, which
 the preamble sources for installers and which `_macos/set-defaults.sh`,
-`_scripts/checklist`, and `_scripts/render-opencode-profiles` source directly. Call
+and `_scripts/checklist` source directly. Call
 `catalog_each_row <catalog> <handler>` and write a handler that takes the
 leading columns it needs; do not write a `read` loop of your own. The reader
 pads every row to seven arguments, and owns what counts as a
 comment, delivery of a final row with no trailing newline, and reading on file
-descriptor 3 so a handler running `duti`, `dockutil`, or `ocx` cannot consume
+descriptor 3 so a handler running `duti` or `dockutil` cannot consume
 the rows still to come. A handler must return zero: consumers run under
 `set -e`, so a non-zero return stops the run rather than skipping a row.
 
@@ -212,23 +210,21 @@ for. Widening a catalog past seven columns means widening the reader first; a
 wider row packs its tail into the last argument instead of failing.
 
 A catalog row that names behaviour binds to it by convention rather than by a
-`case` listing every pair. `_doctor.sh` composes `runtime_condition_<name>` from
-the row's first column, and `_scripts/mobile-setup` composes
+`case` listing every pair, the way `_scripts/mobile-setup` composes
 `<operation>_<target>`. The convention is only safe with the refusal that goes
 with it: resolve the name, check it is defined, and stop the run when it is
 not. A composed name that silently resolves to nothing is worse than the
 enumeration it replaced, because a half-added row then does nothing at all
 instead of failing.
 
-A generated region inside a hand-authored file is read through
-`_scripts/generated-region.sh`, which `_scripts/render-software-catalog` and
-`_scripts/render-opencode-profiles` source directly. Call
-`generated_regions_render <markdown|jsonc> <source-file> <handler>` and write a
-handler that prints one region's body for a name, or returns non-zero for a
-name it does not know; do not write a marker loop of your own. The module owns
-both formats' marker syntax, the refusal of a file with no region or a
-malformed one, byte-for-byte preservation of everything outside a region's
-interior, and the blank lines Markdown puts around a body. It returns `2` for
+A generated region inside a hand-authored Markdown file is read through
+`_scripts/generated-region.sh`, which `_scripts/render-software-catalog`
+sources directly. Call `generated_regions_render <source-file> <handler>` and
+write a handler that prints one region's body for a name, or returns non-zero
+for a name it does not know; do not write a marker loop of your own. The module
+owns the marker syntax, the refusal of a file with no region or a malformed
+one, byte-for-byte preservation of everything outside a region's interior, and
+the blank lines Markdown puts around a body. It returns `2` for
 invalid usage and `1` for any render failure. Output streams as it is
 produced, so render into a staging file and pass it to `generated_file_sync`
 only when the render returned zero.
@@ -348,8 +344,6 @@ the dependent installer.
   narrate obvious syntax.
 - Keep `README.md` human-facing, `AGENTS.md` operational for agents, and this
   file normative. Detailed OpenCode procedures belong in `opencode/README.md`.
-- OCX registry payloads live outside the checkout. Update them through OCX
-  and validate integrity with `ocx verify`; do not vendor or reformat them.
 - Do not invent licenses, approvers, support channels, changelogs, or ownership
   beyond Danilo as the sole owner.
 
@@ -390,9 +384,8 @@ with `installer_fixture` and invoke through `fixture_run`, which takes per-run
 exporting it: an `export` before the call and an `unset` after leaks into the
 next case whenever something returns between the two.
 
-`tests/_support/jsonc.sh` owns reading tracked JSONC, and
-`tests/_support/opencode-catalog.sh` owns reading the managed entry catalog.
-A second fixture needing either reads it from there rather than restating it.
+`tests/_support/jsonc.sh` owns reading tracked JSONC. A second fixture needing
+it reads it from there rather than restating it.
 
 ### Focused validation matrix
 
@@ -418,10 +411,9 @@ A second fixture needing either reads it from there rather than restating it.
 | Aider                                                           | `tests/aider_install_test.sh`                                                                                |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
+| Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                               |
+| Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                               |
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                 |
-| OpenCode and OCX                                                | `tests/opencode_install_test.sh`                                                                             |
-| OpenCode orchestration plugin                                   | `tests/opencode_orchestrator_test.sh`                                                                        |
-| OpenCode runtime state maintenance                              | `tests/opencode_doctor_test.sh`                                                                              |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 
 `_scripts/test` runs every safe suite and returns a single verdict. It discovers
@@ -463,11 +455,12 @@ warnings introduced by the change.
 - Secrets belong in gitignored `.localrc` with mode `600` or an appropriate
   system credential store.
 - Never log or commit Git identity, SSH private keys, SOPS identities,
-  kubeconfigs, auth stores, OCX receipts, or account identifiers.
+  kubeconfigs, auth stores, or account identifiers.
 - SSH and SOPS installers may repair directories, links, and permissions; only
   the explicit `ssh-key-create` and `sops-key-create` commands create keys.
-- Tracked Zed and OpenCode configuration must not contain plaintext credentials
-  or fake interpolation for settings that treat `$VARIABLE` literally.
+- Tracked Zed, OpenCode, Claude Code, Conductor and Kimi Code configuration
+  must not contain plaintext credentials or fake interpolation for settings that
+  treat `$VARIABLE` literally.
 - Resolve exact targets before deletion, replacement, package mutation, or
   remote-changing commands.
 - Tests must not run `_scripts/bootstrap`, `dot`, `set-defaults`, Homebrew

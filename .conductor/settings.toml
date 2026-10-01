@@ -1,0 +1,7 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+# Conductor reads this file from the default branch on the remote, so a change
+# takes effect once it is merged.
+[scripts.run.test]
+command = "_scripts/test"
+icon = "test-tube"

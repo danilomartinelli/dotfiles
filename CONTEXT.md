@@ -32,10 +32,8 @@ _Avoid_: strategy, mode, conflict handling
 **Confirmed replacement**:
 The intent a caller states when a person, not a classification, decided a
 target should go: an answer at a prompt or an explicit batch instruction.
-Destroys like a generated-target replacement and shares its refusals,
-because what a removal must never touch does not depend on why it was asked
-for. Distinct from a generated target, which is a claim about who writes the
-file rather than about who chose.
+It destroys without a backup, so it carries refusals of its own: what a
+removal must never touch does not depend on who asked for it.
 _Avoid_: force, overwrite, user-approved
 
 ### Declaration
@@ -64,84 +62,17 @@ likes.
 _Avoid_: config home, XDG config directory
 
 **Managed entry**:
-A path inside a tool's configuration directory whose editable content this
-repository owns and links from the checkout.
+A path inside a tool's configuration directory whose content this repository
+owns and links from the checkout. When the tool writes that path too, its write
+lands in the checkout as a change for the person to keep or discard, never as
+silent drift.
 _Avoid_: managed file, owned config
-
-**Profile**:
-A managed entry that its tool must generate before this repository replaces it,
-so its link is always preceded by a tool command.
-_Avoid_: preset, variant, flavor
-
-**Generated target**:
-A path a tool recreates on every run, which this repository replaces without
-preserving. Disposable by definition, so it is never backed up.
-_Avoid_: temporary file, scratch path
 
 **Generated region**:
 A named portion of a hand-authored file that this repository regenerates from
-its declarations. Unlike a generated target, the surrounding file is not
-disposable: its hand-authored content remains owned by the person.
+its declarations. The surrounding file is not disposable: its hand-authored
+content remains owned by the person.
 _Avoid_: generated block, managed block
-
-**Runtime condition**:
-A named state inside a tool's runtime directory that this repository is willing
-to report, and sometimes to repair. Declared once, in run order, so the set
-cannot differ between what runs, what is documented, and what a command's own
-help claims. Complements a runtime path rather than contradicting it: the path
-is the tool's alone, and the condition is the whole of what this repository
-says about what accumulates there.
-_Avoid_: check, issue, problem, health check
-
-**Runtime path**:
-A path whose contents belong to the tool, outside this repository's managed
-configuration. The repository neither links nor backs it up; removal is limited
-to a declared runtime condition under explicitly requested repair.
-_Avoid_: generated, generated state
-
-**Directory retirement**:
-The confirmed removal of a directory selected for an explicitly requested
-runtime repair. Distinct from eligibility for removal and from maintenance
-that remains after the directory is gone.
-
-**Checkout eligibility**:
-The permission for an agent checkout to enter Directory retirement, based on
-successfully observed evidence of its work and inactivity. It is not a promise
-that every byte has another copy: ignored files and changes to remote history
-since the last local observation are outside that claim.
-_Avoid_: reconstructible checkout, backed-up checkout
-
-### Delegation
-
-**Agent role**:
-The declared responsibility of an agent, independent of the model selected by
-its profile. It participates in determining the agent's permitted operations.
-
-**Root orchestrator**:
-The agent responsible for coordinating a work item and the delegations it
-creates.
-
-**Delegation ownership**:
-The scope of paths in which a writer delegation may modify files. Permission to
-use a tool does not authorize writing outside that scope.
-
-**Delegation recovery**:
-The reconciliation of recorded delegations with the state of their existing
-sessions. Recovery never starts replacement children.
-_Avoid_: resume, restart
-
-**Delegation resume**:
-A new attempt of the same delegation after its previous attempt has reached a
-confirmed terminal state. Distinct from recovery, which reconciles work already
-recorded rather than executing another attempt.
-_Avoid_: recovery, replacement delegation
-
-**Delegation notice**:
-A report to the root orchestrator of a particular delegation attempt's pending
-stop or terminal state. Distinct from the delegation's result and evidence;
-delivery does not imply that the root has inspected them or that delegation
-ownership has been released.
-_Avoid_: completion receipt, result acknowledgement
 
 ### Credentials
 
@@ -157,6 +88,16 @@ The name a person selects to say which of a tool's keys they mean — `default`,
 lands. Distinct from the key type, which is how the key is generated rather
 than which key it is.
 _Avoid_: profile, identity name, key slot
+
+### Trust
+
+**Trusted root**:
+A directory beneath which a project's own environment and tool configuration
+take effect on entry, without a confirmation per project. Only directories the
+owner populates qualify, and the set is declared once, so every tool that asks
+the question receives the same answer. Outside a trusted root, the same files
+still wait for an explicit approval.
+_Avoid_: whitelist, allowlist, trusted directory, auto-allow
 
 ### Application
 

@@ -39,16 +39,7 @@ test_formatter_policy_and_sandbox_paths() {
     "default_config_options": { "mode": "build" },
     "type": "custom",
     "command": "mise",
-    "args": [
-      "exec",
-      "--",
-      "ocx",
-      "opencode",
-      "-p",
-      "regular",
-      "--no-rename",
-      "acp"
-    ]
+    "args": ["exec", "--", "opencode", "acp"]
   }
   and all(
     .agent.sandbox_permissions.write_paths[];

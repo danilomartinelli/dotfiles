@@ -39,16 +39,7 @@
       },
       "type": "custom",
       "command": "mise",
-      "args": [
-        "exec",
-        "--",
-        "ocx",
-        "opencode",
-        "-p",
-        "regular",
-        "--no-rename",
-        "acp"
-      ]
+      "args": ["exec", "--", "opencode", "acp"]
     },
     "cursor": {
       "type": "registry"
@@ -244,11 +235,7 @@
     "**/deps",
     "**/.elixir_ls",
     "**/target",
-    // Generated or agent-owned trees. `.opencode-artifacts` is a delegation's
-    // evidence directory: it is Git-ignored by its own marker, it is where the
-    // orchestrator's build output lands, and indexing one costs more than every
-    // other exclusion here combined.
-    "**/.opencode-artifacts",
+    // Generated or agent-owned trees.
     "**/.codegraph",
     "**/.wrangler",
     "**/.direnv",
@@ -351,10 +338,6 @@
     // bare installation mangles YAML frontmatter and GFM tables — so the
     // Mise-declared one is reached through `mise exec` rather than trusting
     // whatever PATH Zed inherits, matching agent_servers.opencode above.
-    //
-    // Registry-backed Markdown under opencode/{agents,commands,skills,tools}
-    // must stay byte-identical to its OCX receipt. Saving one of those files
-    // here would reformat it, so update them with OCX instead of the editor.
     "Markdown": {
       "prettier": { "allowed": false },
       "formatter": {

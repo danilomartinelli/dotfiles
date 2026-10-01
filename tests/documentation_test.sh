@@ -7,12 +7,6 @@ REPOSITORY_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$TEST_PATH")/.." && pwd)
 README=$REPOSITORY_ROOT/README.md
 AGENTS=$REPOSITORY_ROOT/AGENTS.md
 CODING_STANDARDS=$REPOSITORY_ROOT/CODING_STANDARDS.md
-OPENCODE_README=$REPOSITORY_ROOT/opencode/README.md
-OPENCODE_ALIASES=$REPOSITORY_ROOT/opencode/aliases.zsh
-
-# shellcheck source=tests/_support/opencode-catalog.sh
-# shellcheck disable=SC1091
-source "$(dirname -- "$TEST_PATH")/_support/opencode-catalog.sh"
 
 # This suite deliberately does not use scenario_run. Its job is to list every
 # undocumented surface in one pass, so it accumulates failures and reports them
@@ -54,17 +48,6 @@ assert_documented_in() {
 
   if ! printf '%s\n' "$haystack" | grep -Fq -- "\`$name\`"; then
     printf '%s is missing %s: %s\n' "$where" "$kind" "$name" >&2
-    failures=$((failures + 1))
-  fi
-}
-
-assert_alias_defined() {
-  local alias_file=$1
-  local alias_name=$2
-
-  if ! grep -Eq "^alias ${alias_name}=" "$alias_file"; then
-    printf '%s is missing OpenCode profile alias: %s\n' \
-      "${alias_file#"$REPOSITORY_ROOT/"}" "$alias_name" >&2
     failures=$((failures + 1))
   fi
 }
@@ -119,29 +102,6 @@ done < <(
   ' "$REPOSITORY_ROOT/mise/config.toml"
 )
 
-# The OpenCode catalog owns the managed entry list. Every row must remain
-# documented in all three guides, and every profile must keep its shell
-# entrypoint, because none of them derive from the catalog at runtime.
-while IFS=$'\t' read -r entry_kind entry_name _; do
-  if [ "$entry_kind" = entry ] && opencode_entry_is_directory "$entry_name"; then
-    documented_name=$entry_name/
-  else
-    documented_name=$entry_name
-  fi
-
-  assert_documented_in "$README" 'OpenCode managed entry' "$documented_name" \
-    '### OpenCode and OCX'
-  assert_documented_in "$AGENTS" 'OpenCode managed entry' "$documented_name" \
-    '### OpenCode and OCX'
-  # The whole of opencode/README.md owns this surface, so it needs no anchor.
-  assert_documented_in "$OPENCODE_README" 'OpenCode managed entry' \
-    "$documented_name"
-
-  if [ "$entry_kind" = profile ]; then
-    assert_alias_defined "$OPENCODE_ALIASES" "oc:$entry_name"
-  fi
-done < <(opencode_catalog_rows)
-
 # The coding standards are the canonical installer-authoring contract. They
 # must list every preamble helper so topics do not recreate shared behavior.
 # The progress vocabulary lives in its own module and reaches installers through
@@ -189,13 +149,6 @@ done <<<"$trusted_taps"
 # grep coverage above proves a name is mentioned and this proves the row around
 # it still matches what was declared.
 if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check >/dev/null; then
-  failures=$((failures + 1))
-fi
-
-# The profile payloads are rendered the same way, and until now only the
-# OpenCode suite noticed a stale one. The suite that enforces the managed-entry
-# ritual is where an unrendered profile edit should surface too.
-if ! "$REPOSITORY_ROOT/_scripts/render-opencode-profiles" --check >/dev/null; then
   failures=$((failures + 1))
 fi
 

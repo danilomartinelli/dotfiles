@@ -1,26 +1,16 @@
-# OpenCode via OCX
+# OpenCode
 
-OpenCode and OCX are upstream CLIs installed through Mise. Dotfiles authors the
-orchestration plugin and profile sources; it does not fork OCX. OCX assembles
-profiles and maintains the worktree and notification components.
+The OpenCode CLI (`npm:opencode-ai` in `mise/config.toml`) and the desktop app
+(`opencode-desktop` in `Brewfile`) are upstream. This topic owns two files in
+`~/.config/opencode`; OpenCode owns everything else there, including the
+`package.json`, `bun.lock` and `node_modules` it writes while installing
+plugins. The global agent instructions it reads as `AGENTS.md` come from the
+`agents` topic, shared with every other coding agent.
 
-## Ownership
-
-The installer links only the entries declared in `opencode/_managed-entries.tsv`
-into `~/.config/opencode`. It never replaces the whole configuration directory.
-
-| Owner    | Paths in `~/.config/opencode`                                                                     | Purpose                                                   |
-| -------- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Dotfiles | `orchestrator/`                                                                                   | Workflow, prompts, permissions and pinned memory adapter  |
-| Dotfiles | `profiles/regular/`, `profiles/example/`, `profiles/anthropic/`, `profiles/go/`, `profiles/xing/` | Rendered instructions and model routing                   |
-| Dotfiles | `ocx.jsonc`, `opencode.jsonc`, `opencode-mem.jsonc`                                               | Registry, common plugins/MCPs and memory storage settings |
-| Dotfiles | `tui.jsonc`                                                                                       | Theme, interaction and notification defaults              |
-| OCX      | `.ocx/`, `plugins/`, `package.json`, `.gitignore`                                                 | Component receipts, generated code and dependencies       |
-| OCX      | `profiles/default/`                                                                               | Internal initial profile; never selected by the shell     |
-
-Registry payloads are no longer versioned. Do not copy runtime files or receipts
-into this repository. Keep retained components byte-intact and validate them with
-`ocx verify --cwd "$HOME/.config/opencode" --verbose`.
+| Path in `~/.config/opencode` | Purpose                                      |
+| ---------------------------- | -------------------------------------------- |
+| `opencode.jsonc`             | Models, MCP servers and plugins              |
+| `tui.jsonc`                  | Theme, interaction and notification defaults |
 
 ## Install or refresh
 
@@ -28,140 +18,54 @@ into this repository. Keep retained components byte-intact and validate them wit
 opencode/install.sh
 ```
 
-Bootstrap and `dot` also invoke this installer. It installs the orchestrator's
-frozen Bun dependencies without lifecycle scripts, initializes OCX, registers
-`https://registry.kdco.dev`, and ensures `kdco/worktree` and `kdco/notify` are
-installed with their shared `kdco-primitives` dependency.
-
-The installer links the managed entries and refreshes `regular`, `example`,
-`anthropic`, `go` and `xing`. Custom profiles and payloads remain untouched.
-Re-running the installer is supported and leaves session and memory data
-alone.
-
-The installer refuses activation when workspace/background orchestration hooks
-are present. Resolve those components through OCX before installing; the
-installer does not migrate or force-remove existing components.
-
-Profile refresh uses `ocx profile remove`, followed by `ocx profile add` and the
-managed link. OCX 2.0.15 unlinks a profile symlink without descending into its
-source. Recheck this behavior before upgrading OCX; the installer fixtures model
-that verified behavior.
-
-Start a new OpenCode process to load changed hooks and prompts. An existing
-process keeps its loaded configuration; installation does not restart it.
-
-## Use OpenCode
-
-Open a new Zsh session or run `reload!` after shell changes.
-
-| Command        | Result                                |
-| -------------- | ------------------------------------- |
-| `opencode`     | Run `ocx opencode` with `OCX_PROFILE` |
-| `oc`           | Short form of `opencode`              |
-| `oc:regular`   | Select `regular` explicitly           |
-| `oc:example`   | Select `example` explicitly           |
-| `oc:anthropic` | Select `anthropic` explicitly         |
-| `oc:go`        | Select `go` explicitly                |
-| `oc:xing`      | Select `xing` explicitly              |
-
-`opencode/env.zsh` declares the default `OCX_PROFILE=regular`. Zed's ACP also
-selects `regular`. A host that spawns the binary itself uses
-`bin/opencode-profile`, which launches OpenCode directly with the chosen
-profile's `OPENCODE_CONFIG` layered over the global configuration. The adapter
-supplies the Mise tool environment and Homebrew paths to OpenCode and its
-MCP/LSP/shell subprocesses, including when a GUI host starts without a
-login-shell `PATH`. It skips automatic dependency preparation; installation
-remains part of the normal Mise setup.
-
-### The desktop app
-
-`opencode-desktop` embeds the runtime rather than spawning a CLI, and reads the
-same `~/.config/opencode` the shell does: the MCP servers, the plugin list, the
-orchestrator and the permissions all arrive already managed. It has no profile
-selector and, opened from the Dock, inherits no environment, so
-`OPENCODE_CONFIG` never reaches it and nothing would carry the routing the
-profiles own.
-
-`opencode/opencode.jsonc` therefore carries the default profile's payload in a
-`// generated: default-profile` block that `_scripts/render-opencode-profiles`
-writes from `profiles/_routing.tsv` and `opencode/env.zsh`. It is a floor, not a
-second declaration: `OPENCODE_CONFIG` merges a profile **over** this file, so
-`oc:anthropic`, `oc:go` and `oc:xing` keep replacing every route, and the CLI
-behaves exactly as before. Change a route in `_routing.tsv` and rerun the
-renderer; never edit between the markers.
-
-Its own window and session state lives in `~/Library/Application Support`,
-which is machine-local and untracked, the way every other app's window state is.
+Bootstrap and `dot` also invoke this installer. It only links the two files, so
+re-running it is harmless. Start a new OpenCode process to load a change; an
+existing one keeps the configuration it loaded.
 
 The TUI uses Catppuccin Macchiato, `ctrl+x` as leader, `ctrl+p` for commands,
 accelerated scrolling, a blinking block cursor and silent notifications.
 
-### Models and roles
+## Models
 
-<!-- generated: profile-routing -->
+`opencode.jsonc` states `model`, `small_model`, and the `plan` and `build`
+agents with their `variant`. The desktop app, opened from the Dock, inherits no
+environment and reads only this file, so without these keys it would start with
+no model at all.
 
-| Role       | `regular`                      | `example`                      | `anthropic`                            | `go`                                 | `xing`                                   |
-| ---------- | ------------------------------ | ------------------------------ | -------------------------------------- | ------------------------------------ | ---------------------------------------- |
-| Default    | `openai/gpt-6-astra`           | `openai/gpt-6-astra`           | `anthropic/claude-fable-5-1`           | `opencode-go/kimi-k3`                | `kimi-code-plan-global/k3`               |
-| Small      | `openai/gpt-5.6-luna`          | `openai/gpt-5.6-luna`          | `anthropic/claude-opus-5`              | `opencode-go/glm-5.3-flash`          | `zai-coding-plan/glm-5.3-flash`          |
-| Plan       | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-code-plan-global/k3` (`max`)       |
-| Build      | `openai/gpt-6-astra` (`xhigh`) | `openai/gpt-6-astra` (`xhigh`) | `anthropic/claude-fable-5-1` (`xhigh`) | `opencode-go/kimi-k3` (`max`)        | `kimi-code-plan-global/k3` (`max`)       |
-| Coder      | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
-| Explore    | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
-| Researcher | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3-flash` (`high`) | `zai-coding-plan/glm-5.3-flash` (`high`) |
-| Scribe     | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
-| Reviewer   | `openai/gpt-5.6-luna` (`high`) | `openai/gpt-5.6-luna` (`high`) | `anthropic/claude-opus-5` (`high`)     | `opencode-go/glm-5.3` (`high`)       | `zai-coding-plan/glm-5.3` (`high`)       |
+Each agent names its model beside its variant. Variants are model-specific, and
+OpenCode v2, which Conductor runs against this same file, drops a variant that
+arrives without a model. Validate a model ID and its variants against the live
+catalog before changing them:
 
-<!-- generated-end -->
+```bash
+opencode models <provider> --verbose
+```
 
-In every profile `small_model` is the model its supporting agents already use.
-No route asks for a priority tier. `openai/gpt-5.6-luna-fast` and
-`anthropic/claude-opus-5-fast` are the same models as the IDs above, with the
-same variants and the same context limit, differing only in `serviceTier` and
-costing twice as much.
+`variant` is the only reasoning knob an agent accepts. `reasoningEffort` and
+`textVerbosity` are provider option names that OpenCode discards without a
+word.
 
-`regular` is the active profile; `example` starts with identical routing and
-preserves the structure for future customization. Plan/build coordinates the
-work. Coder implements and verifies, reviewer checks a supplied focus, scribe
-writes documentation, explore investigates code and researcher retrieves
-external facts. Supporting roles are used when useful, not as mandatory stages.
+### Staying on OpenCode v1
 
-A profile exists for the providers it reaches, and that is the whole of what
-separates the five: the shared policy, the agents and their roles are
-identical. `anthropic` mirrors the two tiers of `regular`, with Claude Fable
-5.1 over plan and build and Claude Opus 5 everywhere else; it resolves only
-while the Anthropic auth plugin below loads. `claude-fable-5-1` is the current
-Fable: `claude-fable-5` is a separate, older model at the same price rather
-than an alias for it. `go` spends the opencode-go plan where a
-role judges and saves it where a role mostly reads: Kimi K3 orchestrates, GLM
-5.3 writes and reviews, GLM 5.3 Flash explores and researches. Kimi K3
-publishes `max` alone, which is why plan and build do not say `xhigh` there.
+OpenCode v2 is published as `@opencode/cli`, beside `opencode-ai`, which still
+carries v1. This topic stays on v1 until these hold:
 
-`xing` is that same split bought direct, and the one profile created for two
-providers: Kimi K3 from the Kimi For Coding (kimi.ai, the global plan)
-subscription orchestrates, and GLM 5.3 and GLM 5.3 Flash from the Z.AI Coding
-Plan do the writing and the reading. The two subscriptions are bought
-separately and neither publishes the other's models, so no single provider can
-serve this routing. See
-[coding-plan providers](#coding-plan-providers) for what the two credentials
-are and which endpoint each reaches.
+- `@franlol/opencode-md-table-formatter` has a v2 release. Its only hook has no
+  v2 equivalent.
+- v2 runs language servers. It accepts `lsp: true` and does nothing with it.
+- The desktop app ships v2. Until then it reads this same file, which therefore
+  has to stay in v1 syntax.
 
-A root runs at most three children with explicit focuses and non-overlapping
-writer ownership. Corrections resume the same child. Reviews use a source
-snapshot and have no fixed round count. Plan saves do not trigger reviews.
-Memory is consolidated in the root execution without auxiliary LLM sessions.
-Git coders receive a retained, ignored artifact directory inside their checkout
-for diagnostics and downloads; see [artifacts and snapshots](orchestrator/README.md#artifacts-and-review-snapshots).
-See [runtime behavior and recovery](orchestrator/README.md) and the
-[orchestration contract](ORCHESTRATION.md).
+v2 also reads its terminal settings from `cli.json` rather than `tui.jsonc`, so
+moving means rewriting that file, and the Anthropic plugin moves to its `2.x`
+line under the `plugins` key.
 
-### Anthropic provider
+## Anthropic provider
 
-OpenCode ships no Anthropic provider. Without a plugin, `opencode auth list`
-reports the stored Anthropic OAuth credential and `opencode models anthropic`
-still answers `Provider not found`, so every `anthropic/*` route resolves to
-nothing. `opencode.jsonc` pins `@ex-machina/opencode-anthropic-auth` for that
-reason.
+OpenCode ships no Anthropic subscription login. Without a plugin,
+`opencode auth list` reports the stored Anthropic OAuth credential and
+`opencode models anthropic` still answers `Provider not found`.
+`opencode.jsonc` pins `@ex-machina/opencode-anthropic-auth` for that reason.
 
 Its two release lines share one npm name and are not cross-compatible: `1.x` on
 the `latest` tag is the OpenCode v1 plugin declared under the `plugin` key, and
@@ -170,135 +74,66 @@ the `latest` tag is the OpenCode v1 plugin declared under the `plugin` key, and
 `must default export an object with server()` and leaves the provider missing
 rather than reporting a credential problem.
 
-### Coding-plan providers
+## Coding-plan providers
 
-`xing` needs no plugin: OpenCode ships both of its providers and authenticates
-each from the environment, so the two keys belong in `.localrc` beside the
-others. `kimi-code-plan-global/*` reads `KIMI_API_KEY` and reaches
+Two subscription providers need no plugin: OpenCode ships both and
+authenticates each from the environment, so their keys belong in `.localrc`
+beside the others. `kimi-code-plan-global/*` reads `KIMI_API_KEY` and reaches
 `api.kimi.ai/coding/v1`; `zai-coding-plan/*` reads `ZHIPU_API_KEY` and reaches
 `api.z.ai/api/coding/paas/v4`. Both are subscription endpoints rather than
 metered ones, which is why `opencode models --verbose` reports zero cost for
 every model in them.
 
 One key name serves four providers, and that is the trap worth knowing before
-editing a `zai*` route. `ZHIPU_API_KEY` also feeds `zhipuai-coding-plan`, whose
+choosing a `zai*` model. `ZHIPU_API_KEY` also feeds `zhipuai-coding-plan`, whose
 catalog is nearly identical but whose endpoint is `open.bigmodel.cn`, and the
 metered `zai` and `zhipuai` pair. `opencode auth list` shows all four as
 configured because it only observes that the variable is set; a key issued by
-one platform is rejected by the other's endpoint at request time, and the
-routing table is the only place that choice is recorded.
+one platform is rejected by the other's endpoint at request time.
 
-### Repository and tracker access
+## Code navigation: LSP and CodeGraph
 
-For repository, issue, PR or MR context, the prompts first inspect `git remote -v`
-and check `command -v gh` or `command -v glab`. They prefer the matching CLI,
-reuse that discovery in delegated work and use `--repo` or API `--hostname` when
-needed. Web access is the fallback for missing capabilities or inaccessible
-resources, or when explicitly requested by the user.
-
-The read-only runtime guard permits this discovery and supported Git/CLI query
-commands, including explicit GET APIs. It rejects mutations, shell composition
-and browser-opening flags. Publishing and other writes require existing user
-authorization and an appropriate writer delegation.
-
-### Code navigation: LSP and CodeGraph
-
-Every profile enables native language servers through `lsp: true` in the shared
-profile source. `opencode/env.zsh` exports `OPENCODE_EXPERIMENTAL_LSP_TOOL=true`
-for both OCX and the direct GUI adapter. The orchestrator permits the native
-`lsp` tool for definitions, references, hover, symbols and call hierarchy.
-Server availability still depends on the language and its project dependencies;
-OpenCode starts applicable servers on demand. See the
+`lsp: true` enables OpenCode's native language servers, which start on demand
+for the languages a project contains. Server availability still depends on the
+language and its project dependencies. See the
 [native LSP guide](https://opencode.ai/docs/lsp/).
 
-CodeGraph is already declared through Mise. The common MCP configuration runs
-`codegraph serve --mcp`, matching `codegraph install --print-config opencode`.
-This declaration replaces running the interactive installer against managed
-configuration. Its sole default tool, `codegraph_codegraph_explore`, is allowed
-for all seven roles. The MCP and automatic initialization disable CodeGraph
-telemetry. CodeGraph answers structural questions across files; LSP supplies
-precise language queries. Prompts choose the relevant tool and verify stale or
-conflicting results against current source.
+CodeGraph is declared through Mise. The MCP configuration runs
+`codegraph serve --mcp`, matching `codegraph install --print-config opencode`,
+with telemetry disabled; the declaration replaces running the interactive
+installer against managed configuration. An index belongs to one checkout and
+nothing builds it automatically: the shared agent instructions tell an agent to
+run `codegraph init` when `.codegraph/` is missing. `.codegraph/` is ignored
+globally by `git/gitignore.symlink`.
 
-On the first session message in a Git checkout, the runtime runs `codegraph init`
-only when `.codegraph/` is absent. Nested directories resolve to their checkout
-root; linked worktrees get independent indices. Existing directories are
-preserved. The initial request waits for initialization, with a three-minute
-limit, and concurrent sessions share the work without LLM subsessions. A project
-can opt out of both the hook and MCP with `mcp.codegraph.enabled: false`.
+## Skills
 
-The hook respects Git's global ignore. If a ready or newly created index is not
-ignored, it appends `/.codegraph/` to the checkout's `.gitignore`, preserving
-existing content. Tracked index files and symlinks require explicit repair;
-the hook never untracks or deletes them. An interrupted or failed initialization
-leaves its directory intact and reports a fallback to file/LSP queries. Inspect
-that directory and repair it explicitly with the CodeGraph CLI before starting
-a new OpenCode process; retries never launch automatically.
+No skill discovery flag is set, so OpenCode reads `.agents/skills` and
+`.claude/skills` from the home directory and from every directory between the
+current one and the Git worktree root, alongside project `.opencode/skills`.
+Global configuration carries only the MCP servers and plugins above; anything
+else a project needs belongs in that project's own `opencode.json`.
 
-After upgrading CodeGraph, run `codegraph status` in each project. If it reports
-an outdated index, run `codegraph index` there to refresh existing data. The
-startup hook only creates missing indices; it does not rebuild existing ones.
-
-### Project integrations and skills
-
-Global configuration contains CodeGraph, the common research MCPs and plugins.
-Additional integrations belong in the trusted project's OpenCode configuration.
-For example, a project can register an optional server and explicitly permit its
-tools for coder:
-
-```json
-{
-  "mcp": {
-    "project_tracker": {
-      "type": "remote",
-      "url": "https://tracker.example.invalid/mcp"
-    }
-  },
-  "agent": {
-    "coder": {
-      "permission": {
-        "project_tracker_*": "allow",
-        "project_tracker_delete_item": "deny"
-      }
-    }
-  }
-}
-```
-
-### Argent device control
+## Argent device control
 
 `argent` is declared in `mise/config.toml` and its MCP server in
 `opencode.jsonc`, with `DO_NOT_TRACK=1` because its telemetry is on by default.
-It is enabled, and coder is granted `argent_*` wherever the server is declared,
-with `argent_debugger-evaluate` left at `ask` because it evaluates arbitrary
-JavaScript inside the running app. The grant lives in `rolePermissions` rather
-than in a project's configuration because a profile launch cannot read one, so
-a project-side permission would work in the GUI adapter and nowhere else.
-Read-only roles get none of it: driving a device is a coder action.
-
-A project that wants a narrower boundary still states it, and coder preserves
-it for a configured MCP namespace:
+`argent_debugger-evaluate` evaluates arbitrary JavaScript inside the running
+app, so a project that wants a narrower boundary states it in its own
+configuration:
 
 ```json
 {
-  "mcp": { "argent": { "enabled": true } },
-  "agent": {
-    "coder": {
-      "permission": {
-        "argent_*": "allow",
-        "argent_debugger-evaluate": "ask"
-      }
-    }
+  "permission": {
+    "argent_*": "allow",
+    "argent_debugger-evaluate": "ask"
   }
 }
 ```
 
-Device control is a coder action, so nothing is added to the reviewed read-only
-query list: build/plan, explore, researcher and reviewer keep their allowlist.
-
 Never run `argent init`. It writes its own editor registration and would leave
-an untracked configuration beside the managed one, which `opencode-doctor`
-then reports as a shadow. The declaration above replaces it.
+an untracked configuration beside the managed one. The declaration above
+replaces it.
 
 Verify the toolchain without OpenCode before blaming the integration, because
 every one of these answers comes from the CLI the MCP server wraps:
@@ -313,7 +148,7 @@ argent telemetry status      # must report disabled through the environment
 ```
 
 `argent run` is the honest test: a failure there is the device or the SDK, and
-a failure only through the MCP is the integration or the permissions above.
+a failure only through the MCP is the integration.
 
 ### Why the Argent server declares a timeout
 
@@ -364,12 +199,12 @@ Wake it before describing or tapping anything.
 the previous installation is removed first "so app data and runtime permissions
 are cleared". There is no flag that keeps them. A retest that depends on state
 the app already holds therefore cannot go through the MCP at all, and the
-`adb install -r` that does keep it is a coder's ordinary shell command — the
-runtime permits it, and only a task that scopes device work to Argent does not.
+`adb install -r` that does keep it is an ordinary shell command, which only a
+task that scopes device work to Argent rules out.
 
 `ANDROID_HOME` and the SDK tool directories come from `android-studio/_sdk.sh`,
-which `path.zsh` and `bin/opencode-profile` both ask, so `adb` is on PATH for a
-GUI-hosted session and a login shell alike. Two failures are worth recognizing
+which `android-studio/path.zsh` asks, so `adb` is on PATH in every shell an
+agent starts from. Two failures are worth recognizing
 rather than rediscovering: `INSTALL_FAILED_UPDATE_INCOMPATIBLE` means the new
 APK carries a different signature and only an uninstall will take it, which is
 the data loss the update was avoiding; `INSTALL_FAILED_VERSION_DOWNGRADE` means
@@ -391,320 +226,3 @@ another unlocked: thirty-one seconds through `uiautomator` against one and two
 tenths through `android-devtools`. Unlocking past the keyguard is the fix, and
 until then the thirty seconds belong to the keyguard rather than to the tool or
 the app.
-
-Coder preserves explicit permissions for configured MCP namespaces; a server
-alone does not grant access. These permissions do not override native tool
-boundaries or authorize remote changes. Build/plan, reviewer, explore and
-researcher retain their reviewed read-only tool allowlist. Supporting a new MCP
-in those roles requires reviewing its query operations in the runtime.
-
-Tracker retrieval reaches the read-only roles through the `gh`/`glab` queries
-they already hold. A project that registers its own tracker MCP does not widen
-that: its tools stay outside the reviewed allowlist, so reading through it is a
-coder operation with explicit MCP permission, and creating or changing tracker
-data is one regardless. Unknown tools are denied even if the server describes
-them as read-only.
-
-For other project MCP queries not yet in the reviewed allowlist, build/plan
-can delegate to an explicitly permitted coder with a prompt limiting the task
-to retrieval. In a Git checkout, use
-`ownership: []` when no source/configuration/documentation writes are needed;
-coder receives only its automatic artifact directory. There is no need to
-grant an unrelated source path or copy tracker content manually. MCP permissions
-remain separate from authorization to change tracker data.
-
-Native `list_mcp_resources`, `list_mcp_resource_templates` and
-`read_mcp_resource` are available to read-only roles through OpenCode's `read`
-permission. They discover and retrieve resources, not the server's callable
-tools; an empty resource list does not prove a disconnected server. To check
-connection status with the selected profile, run `opencode-profile mcp list`
-from the project directory. `enabled: true` connects a server but does not grant
-its unapproved tools to a role. The explicit coder permissions shown above
-are needed for those operations; build/plan do not inherit them.
-
-A new conversation can reuse the same running directory instance and its
-cached configuration. If a fresh CLI sees a configured MCP but the host does
-not, compare `/path`, `/config` and `/mcp` on that running server with the
-exact worktree directory. Reload an idle directory instance after changing
-project configuration; restart OpenCode through its host after changing the
-orchestration plugin. Do not infer a credential failure from a different CLI's
-status or an agent's missing tools.
-
-Skill discovery for `.agents/skills` is the runtime's own: the home directory
-plus every directory from the current one through the Git worktree root, with
-explicit `skills.paths` and `skills.urls` preserved. Project `.opencode/skills`
-continues to work through normal configuration discovery.
-
-Only `OPENCODE_DISABLE_CLAUDE_CODE_SKILLS=true` is set, which keeps both
-home-level and project `.claude/skills` out of OpenCode. The broader
-`OPENCODE_DISABLE_EXTERNAL_SKILLS` is deliberately unset: despite what
-OpenCode's own `customize-opencode` skill claims, that flag guards the whole
-discovery block, so it removes a project's `.agents/skills` along with the
-home-level scan. Restoring the project paths through `skills.paths` is not
-enough either, because a desktop host cannot see that repair: a host that reads
-`OPENCODE_DISABLE_EXTERNAL_SKILLS` from its own environment goes on to hide
-every skill whose path contains `.agents/` or `.claude/`, so its slash menu
-lists no project skills while the agent can still load all of them.
-
-`ocx opencode -p <profile>` cannot see a project's OpenCode configuration. OCX
-collects only `agent`, `command`, `skill` and `tool` directories out of
-`.opencode/` into the merged configuration it launches from, so a project's
-`opencode.json`, `opencode.jsonc` and `AGENTS.md` never reach the runtime. The
-profile's `exclude` and `include` lists filter that collection and cannot add a
-file type to it, which is why both stay empty. OCX also strips
-`OPENCODE_DISABLE_PROJECT_CONFIG` from the inherited environment and forces it
-to `true` whenever a profile is selected, so the shell's own export governs a
-bare `opencode` run outside OCX and nothing else.
-
-The direct GUI adapter does not use that launcher. It sets
-`OPENCODE_DISABLE_PROJECT_CONFIG=false`, so native discovery loads
-`<project>/opencode.json` and `<project>/.opencode/opencode.json`, and a
-project's MCP servers, permissions and instructions do apply there. The adapter
-also passes `DOTFILES_OPENCODE_PROFILE_CONFIG` so the runtime restores the
-selected profile's models after project merging, leaving the declared routes
-unchanged. An integration that has to work from the terminal has to be declared
-globally instead of by the project.
-
-### Worktrees
-
-`kdco/worktree` exposes `worktree_create` and `worktree_delete`; the installer
-provisions it alongside `kdco/notify`. Only the root orchestrator may call
-them, and they are granted by name: a tool the plugin adds later stays denied
-until the orchestrator's classification includes it. Its per-project configuration is
-`.opencode/worktree.jsonc`, and the plugin writes its own empty template into a
-checkout that has none, so a repository that needs worktree bootstrapping should
-track the file deliberately.
-
-This repository tracks one. A worktree of dotfiles starts without
-`opencode/orchestrator/node_modules`, which is untracked and around 686 MB;
-until it exists `bun test` cannot resolve `@opencode-ai/plugin` and the
-orchestrator suite fails before validating anything. The `postCreate` hook
-reinstalls it from the lockfile:
-
-```bash
-mise exec -- bun install --frozen-lockfile --ignore-scripts --cwd opencode/orchestrator
-```
-
-Reinstalling is deliberate: `sync.symlinkDirs` would share one `node_modules`
-across worktrees, so a worktree changing `package.json` or `bun.lock` would
-mutate the tree it branched from. Hooks run under `bash -c` without the login
-shell, which is why bun is reached through `mise exec`, the adapter
-`bin/opencode-profile` already uses. Nothing is copied into a worktree: the only
-machine-local file is `.localrc`, and it lives in `$HOME`.
-
-The plugin only logs a failed hook. When orchestrator imports do not resolve in
-a worktree, run that command there before investigating further.
-
-Linked worktrees opt out of Git's fsmonitor through
-`git/gitconfig.worktree.symlink`, because the daemon segfaults when the worktree
-it watches is deleted and leaves the socket behind that makes the next command
-fail with `fsmonitor_ipc__send_query`. A process still alive inside a worktree
-after its session ends is reported by `opencode-doctor`.
-
-## Edit configuration or profiles
-
-Edit the owning source and use a new process to load the result:
-
-| Concern                                    | Source                                         |
-| ------------------------------------------ | ---------------------------------------------- |
-| Common plugins and MCPs                    | `opencode/opencode.jsonc`                      |
-| Registry                                   | `opencode/ocx.jsonc`                           |
-| Memory storage/UI                          | `opencode/opencode-mem.jsonc`                  |
-| TUI                                        | `opencode/tui.jsonc`                           |
-| Workflow, prompts and permissions          | `opencode/orchestrator/`                       |
-| Shared profile instructions and OCX policy | `opencode/profiles/_shared/`                   |
-| Optional policy for one profile            | `opencode/profiles/_overrides/<profile>.jsonc` |
-| Models and variants                        | `opencode/profiles/_routing.tsv`               |
-
-The profile directories are generated. OCX has no profile inheritance and
-`--clone` copies only `ocx.jsonc`; the renderer composes shared policy, optional
-overrides and routing into each profile's three payloads:
-
-```bash
-_scripts/render-opencode-profiles
-_scripts/render-opencode-profiles --check
-```
-
-`default` and `small` rows declare `model` and `small_model`. Agent rows use the
-roles declared by the profile source. Model settings belong only in routing;
-overrides cannot introduce them. A new workflow role also needs a runtime
-contract. The renderer rejects unknown, duplicate or incomplete routes.
-
-`variant` is the supported agent reasoning knob. Validate each model and variant
-against `bin/opencode-profile models <provider> --verbose` without `--pure`.
-Provider options such as `reasoningEffort` are not agent configuration keys.
-
-To add a profile:
-
-1. Add routing rows and a `profile` row to `opencode/_managed-entries.tsv`, with
-   `regular` as its clone source.
-1. Render the profile and add its `oc:<name>` shortcut to `opencode/aliases.zsh`.
-1. Name the providers it was created for in `tests/opencode_install_test.sh`.
-   No row states that, so nothing else refuses a route borrowed from another
-   profile.
-1. Document the profile here, in `README.md` and in `AGENTS.md`.
-1. Validate its models, run the focused tests, install and verify its link.
-
-## Update and verify
-
-Update retained registry components with OCX, then check their integrity:
-
-```bash
-ocx update --all
-opencode/install.sh
-ocx verify --cwd "$HOME/.config/opencode" --verbose
-```
-
-The local orchestrator and its pinned memory dependency have a separate
-[update procedure](orchestrator/README.md#dependencies-and-updates).
-
-```bash
-_scripts/test opencode_install
-_scripts/test opencode_orchestrator
-_scripts/test documentation
-```
-
-Fixtures cover generated profiles, model routing, installed ownership,
-idempotent installation, conflict rejection, delegation lifecycle, permissions and memory.
-Use `_scripts/test` for the complete safe suite after shared/security changes.
-
-For a machine-specific link check:
-
-```bash
-find "$HOME/.config/opencode" -maxdepth 2 -type l -print
-ocx profile list --global
-```
-
-Expected managed links come from `opencode/_managed-entries.tsv`.
-
-## Maintain the runtime state
-
-The configuration above is one half of what OpenCode leaves on a machine. The
-other half is its data directory, `~/.local/share/opencode`, and OpenCode
-prunes none of it. `opencode-doctor` reports that state and, with `--fix`,
-repairs it:
-
-```bash
-opencode-doctor
-opencode-doctor --fix
-opencode-doctor --fix --days 14
-opencode-doctor --fix --days 0 --clear-logs
-```
-
-`opencode/_doctor.sh` owns the behavior and the command is a thin adapter over
-it. `opencode/_runtime-conditions.tsv` declares what it inspects, in the order
-it runs, and the table below is rendered from that catalog:
-
-<!-- generated: runtime-conditions -->
-
-| State                      | Doctor                          | Why it accumulates                                                                                                     |
-| -------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Worktree processes         | Reported, repaired with `--fix` | A command an agent started outlives the session that started it                                                        |
-| The `event` table          | Reported, repaired with `--fix` | An append-only replication log for remote workspaces, with no retention                                                |
-| Stale `workspace` rows     | Reported, repaired with `--fix` | A row outlives its directory, and a retired adapter fails every server start                                           |
-| Stranded sessions          | Reported, repaired with `--fix` | A session names a `workspace` row that is gone, so it can be neither deleted nor archived                              |
-| Stale session snapshots    | Reported, repaired with `--fix` | A snapshot shadows the directory its `core.worktree` names, and keeps collecting garbage after it goes                 |
-| Idle delegation artifacts  | Reported, repaired with `--fix` | A delegation's evidence directory outlives the work, and nothing else can tell evidence from build output              |
-| Idle worktree checkouts    | Reported, repaired with `--fix` | A retired session's checkout keeps its node_modules and build output, and no other condition owns the directory itself |
-| An untracked global config | Reported only                   | OpenCode reads `opencode.json` as readily as the managed `opencode.jsonc`                                              |
-| Log files                  | Reported, repaired with `--fix` | CLI and plugin output, and the rotations it leaves behind                                                              |
-
-<!-- generated-end -->
-
-The event log is the one that grows without bound. Every streaming update of a
-message part is stored as a fresh copy of the whole part, so one long session
-writes its own transcript back many times over; `message` and `part`, which
-hold what a session actually said, stay small beside it. Age alone does not
-find the weight: orchestration keeps every session it touches inside any
-sensible window. Pruning therefore removes the replication history of every
-finished session, one whose newest message is a completed assistant reply,
-regardless of age, and of every other session outside the retention window. A
-session still owed a reply, or whose reply was cut off, keeps its history for
-`--days` days. `--days 0` removes all replication events, including those from
-today, and compacts the database. Sessions, messages and memory data remain
-intact.
-
-Routine repair rotates the primary log when it exceeds 64 MiB. Add
-`--clear-logs` to delete regular `*.log` and numbered rotation files from the
-log directory regardless of age or size. Other files, subdirectories and
-symlinks are preserved; a symlinked log directory is refused. This option is
-read-only without `--fix`.
-
-Snapshots, delegation artifacts and agent worktree checkouts leave through one
-retirement operation. Each condition decides which of its directories are
-eligible. The doctor then measures a directory, removes it, restores write
-permission and tries once more if anything survived, and counts it only once it
-is confirmed gone. Reported bytes are those pre-removal sizes of fully retired
-directories, not the free space the filesystem gained. A directory whose size
-cannot be measured, or that has been replaced by a file or symlink, is kept; one
-that is already gone is neither counted nor treated as a failure.
-
-A directory that is not retired is named with the step that failed, and every
-directory above it is kept for the rest of that run, even with `--days 0`.
-Repairs that do not depend on it still run. The run then ends with
-`OpenCode repair incomplete` and exit status 1 instead of reporting success; what
-it did complete is reported above that line.
-
-Checkout eligibility requires successful Git and inactivity observations. Only
-linked worktrees with an identified external Git owner that will be preserved
-can qualify. Tracked edits, staged changes, non-ignored untracked files, HEAD
-commits absent from the locally recorded upstream, recent activity, detached
-HEAD and missing upstreams preserve the checkout. Independent clones are also
-preserved: a clean, published HEAD says nothing about work in another branch or
-stash stored in that repository. Non-Git directories are kept normally.
-An upstream still configured after its remote branch was deleted and pruned is
-reported as `upstream ref is gone`; it preserves the checkout without failing
-the report or repair, including with `--days 0`.
-
-Assessment stays offline: no fetch or remote verification occurs, and locally
-recorded upstream history may be stale. Ignored files do not prevent retirement;
-build output and ignored local configuration disappear with a repaired checkout.
-Eligibility therefore does not promise a backup of every byte. Git inspection
-avoids optional index writes, excludes Git bookkeeping from age checks, and
-includes activity in delegation artifacts. `--days 0` bypasses age only.
-
-A failed observation preserves the affected checkout and reports its path and
-failed step. Failed discovery selects no checkout, even if listing produced
-partial output. Independent assessments and later conditions continue, but both
-report and repair end with exit status 1 and an incomplete summary. Eligible
-candidate counts describe selection; only confirmed removals count as retired.
-An absent or successfully inspected empty checkout root is a normal empty result.
-
-A linked worktree is registered in the repository it was added from. The doctor
-checks that owner again before removal and afterwards removes that one
-registration and no other. The owner, its branches and stash, and sibling
-worktrees remain intact. A registration it cannot remove is reported with its
-owner and fails the run, although the checkout stays counted as retired. An
-assessment is made once per checkout; these checks do not promise atomic
-protection from concurrent external edits or replacements.
-
-Recovery from an incomplete repair is manual. A partial removal can take the
-metadata that identified a snapshot or checkout, and a removed checkout can no
-longer name its owner, so a later run judges what remains afresh and may keep it
-as something it cannot judge. `--days 0` bypasses the age check only, and
-nothing records an interrupted repair between runs.
-
-Reporting is the default because each repair deletes state no backup covers.
-Repairs refuse to run while OpenCode holds the database, so quit the desktop
-app and any `opencode` session first. That precondition is also what makes reaping
-safe to state: a process still living inside an agent worktree while no
-OpenCode runs has no owner left.
-
-A shadowing configuration file is reported and never removed. Adopt what it
-declares into `opencode.jsonc`, then delete it by hand.
-
-## Troubleshooting
-
-If `opencode` or `ocx` is missing, reconcile the Mise runtimes:
-
-```bash
-mise install
-```
-
-If the installer reports a missing source, restore the corresponding path under
-`opencode/` before rerunning it. The installer intentionally fails instead of
-creating an empty managed configuration.
-
-If an OCX-owned path is missing or damaged, rerun `opencode/install.sh`. Do not
-replace `.ocx`, `plugins`, `package.json`, `.gitignore`, or `profiles/default`
-with repository links.

@@ -1,13 +1,7 @@
 #!/bin/sh
 #
-# Resolve the Android SDK location for every caller.
-#
-# Zsh startup exported the root and appended the tool directories itself, which
-# was the whole answer while a login shell was the only way in. The GUI-host
-# adapter is not one: it starts OpenCode from a GUI process, and the Android
-# tools reached its children only because that host happened to resolve the
-# user's interactive shell first. Asking here instead makes that deliberate, and
-# keeps one file saying where the SDK is.
+# Resolve the Android SDK location: the root and the tool directories that
+# belong on PATH. path.zsh only exports what this file answers.
 
 # Android Studio installs under an absolute path, so a test that wants it inside
 # a fixture tree has no way in. DOTFILES_ANDROID_HOME is that way in, as
