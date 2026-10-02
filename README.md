@@ -556,11 +556,15 @@ phases so failures have clear ownership.
 
 ### Zsh loading order
 
-`zsh/zshenv.symlink` is linked as `~/.zshenv` and sets `LC_MESSAGES=C` only
-when `__CFBundleIdentifier=com.conductor.app`. This keeps Git diagnostics in
-English for Conductor 0.93.3's parser, including the missing-upstream error,
-without changing `LANG` or other locale categories. It runs in non-interactive
-shells too and leaves shells from other apps unchanged.
+`zsh/zshenv.symlink` is linked as `~/.zshenv` and sets `LANG=en_US.UTF-8` and
+`LC_MESSAGES=C` only when `__CFBundleIdentifier=com.conductor.app`. Conductor's
+Git runner forwards the captured `LANG` to clean `zsh -f` shells, which skip
+startup files and do not inherit `LC_MESSAGES`. Setting only `LC_MESSAGES`
+therefore leaves the Git runner's missing-upstream error translated, and the
+Changes panel can remain on "Loading git status..." until the branch has an
+upstream. The workaround gives Conductor an English UTF-8 locale, preserving
+explicit category overrides such as `LC_TIME`. Shells from other apps keep
+their existing locale.
 
 `zsh/zshrc.symlink` resolves the physical checkout and loads
 `zsh/_startup.zsh` once. Startup then:

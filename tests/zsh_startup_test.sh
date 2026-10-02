@@ -38,7 +38,7 @@ test_conductor_shells_export_english_messages() {
       LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 \
       __CFBundleIdentifier=com.conductor.app \
       "$ZSH_BIN" -d "$mode" '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
-    assert_equal 'C|pt_BR.UTF-8|pt_BR.UTF-8' \
+    assert_equal 'C|en_US.UTF-8|pt_BR.UTF-8' \
       "$(cat "$TEST_ROOT/locale-conductor/stdout.log")" 'Conductor message locale'
     assert_empty "$TEST_ROOT/locale-conductor/stderr.log"
   done
@@ -82,6 +82,35 @@ EOF
     "$ZSH_BIN" -d "$TEST_ROOT/git-upstream.zsh" "$git_bin"
   assert_empty "$TEST_ROOT/locale-git/stdout.log"
   assert_contains "$TEST_ROOT/locale-git/stderr.log" "no upstream configured for branch 'locale-test'"
+}
+
+test_conductor_git_child_uses_captured_locale() {
+  local git_bin captured_lang repository
+  git_bin=$(command -v git)
+  repository="$TEST_ROOT/conductor-git-child"
+  env -i HOME="$LOCALE_HOME" PATH=/usr/bin:/bin \
+    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    "$git_bin" init -q -b locale-test "$repository"
+  env -i HOME="$LOCALE_HOME" PATH=/usr/bin:/bin \
+    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    "$git_bin" -C "$repository" -c user.name=Fixture -c user.email=fixture@example.invalid \
+    -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m Fixture
+
+  # Conductor forwards LANG to clean zsh -f children, but not LC_MESSAGES.
+  # shellcheck disable=SC2016 # The child Zsh evaluates its captured locale.
+  captured_lang=$(env -i \
+    HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin \
+    LANG=pt_BR.UTF-8 __CFBundleIdentifier=com.conductor.app \
+    "$ZSH_BIN" -d -c 'printf "%s" "$LANG"')
+  # shellcheck disable=SC2016 # Arguments are expanded by the child Zsh.
+  assert_fails_with_status 128 scenario_capture "$TEST_ROOT/locale-git-child" env -i \
+    HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin \
+    GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
+    "$ZSH_BIN" -f -c \
+    'export LANG="$1"; "$2" -C "$3" rev-parse --abbrev-ref --symbolic-full-name "@{upstream}"' \
+    zsh "$captured_lang" "$git_bin" "$repository"
+  assert_empty "$TEST_ROOT/locale-git-child/stdout.log"
+  assert_contains "$TEST_ROOT/locale-git-child/stderr.log" "no upstream configured for branch 'locale-test'"
 }
 
 mkdir -p \
@@ -498,6 +527,7 @@ scenario_run 'startup follows the documented order and remains idempotent' test_
 scenario_run 'Conductor exports English messages in command and login shells' test_conductor_shells_export_english_messages
 scenario_run 'other shells preserve their message locale' test_other_shells_preserve_message_locale
 scenario_run 'Conductor Git reports a missing upstream in English' test_conductor_git_reports_missing_upstream_in_english
+scenario_run 'Conductor Git children use the captured locale without startup files' test_conductor_git_child_uses_captured_locale
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
 scenario_run 'coding agent shells keep the standard ls and cat' test_agent_shells_keep_standard_file_commands
 scenario_run 'nested topic additions, renames and removals refresh cached startup' \

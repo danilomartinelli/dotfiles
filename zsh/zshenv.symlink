@@ -1,5 +1,6 @@
-# Conductor 0.93.3 parses Git diagnostics in English, including missing upstreams.
-# Keep this early, silent setup available to its non-interactive shells too.
+# Conductor forwards LANG, but not LC_MESSAGES, to its clean zsh -f Git shells.
+# Those shells skip this file, so the captured LANG must also select English.
 if [[ ${__CFBundleIdentifier:-} == com.conductor.app ]]; then
+  export LANG=en_US.UTF-8
   export LC_MESSAGES=C
 fi
