@@ -1,7 +1,8 @@
 #!/bin/sh
 #
 # Idempotent config linking for topic installers.
-# Default policy: replace-with-backup.
+# Default policy: replace-with-backup. Creates the directory that holds the
+# target when it is missing.
 
 set -eu
 
@@ -23,7 +24,7 @@ Options:
 
 Exit status:
   0  the target now matches the declaration, or the policy kept it deliberately
-  1  the link could not be made
+  1  the link, or the directory that holds it, could not be made
   2  invalid usage, or a removal the linker refuses to perform
 
 Policies:
@@ -250,6 +251,14 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
       ;;
   esac
 fi
+
+# Every caller wants the link whether or not its directory exists yet, so the
+# linker makes the directory rather than each installer spelling out a mkdir.
+target_directory=$(dirname -- "$target_path")
+mkdir -p -- "$target_directory" || {
+  installer_error "cannot create $target_directory; cannot link $label"
+  exit 1
+}
 
 ln -sfn "$source_path" "$target_path"
 installer_item "$label linked"

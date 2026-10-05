@@ -130,7 +130,7 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_claim_file_types`   | Gate, apply, and record a topic's declared file-type associations   |
   | `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
   | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
-  | `installer_link_tool_config`   | Create a tool's configuration directory and link one file into it   |
+  | `installer_link_tool_config`   | Link one file into a tool's configuration directory                 |
   | `installer_banner`             | Print a phase heading to stdout                                     |
   | `installer_success`            | Print successful completion to stdout                               |
   | `installer_item`               | Print one completed step inside a phase, indented under it          |
@@ -141,9 +141,10 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_fail`               | Print an error and stop the installer                               |
 
 A topic that links a file into `$HOME/.config/<tool>` calls
-`installer_link_tool_config`, which resolves the directory, creates it, and
-composes the target. Reach for `installer_link_config` directly only to link
-outside that directory or under a policy other than the default.
+`installer_link_tool_config`, which resolves the directory and composes the
+target. Reach for `installer_link_config` directly only to link outside that
+directory or under a policy other than the default. The linker creates the
+directory that holds a target, so no installer runs `mkdir` before linking.
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside

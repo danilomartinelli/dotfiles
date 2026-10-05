@@ -8,11 +8,8 @@ set -e
 installer_require_darwin
 installer_banner "setting up OrbStack Docker engine defaults"
 
-CONFIG_DIR="$HOME/.orbstack/config"
 SOURCE="$TOPIC_DIR/docker.json"
-TARGET="$CONFIG_DIR/docker.json"
-
-mkdir -p "$CONFIG_DIR"
+TARGET="$HOME/.orbstack/config/docker.json"
 
 installer_link_config --policy preserve-existing --label "OrbStack docker.json" \
   "$SOURCE" "$TARGET"

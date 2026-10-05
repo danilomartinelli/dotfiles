@@ -92,7 +92,8 @@ installer_optional_app() {
 # The directory a tool reads its configuration from. Spelled the way the tool
 # spells it: XDG_CONFIG_HOME is deliberately ignored, because honouring it is
 # each tool's fact to state rather than ours to assume on its behalf. Resolves
-# only; the caller creates the directory, so the path stays safe to compute.
+# only, so the path stays safe to compute: linking into it creates it, and any
+# other caller creates it itself.
 # Usage: installer_config_dir <tool>
 installer_config_dir() {
   printf '%s\n' "$HOME/.config/$1"
@@ -242,9 +243,10 @@ installer_link_config() {
 }
 
 # Link a file this repository owns into a tool's configuration directory. The
-# three steps every linking topic spelled out — resolve the directory, create
-# it, compose the target path — are implementation here, so a topic states the
-# tool, the label, and the file and nothing about where any of them land.
+# steps every linking topic spelled out — resolve the directory, compose the
+# target path — are implementation here, so a topic states the tool, the label,
+# and the file and nothing about where any of them land. The linker creates the
+# directory.
 #
 # The target keeps the source's name. No topic links a file under a different
 # one, and an argument for that would widen the interface for a case that does
@@ -252,11 +254,8 @@ installer_link_config() {
 # than the default, calls installer_link_config directly.
 # Usage: installer_link_tool_config <tool> <label> <file>
 installer_link_tool_config() {
-  _installer_link_dir=$(installer_config_dir "$1")
-  mkdir -p "$_installer_link_dir"
   installer_link_config --label "$2" \
-    "$TOPIC_DIR/$3" "$_installer_link_dir/$3"
-  unset _installer_link_dir
+    "$TOPIC_DIR/$3" "$(installer_config_dir "$1")/$3"
 }
 
 # Report an operational failure and stop the installer.

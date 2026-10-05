@@ -11,7 +11,6 @@ installer_banner "setting up global agent instructions"
 # One file, read under each agent's own name and from each agent's own
 # directory. The directories are the tools' contracts, not ours.
 link_instructions() {
-  mkdir -p "$(dirname -- "$2")"
   installer_link_config --label "$1 instructions" \
     "$TOPIC_DIR/instructions.md" "$2"
 }
