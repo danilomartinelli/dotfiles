@@ -103,7 +103,7 @@ def brew_candidates(root, brew, env):
                     f"undeclared or ambiguous Homebrew candidate: {item['name']}"
                 )
             if item.get("pinned"):
-                print(f"Keeping Homebrew pin: {item['name']}")
+                print(f"Keeping {item['name']}: held with brew pin")
                 continue
             candidates.append(
                 Candidate(
