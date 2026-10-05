@@ -30,7 +30,7 @@ assert_links_to() {
     scenario_fail "$link is not a symbolic link"
     return 1
   }
-  assert_equal "$source" "$(readlink "$link")" "target of $link"
+  assert_equal "$source" "$(readlink "$link")" "source of $link"
 }
 
 test_every_agent_reads_the_shared_instructions() {

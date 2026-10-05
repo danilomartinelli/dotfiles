@@ -244,11 +244,11 @@ installer_link_config() {
 
 # Link a file this repository owns into a tool's configuration directory. The
 # steps every linking topic spelled out — resolve the directory, compose the
-# target path — are implementation here, so a topic states the tool, the label,
+# destination — are implementation here, so a topic states the tool, the label,
 # and the file and nothing about where any of them land. The linker creates the
 # directory.
 #
-# The target keeps the source's name. No topic links a file under a different
+# The destination keeps the source's name. No topic links a file under a different
 # one, and an argument for that would widen the interface for a case that does
 # not exist. A topic linking outside $HOME/.config, or under a policy other
 # than the default, calls installer_link_config directly.

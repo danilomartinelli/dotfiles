@@ -148,7 +148,7 @@ test_an_existing_backup_stops_the_run() {
 
 # overwrite destroys without a backup, so it inherits the linker's guard
 # rather than running an unattended rm -rf on whatever it was handed. The
-# catalog only ever yields $HOME/.<name> targets, so the guard is unreachable
+# catalog only ever yields $HOME/.<name> destinations, so the guard is unreachable
 # from here by construction; what this pins is that the removal is the
 # linker's to perform at all.
 test_removal_belongs_to_the_linker() {

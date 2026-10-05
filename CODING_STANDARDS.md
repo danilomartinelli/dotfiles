@@ -142,9 +142,10 @@ without updating adapters, tests, and user documentation in the same change.
 
 A topic that links a file into `$HOME/.config/<tool>` calls
 `installer_link_tool_config`, which resolves the directory and composes the
-target. Reach for `installer_link_config` directly only to link outside that
-directory or under a policy other than the default. The linker creates the
-directory that holds a target, so no installer runs `mkdir` before linking.
+destination. Reach for `installer_link_config` directly only to link outside
+that directory or under a policy other than the default. The linker creates the
+directory that holds a destination, so no installer runs `mkdir` before
+linking.
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
@@ -170,13 +171,13 @@ inherited `DOTFILES_ROOT` or falls back to one: every shell exports its active
 checkout's root, which is not the checkout a worktree's command belongs to. A
 sourced file reads the value of the process that sourced it.
 
-`_scripts/link-config --status <source> <target>` reports what an existing
-target is — `current`, `conflict`, or `absent` — and changes nothing. It is how
+`_scripts/link-config --status <source> <destination>` reports what a
+destination holds — `current`, `conflict`, or `absent` — and changes nothing. It is how
 `_scripts/link-dotfiles` decides which conflict policy to ask for; no caller
 derives that classification for itself.
 
-On the acting path the linker's exit status is its outcome: `0` when the target
-matches the declaration or the policy kept it deliberately, `1` when the link
+On the acting path the linker's exit status is its outcome: `0` when the
+destination matches the declaration or the policy kept it deliberately, `1` when the link
 could not be made, and `2` for invalid usage or a removal it refuses to perform.
 A caller does not parse the prose to learn which happened.
 

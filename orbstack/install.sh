@@ -9,10 +9,10 @@ installer_require_darwin
 installer_banner "setting up OrbStack Docker engine defaults"
 
 SOURCE="$TOPIC_DIR/docker.json"
-TARGET="$HOME/.orbstack/config/docker.json"
+DESTINATION="$HOME/.orbstack/config/docker.json"
 
 installer_link_config --policy preserve-existing --label "OrbStack docker.json" \
-  "$SOURCE" "$TARGET"
+  "$SOURCE" "$DESTINATION"
 
 # Prefer OrbStack as the active Docker context when available.
 if command -v docker >/dev/null 2>&1 && docker context ls >/dev/null 2>&1; then

@@ -60,6 +60,18 @@ A unit of the managed environment that gathers the configuration, shell setup
 and optional installation step for one tool or concern.
 _Avoid_: Module, package, plugin
 
+### Linking
+
+**Destination**:
+The place in the home directory where the environment puts a link to its own
+configuration.
+_Avoid_: Target
+
+**Conflict**:
+Something already at a destination that is not the link the environment
+declares there.
+_Avoid_: Collision, clash
+
 ### Checkouts
 
 **Checkout**:

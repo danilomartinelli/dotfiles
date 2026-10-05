@@ -64,7 +64,7 @@ Individual suites also construct specialized repositories and command stubs.
 
 This is shell/process substitution at real integration boundaries, rather than
 mocking an application's in-memory functions. Assertions check effects such as
-link targets, backup files, permissions, execution order and command exit codes.
+link sources, backup files, permissions, execution order and command exit codes.
 
 The isolated fixture environment is an explicit harness contract, not an OS
 sandbox. A new test must stub each external operation it would otherwise reach.
