@@ -29,42 +29,73 @@ scenario_write_file "$TEST_ROOT/locale.sh" <<'EOF'
 printf '%s\n' "${LC_MESSAGES-unset}|$LANG|$LC_TIME"
 EOF
 
-test_conductor_shells_export_english_messages() {
-  local mode
-  for mode in -c -ilc; do
-    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-    scenario_capture "$TEST_ROOT/locale-conductor" env -i \
-      HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb \
-      LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 \
-      __CFBundleIdentifier=com.conductor.app \
-      "$ZSH_BIN" -d "$mode" '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
-    assert_equal 'C|en_US.UTF-8|pt_BR.UTF-8' \
-      "$(cat "$TEST_ROOT/locale-conductor/stdout.log")" 'Conductor message locale'
-    assert_empty "$TEST_ROOT/locale-conductor/stderr.log"
-  done
-}
-
-test_other_shells_preserve_message_locale() {
-  local bundle messages
-  for bundle in '' com.apple.Terminal; do
-    for messages in unset pt_BR.UTF-8; do
-      local -a startup=(env -i
-        HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin
-        LANG=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 "__CFBundleIdentifier=$bundle")
-      if [ "$messages" != unset ]; then
-        startup+=("LC_MESSAGES=$messages")
-      fi
+# Output that reaches a pipe is read by a program, whichever app started the
+# shell and however much of startup it runs.
+test_tool_shells_export_english_messages() {
+  local bundle mode
+  for bundle in '' com.conductor.app; do
+    for mode in -c -ilc; do
       # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-      scenario_capture "$TEST_ROOT/locale-other" "${startup[@]}" \
-        "$ZSH_BIN" -d -c '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
-      assert_equal "$messages|pt_BR.UTF-8|pt_BR.UTF-8" \
-        "$(cat "$TEST_ROOT/locale-other/stdout.log")" 'non-Conductor message locale'
-      assert_empty "$TEST_ROOT/locale-other/stderr.log"
+      scenario_capture "$TEST_ROOT/locale-tool" env -i \
+        HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb \
+        LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 LC_TIME=pt_BR.UTF-8 \
+        "__CFBundleIdentifier=$bundle" \
+        "$ZSH_BIN" -d "$mode" '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh"
+      assert_equal 'C|en_US.UTF-8|pt_BR.UTF-8' \
+        "$(cat "$TEST_ROOT/locale-tool/stdout.log")" \
+        "tool shell locale ($mode, bundle '$bundle')"
+      assert_empty "$TEST_ROOT/locale-tool/stderr.log"
     done
   done
 }
 
-test_conductor_git_reports_missing_upstream_in_english() {
+# A terminal means a person reads the output, in Conductor's integrated
+# terminal too. A message override inherited from a tool shell, such as an
+# editor that captured its environment without a terminal, does not survive.
+test_person_shells_export_portuguese_messages() {
+  local bundle messages mode output
+  for bundle in '' com.conductor.app; do
+    for messages in unset C; do
+      for mode in -c -ilc; do
+        local -a startup=(env -i
+          HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb
+          LANG=en_US.UTF-8 LC_TIME=en_US.UTF-8 "__CFBundleIdentifier=$bundle")
+        if [ "$messages" != unset ]; then
+          startup+=("LC_MESSAGES=$messages")
+        fi
+        # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+        output=$(scenario_on_terminal "${startup[@]}" \
+          "$ZSH_BIN" -d "$mode" '/bin/sh "$1"' zsh "$TEST_ROOT/locale.sh" | tr -d '\r')
+        assert_equal 'unset|pt_BR.UTF-8|en_US.UTF-8' "$output" \
+          "person's shell locale ($mode, bundle '$bundle', inherited messages $messages)"
+      done
+    done
+  done
+}
+
+# Conductor captures its environment with `$SHELL -ilc env`, which runs the
+# shared defaults after ~/.zshenv, so they must not replace either locale.
+test_shared_defaults_keep_the_shell_locale() {
+  local output
+  # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+  local probe='source "$1/.commonrc"; printf "%s\n" "${LC_MESSAGES-unset}|$LANG"'
+  local -a startup=(env -i
+    HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb
+    __CFBundleIdentifier=com.conductor.app)
+
+  scenario_capture "$TEST_ROOT/locale-shared" "${startup[@]}" LANG=pt_BR.UTF-8 \
+    "$ZSH_BIN" -d -ilc "$probe" zsh "$REPOSITORY_ROOT"
+  assert_equal 'C|en_US.UTF-8' "$(cat "$TEST_ROOT/locale-shared/stdout.log")" \
+    'tool shell locale after the shared defaults'
+  assert_empty "$TEST_ROOT/locale-shared/stderr.log"
+
+  output=$(scenario_on_terminal "${startup[@]}" LANG=en_US.UTF-8 LC_MESSAGES=C \
+    "$ZSH_BIN" -d -ilc "$probe" zsh "$REPOSITORY_ROOT" | tr -d '\r')
+  assert_equal 'unset|pt_BR.UTF-8' "$output" \
+    "person's shell locale after the shared defaults"
+}
+
+test_tool_shell_git_reports_missing_upstream_in_english() {
   local git_bin
   git_bin=$(command -v git)
   scenario_write_file "$TEST_ROOT/git-upstream.zsh" <<'EOF'
@@ -78,7 +109,6 @@ EOF
     HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin \
     LANG=pt_BR.UTF-8 LC_MESSAGES=pt_BR.UTF-8 \
     GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
-    __CFBundleIdentifier=com.conductor.app \
     "$ZSH_BIN" -d "$TEST_ROOT/git-upstream.zsh" "$git_bin"
   assert_empty "$TEST_ROOT/locale-git/stdout.log"
   assert_contains "$TEST_ROOT/locale-git/stderr.log" "no upstream configured for branch 'locale-test'"
@@ -279,6 +309,7 @@ EOF
 chmod +x "$FIXTURE/homebrew/_availability.sh" "$FIXTURE/_scripts/topic-catalog"
 ln -s "$FIXTURE/resolver" "$TEST_HOME/.dotfiles-root"
 ln -s "$FIXTURE/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
+ln -s "$REPOSITORY_ROOT/zsh/zshenv.symlink" "$TEST_HOME/.zshenv"
 
 scenario_write_file "$TEST_ROOT/assert-startup.zsh" <<'EOF'
 fail() {
@@ -441,27 +472,39 @@ test_optional_homebrew_integration() {
   assert_not_contains "$events" syntax-highlighting
 }
 
-test_agent_shells_keep_standard_file_commands() {
-  local marker
-  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS -u CLAUDECODE -u CODEX_SHELL
+test_only_a_persons_shell_replaces_file_commands() {
+  local mode
+  # shellcheck disable=SC2016 # The commands are evaluated by the child Zsh process.
+  local replaced='source "$HOME/.zshrc"; [[ ${aliases[ls]-} == "eza --icons=auto" && ${aliases[cat]-} == bat ]]'
+  # shellcheck disable=SC2016 # The commands are evaluated by the child Zsh process.
+  local standard='source "$HOME/.zshrc"; (( ! $+aliases[ls] && ! $+aliases[cat] ))'
+  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS
     HOME="$TEST_HOME"
+    ZDOTDIR="$TEST_HOME"
     PATH="$STARTUP_PATH"
     MANPATH='/base/man:'
     STARTUP_FIXTURE_ROOT="$FIXTURE"
     DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
     FAKE_HOMEBREW_PREFIX="$BREW_PREFIX")
 
-  # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-  if ! scenario_capture "$AGENT_ARTIFACTS/person" "${startup[@]}" \
-    "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; [[ ${aliases[ls]-} == "eza --icons=auto" && ${aliases[cat]-} == bat ]]'; then
-    scenario_fail "a person's shell must keep the eza and bat replacements"
+  mkdir -p "$AGENT_ARTIFACTS"
+  if ! scenario_on_terminal "${startup[@]}" SCENARIO_EVENT_LOG=/dev/null \
+    "$ZSH_BIN" -d -c "$replaced" >"$AGENT_ARTIFACTS/person.log" 2>&1; then
+    command cat "$AGENT_ARTIFACTS/person.log" >&2
+    scenario_fail "a person's shell must get the eza and bat replacements"
   fi
-  # Claude Code and Codex replay this startup into their tool shells.
-  for marker in CLAUDECODE CODEX_SHELL; do
-    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-    if ! scenario_capture "$AGENT_ARTIFACTS/$marker" "${startup[@]}" "$marker=1" \
-      "$ZSH_BIN" -d -f -c 'source "$HOME/.zshrc"; (( ! $+aliases[ls] && ! $+aliases[cat] ))'; then
-      scenario_fail "$marker shells must keep the standard ls and cat"
+  # A shell that skipped ~/.zshenv has no classification and is a person's.
+  if ! scenario_capture "$AGENT_ARTIFACTS/unclassified" "${startup[@]}" \
+    "$ZSH_BIN" -d -f -c "$replaced"; then
+    scenario_fail "a shell that skipped ~/.zshenv must get the replacements"
+  fi
+  # Claude Code and Codex replay this startup through a login shell without a
+  # terminal and keep the aliases for their command shells.
+  for mode in -c -lc; do
+    if ! scenario_capture "$AGENT_ARTIFACTS/tool$mode" "${startup[@]}" \
+      "$ZSH_BIN" -d "$mode" "$standard"; then
+      command cat "$AGENT_ARTIFACTS/tool$mode/stderr.log" >&2
+      scenario_fail "a tool shell ($mode) must keep the standard ls and cat"
     fi
   done
 }
@@ -524,12 +567,13 @@ EOF
 }
 
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
-scenario_run 'Conductor exports English messages in command and login shells' test_conductor_shells_export_english_messages
-scenario_run 'other shells preserve their message locale' test_other_shells_preserve_message_locale
-scenario_run 'Conductor Git reports a missing upstream in English' test_conductor_git_reports_missing_upstream_in_english
+scenario_run 'tool shells export English messages whichever app started them' test_tool_shells_export_english_messages
+scenario_run "a person's shell exports Portuguese messages on a terminal" test_person_shells_export_portuguese_messages
+scenario_run 'shared defaults keep the locale of each kind of shell' test_shared_defaults_keep_the_shell_locale
+scenario_run 'Git in a tool shell reports a missing upstream in English' test_tool_shell_git_reports_missing_upstream_in_english
 scenario_run 'Conductor Git children use the captured locale without startup files' test_conductor_git_child_uses_captured_locale
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
-scenario_run 'coding agent shells keep the standard ls and cat' test_agent_shells_keep_standard_file_commands
+scenario_run "only a person's shell replaces ls and cat" test_only_a_persons_shell_replaces_file_commands
 scenario_run 'nested topic additions, renames and removals refresh cached startup' \
   test_nested_topic_changes_refresh_cached_startup
 scenario_finish

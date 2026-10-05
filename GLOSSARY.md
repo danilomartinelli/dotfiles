@@ -5,6 +5,8 @@ that keeps that environment current.
 
 ## Language
 
+### Software
+
 **Declared software**:
 Software explicitly selected as part of the managed Mac environment. Software
 installed independently is outside this set.
@@ -39,3 +41,14 @@ installation. Availability alone does not authorize a version change.
 A change to installed software that follows the owner's explicit selection of
 upgrade candidates, including dependencies required by those selections.
 _Avoid_: Frozen machine, automatic upgrade
+
+### Shells
+
+**Person's shell**:
+A shell whose output a person reads, whichever app opened it.
+_Avoid_: Interactive shell, terminal shell
+
+**Tool shell**:
+A shell whose output a program reads, such as a coding agent's command shell
+or an app's internal shell.
+_Avoid_: Agent shell, non-interactive shell, Conductor shell

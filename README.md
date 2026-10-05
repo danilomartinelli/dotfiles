@@ -483,8 +483,9 @@ implementations.
 | `pubkey`  | Copy the default SSH public key, preferring Ed25519                |
 
 Arguments provided after an alias are passed to the expanded command. The Files
-aliases are for a person's shell: Claude Code (`CLAUDECODE`) and Codex
-(`CODEX_SHELL`) tool shells keep the standard `ls` and `cat`.
+aliases are for a person's shell; a tool shell, such as a coding agent's command
+shell, keeps the standard `ls` and `cat` (see
+[Zsh loading order](#zsh-loading-order)).
 
 | Area                      | Aliases                                                                                                                              |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -564,15 +565,27 @@ phases so failures have clear ownership.
 
 ### Zsh loading order
 
-`zsh/zshenv.symlink` is linked as `~/.zshenv` and sets `LANG=en_US.UTF-8` and
-`LC_MESSAGES=C` only when `__CFBundleIdentifier=com.conductor.app`. Conductor's
-Git runner forwards the captured `LANG` to clean `zsh -f` shells, which skip
-startup files and do not inherit `LC_MESSAGES`. Setting only `LC_MESSAGES`
-therefore leaves the Git runner's missing-upstream error translated, and the
-Changes panel can remain on "Loading git status..." until the branch has an
-upstream. The workaround gives Conductor an English UTF-8 locale, preserving
-explicit category overrides such as `LC_TIME`. Shells from other apps keep
-their existing locale.
+`zsh/zshenv.symlink` is linked as `~/.zshenv`, the one startup file every Zsh
+shell reads unless started with `-f`, and classifies the shell by who reads its
+output
+([ADR-0003](docs/adr/0003-classify-shells-by-who-reads-their-output.md)):
+
+- A shell whose standard output is a terminal is a person's shell, in any app,
+  Conductor's integrated terminal included. It gets `LANG=pt_BR.UTF-8` and
+  drops an inherited `LC_MESSAGES`, and startup adds the Files aliases.
+- Any other shell is a tool shell: Conductor capturing its environment with
+  `$SHELL -ilc env`, or Claude Code, Codex and OpenCode replaying startup for
+  their command shells. It gets `LANG=en_US.UTF-8` and `LC_MESSAGES=C`, and
+  keeps the standard `ls` and `cat`.
+
+Other locale categories, such as `LC_TIME`, pass through unchanged, and neither
+`.commonrc` nor `~/.localrc` sets the locale: both run after `~/.zshenv` in the
+shell Conductor captures. English must arrive through `LANG` itself because
+Conductor's Git runner forwards the captured `LANG` to clean `zsh -f` shells,
+which skip startup files and do not inherit `LC_MESSAGES`; a translated
+missing-upstream error leaves the Changes panel on "Loading git status..."
+until the branch has an upstream. A shell that skipped `~/.zshenv` is treated
+as a person's shell. Kimi Code runs its commands in Bash, outside this policy.
 
 `zsh/zshrc.symlink` resolves the physical checkout and loads
 `zsh/_startup.zsh` once. Startup then:
@@ -634,11 +647,13 @@ precedence.
 - **Conductor** links `~/.conductor/settings.toml`, the user layer its Settings
   window writes. This repository's own `.conductor/settings.toml` adds a run
   script for `_scripts/test`; Conductor reads it from the default branch on the
-  remote, so a change to it applies once merged. The Git message workaround is
-  owned by `zsh/zshenv.symlink` (see [Zsh loading order](#zsh-loading-order)).
-  When replacing an existing local `~/.zshenv`, use the linker's backup option
-  and preserve any unrelated settings. Fully quit and reopen Conductor after
-  applying the change to refresh its
+  remote, so a change to it applies once merged. Its English Git messages come
+  from the tool-shell locale in `zsh/zshenv.symlink` (see
+  [Zsh loading order](#zsh-loading-order)). `~/.zshenv` must be that link: a
+  copy keeps the policy it was copied from. When replacing an existing local
+  `~/.zshenv`, use the linker's backup option and preserve any unrelated
+  settings. Fully quit and reopen Conductor after a change to `~/.zshenv` to
+  refresh its
   [captured shell environment](https://www.conductor.build/docs/reference/shells).
 - **OpenCode** runs from Mise, and the desktop app comes from the
   `opencode-desktop` cask. `opencode.jsonc` declares the models, the CodeGraph,

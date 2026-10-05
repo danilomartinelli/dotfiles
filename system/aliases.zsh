@@ -1,7 +1,8 @@
-# Coding agents (Claude Code sets CLAUDECODE, Codex sets CODEX_SHELL) replay
-# this startup into their tool shells and rely on the standard ls and cat flags
-# and output, so these replacements are for a person's interactive shell only.
-[[ -n ${CLAUDECODE-} || -n ${CODEX_SHELL-} ]] && return 0
+# Programs reading a tool shell, such as coding agents that replay this startup
+# into their command shells, rely on the standard ls and cat flags and output,
+# so these replacements are for a person's shell only. A shell that skipped
+# ~/.zshenv is a person's.
+[[ ${_dotfiles_shell:-person} == tool ]] && return 0
 
 # Modern file listing: prefer eza, fall back to GNU coreutils gls.
 if (( $+commands[eza] )); then
