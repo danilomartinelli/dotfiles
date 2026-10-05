@@ -174,6 +174,7 @@ cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$FIXTURE/_scripts/adapter-checkout.sh"
+cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$FIXTURE/dotfiles-root.symlink"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
@@ -553,6 +554,39 @@ EOF
   assert_empty "$fixture/removed/stderr.log"
 }
 
+# ~/.zshrc reaches the checkout through a symbolic link, and ~/.dotfiles-root
+# may be missing or still name a worktree that has since been removed. Startup
+# must find the checkout containing the startup file either way.
+test_startup_finds_its_checkout_without_the_home_link() {
+  local fixture
+  fixture=$(scenario_tmpdir home-link)
+  mkdir -p "$fixture/home"
+  ln -s "$FIXTURE/zsh/zshrc.symlink" "$fixture/home/.zshrc"
+
+  scenario_write_file "$fixture/start.zsh" <<'EOF'
+source "$HOME/.zshrc" || exit 1
+print -r -- "$DOTFILES_ROOT" >| "$HOME/checkout"
+EOF
+
+  local -a startup=("${STARTUP_ENV[@]}"
+    HOME="$fixture/home"
+    PATH="$STARTUP_PATH"
+    STARTUP_FIXTURE_ROOT="$FIXTURE"
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX"
+    "$ZSH_BIN" -d -f "$fixture/start.zsh")
+
+  scenario_capture "$fixture/missing" "${startup[@]}"
+  assert_equal "$FIXTURE" "$(command cat "$fixture/home/checkout")" 'checkout without the home link'
+  assert_empty "$fixture/missing/stderr.log"
+
+  rm "$fixture/home/checkout"
+  ln -s "$fixture/removed-worktree/dotfiles-root.symlink" "$fixture/home/.dotfiles-root"
+  scenario_capture "$fixture/dangling" "${startup[@]}"
+  assert_equal "$FIXTURE" "$(command cat "$fixture/home/checkout")" 'checkout with a dangling home link'
+  assert_empty "$fixture/dangling/stderr.log"
+}
+
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
 scenario_run 'tool shells export English messages whichever app started them' test_tool_shells_export_english_messages
 scenario_run "a person's shell exports Portuguese messages on a terminal" test_person_shells_export_portuguese_messages
@@ -563,4 +597,6 @@ scenario_run 'optional Homebrew integration may be absent' test_optional_homebre
 scenario_run "only a person's shell replaces ls and cat" test_only_a_persons_shell_replaces_file_commands
 scenario_run 'nested topic additions and removals reach the next shell' \
   test_nested_topic_changes_reach_the_next_shell
+scenario_run 'startup finds its checkout without a usable home link' \
+  test_startup_finds_its_checkout_without_the_home_link
 scenario_finish
