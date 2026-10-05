@@ -144,8 +144,8 @@ A topic that links a file into `$HOME/.config/<tool>` calls
 `installer_link_tool_config`, which resolves the directory and composes the
 destination. Reach for `installer_link_config` directly only to link outside
 that directory or under a policy other than the default. The linker creates the
-directory that holds a destination, so no installer runs `mkdir` before
-linking.
+directory that holds a destination, so no installer runs `mkdir` just to
+prepare a link.
 
 Do not reimplement checkout resolution, Darwin checks, dependency hints,
 message conventions, run-once markers, or link-conflict policy inside
