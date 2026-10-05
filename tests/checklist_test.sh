@@ -44,7 +44,6 @@ invoke_checklist() {
   scenario_capture "$fixture" env \
     HOME="$fixture/home" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    DOTFILES_ROOT="$REPOSITORY_ROOT" \
     DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
     "$CHECKLIST" "$@"
 }
@@ -60,7 +59,6 @@ invoke_checklist_on_a_terminal() {
     HOME="$fixture/home" \
     SCENARIO_EVENT_LOG="$fixture/events.log" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    DOTFILES_ROOT="$REPOSITORY_ROOT" \
     DOTFILES_CHECKLIST_CATALOG="$fixture/catalog.tsv" \
     "$CHECKLIST" "$@" >"$fixture/stdout.log" 2>&1
 }

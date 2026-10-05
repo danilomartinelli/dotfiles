@@ -30,8 +30,8 @@ make_fixture() {
     "$fixture/tests" \
     "$fixture/zsh"
 
-  scenario_write_file "$fixture/dotfiles-root.symlink" <<'EOF'
-resolver
+  scenario_write_file "$fixture/root.symlink" <<'EOF'
+root-level link
 EOF
   scenario_write_file "$fixture/.hidden/secret.zsh" <<'EOF'
 hidden
@@ -138,7 +138,7 @@ golden_manifest() {
   printf '%s\t%s\n' installer "$fixture/alpha/install.sh"
   printf '%s\t%s\n' link "$fixture/alpha/alpha.symlink"
   printf '%s\t%s\n' link "$fixture/alpha/bundle.symlink"
-  printf '%s\t%s\n' link "$fixture/dotfiles-root.symlink"
+  printf '%s\t%s\n' link "$fixture/root.symlink"
   printf '%s\t%s\n' main "$fixture/alpha/aliases.zsh"
   printf '%s\t%s\n' main "$fixture/alpha/nested/deep.zsh"
   printf '%s\t%s\n' main "$fixture/alpha/prompt.zsh"

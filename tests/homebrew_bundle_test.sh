@@ -41,7 +41,6 @@ invoke_bundle() {
   shift
 
   fixture_run "$fixture" \
-    DOTFILES_ROOT="$fixture" \
     DOTFILES_HOMEBREW_ROOT="$fixture/platform" \
     ${overrides[@]+"${overrides[@]}"} \
     -- "$fixture/homebrew/_bundle.sh" "$@"

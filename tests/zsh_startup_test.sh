@@ -173,17 +173,10 @@ cp "$REPOSITORY_ROOT/system/aliases.zsh" "$FIXTURE/system/aliases.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
-cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$FIXTURE/_scripts/adapter-checkout.sh"
-cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$FIXTURE/dotfiles-root.symlink"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
 printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >>"$FIXTURE/zsh/prompt.zsh"
-
-scenario_write_executable "$FIXTURE/resolver" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$STARTUP_FIXTURE_ROOT"
-EOF
 
 scenario_write_executable "$BREW_PREFIX/bin/brew" <<'EOF'
 #!/bin/sh
@@ -308,7 +301,6 @@ print -r -- ignored-tests >> "$SCENARIO_EVENT_LOG"
 EOF
 
 chmod +x "$FIXTURE/homebrew/_availability.sh" "$FIXTURE/_scripts/topic-catalog"
-ln -s "$FIXTURE/resolver" "$TEST_HOME/.dotfiles-root"
 ln -s "$FIXTURE/zsh/zshrc.symlink" "$TEST_HOME/.zshrc"
 ln -s "$REPOSITORY_ROOT/zsh/zshenv.symlink" "$TEST_HOME/.zshenv"
 
@@ -524,7 +516,6 @@ test_nested_topic_changes_reach_the_next_shell() {
   fixture=$(scenario_tmpdir nested-topic)
   nested="$FIXTURE/alpha/nested/deeper"
   mkdir -p "$nested" "$fixture/home"
-  ln -s "$FIXTURE/resolver" "$fixture/home/.dotfiles-root"
 
   scenario_write_file "$fixture/start.zsh" <<'EOF'
 source "$STARTUP_FIXTURE_ROOT/zsh/zshrc.symlink" || exit 1
@@ -554,37 +545,32 @@ EOF
   assert_empty "$fixture/removed/stderr.log"
 }
 
-# ~/.zshrc reaches the checkout through a symbolic link, and ~/.dotfiles-root
-# may be missing or still name a worktree that has since been removed. Startup
-# must find the checkout containing the startup file either way.
-test_startup_finds_its_checkout_without_the_home_link() {
+# ~/.zshrc reaches the checkout through a symbolic link. Startup acts on the
+# checkout containing the startup file, not on one an inherited DOTFILES_ROOT
+# names, and a ~/.dotfiles-root left by an older setup plays no part, even
+# when it names a worktree that has since been removed.
+test_startup_acts_on_the_checkout_containing_it() {
   local fixture
-  fixture=$(scenario_tmpdir home-link)
-  mkdir -p "$fixture/home"
+  fixture=$(scenario_tmpdir containing-checkout)
+  mkdir -p "$fixture/home" "$fixture/other-checkout"
   ln -s "$FIXTURE/zsh/zshrc.symlink" "$fixture/home/.zshrc"
+  ln -s "$fixture/removed-worktree/dotfiles-root.symlink" "$fixture/home/.dotfiles-root"
 
   scenario_write_file "$fixture/start.zsh" <<'EOF'
 source "$HOME/.zshrc" || exit 1
 print -r -- "$DOTFILES_ROOT" >| "$HOME/checkout"
 EOF
 
-  local -a startup=("${STARTUP_ENV[@]}"
-    HOME="$fixture/home"
-    PATH="$STARTUP_PATH"
-    STARTUP_FIXTURE_ROOT="$FIXTURE"
-    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
-    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX"
-    "$ZSH_BIN" -d -f "$fixture/start.zsh")
-
-  scenario_capture "$fixture/missing" "${startup[@]}"
-  assert_equal "$FIXTURE" "$(command cat "$fixture/home/checkout")" 'checkout without the home link'
-  assert_empty "$fixture/missing/stderr.log"
-
-  rm "$fixture/home/checkout"
-  ln -s "$fixture/removed-worktree/dotfiles-root.symlink" "$fixture/home/.dotfiles-root"
-  scenario_capture "$fixture/dangling" "${startup[@]}"
-  assert_equal "$FIXTURE" "$(command cat "$fixture/home/checkout")" 'checkout with a dangling home link'
-  assert_empty "$fixture/dangling/stderr.log"
+  scenario_capture "$fixture" "${STARTUP_ENV[@]}" \
+    HOME="$fixture/home" \
+    PATH="$STARTUP_PATH" \
+    DOTFILES_ROOT="$fixture/other-checkout" \
+    STARTUP_FIXTURE_ROOT="$FIXTURE" \
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
+    "$ZSH_BIN" -d -f "$fixture/start.zsh"
+  assert_equal "$FIXTURE" "$(command cat "$fixture/home/checkout")" 'checkout containing the startup file'
+  assert_empty "$fixture/stderr.log"
 }
 
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
@@ -597,6 +583,6 @@ scenario_run 'optional Homebrew integration may be absent' test_optional_homebre
 scenario_run "only a person's shell replaces ls and cat" test_only_a_persons_shell_replaces_file_commands
 scenario_run 'nested topic additions and removals reach the next shell' \
   test_nested_topic_changes_reach_the_next_shell
-scenario_run 'startup finds its checkout without a usable home link' \
-  test_startup_finds_its_checkout_without_the_home_link
+scenario_run 'startup acts on the checkout containing it' \
+  test_startup_acts_on_the_checkout_containing_it
 scenario_finish

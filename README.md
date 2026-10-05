@@ -59,8 +59,8 @@ Bootstrap performs the complete first-machine workflow:
    restricts it to mode `600`.
 1. Prompts for the Git author name and email only when the private
    `git/gitconfig.local.symlink` does not exist.
-1. Links `.localrc`, root-level `*.symlink` entries, topic `*.symlink` entries,
-   and the worktree-aware `~/.dotfiles-root` resolver.
+1. Links `.localrc`, root-level `*.symlink` entries, and topic `*.symlink`
+   entries.
 1. Applies the tracked macOS defaults and attempts hostname normalization.
 1. Installs Homebrew and reconciles every declaration in `Brewfile`.
 1. Runs each discovered topic installer in deterministic order.
@@ -127,13 +127,12 @@ Run the public update command:
 dot
 ```
 
-`dot` repairs the checkout-root link, attempts `git pull`, restores a missing
-private environment file from its template, conservatively recreates missing
-dotfile links, updates Homebrew, reconciles `Brewfile` without blanket upgrades,
-and reruns topic installers. It then reports available upgrades for declared
-software and opens an interactive picker. Checkout refresh, Homebrew refresh,
-and optional upgrade failures warn and continue; declared dependency and
-installer failures stop the run.
+`dot` attempts `git pull`, restores a missing private environment file from its
+template, conservatively recreates missing dotfile links, updates Homebrew,
+reconciles `Brewfile` without blanket upgrades, and reruns topic installers. It
+then reports available upgrades for declared software and opens an interactive
+picker. Checkout refresh, Homebrew refresh, and optional upgrade failures warn
+and continue; declared dependency and installer failures stop the run.
 
 Use Tab or Space to select packages, Ctrl-A to select all, and Enter to review
 the selection. The final `Apply selected upgrades? [y/N]` confirmation defaults
@@ -180,12 +179,11 @@ macOS defaults.
 | Command                            | Purpose                                                           |
 | ---------------------------------- | ----------------------------------------------------------------- |
 | `dot`                              | Update the checkout, dependencies, links, and topic configuration |
-| `dot --edit`                       | Open the active physical checkout in `$EDITOR`                    |
+| `dot --edit`                       | Open the checkout containing `dot` in `$EDITOR`                   |
 | `dot --help`                       | Print supported lifecycle options                                 |
 | `_scripts/bootstrap`               | Run the complete first-machine installation                       |
 | `_scripts/setup bootstrap`         | Invoke the canonical bootstrap implementation                     |
 | `_scripts/setup update`            | Invoke the canonical daily-update implementation                  |
-| `dotfiles-root.symlink --install`  | Repair `~/.dotfiles-root` for this checkout                       |
 | `set-defaults`                     | Explicitly reapply tracked macOS preferences                      |
 | `_scripts/render-software-catalog` | Rewrite the README software catalog from the declarations         |
 
@@ -536,7 +534,6 @@ dotfiles/
 │   ├── env.zsh             # Main Zsh configuration
 │   └── completion.zsh      # Loaded after compinit
 ├── Brewfile
-├── dotfiles-root.symlink
 └── .localrc.example
 ```
 
@@ -587,8 +584,8 @@ missing-upstream error leaves the Changes panel on "Loading git status..."
 until the branch has an upstream. A shell that skipped `~/.zshenv` is treated
 as a person's shell. Kimi Code runs its commands in Bash, outside this policy.
 
-`zsh/zshrc.symlink` resolves the physical checkout and loads
-`zsh/_startup.zsh` once. Startup then:
+`zsh/zshrc.symlink` follows the `~/.zshrc` link to the checkout containing it,
+the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
 
 1. Loads optional `~/.localrc`, followed by tracked `.commonrc`.
 1. Initializes Homebrew, unique `PATH`/`MANPATH`, functions, and topic paths.

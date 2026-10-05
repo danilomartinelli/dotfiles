@@ -16,7 +16,7 @@
 set -uo pipefail
 
 SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-DOTFILES_ROOT=${DOTFILES_TEST_ROOT:-$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)}
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)
 
 usage() {
   cat >&2 <<'EOF'
@@ -47,17 +47,11 @@ fi
 pattern=${1-}
 
 # The suite list is discovered, never restated: a new tests/*_test.sh file is
-# picked up by existing here. test-checkout-root is appended because it is a
-# scenario suite that lives outside tests/ so it can exercise the checkout from
-# the repository root.
+# picked up by existing here.
 suites=()
 while IFS= read -r suite_path; do
   suites+=("$suite_path")
 done < <(find "$DOTFILES_ROOT/tests" -maxdepth 1 -name '*_test.sh' -type f | sort)
-
-if [ -f "$DOTFILES_ROOT/_scripts/test-checkout-root" ]; then
-  suites+=("$DOTFILES_ROOT/_scripts/test-checkout-root")
-fi
 
 selected=()
 for suite_path in ${suites[@]+"${suites[@]}"}; do

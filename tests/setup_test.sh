@@ -146,7 +146,6 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/setup" "$fixture/_scripts/setup"
   cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
   cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
-  cp "$REPOSITORY_ROOT/_scripts/adapter-checkout.sh" "$fixture/_scripts/adapter-checkout.sh"
   cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$fixture/_scripts/installer-preamble.sh"
   cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
   cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
@@ -159,7 +158,6 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
   cp "$REPOSITORY_ROOT/bin/mobile-setup" "$fixture/bin/mobile-setup"
   cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
-  cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/dotfiles-root.symlink"
   cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
   cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
   cp "$REPOSITORY_ROOT/homebrew/_maintenance.sh" "$fixture/homebrew/_maintenance.sh"
@@ -183,7 +181,6 @@ make_fixture() {
     "$fixture/bin/dot" \
     "$fixture/bin/mobile-setup" \
     "$fixture/bin/set-defaults" \
-    "$fixture/dotfiles-root.symlink" \
     "$fixture/homebrew/_availability.sh" \
     "$fixture/homebrew/_bundle.sh" \
     "$fixture/homebrew/_maintenance.sh" \
@@ -279,7 +276,7 @@ test_bootstrap_sequence() {
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
   [ -L "$fixture/home/.localrc" ]
   [ -L "$fixture/home/.config" ]
-  [ -L "$fixture/home/.dotfiles-root" ]
+  [ ! -L "$fixture/home/.dotfiles-root" ]
   [ ! -e "$fixture/home/.hidden" ]
   [ ! -e "$fixture/home/.reserved" ]
   [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
@@ -315,7 +312,7 @@ test_update_sequence_and_cwd_independence() {
   assert_not_contains "$fixture/events.log" ssh-keygen
   assert_not_contains "$fixture/events.log" topic-bin
   assert_contains "$fixture/stdout.log" 'setup update complete'
-  [ -L "$fixture/home/.dotfiles-root" ]
+  [ ! -L "$fixture/home/.dotfiles-root" ]
   [ -L "$fixture/home/.config" ]
   [ -L "$fixture/home/.bundle" ]
   assert_contains "$fixture/home/.bundle/config.json" 'directory config'

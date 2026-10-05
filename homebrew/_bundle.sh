@@ -7,7 +7,7 @@ set -eu
 SCRIPT_PATH=$0
 SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$SCRIPT_PATH")" && pwd)
 HOMEBREW_AVAILABILITY=$SCRIPT_DIR/_availability.sh
-DOTFILES_ROOT=${DOTFILES_ROOT:-$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)}
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$SCRIPT_DIR/.." && pwd)
 BREW_BIN=
 BREWFILE=$DOTFILES_ROOT/Brewfile
 

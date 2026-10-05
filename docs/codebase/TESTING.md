@@ -7,7 +7,7 @@ scenario/assertion library in `tests/_support/shell-scenario.sh`. Neither has an
 independent framework version: they are versioned with the repository.
 
 ```bash
-# All safe suites; includes _scripts/test-checkout-root
+# All safe suites
 _scripts/test
 
 # Select suite names containing a substring
@@ -26,7 +26,6 @@ failure. `CODING_STANDARDS.md` owns the focused validation matrix.
 ## 2) Test Layout
 
 - `tests/*_test.sh`: discovered in sorted order by `_scripts/test`.
-- `_scripts/test-checkout-root`: appended explicitly for checkout/symlink cases.
 - `tests/_support/shell-scenario.sh`: temporary-root cleanup, assertions,
   per-case execution and final verdict.
 - `tests/_support/fixture.sh`: installer home/state/fake-bin layout and per-run
@@ -37,8 +36,7 @@ failure. `CODING_STANDARDS.md` owns the focused validation matrix.
 - `tests/documentation_test.sh`: intentional harness exception that collects all
   missing public documentation in one report.
 
-At the inspected source snapshot the runner selects 32 suites, including the
-checkout-root suite.
+At the inspected source snapshot the runner selects 33 suites.
 
 ## 3) Test Scope Matrix
 

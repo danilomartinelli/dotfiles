@@ -1,8 +1,6 @@
 # Resolve the checkout containing this startup file, including linked worktrees.
-# The anchor is resolved here because ~/.zshrc is a link: the adapter falls back
-# to the resolver beside the anchor when ~/.dotfiles-root is missing or broken.
-ADAPTER_ANCHOR=${${(%):-%N}:A}
-# shellcheck disable=SC1091 # Sourced from the checkout beside this startup file.
-. "${ADAPTER_ANCHOR:h:h}/_scripts/adapter-checkout.sh" || return 1
+# ~/.zshrc is a link into the checkout, so the path is resolved before climbing.
+DOTFILES_ROOT=${${(%):-%N}:A:h:h}
+export DOTFILES_ROOT
 
 source "$DOTFILES_ROOT/zsh/_startup.zsh"

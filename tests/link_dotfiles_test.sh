@@ -17,9 +17,8 @@ make_repo() {
   cp "$REPOSITORY_ROOT/_scripts/output.sh" "$repo/_scripts/output.sh"
   cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$repo/_scripts/installer-output.sh"
   cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$repo/_scripts/topic-catalog"
-  cp "$REPOSITORY_ROOT/dotfiles-root.symlink" "$repo/dotfiles-root.symlink"
   chmod +x "$repo/_scripts/link-dotfiles" "$repo/_scripts/link-config" \
-    "$repo/_scripts/topic-catalog" "$repo/dotfiles-root.symlink"
+    "$repo/_scripts/topic-catalog"
   printf '%s\n' 'localrc' >"$repo/.localrc"
   printf '%s\n' 'config body' >"$repo/sample/config.symlink"
   mkdir -p "$repo/sample/bundle.symlink"
@@ -33,7 +32,6 @@ invoke_linker() {
   shift
   scenario_capture "$repo" env \
     HOME="$repo/home" \
-    DOTFILES_ROOT="$repo" \
     "$repo/_scripts/link-dotfiles" "$@"
 }
 
@@ -121,7 +119,6 @@ test_removal_belongs_to_the_linker() {
 
   scenario_capture "$repo" env \
     HOME="$repo/home" \
-    DOTFILES_ROOT="$repo" \
     "$repo/_scripts/link-config" --policy replace-confirmed \
     "$repo/sample/config.symlink" "$repo/home" || status=$?
 
@@ -130,7 +127,26 @@ test_removal_belongs_to_the_linker() {
   [[ -d $repo/home ]] || scenario_fail 'the home directory was removed'
 }
 
+# Every shell exports its active checkout's root, so a linker run from a
+# worktree inherits one that names a different checkout. The links must still
+# come from the checkout that contains the linker.
+test_links_the_checkout_containing_the_linker() {
+  local repo other
+
+  repo=$(make_repo)
+  other=$(make_repo)
+  printf '%s\n' 'other checkout' >"$other/.localrc"
+  scenario_capture "$repo" env \
+    HOME="$repo/home" \
+    DOTFILES_ROOT="$other" \
+    "$repo/_scripts/link-dotfiles" --batch overwrite
+  assert_equal "$repo/.localrc" "$(readlink "$repo/home/.localrc")" 'localrc link source'
+  assert_equal "$repo/sample/config.symlink" "$(readlink "$repo/home/.config")" 'topic link source'
+}
+
 scenario_run 'batch overwrite links localrc and topic symlinks' test_batch_link_and_idempotent
+scenario_run 'links come from the checkout containing the linker' \
+  test_links_the_checkout_containing_the_linker
 scenario_run 'batch backup and skip honor conflict policy' test_batch_backup_and_skip
 scenario_run 'an existing backup stops the run instead of reporting success' \
   test_an_existing_backup_stops_the_run

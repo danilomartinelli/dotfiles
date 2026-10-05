@@ -83,8 +83,19 @@ test_machine_local_configuration_still_wins() {
     'core.fsmonitor after a machine-local override'
 }
 
+# Repository commands behind Git aliases run from the checkout whose root the
+# person's shell exported, so the alias keeps the variable for Git to expand.
+test_aliases_reach_commands_through_the_exported_root() {
+  # shellcheck disable=SC2016 # The alias must keep the variable unexpanded.
+  assert_equal '!"$DOTFILES_ROOT/bin/git-promote"' \
+    "$(git config --file "$REPOSITORY_ROOT/git/gitconfig.symlink" --get alias.promote)" \
+    'promote alias'
+}
+
 scenario_run 'a main working tree keeps the filesystem monitor' test_main_working_tree_keeps_the_filesystem_monitor
 scenario_run 'a linked worktree disables the filesystem monitor' test_linked_worktree_disables_the_filesystem_monitor
 scenario_run 'a linked worktree keeps the rest of the configuration' test_linked_worktree_keeps_the_rest_of_the_configuration
 scenario_run 'machine-local configuration still wins' test_machine_local_configuration_still_wins
+scenario_run 'aliases reach commands through the exported root' \
+  test_aliases_reach_commands_through_the_exported_root
 scenario_finish

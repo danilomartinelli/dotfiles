@@ -5,10 +5,7 @@
 set -e
 set -o pipefail
 
-SETUP_PATH=${BASH_SOURCE[0]}
-SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$SETUP_PATH")" && pwd)"
-ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
-DOTFILES_ROOT=$("$ROOT_RESOLVER" "$SETUP_PATH")
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 export DOTFILES_ROOT
 HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
@@ -283,10 +280,6 @@ run_dependency_pipeline() {
   fi
 }
 
-install_checkout_root_link() {
-  "$ROOT_RESOLVER" --install "$SETUP_PATH" >/dev/null
-}
-
 # The post-bootstrap checklist is its own module: it owns the catalog, the
 # sections, and the app opening, and setup only decides when to run it.
 open_app_checklist() {
@@ -302,7 +295,6 @@ run_bootstrap() {
 }
 
 run_update() {
-  run_critical 'checkout root link' install_checkout_root_link
   run_advisory 'checkout refresh' update_checkout
   run_critical 'local environment' setup_local_environment
   run_critical 'dotfile links' install_dotfile_links --batch skip
