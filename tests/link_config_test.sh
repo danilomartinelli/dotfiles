@@ -203,6 +203,31 @@ test_status_classifies_without_changing_anything() {
   assert_equal "$source" "$(readlink "$target")" 'status left the link alone'
 }
 
+# Every caller created the directory before linking into it, so the linker owns
+# that step. Asking for the status still changes nothing.
+test_creates_a_missing_parent_directory() {
+  local home source target
+
+  home=$(scenario_tmpdir parent)
+  source=$home/source.conf
+  target=$home/.config/app/nested/config
+  printf 'tracked\n' >"$source"
+
+  invoke_link "$home" --status "$source" "$target"
+  assert_equal 'absent' "$(cat "$home/stdout.log")" 'status under a missing parent'
+  [[ ! -e $home/.config ]] || scenario_fail 'status created the parent directory'
+
+  invoke_link "$home" --label 'app config' "$source" "$target"
+  assert_equal "$source" "$(readlink "$target")" 'linked under a created parent'
+
+  # A file where the directory belongs is not one to create, so the link
+  # cannot be made.
+  printf 'file\n' >"$home/blocked"
+  assert_fails_with_status 1 invoke_link "$home" "$source" "$home/blocked/config"
+  assert_contains "$home/stderr.log" 'cannot link config'
+  assert_contains "$home/blocked" 'file'
+}
+
 test_status_refuses_a_missing_source() {
   local home
 
@@ -232,6 +257,8 @@ scenario_run 'replace-confirmed refuses to remove unsafe targets' \
   test_replace_confirmed_refuses_unsafe_targets
 scenario_run 'status classifies a target without changing it' \
   test_status_classifies_without_changing_anything
+scenario_run 'a missing parent directory is created, never by status' \
+  test_creates_a_missing_parent_directory
 scenario_run 'status refuses a missing source' test_status_refuses_a_missing_source
 scenario_run 'missing source fails' test_missing_source_fails
 scenario_finish

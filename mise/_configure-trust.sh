@@ -20,7 +20,5 @@ rendered=$TOPIC_DIR/trusted-roots.local.toml
 } >"$rendered.tmp"
 mv "$rendered.tmp" "$rendered"
 
-config_dir=$(installer_config_dir mise)/conf.d
-mkdir -p "$config_dir"
 installer_link_config --label "Mise trusted roots" \
-  "$rendered" "$config_dir/trusted-roots.toml"
+  "$rendered" "$(installer_config_dir mise)/conf.d/trusted-roots.toml"

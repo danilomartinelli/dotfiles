@@ -10,7 +10,6 @@ installer_banner "setting up Kimi Code configuration"
 
 # Only the terminal settings are linked. config.toml carries provider
 # credentials and is rewritten by every login, so it stays machine-local.
-mkdir -p "$HOME/.kimi-code"
 installer_link_config --label "Kimi Code TUI settings" \
   "$TOPIC_DIR/tui.toml" "$HOME/.kimi-code/tui.toml"
 

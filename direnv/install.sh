@@ -36,8 +36,7 @@ toml_string() {
 } >"$RENDERED.tmp"
 mv "$RENDERED.tmp" "$RENDERED"
 
-CONFIG_DIR=$(installer_config_dir direnv)
-mkdir -p "$CONFIG_DIR"
-installer_link_config --label "direnv config" "$RENDERED" "$CONFIG_DIR/direnv.toml"
+installer_link_config --label "direnv config" \
+  "$RENDERED" "$(installer_config_dir direnv)/direnv.toml"
 
 installer_success "direnv configured"

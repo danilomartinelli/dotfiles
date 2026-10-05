@@ -342,7 +342,8 @@ installer_success "sample configured"'
 
 # The linking half of the same rule. installer_config_dir only resolves, so the
 # five topics that link into a tool directory each spelled out resolve, create,
-# compose. This helper owns all three and a topic states none of them.
+# compose. This helper resolves and composes, the linker creates, and a topic
+# states none of them.
 test_link_tool_config_creates_the_directory_and_links() {
   local checkout home source target
 
