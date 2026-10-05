@@ -176,6 +176,26 @@ test_a_generation_failure_leaves_the_stored_file_intact() {
     'brew undescribed-formula has no catalog description'
 }
 
+# A Brewfile line outside the grammar the declaration reader accepts stops the
+# render too, after an earlier region has already emitted its body.
+test_a_rejected_declaration_leaves_the_stored_file_intact() {
+  local fixture destination
+  fixture=$(renderer_fixture rejected)
+  destination=$fixture/README.md
+
+  printf '%s\n' \
+    '<!-- generated: mise-tools -->' '| stale |' '<!-- generated-end -->' \
+    '<!-- generated: homebrew-formulae -->' '<!-- generated-end -->' \
+    >"$destination"
+  cp "$destination" "$fixture/before"
+  printf '%s\n' "brew 'git', args: ['HEAD']" >>"$fixture/Brewfile"
+
+  run_renderer "$fixture/result" "$fixture"
+
+  assert_left_intact "$fixture/result" "$destination" "$fixture/before"
+  assert_contains "$fixture/result/stderr.log" 'not a literal Brewfile declaration'
+}
+
 # The repository's own README.md is current, so rendering a copy whose region
 # was edited by hand must restore exactly the tracked bytes, --check must
 # report the drift without writing it, and a second write must find nothing to
@@ -221,6 +241,8 @@ scenario_run 'a malformed region leaves the stored file intact' \
   test_a_malformed_region_leaves_the_stored_file_intact
 scenario_run 'a generation failure leaves the stored file intact' \
   test_a_generation_failure_leaves_the_stored_file_intact
+scenario_run 'a rejected declaration leaves the stored file intact' \
+  test_a_rejected_declaration_leaves_the_stored_file_intact
 scenario_run 'a stale region is reported by check and restored by a write' \
   test_a_stale_region_is_reported_by_check_and_restored_by_a_write
 scenario_finish

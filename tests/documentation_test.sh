@@ -86,25 +86,6 @@ done < <(
   done <<<"$topic_catalog" | sort -u
 )
 
-while IFS= read -r package_name; do
-  assert_documented_in "$README" 'Brewfile dependency' "$package_name"
-done < <(awk -F "'" '/^(brew|cask|mas) / { print $2 }' "$REPOSITORY_ROOT/Brewfile")
-
-while IFS= read -r tool_name; do
-  assert_documented_in "$README" 'Mise tool' "$tool_name"
-done < <(
-  awk -F '=' '
-    /^\[tools\]$/ { in_tools = 1; next }
-    /^\[/ { in_tools = 0 }
-    /^[[:space:]]*#/ { next }
-    in_tools {
-      name = $1
-      gsub(/[[:space:]\"]/, "", name)
-      if (name != "") print name
-    }
-  ' "$REPOSITORY_ROOT/mise/config.toml"
-)
-
 # The coding standards are the canonical installer-authoring contract. They
 # must list every preamble helper so topics do not recreate shared behavior.
 # The progress vocabulary lives in its own module and reaches installers through
@@ -123,8 +104,9 @@ done < <(
 # derive the other — trust is not expressible in a Brewfile — so the two lists
 # are held to each other here rather than by hand.
 brewfile_taps=$(
-  awk -F "'" '/^tap / { print $2 }' "$REPOSITORY_ROOT/Brewfile" | sort -u
-)
+  python3 "$REPOSITORY_ROOT/_scripts/declared_software.py" taps "$REPOSITORY_ROOT" \
+    | sort -u
+) || failures=$((failures + 1))
 trusted_taps=$(
   sed -n "s/^TRUSTED_TAPS='\(.*\)'$/\1/p" "$REPOSITORY_ROOT/homebrew/_bundle.sh" \
     | tr ' ' '\n' | sed '/^$/d' | sort -u
@@ -148,9 +130,9 @@ while IFS= read -r tap_name; do
   }
 done <<<"$trusted_taps"
 
-# The catalog tables are rendered from Brewfile and mise/config.toml, so the
-# grep coverage above proves a name is mentioned and this proves the row around
-# it still matches what was declared.
+# The catalog tables are rendered from what _scripts/declared_software.py reads
+# in Brewfile and mise/config.toml, so a current catalog proves that every
+# declaration has its row and that the row still matches what was declared.
 if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check >/dev/null; then
   failures=$((failures + 1))
 fi

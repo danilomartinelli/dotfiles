@@ -77,71 +77,39 @@ for required in "$brewfile" "$mise_config" "$readme"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
 
-# The one awk helper every emitter below needs. It was written out four times,
-# which is three chances for the emitters to disagree about what surrounding
-# whitespace in a declaration means.
-AWK_TRIM='
-  function trim(value) {
-    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-    return value
-  }
-'
+# What is declared comes from _scripts/declared_software.py, the one reader of
+# both files; the emitters below only turn its rows into table cells.
+declared() {
+  python3 "$SCRIPT_DIR/declared_software.py" "$1" "$repository_root"
+}
 
 # Every emitter writes tab-separated cells and stops on a declaration with no
-# description, because a blank cell in the rendered table would read as a
-# package nobody had to explain rather than one nobody did.
+# catalog description, because a blank cell in the rendered table would read as
+# a package nobody had to explain rather than one nobody did.
 emit_formula_rows() {
-  awk -F'\t' "$AWK_TRIM"'
-    /^brew / {
-      rest = substr($0, index($0, "'"'"'") + 1)
-      name = substr(rest, 1, index(rest, "'"'"'") - 1)
-      hash = index($0, "#")
-      purpose = hash ? trim(substr($0, hash + 1)) : ""
-      if (purpose == "") {
-        printf "render-software-catalog: brew %s has no catalog description\n", name > "/dev/stderr"
-        exit 1
-      }
-      printf "`%s`\t%s\n", name, purpose
+  declared formulae | awk -F'\t' '
+    $2 == "" {
+      printf "render-software-catalog: brew %s has no catalog description\n", $1 > "/dev/stderr"
+      exit 1
     }
-  ' "$brewfile"
+    { printf "`%s`\t%s\n", $1, $2 }
+  '
 }
 
 # A cask's group is the comment directly above its block, so the Brewfile
 # states the grouping the table renders instead of the table inventing one.
-# Only a comment that opens a block counts: a stray cask under the file header
-# would otherwise be filed under a sentence of prose.
 emit_cask_rows() {
-  awk "$AWK_TRIM"'
-    /^#/ {
-      pending = trim(substr($0, 2))
-      next
-    }
-    /^[[:space:]]*$/ {
-      pending = ""
-      group = ""
-      next
-    }
-    !/^cask / {
-      pending = ""
-      group = ""
-      next
+  declared casks | awk -F'\t' '
+    $2 == "" {
+      printf "render-software-catalog: cask %s has no catalog group\n", $1 > "/dev/stderr"
+      failed = 1
+      exit 1
     }
     {
-      rest = substr($0, index($0, "'"'"'") + 1)
-      name = substr(rest, 1, index(rest, "'"'"'") - 1)
-      if (pending != "") {
-        group = pending
-        pending = ""
+      if (!($2 in members)) {
+        order[++groups] = $2
       }
-      if (group == "") {
-        printf "render-software-catalog: cask %s has no catalog group\n", name > "/dev/stderr"
-        failed = 1
-        exit 1
-      }
-      if (!(group in members)) {
-        order[++groups] = group
-      }
-      members[group] = members[group] (members[group] == "" ? "" : ", ") "`" name "`"
+      members[$2] = members[$2] (members[$2] == "" ? "" : ", ") "`" $1 "`"
     }
     END {
       if (failed) {
@@ -151,67 +119,29 @@ emit_cask_rows() {
         printf "%s\t%s\n", order[index_], members[order[index_]]
       }
     }
-  ' "$brewfile"
+  '
 }
 
 emit_mas_rows() {
-  awk "$AWK_TRIM"'
-    /^mas / {
-      rest = substr($0, index($0, "'"'"'") + 1)
-      name = substr(rest, 1, index(rest, "'"'"'") - 1)
-      identifier = substr($0, index($0, "id:") + 3)
-      hash = index($0, "#")
-      purpose = hash ? trim(substr($0, hash + 1)) : ""
-      if (hash) {
-        identifier = substr(identifier, 1, index(identifier, "#") - 1)
-      }
-      gsub(/[[:space:],]/, "", identifier)
-      if (purpose == "") {
-        printf "render-software-catalog: mas %s has no catalog description\n", name > "/dev/stderr"
-        exit 1
-      }
-      printf "`%s`\t`%s`\t%s\n", name, identifier, purpose
+  declared mas | awk -F'\t' '
+    $3 == "" {
+      printf "render-software-catalog: mas %s has no catalog description\n", $1 > "/dev/stderr"
+      exit 1
     }
-  ' "$brewfile"
+    { printf "`%s`\t`%s`\t%s\n", $1, $2, $3 }
+  '
 }
 
-# Versions are read from the declaration rather than restated, so a floating
-# "latest" and a pinned release are both reported as declared.
+# Versions are read from the declaration rather than restated, so a channel
+# such as "latest" and a pin are both reported as declared.
 emit_mise_rows() {
-  awk "$AWK_TRIM"'
-    # Any section header ends [tools]. Naming only [settings] would keep
-    # reading rows out of whatever section were inserted between them, and
-    # tests/documentation_test.sh derives the same list by the same rule.
-    /^\[tools\]/ { in_tools = 1; next }
-    /^\[/ { in_tools = 0 }
-    !in_tools { next }
-    /^[[:space:]]*(#.*)?$/ { next }
-    {
-      name = trim(substr($0, 1, index($0, "=") - 1))
-      gsub(/"/, "", name)
-      value = substr($0, index($0, "=") + 1)
-      hash = index(value, "#")
-      role = hash ? trim(substr(value, hash + 1)) : ""
-      if (hash) {
-        value = substr(value, 1, hash - 1)
-      }
-      if (index(value, "version") > 0) {
-        value = substr(value, index(value, "version"))
-        value = substr(value, index(value, "=") + 1)
-      }
-      version = substr(value, index(value, "\"") + 1)
-      version = substr(version, 1, index(version, "\"") - 1)
-      if (role == "") {
-        printf "render-software-catalog: mise tool %s has no catalog role\n", name > "/dev/stderr"
-        exit 1
-      }
-      if (version == "") {
-        printf "render-software-catalog: mise tool %s declares no version\n", name > "/dev/stderr"
-        exit 1
-      }
-      printf "`%s`\t`%s`\t%s\n", name, version, role
+  declared mise | awk -F'\t' '
+    $4 == "" {
+      printf "render-software-catalog: mise tool %s has no catalog description\n", $1 > "/dev/stderr"
+      exit 1
     }
-  ' "$mise_config"
+    { printf "`%s`\t`%s`\t%s\n", $1, $2, $4 }
+  '
 }
 
 # The content handler for README.md's generated regions. It owns which region
