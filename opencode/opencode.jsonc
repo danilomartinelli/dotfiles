@@ -29,30 +29,30 @@
       "command": ["argent", "mcp"],
       "environment": { "DO_NOT_TRACK": "1" },
       "timeout": 900000,
-      "enabled": true
+      "enabled": false
     },
     "codegraph": {
       "type": "local",
       "command": ["codegraph", "serve", "--mcp"],
       "environment": { "CODEGRAPH_TELEMETRY": "0" },
-      "enabled": true
+      "enabled": false
     },
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
-      "enabled": true,
+      "enabled": false,
       // Unset sends an empty header, which Context7 serves at the anonymous quota.
       "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" }
     },
     "exa": {
       "type": "remote",
       "url": "https://mcp.exa.ai/mcp",
-      "enabled": true
+      "enabled": false
     },
     "gh_grep": {
       "type": "remote",
       "url": "https://mcp.grep.app",
-      "enabled": true
+      "enabled": false
     }
   },
   "plugin": [
