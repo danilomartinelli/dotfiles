@@ -22,6 +22,9 @@
 # Machine defaults (non-secret)
 # =======================================
 
+# Do not set LANG or LC_* here: ~/.zshenv sets the locale for a person's shell
+# or a tool shell, and the shell Conductor captures runs this file after it.
+
 # Override the shared workspace / projects directories if needed
 # export WORKSPACE="$HOME/Workspace"
 # export PROJECTS="$WORKSPACE/github.com"

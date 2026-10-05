@@ -1,6 +1,21 @@
-# Conductor forwards LANG, but not LC_MESSAGES, to its clean zsh -f Git shells.
-# Those shells skip this file, so the captured LANG must also select English.
-if [[ ${__CFBundleIdentifier:-} == com.conductor.app ]]; then
+# Classify this shell by who reads its output: a terminal means a person, and
+# anything else means a program, such as Conductor capturing its environment or
+# a coding agent replaying startup for its command shells. This is the one
+# startup file those shells all read. Later files read the answer, and it is
+# never exported, so no shell inherits another shell's classification. See
+# docs/adr/0003-classify-shells-by-who-reads-their-output.md.
+#
+# No LC_ALL: it overrides every category, including an explicit LC_TIME.
+if [[ -t 1 ]]; then
+  typeset -g _dotfiles_shell=person
+  # An inherited message override is left over from a tool shell, such as an
+  # editor that captured its environment without a terminal.
+  export LANG=pt_BR.UTF-8
+  unset LC_MESSAGES
+else
+  typeset -g _dotfiles_shell=tool
+  # Conductor forwards LANG, but not LC_MESSAGES, to its clean zsh -f Git
+  # shells, so LANG itself must select English.
   export LANG=en_US.UTF-8
   export LC_MESSAGES=C
 fi

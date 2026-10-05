@@ -6,9 +6,8 @@
 # Put sensitive data in ~/.localrc instead.
 # =======================================
 
-# Locale. No LC_ALL: it overrides every category and breaks script-visible
-# collation and number formatting; LANG keeps the pt-BR interface.
-export LANG="pt_BR.UTF-8"
+# Locale belongs to ~/.zshenv, which sets it for a person's shell or a tool
+# shell before this file runs; setting it here would undo that choice.
 
 # Default editor (override if needed). --wait keeps synchronous consumers
 # (crontab -e, visudo, sops, kubectl edit) blocked until the buffer closes.

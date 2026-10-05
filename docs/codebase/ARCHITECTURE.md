@@ -53,6 +53,7 @@ not reapply those defaults. These orders come from `_scripts/setup`.
 Shell startup is a separate flow:
 
 ```text
+zshenv.symlink -> person's shell or tool shell, and its locale
 zshrc.symlink -> physical checkout -> .localrc -> .commonrc
   -> Homebrew and unique paths -> topic catalog/cache -> autoload functions
   -> topic paths -> topic main files -> sole prompt -> compinit

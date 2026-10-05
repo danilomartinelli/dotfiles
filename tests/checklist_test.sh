@@ -50,37 +50,12 @@ invoke_checklist() {
 }
 
 # The opt-in path refuses a non-interactive caller, so reaching it needs a
-# terminal. `script` cannot supply one: it copies terminal attributes from its
-# own stdin and dies when the suite runs from a pipe. pty.spawn cannot either —
-# its stdin-copying loop does not return under the system Python 3.9. Forking a
-# pty directly and draining it needs neither, so this behaves the same in a
-# terminal and in a pipeline.
-PTY_RUNNER='
-import os, pty, sys
-pid, fd = pty.fork()
-if pid == 0:
-    os.execvp(sys.argv[1], sys.argv[1:])
-chunks = []
-while True:
-    try:
-        data = os.read(fd, 1024)
-    except OSError:
-        break
-    if not data:
-        break
-    chunks.append(data)
-os.close(fd)
-_, status = os.waitpid(pid, 0)
-sys.stdout.buffer.write(b"".join(chunks))
-sys.stdout.buffer.flush()
-sys.exit(os.waitstatus_to_exitcode(status))
-'
-
+# terminal.
 invoke_checklist_on_a_terminal() {
   local fixture=$1
   shift
   : >"$fixture/events.log"
-  /usr/bin/python3 -c "$PTY_RUNNER" \
+  scenario_on_terminal \
     env \
     HOME="$fixture/home" \
     SCENARIO_EVENT_LOG="$fixture/events.log" \
