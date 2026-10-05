@@ -1,5 +1,67 @@
 {
   "model": "opus[1m]",
+  "deniedMcpServers": [
+    {
+      "serverName": "aws-mcp"
+    },
+    {
+      "serverName": "node_repl"
+    },
+    {
+      "serverName": "linear"
+    },
+    {
+      "serverName": "supabase"
+    },
+    {
+      "serverName": "plugin:aws-agents-for-devsecops:aws-devops-agent"
+    },
+    {
+      "serverName": "plugin:aws-agents:awsknowledge"
+    },
+    {
+      "serverName": "plugin:aws-core:aws-mcp"
+    },
+    {
+      "serverName": "plugin:aws-data-analytics:aws-mcp"
+    },
+    {
+      "serverName": "plugin:engineering:atlassian"
+    },
+    {
+      "serverName": "plugin:engineering:datadog"
+    },
+    {
+      "serverName": "plugin:engineering:gmail"
+    },
+    {
+      "serverName": "plugin:engineering:google calendar"
+    },
+    {
+      "serverName": "plugin:engineering:linear"
+    },
+    {
+      "serverName": "plugin:engineering:notion"
+    },
+    {
+      "serverName": "plugin:engineering:slack"
+    },
+    {
+      "serverName": "plugin:finance:databricks"
+    },
+    {
+      "serverName": "plugin:finance:gmail"
+    },
+    {
+      "serverName": "plugin:finance:google calendar"
+    },
+    {
+      "serverName": "plugin:finance:snowflake"
+    },
+    {
+      "serverName": "plugin:finance:slack"
+    }
+  ],
   "extraKnownMarketplaces": {
     "pm-skills": {
       "source": {
@@ -26,5 +88,6 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "disableClaudeAiConnectors": true
 }
