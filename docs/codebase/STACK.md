@@ -38,10 +38,11 @@ production/development dependency split. The operational dependencies are:
 
 The complete dependency inventory belongs to `Brewfile` and
 `mise/config.toml`; the generated software tables in `README.md` expose every
-declared package and its purpose. `mise/mise.lock` is generated, while
-`Brewfile.lock.json` is ignored. Homebrew software is therefore not frozen to
-one resolved package set. The public guide describes a declarative setup and
-explicitly distinguishes configuration reproducibility from a frozen machine image.
+declared package and its catalog description. `mise/mise.lock` is generated,
+while `Brewfile.lock.json` is ignored. Homebrew software is therefore not
+frozen to one resolved package set. The public guide describes a declarative
+setup and explicitly distinguishes configuration reproducibility from a frozen
+machine image.
 
 ## 3) Development Toolchain
 

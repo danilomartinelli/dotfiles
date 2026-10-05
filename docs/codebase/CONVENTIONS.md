@@ -26,8 +26,10 @@ topic files mapped in `STRUCTURE.md`, rather than by generated or vendored code.
   `.agents/` payloads are excluded by the documented checks and CI.
 - JSON/JSONC: double-quoted strings; Zed-managed Prettier uses the repository
   `.prettierrc.json` override to parse JSONC without trailing commas.
-- TOML/Brewfile: preserve grouping and declaration comments. The comments are
-  data consumed by `_scripts/render-software-catalog`.
+- TOML/Brewfile: stay within the closed literal grammars that
+  `_scripts/declared_software.py` reads (ADR-0002), and preserve grouping and
+  declaration comments. The comments are catalog descriptions consumed by
+  `_scripts/render-software-catalog`.
 - Shell dialect follows the shebang. Bash-only arrays, `local`, and `pipefail`
   do not belong in `#!/bin/sh` scripts.
 

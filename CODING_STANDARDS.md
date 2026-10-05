@@ -32,20 +32,20 @@ catalogs, validation lists, or subsystem runbooks between files.
 
 ## Repository structure and naming
 
-| Concern                              | Authoritative source              |
-| ------------------------------------ | --------------------------------- |
-| Homebrew software and its purposes   | `Brewfile`                        |
-| Runtime and language-package tools   | `mise/config.toml`                |
-| README software catalog tables       | rendered from the two files above |
-| Resolved Mise versions and checksums | `mise/mise.lock`                  |
-| macOS preferences                    | `_macos/defaults.tsv`             |
-| Dock layout                          | `dock/_layout.tsv`                |
-| Topic discovery and load classes     | `_scripts/topic-catalog`          |
-| Setup orchestration                  | `_scripts/setup`                  |
-| Global coding-agent instructions     | `agents/instructions.md`          |
-| Trusted roots for direnv and Mise    | `_scripts/trusted-roots`          |
-| Public commands and lifecycle        | `README.md`                       |
-| Agent workflow                       | `AGENTS.md`                       |
+| Concern                                        | Authoritative source              |
+| ---------------------------------------------- | --------------------------------- |
+| Homebrew software and its catalog descriptions | `Brewfile`                        |
+| Runtime and language-package tools             | `mise/config.toml`                |
+| README software catalog tables                 | rendered from the two files above |
+| Resolved Mise versions and checksums           | `mise/mise.lock`                  |
+| macOS preferences                              | `_macos/defaults.tsv`             |
+| Dock layout                                    | `dock/_layout.tsv`                |
+| Topic discovery and load classes               | `_scripts/topic-catalog`          |
+| Setup orchestration                            | `_scripts/setup`                  |
+| Global coding-agent instructions               | `agents/instructions.md`          |
+| Trusted roots for direnv and Mise              | `_scripts/trusted-roots`          |
+| Public commands and lifecycle                  | `README.md`                       |
+| Agent workflow                                 | `AGENTS.md`                       |
 
 Naming follows the executable surface already present:
 
@@ -305,8 +305,11 @@ the dependent installer.
 
 ### TOML, Brewfile, and generated locks
 
-- Preserve the established syntax and grouping in `mise/config.toml` and
-  `Brewfile`.
+- Keep `Brewfile` and `mise/config.toml` within the closed literal grammars of
+  [ADR-0002](docs/adr/0002-read-declarations-as-closed-literal-grammars.md),
+  and preserve their grouping. `_scripts/declared_software.py` is the only
+  reader of both files; a consumer reads declarations through it and never
+  parses either file itself.
 - A trailing comment on a `brew`, `cask`, `mas`, or `[tools]` declaration is
   that entry's catalog description, and the comment above a `cask` block is its
   catalog group. `_scripts/render-software-catalog` renders both into
@@ -408,6 +411,7 @@ it reads it from there rather than restating it.
 | Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                         |
 | Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                               |
 | Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
+| Declared software reading                                       | `tests/declared_software_test.sh`                                                                            |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
 | Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                   |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh` |

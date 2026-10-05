@@ -44,7 +44,7 @@ checkout-root suite.
 
 | Scope                                     | Covered?                    | Typical target                                                               | Notes                                                    |
 | ----------------------------------------- | --------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Shared module behavior                    | Yes                         | Catalog reading, generated regions/files, Markdown tables                    | Real filesystem and shell behavior in temporary fixtures |
+| Shared module behavior                    | Yes                         | Catalog and declaration reading, generated regions/files, Markdown tables    | Real filesystem and shell behavior in temporary fixtures |
 | Process/filesystem integration            | Yes, isolated               | Setup ordering, symlink conflicts, key provisioning, Mise lock behavior      | Real repository scripts with fake vendor commands        |
 | Interactive shell lifecycle               | Yes, isolated               | Zsh order, repeat sourcing, optional dependencies and agent aliases          | Separate `zsh -d -f` fixture process                     |
 | Public documentation/config contracts     | Yes                         | Commands, aliases, packages, installer helpers, JSONC and renderer freshness | Primarily tracked source/config checks                   |
