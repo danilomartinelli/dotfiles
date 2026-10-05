@@ -3,6 +3,10 @@
 # A trailing comment is the entry's catalog description, and the comment above a
 # cask block is its catalog group. _scripts/render-software-catalog renders both
 # into README.md, so an entry without one stops the render.
+#
+# Homebrew evaluates this file as Ruby, but _scripts/declared_software.py reads
+# it literally and refuses conditionals, loops and entry options
+# (docs/adr/0002), so both always see the same software.
 
 cask_args appdir: '/Applications'
 

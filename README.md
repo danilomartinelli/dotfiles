@@ -201,10 +201,17 @@ declared setup and configuration, not a frozen machine image. See the
 [controlled-upgrade decision](docs/adr/0001-controlled-software-upgrades.md).
 
 The tables below are rendered from those two files by
-`_scripts/render-software-catalog`, so a name, a version, a group, or a purpose
-is written once, where the software is declared. Each entry's trailing comment
-is its description. Run the renderer after changing a declaration;
-`tests/documentation_test.sh` fails while the catalog is out of date.
+`_scripts/render-software-catalog`, so a name, a version, a group, or a catalog
+description is written once, where the software is declared. Each entry's
+trailing comment is its catalog description. Run the renderer after changing a
+declaration; `tests/documentation_test.sh` fails while the catalog is out of
+date.
+
+Both files stay literal, one declaration per line: the catalog, the
+documentation check and controlled upgrades all read them through
+`_scripts/declared_software.py`, which refuses Brewfile conditionals or entry
+options, and Mise declarations that span lines or list several versions. See the
+[declaration-grammar decision](docs/adr/0002-read-declarations-as-closed-literal-grammars.md).
 
 ### Homebrew command-line tools
 
@@ -720,10 +727,14 @@ Mise lock does not freeze all transitive language-package dependencies.
 - Add system packages, applications, fonts, and taps to `Brewfile`.
 - Add language-package CLIs and runtimes to `mise/config.toml`, regenerate the
   lock from the repository root, and review the generated diff.
-- Give the new declaration a trailing comment: it is the purpose or role the
-  catalog renders, and a declaration without one stops the render.
+- Keep the declaration literal and on one line; a line the declaration reader
+  does not accept stops the catalog, the documentation check and upgrade
+  discovery for that file.
+- Give the new declaration a trailing comment: it is the catalog description
+  the catalog renders, and a declaration without one stops the render.
 - Run `_scripts/render-software-catalog` to update the catalog tables.
-  Documentation coverage reports both a missing declaration and a stale table.
+  Documentation coverage reports a stale table, including a declaration missing
+  from it.
 
 Implementation, testing, and delivery rules live in
 [`CODING_STANDARDS.md`](CODING_STANDARDS.md). Agent-specific instructions live

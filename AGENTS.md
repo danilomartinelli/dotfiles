@@ -88,21 +88,22 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 
 ## Sources of truth
 
-| Concern                                         | Source                       |
-| ----------------------------------------------- | ---------------------------- |
-| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                   |
-| README software catalog tables                  | rendered from declarations   |
-| Runtimes and language-package CLIs              | `mise/config.toml`           |
-| Mise versions and checksums                     | `mise/mise.lock` (generated) |
-| macOS preferences                               | `_macos/defaults.tsv`        |
-| Dock layout                                     | `dock/_layout.tsv`           |
-| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`    |
-| Topic discovery and load classes                | `_scripts/topic-catalog`     |
-| Setup orchestration                             | `_scripts/setup`             |
-| Global coding-agent instructions                | `agents/instructions.md`     |
-| Trusted roots for direnv and Mise               | `_scripts/trusted-roots`     |
-| Public lifecycle and commands                   | `README.md`                  |
-| Coding and validation rules                     | `CODING_STANDARDS.md`        |
+| Concern                                         | Source                          |
+| ----------------------------------------------- | ------------------------------- |
+| Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                      |
+| README software catalog tables                  | rendered from declarations      |
+| Reading Brewfile and Mise declarations          | `_scripts/declared_software.py` |
+| Runtimes and language-package CLIs              | `mise/config.toml`              |
+| Mise versions and checksums                     | `mise/mise.lock` (generated)    |
+| macOS preferences                               | `_macos/defaults.tsv`           |
+| Dock layout                                     | `dock/_layout.tsv`              |
+| Post-bootstrap checklist                        | `_scripts/_checklist.tsv`       |
+| Topic discovery and load classes                | `_scripts/topic-catalog`        |
+| Setup orchestration                             | `_scripts/setup`                |
+| Global coding-agent instructions                | `agents/instructions.md`        |
+| Trusted roots for direnv and Mise               | `_scripts/trusted-roots`        |
+| Public lifecycle and commands                   | `README.md`                     |
+| Coding and validation rules                     | `CODING_STANDARDS.md`           |
 
 Never edit `mise/mise.lock` manually. Regenerate it with `mise lock --global`
 from the repository root and review the generated diff narrowly. Normal
@@ -140,7 +141,11 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   `homebrew/_bundle.sh`. `tests/documentation_test.sh` holds the two lists to
   each other, because trust is not expressible in a Brewfile and neither list
   can derive the other.
-- Give every declaration a trailing comment; it is the description
+- Keep declarations literal and one per line. `_scripts/declared_software.py`
+  is the only reader of `Brewfile` and `mise/config.toml` and rejects anything
+  else (`docs/adr/0002-read-declarations-as-closed-literal-grammars.md`); read
+  declarations through it instead of parsing either file.
+- Give every declaration a trailing comment; it is the catalog description
   `_scripts/render-software-catalog` renders into the README catalog tables.
   Run the renderer with the declaration change.
 - Do not run broad package-manager repair commands such as `npm audit fix`.

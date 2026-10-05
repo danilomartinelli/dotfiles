@@ -1,8 +1,9 @@
 # Runtime and language-package declarations for this machine.
 #
-# A trailing comment is the tool's catalog role, which
+# A trailing comment is the tool's catalog description, which
 # _scripts/render-software-catalog renders into README.md. A comment on its own
-# line stays here as rationale.
+# line stays here as rationale. _scripts/declared_software.py reads one
+# declaration per line and refuses any other shape (docs/adr/0002).
 
 [tools]
 "aqua:koalaman/shellcheck" = "latest"                           # Shell linting
