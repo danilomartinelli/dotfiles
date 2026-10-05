@@ -21,7 +21,8 @@ usage() {
 Usage: link-dotfiles [--batch skip|overwrite|backup]
 
   Link .localrc and topic *.symlink entries into $HOME.
-  Without --batch, prompts on conflicts (bootstrap).
+  Without --batch, prompts on conflicts (bootstrap) and stops when no
+  answer can be read.
 EOF
 }
 
@@ -67,7 +68,11 @@ choose_link_action() {
 
   while true; do
     prompt "File already exists: $dst ($(basename "$src")). [s]kip, [S]kip all, [o]verwrite, [O]verwrite all, [b]ackup, [B]ackup all?"
-    read -r -n 1 action
+    # Without an answer nobody chose, so the run stops rather than pick an
+    # action for a destination that holds someone's file.
+    if ! read -r -n 1 action; then
+      fail "No answer for $dst; answer in a terminal, or decide every conflict with _scripts/link-dotfiles --batch skip|backup|overwrite"
+    fi
     printf '\n'
 
     case "$action" in
@@ -108,6 +113,11 @@ choose_link_action() {
 # removal belongs to the linker, for installers and for this caller alike: the
 # linker refuses to clobber an existing backup and guards the paths an
 # unattended rm -rf must never take.
+#
+# The decision stays here rather than in the linker, which runs once per
+# destination: an all-answer is memory over this loop, and a topic installer's
+# policy is a fact about its destination that holds however setup was run, so
+# neither can be derived inside the linker from the mode.
 link_action_policy() {
   case "$1" in
     overwrite) printf '%s\n' replace-confirmed ;;
@@ -180,7 +190,10 @@ catalog=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || exit 1
 
 link_file "$DOTFILES_ROOT/.localrc" "$HOME/.localrc" || exit 1
 
-while IFS=$'\t' read -r kind src; do
+# The catalog arrives on its own descriptor because stdin belongs to the
+# conflict prompt. Sharing it made the prompt read catalog characters as
+# answers and swallow the rest of the line it read them from.
+while IFS=$'\t' read -r -u 3 kind src; do
   [ "$kind" = link ] || continue
   link_file "$src" "$HOME/.$(basename "${src%.*}")" || exit 1
-done <<<"$catalog"
+done 3<<<"$catalog"
