@@ -156,11 +156,6 @@ def mise_candidates(root, env):
                     raise ValueError(f"cannot identify Mise candidate {name}")
                 name = matches[0]
             if item.get("current") and item.get("latest"):
-                if name == "npm:opencode-ai" and not item["latest"].startswith("1."):
-                    warn(
-                        "OpenCode major migration requires reviewing its auth plugin; skipped"
-                    )
-                    continue
                 candidates.append(
                     Candidate("mise", name, item["current"], item["latest"])
                 )

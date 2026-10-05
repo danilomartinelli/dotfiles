@@ -24,7 +24,7 @@ node = "lts"                                                    # Node.js LTS
 "npm:@openai/codex" = "0.159.3"                                 # Codex CLI
 "npm:eas-cli" = "24.8.0"                                        # Expo Application Services CLI
 "npm:neonctl" = "7.0.1"                                         # Neon CLI
-"npm:opencode-ai" = { version = "1.18.34", npm_args = "--ignore-scripts=false" } # OpenCode CLI
+"npm:opencode-ai" = { version = "1", npm_args = "--ignore-scripts=false" } # OpenCode CLI
 "npm:skills" = "1.7.0"                                          # Agent skills CLI
 "npm:wrangler" = "4.145.0"                                      # Cloudflare Workers CLI
 "pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" } # Aider coding assistant

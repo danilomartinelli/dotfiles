@@ -153,8 +153,8 @@ Versions already committed to the Mise lock, including those received by
 the appropriate declaration, regenerates its lock, installs the selected tools,
 and refreshes the README catalog. Review and commit that diff separately:
 `dot` does not commit or push. Channels such as Node `lts`, Java `temurin-25`,
-and Erlang `29` are retained; exact pins can advance across major versions,
-which the picker highlights. OpenCode remains on its configured v1 release line.
+Erlang `29` and OpenCode `1` are retained; exact pins can advance across major
+versions, which the picker highlights.
 The Mise installer also checks the installed formatter plugins against their
 pins and refreshes only mdformat when those versions differ.
 
@@ -366,7 +366,7 @@ own, and `mise lock --global` settles it again.
 | `npm:@openai/codex`                         | `0.159.3`        | Codex CLI                                       |
 | `npm:eas-cli`                               | `24.8.0`         | Expo Application Services CLI                   |
 | `npm:neonctl`                               | `7.0.1`          | Neon CLI                                        |
-| `npm:opencode-ai`                           | `1.18.34`        | OpenCode CLI                                    |
+| `npm:opencode-ai`                           | `1`              | OpenCode CLI                                    |
 | `npm:skills`                                | `1.7.0`          | Agent skills CLI                                |
 | `npm:wrangler`                              | `4.145.0`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
