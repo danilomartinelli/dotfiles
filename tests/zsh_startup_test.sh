@@ -411,11 +411,17 @@ private_loader_parameters=(${(k)parameters[(I)_dotfiles_*]})
 EOF
 
 STARTUP_PATH="$BREW_PREFIX/bin:/base/bin:/usr/local/bin:/usr/bin:/bin"
+# .commonrc keeps the caller's XDG cache, data and state homes, so a startup
+# file writing below them reached the real home: the catalog cache once filled
+# ~/.cache/dotfiles with test entries. Unset, they fall back below each
+# scenario's HOME.
+STARTUP_ENV=(env -u ZSH -u WORKSPACE -u PROJECTS
+  -u XDG_CACHE_HOME -u XDG_DATA_HOME -u XDG_STATE_HOME)
 
 test_startup_order_and_reload() {
   local events="$MAIN_ARTIFACTS/events.log"
 
-  if ! scenario_capture "$MAIN_ARTIFACTS" env -u ZSH -u WORKSPACE -u PROJECTS \
+  if ! scenario_capture "$MAIN_ARTIFACTS" "${STARTUP_ENV[@]}" \
     HOME="$TEST_HOME" \
     PATH="$STARTUP_PATH" \
     MANPATH='/base/man:' \
@@ -457,7 +463,7 @@ test_optional_homebrew_integration() {
   local events="$OPTIONAL_ARTIFACTS/events.log"
 
   # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-  if ! scenario_capture "$OPTIONAL_ARTIFACTS" env -u ZSH -u WORKSPACE -u PROJECTS \
+  if ! scenario_capture "$OPTIONAL_ARTIFACTS" "${STARTUP_ENV[@]}" \
     HOME="$TEST_HOME" \
     PATH="$STARTUP_PATH" \
     MANPATH='/base/man:' \
@@ -478,7 +484,7 @@ test_only_a_persons_shell_replaces_file_commands() {
   local replaced='source "$HOME/.zshrc"; [[ ${aliases[ls]-} == "eza --icons=auto" && ${aliases[cat]-} == bat ]]'
   # shellcheck disable=SC2016 # The commands are evaluated by the child Zsh process.
   local standard='source "$HOME/.zshrc"; (( ! $+aliases[ls] && ! $+aliases[cat] ))'
-  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS
+  local -a startup=("${STARTUP_ENV[@]}"
     HOME="$TEST_HOME"
     ZDOTDIR="$TEST_HOME"
     PATH="$STARTUP_PATH"
@@ -509,11 +515,13 @@ test_only_a_persons_shell_replaces_file_commands() {
   done
 }
 
-test_nested_topic_changes_refresh_cached_startup() {
-  local fixture nested cache
-  fixture=$(scenario_tmpdir nested-cache)
+# The next shell must see the checkout as it is now. Startup classifies on
+# every pass, so this holds by construction; the test stays because a memo
+# brought back would break it, as the old one did for nested directories.
+test_nested_topic_changes_reach_the_next_shell() {
+  local fixture nested
+  fixture=$(scenario_tmpdir nested-topic)
   nested="$FIXTURE/alpha/nested/deeper"
-  cache="$fixture/cache/dotfiles/topic-catalog${FIXTURE//\//%}"
   mkdir -p "$nested" "$fixture/home"
   ln -s "$FIXTURE/resolver" "$fixture/home/.dotfiles-root"
 
@@ -522,9 +530,8 @@ source "$STARTUP_FIXTURE_ROOT/zsh/zshrc.symlink" || exit 1
 print -r -- "nested=${STARTUP_NESTED:-absent}"
 EOF
 
-  local -a startup=(env -u ZSH -u WORKSPACE -u PROJECTS
+  local -a startup=("${STARTUP_ENV[@]}"
     HOME="$fixture/home"
-    XDG_CACHE_HOME="$fixture/cache"
     PATH="$STARTUP_PATH"
     STARTUP_FIXTURE_ROOT="$FIXTURE"
     DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
@@ -533,34 +540,14 @@ EOF
 
   scenario_capture "$fixture/initial" "${startup[@]}"
   assert_contains "$fixture/initial/stdout.log" 'nested=absent'
-  [ -s "$cache" ] || scenario_fail 'startup did not populate the catalog cache'
 
-  # Only the directory changed by each operation may be newer than the cache.
-  # Fixed mtimes avoid sleeps and filesystem timestamp-resolution races.
-  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
-  touch -t 200001020000 "$cache"
   scenario_write_file "$nested/added.zsh" <<'EOF'
 typeset -g STARTUP_NESTED=loaded
 EOF
   scenario_capture "$fixture/added" "${startup[@]}"
   assert_contains "$fixture/added/stdout.log" 'nested=loaded'
 
-  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
-  touch -t 200001020000 "$cache"
-  mv "$nested/added.zsh" "$nested/disabled.txt"
-  scenario_capture "$fixture/renamed" "${startup[@]}"
-  assert_contains "$fixture/renamed/stdout.log" 'nested=absent'
-  assert_empty "$fixture/renamed/stderr.log"
-
-  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
-  touch -t 200001020000 "$cache"
-  mv "$nested/disabled.txt" "$nested/restored.zsh"
-  scenario_capture "$fixture/restored" "${startup[@]}"
-  assert_contains "$fixture/restored/stdout.log" 'nested=loaded'
-
-  find "$FIXTURE" -type d -exec touch -t 200001010000 {} +
-  touch -t 200001020000 "$cache"
-  rm "$nested/restored.zsh"
+  rm "$nested/added.zsh"
   scenario_capture "$fixture/removed" "${startup[@]}"
   assert_contains "$fixture/removed/stdout.log" 'nested=absent'
   assert_empty "$fixture/removed/stderr.log"
@@ -574,6 +561,6 @@ scenario_run 'Git in a tool shell reports a missing upstream in English' test_to
 scenario_run 'Conductor Git children use the captured locale without startup files' test_conductor_git_child_uses_captured_locale
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
 scenario_run "only a person's shell replaces ls and cat" test_only_a_persons_shell_replaces_file_commands
-scenario_run 'nested topic additions, renames and removals refresh cached startup' \
-  test_nested_topic_changes_refresh_cached_startup
+scenario_run 'nested topic additions and removals reach the next shell' \
+  test_nested_topic_changes_reach_the_next_shell
 scenario_finish

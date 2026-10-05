@@ -170,6 +170,40 @@ test_golden_manifest() {
   fi
 }
 
+# Zsh startup runs the classifier on every shell, so its cost must not grow
+# with the number of topics. On a PATH holding only Bash and logging spies for
+# find and sort, any other command is missing and fails the run, and a find per
+# topic shows up in the log. The fixture has several topics with .zsh files.
+test_process_count_is_independent_of_topic_count() {
+  local fixture
+  local run
+  local spies
+  local spied
+  local real
+
+  fixture=$(make_fixture)
+  run=$(scenario_tmpdir spied-run)
+  spies=$run/bin
+  mkdir -p "$spies"
+  ln -s "$(command -v bash)" "$spies/bash"
+  for spied in find sort; do
+    real=$(command -v "$spied")
+    scenario_write_executable "$spies/$spied" <<EOF
+#!/bin/sh
+printf '%s\n' $spied >>"\$SCENARIO_EVENT_LOG"
+exec $real "\$@"
+EOF
+  done
+
+  "$CATALOG" "$fixture" >"$run/expected.manifest" || return 1
+  scenario_capture "$run/capture" env PATH="$spies" "$CATALOG" "$fixture" \
+    || scenario_fail "catalog needed a command other than find and sort: $(cat "$run/capture/stderr.log")"
+  diff -u "$run/expected.manifest" "$run/capture/stdout.log" \
+    || scenario_fail 'catalog output changed under the restricted PATH'
+  assert_count "$run/capture/events.log" find 1
+  assert_count "$run/capture/events.log" sort 1
+}
+
 test_relative_root_resolves_to_absolute_records() {
   local fixture
   local parent
@@ -214,6 +248,8 @@ test_invalid_root() {
 }
 
 scenario_run 'catalog matches the golden manifest' test_golden_manifest
+scenario_run 'catalog starts one find and one sort whatever the topic count' \
+  test_process_count_is_independent_of_topic_count
 scenario_run 'relative roots resolve to absolute records' test_relative_root_resolves_to_absolute_records
 scenario_run 'invalid usage exits with status 2' test_invalid_usage
 scenario_run 'invalid roots exit with status 1' test_invalid_root

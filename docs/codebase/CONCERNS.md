@@ -41,6 +41,10 @@ The original isolated reproduction also now reports `nested=loaded` after the
 addition. Only fixture state was changed during reproduction; the installed
 shell and cache were not used to validate it.
 
+The cache was later removed. Startup runs the classifier on every shell, so
+this class of invalidation defect no longer exists; the regression remains as
+`nested topic additions and removals reach the next shell`.
+
 ### Resolved: stub failure-control drift
 
 The former Mise control used `FAKE_MISE_INSTALL_STATUS`, while duti treated
@@ -123,7 +127,7 @@ modules or tests. Current OpenCode link coverage is in
 ### Intent versus reality
 
 - **Discovery:** the nested-file omission was reproduced and corrected. Startup
-  now invalidates its cache for nested additions, renames and removals.
+  no longer caches the catalog, so nested changes reach the next shell.
 - **Fixture convention:** failure controls and their consumers now agree on
   numeric `FAIL_*` values, with output/state supplied separately.
 - **Reproducibility:** the README now describes the actual declarative setup:
