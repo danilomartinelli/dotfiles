@@ -182,21 +182,21 @@ printf "%s\n" "$INSTALLER_APP" >"$HOME/installer_app"'
 }
 
 test_link_config_wrapper_delegates() {
-  local checkout home source target
+  local checkout home source destination
 
   checkout=$(make_checkout)
   home=$checkout/home
   source=$checkout/sample/tracked.conf
-  target=$home/.config/app/config
+  destination=$home/.config/app/config
   printf 'tracked\n' >"$source"
-  mkdir -p "$(dirname "$target")"
+  mkdir -p "$(dirname "$destination")"
 
   write_synthetic_installer "$checkout/sample/install.sh" \
     'installer_link_config --label "app config" \
   "$TOPIC_DIR/tracked.conf" "$HOME/.config/app/config"'
 
   scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
-  assert_equal "$source" "$(readlink "$target")" 'linked target'
+  assert_equal "$source" "$(readlink "$destination")" 'linked destination'
   assert_contains "$home/stdout.log" 'app config linked'
 }
 
@@ -345,12 +345,12 @@ installer_success "sample configured"'
 # compose. This helper resolves and composes, the linker creates, and a topic
 # states none of them.
 test_link_tool_config_creates_the_directory_and_links() {
-  local checkout home source target
+  local checkout home source destination
 
   checkout=$(make_checkout)
   home=$checkout/home
   source=$checkout/sample/settings.json
-  target=$home/.config/sampletool/settings.json
+  destination=$home/.config/sampletool/settings.json
   printf '{}\n' >"$source"
 
   write_synthetic_installer "$checkout/sample/install.sh" \
@@ -359,11 +359,11 @@ test_link_tool_config_creates_the_directory_and_links() {
   scenario_capture "$home" env -u XDG_CONFIG_HOME HOME="$home" \
     "$checkout/sample/install.sh"
 
-  assert_equal "$source" "$(readlink "$target")" 'linked tool config'
+  assert_equal "$source" "$(readlink "$destination")" 'linked tool config'
   assert_contains "$home/stdout.log" 'Sample settings linked'
 
   # Idempotent for the same reason installer_link_config is: the linker is the
-  # one that decides an existing target is already current.
+  # one that decides an existing destination is already current.
   scenario_capture "$home" env -u XDG_CONFIG_HOME HOME="$home" \
     "$checkout/sample/install.sh"
   assert_contains "$home/stdout.log" 'Sample settings already linked'

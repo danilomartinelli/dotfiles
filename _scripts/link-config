@@ -2,7 +2,7 @@
 #
 # Idempotent config linking for topic installers.
 # Default policy: replace-with-backup. Creates the directory that holds the
-# target when it is missing.
+# destination when it is missing.
 
 set -eu
 
@@ -15,24 +15,25 @@ set -eu
 
 usage() {
   cat >&2 <<'EOF'
-Usage: link-config [--policy POLICY] [--label LABEL] <source> <target>
-       link-config --status <source> <target>
+Usage: link-config [--policy POLICY] [--label LABEL] <source> <destination>
+       link-config --status <source> <destination>
 
 Options:
-  --status  Print what the target is — current, conflict, or absent — and
-            exit without changing anything.
+  --status  Print what the destination holds — current, conflict, or absent —
+            and exit without changing anything.
 
 Exit status:
-  0  the target now matches the declaration, or the policy kept it deliberately
+  0  the destination now matches the declaration, or the policy kept it
+     deliberately
   1  the link, or the directory that holds it, could not be made
   2  invalid usage, or a removal the linker refuses to perform
 
 Policies:
-  replace-with-backup  Default. Back up an existing real target once, then link.
+  replace-with-backup  Default. Back up a real conflict once, then link.
                        Fails when that one backup slot is already taken.
-  preserve-existing    Keep an existing target and change nothing.
-  numbered-backup      Move an existing target to the next free .backup suffix.
-  replace-confirmed    Caller asserts an operator confirmed this target:
+  preserve-existing    Keep a conflict and change nothing.
+  numbered-backup      Move a conflict to the next free .backup suffix.
+  replace-confirmed    Caller asserts an operator confirmed this conflict:
                        remove it without a backup, then link.
 EOF
 }
@@ -41,7 +42,7 @@ policy=replace-with-backup
 label=
 status_only=false
 source_path=
-target_path=
+destination_path=
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -90,7 +91,7 @@ if [ "$#" -ne 2 ]; then
 fi
 
 source_path=$1
-target_path=$2
+destination_path=$2
 
 case "$policy" in
   replace-with-backup | preserve-existing | numbered-backup | replace-confirmed) ;;
@@ -101,7 +102,7 @@ case "$policy" in
 esac
 
 if [ -z "$label" ]; then
-  label=$(basename -- "$target_path")
+  label=$(basename -- "$destination_path")
 fi
 
 if [ ! -e "$source_path" ] && [ ! -L "$source_path" ]; then
@@ -123,15 +124,15 @@ resolve_existing_path() {
   fi
 }
 
-# replace-confirmed destroys without a backup, so it refuses the targets whose
-# removal is never what a caller meant, whatever the operator confirmed: the
-# filesystem root, the home directory, and any directory holding the source
+# replace-confirmed destroys without a backup, so it refuses the destinations
+# whose removal is never what a caller meant, whatever the operator confirmed:
+# the filesystem root, the home directory, and any directory holding the source
 # about to be linked. The last rule keeps a checkout from deleting itself
 # without teaching this script where checkouts live. Symbolic links need no
 # guard: rm removes the link, not what it points at.
-refuse_unsafe_replacement_target() {
-  guard_target=$(resolve_existing_path "$target_path") || {
-    echo "link-config: cannot resolve $target_path; refusing to replace it" >&2
+refuse_unsafe_replacement() {
+  guard_destination=$(resolve_existing_path "$destination_path") || {
+    echo "link-config: cannot resolve $destination_path; refusing to replace it" >&2
     exit 2
   }
 
@@ -140,21 +141,21 @@ refuse_unsafe_replacement_target() {
     guard_home=$(CDPATH='' cd -P -- "$guard_home" 2>/dev/null && pwd) || guard_home=
   fi
 
-  # A resolved target is always a non-empty absolute path, so an unset or
+  # A resolved destination is always a non-empty absolute path, so an unset or
   # unresolvable HOME simply never matches.
-  if [ "$guard_target" = / ] || [ "$guard_target" = "$guard_home" ]; then
-    echo "link-config: refusing to remove $guard_target under replace-confirmed" >&2
+  if [ "$guard_destination" = / ] || [ "$guard_destination" = "$guard_home" ]; then
+    echo "link-config: refusing to remove $guard_destination under replace-confirmed" >&2
     exit 2
   fi
 
   guard_source=$(resolve_existing_path "$source_path") || {
-    echo "link-config: cannot resolve $source_path; refusing to replace $guard_target" >&2
+    echo "link-config: cannot resolve $source_path; refusing to replace $guard_destination" >&2
     exit 2
   }
 
   case "$guard_source" in
-    "$guard_target"/*)
-      echo "link-config: refusing to remove $guard_target; it contains the source $guard_source" >&2
+    "$guard_destination"/*)
+      echo "link-config: refusing to remove $guard_destination; it contains the source $guard_source" >&2
       exit 2
       ;;
   esac
@@ -174,27 +175,27 @@ next_backup_path() {
 }
 
 link_is_current() {
-  [ -L "$target_path" ] || return 1
+  [ -L "$destination_path" ] || return 1
 
-  current_target=$(readlink "$target_path") || return 1
-  case "$current_target" in
+  current_source=$(readlink "$destination_path") || return 1
+  case "$current_source" in
     /*) ;;
-    *) current_target=$(dirname -- "$target_path")/$current_target ;;
+    *) current_source=$(dirname -- "$destination_path")/$current_source ;;
   esac
 
-  current_target=$(canonical_file_path "$current_target") || return 1
-  expected_target=$(canonical_file_path "$source_path") || return 1
-  [ "$current_target" = "$expected_target" ]
+  current_source=$(canonical_file_path "$current_source") || return 1
+  expected_source=$(canonical_file_path "$source_path") || return 1
+  [ "$current_source" = "$expected_source" ]
 }
 
 # What a caller has to know before it can state an intent. Home linking derived
 # this a second time, by different path arithmetic, and reported it in a second
-# voice; the module that owns what happens to an existing target owns what that
-# target is. Prints one word and changes nothing.
+# voice; the module that owns what happens to a conflict owns what a
+# destination holds. Prints one word and changes nothing.
 if [ "$status_only" = true ]; then
   if link_is_current; then
     echo current
-  elif [ -e "$target_path" ] || [ -L "$target_path" ]; then
+  elif [ -e "$destination_path" ] || [ -L "$destination_path" ]; then
     echo conflict
   else
     echo absent
@@ -207,30 +208,30 @@ if link_is_current; then
   exit 0
 fi
 
-if [ -e "$target_path" ] || [ -L "$target_path" ]; then
+if [ -e "$destination_path" ] || [ -L "$destination_path" ]; then
   case "$policy" in
     preserve-existing)
-      installer_note "Existing $target_path kept (not overwriting local config)"
+      installer_note "Existing $destination_path kept (not overwriting local config)"
       exit 0
       ;;
     replace-with-backup)
-      if [ -e "$target_path" ] && [ ! -L "$target_path" ]; then
-        backup=${target_path}.backup
+      if [ -e "$destination_path" ] && [ ! -L "$destination_path" ]; then
+        backup=${destination_path}.backup
         # The caller asked for a link and this is the one path that cannot
         # produce one: the single backup slot this policy owns is occupied, so
         # honouring the request would destroy the earlier backup. Reported as a
         # failure rather than a warning because exiting zero here told every
         # caller the link existed.
         if [ -e "$backup" ] || [ -L "$backup" ]; then
-          installer_error "$target_path and $backup exist; cannot link $label"
+          installer_error "$destination_path and $backup exist; cannot link $label"
           installer_hint "Move or remove $backup, then rerun"
           exit 1
         fi
-        mv "$target_path" "$backup"
+        mv "$destination_path" "$backup"
         installer_note "Existing $label moved to $backup"
       else
-        # Wrong symlink or other link target: replace in place.
-        rm -f "$target_path"
+        # A link to somewhere else: replace it in place.
+        rm -f "$destination_path"
       fi
       ;;
     # A person chose this at a prompt, or a caller was run with an explicit
@@ -238,27 +239,27 @@ if [ -e "$target_path" ] || [ -L "$target_path" ]; then
     # any claim about who wrote a file the operator may well have written by
     # hand.
     replace-confirmed)
-      if [ -e "$target_path" ] && [ ! -L "$target_path" ]; then
-        refuse_unsafe_replacement_target
+      if [ -e "$destination_path" ] && [ ! -L "$destination_path" ]; then
+        refuse_unsafe_replacement
       fi
-      rm -rf "$target_path"
+      rm -rf "$destination_path"
       installer_note "Replaced $label as confirmed"
       ;;
     numbered-backup)
-      backup=$(next_backup_path "$target_path")
-      mv "$target_path" "$backup"
-      installer_note "backed up $target_path to $backup"
+      backup=$(next_backup_path "$destination_path")
+      mv "$destination_path" "$backup"
+      installer_note "backed up $destination_path to $backup"
       ;;
   esac
 fi
 
 # Every caller wants the link whether or not its directory exists yet, so the
 # linker makes the directory rather than each installer spelling out a mkdir.
-target_directory=$(dirname -- "$target_path")
-mkdir -p -- "$target_directory" || {
-  installer_error "cannot create $target_directory; cannot link $label"
+destination_directory=$(dirname -- "$destination_path")
+mkdir -p -- "$destination_directory" || {
+  installer_error "cannot create $destination_directory; cannot link $label"
   exit 1
 }
 
-ln -sfn "$source_path" "$target_path"
+ln -sfn "$source_path" "$destination_path"
 installer_item "$label linked"

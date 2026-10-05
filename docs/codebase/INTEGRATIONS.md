@@ -37,14 +37,14 @@ transitive Mise dependencies. No vulnerability check is a CI gate. See
 
 ## 2) Data Stores
 
-| Store                                            | Role                                   | Access layer                             | Key risk                                                  | Evidence                                                |
-| ------------------------------------------------ | -------------------------------------- | ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------- |
-| Checked-in files and Git history                 | Authoritative declarations and scripts | Git and owning generators                | Consumer-written linked settings can change source        | `AGENTS.md`, `_scripts/render-software-catalog`         |
-| `$HOME` settings and symlinks                    | Installed configuration                | Shared linker and topic installers       | Conflict handling or wrong target could affect user state | `_scripts/link-config`                                  |
-| `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles` | Run-once markers                       | Preamble helpers                         | Lost markers re-arm operations                            | `_scripts/installer-preamble.sh`                        |
-| `${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles`       | Generated Codex completion             | Codex completion file                    | Stale if Codex changes without a Mise lock change         | `codex/completion.zsh`                                  |
-| Tool-owned agent/auth directories                | Vendor runtime/session state           | Vendor tools; only selected files linked | Accidentally versioning private state                     | `agents/install.sh`, `opencode/install.sh`, `AGENTS.md` |
-| Docker JSON logs                                 | Local container-log retention policy   | OrbStack Docker settings                 | Not an application observability pipeline                 | `orbstack/docker.json`                                  |
+| Store                                            | Role                                   | Access layer                             | Key risk                                                       | Evidence                                                |
+| ------------------------------------------------ | -------------------------------------- | ---------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------- |
+| Checked-in files and Git history                 | Authoritative declarations and scripts | Git and owning generators                | Consumer-written linked settings can change source             | `AGENTS.md`, `_scripts/render-software-catalog`         |
+| `$HOME` settings and symlinks                    | Installed configuration                | Shared linker and topic installers       | Conflict handling or wrong destination could affect user state | `_scripts/link-config`                                  |
+| `${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles` | Run-once markers                       | Preamble helpers                         | Lost markers re-arm operations                                 | `_scripts/installer-preamble.sh`                        |
+| `${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles`       | Generated Codex completion             | Codex completion file                    | Stale if Codex changes without a Mise lock change              | `codex/completion.zsh`                                  |
+| Tool-owned agent/auth directories                | Vendor runtime/session state           | Vendor tools; only selected files linked | Accidentally versioning private state                          | `agents/install.sh`, `opencode/install.sh`, `AGENTS.md` |
+| Docker JSON logs                                 | Local container-log retention policy   | OrbStack Docker settings                 | Not an application observability pipeline                      | `orbstack/docker.json`                                  |
 
 No repository-owned SQL schema, database access layer, message queue, service
 mesh or API gateway is declared in the mapped shell implementation. Installed

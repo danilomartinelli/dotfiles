@@ -144,7 +144,7 @@ link_file() {
 
   src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
 
-  # The linker classifies the target it owns. Deriving it here a second time is
+  # The linker classifies the destination it owns. Deriving it here a second time is
   # what let the two modules disagree about the same link.
   status=$("$LINK_CONFIG" --status "$src_abs" "$dst") || return 1
 
@@ -171,7 +171,7 @@ link_file() {
       ;;
     absent)
       # With no conflict there is nothing to decide, so the default policy
-      # never reaches an existing target.
+      # never reaches a conflict.
       policy=replace-with-backup
       ;;
     *)
