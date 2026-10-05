@@ -38,6 +38,12 @@ if command == "brew":
         kind = "formulae" if "--formula" in args else "casks"
         name = "git" if kind == "formulae" else "example"
         if os.environ.get("OUTSIDER"): name = "undeclared"
+        if os.environ.get("DRIFT"):
+            with open(os.environ["EVENTS"]) as log:
+                queries = [line for line in log if json.loads(line)[:2] == ["brew", "outdated"]]
+            if len(queries) > 2:
+                print(json.dumps({kind: []}))
+                sys.exit(0)
         print(json.dumps({kind: [{"name": name, "installed_versions": ["1.0.0"],
              "current_version": "2.0.0", "pinned": bool(os.environ.get("PINNED"))}]}))
         sys.exit(1)
@@ -97,6 +103,8 @@ elif command == "mise":
                         for k, v in entry["options"].items(): out.write(f"{k} = {json.dumps(v)}\n")
     elif args[0] == "install":
         if os.environ.get("FAIL_INSTALL"): sys.exit(1)
+        if os.environ.get("CONCURRENT_EDIT"):
+            pathlib.Path(os.environ["CONCURRENT_EDIT"]).write_text("concurrent user edit\n")
 """
 
 
@@ -238,7 +246,7 @@ class UpgradesTest(unittest.TestCase):
         self.assertIn("Selected upgrades completed", output)
 
     def test_discovery_preserves_lts_and_bumps_exact_pins(self):
-        candidates = upgrades.mise_candidates(self.root, self.env)
+        candidates = upgrades.Mise(self.root, self.env).discover()
         self.assertIn(
             upgrades.Candidate("mise", "node", "24.0.0", "24.1.0"), candidates
         )
@@ -259,7 +267,7 @@ class UpgradesTest(unittest.TestCase):
             upgrades.Candidate("mise", "node", "24.0.0", "24.1.0"),
             upgrades.Candidate("mise", "npm:sample", "1.0.0", "2.0.0"),
         ]
-        upgrades.apply_mise(self.root, self.env, selected)
+        upgrades.Mise(self.root, self.env).apply(selected)
         config = upgrades.read_toml(self.root / "mise/config.toml")
         self.assertEqual("lts", config["tools"]["node"])
         self.assertEqual(
@@ -283,7 +291,7 @@ class UpgradesTest(unittest.TestCase):
         selected = [upgrades.Candidate("mise", "npm:sample", "1.0.0", "2.0.0")]
         for failure in ("FAIL_LOCK", "FAIL_INSTALL", "LOCK_DRIFT"):
             with self.assertRaises((RuntimeError, ValueError)):
-                upgrades.apply_mise(self.root, {**self.env, failure: "1"}, selected)
+                upgrades.Mise(self.root, {**self.env, failure: "1"}).apply(selected)
             self.assertEqual(self.before, self.sources())
 
     def test_ruby_backend_defaults_do_not_freeze_its_macos_resolution(self):
@@ -297,8 +305,8 @@ class UpgradesTest(unittest.TestCase):
             '[[tools.ruby]]\nversion = "4.0.7"\n'
             '[tools.ruby.options]\ncompile = "false"\nprecompiled_url = "jdx/ruby"\n'
         )
-        upgrades.apply_mise(
-            self.root, self.env, [upgrades.Candidate("mise", "ruby", "4.0.7", "4.0.8")]
+        upgrades.Mise(self.root, self.env).apply(
+            [upgrades.Candidate("mise", "ruby", "4.0.7", "4.0.8")]
         )
         self.assertEqual(
             "4.0.8", upgrades.read_toml(lock)["tools"]["ruby"][-1]["version"]
@@ -306,20 +314,12 @@ class UpgradesTest(unittest.TestCase):
         self.assertEqual("4.0", upgrades.read_toml(config)["tools"]["ruby"])
 
     def test_concurrent_source_edit_is_preserved(self):
-        execute = upgrades.execute
-
-        def edit_after_install(args, **kwargs):
-            execute(args, **kwargs)
-            (self.root / "README.md").write_text("concurrent user edit\n")
-
-        with (
-            patch.object(upgrades, "execute", side_effect=edit_after_install),
-            self.assertRaises(RuntimeError),
-        ):
-            upgrades.apply_mise(
-                self.root,
-                self.env,
-                [upgrades.Candidate("mise", "node", "24.0.0", "24.1.0")],
+        # The fake install edits the checkout's README while the staged
+        # upgrade is still unpublished.
+        env = {**self.env, "CONCURRENT_EDIT": str(self.root / "README.md")}
+        with self.assertRaises(RuntimeError):
+            upgrades.Mise(self.root, env).apply(
+                [upgrades.Candidate("mise", "node", "24.0.0", "24.1.0")]
             )
         self.assertEqual(
             "concurrent user edit\n", (self.root / "README.md").read_text()
@@ -332,31 +332,40 @@ class UpgradesTest(unittest.TestCase):
     def test_pins_and_unknown_candidates_are_never_applied(self):
         self.assertEqual(
             [],
-            upgrades.brew_candidates(self.root, self.brew, {**self.env, "PINNED": "1"}),
+            upgrades.Homebrew(
+                self.root, self.brew, {**self.env, "PINNED": "1"}
+            ).discover(),
         )
         with self.assertRaises(ValueError):
-            upgrades.brew_candidates(
+            upgrades.Homebrew(
                 self.root, self.brew, {**self.env, "OUTSIDER": "1"}
-            )
+            ).discover()
         with self.assertRaises(ValueError):
             self.invoke(interactive=True, answer="yes", BAD_PICKER="1")
 
     def test_changed_candidates_abort_before_any_install(self):
-        original = upgrades.brew_candidates
-        calls = 0
-
-        def drifting(*args):
-            nonlocal calls
-            calls += 1
-            return original(*args) if calls == 1 else []
-
-        with (
-            patch.object(upgrades, "brew_candidates", side_effect=drifting),
-            self.assertRaises(RuntimeError),
-        ):
-            self.invoke(interactive=True, answer="yes")
+        # The fake Homebrew reports no outdated formula on the requery.
+        with self.assertRaises(RuntimeError):
+            self.invoke(interactive=True, answer="yes", DRIFT="1")
         self.assertFalse(
             any(e[1] in ("upgrade", "install", "lock") for e in self.events())
+        )
+
+    def test_managers_apply_mise_first_then_homebrew_then_app_store(self):
+        # Selected as App Store, Mise, Homebrew; applied in manager order.
+        self.invoke(interactive=True, answer="yes", PICK="2,3,0")
+        mutations = [
+            e[:2] for e in self.events() if e[1] in ("upgrade", "install", "lock")
+        ]
+        self.assertEqual(
+            [
+                ["mise", "lock"],
+                ["mise", "lock"],
+                ["mise", "install"],
+                ["brew", "upgrade"],
+                ["mas", "upgrade"],
+            ],
+            mutations,
         )
 
 

@@ -166,12 +166,13 @@ Store apps, formatter extras, other backends, and runtimes are explicitly outsid
 that scan. A failed query is reported as unavailable, never as a clean audit.
 The package names and versions queried are sent to the public OSV service.
 
-Candidates are checked again before applying. Mise prepares and validates its
+Candidates are checked again before applying. Selected Mise tools apply first,
+then Homebrew packages, then App Store apps. Mise prepares and validates its
 source changes in a temporary directory; failed preparation or installation
-leaves tracked declarations intact. A failed install may leave an inactive tool
-copy. Package-manager operations are not a transaction: an earlier successful
-upgrade is retained if a later one fails. Avoid running concurrent package
-upgrades against the same Mac.
+leaves tracked declarations intact and stops the run before any other upgrade.
+A failed install may leave an inactive tool copy. Package-manager operations are
+not a transaction: an earlier successful upgrade is retained if a later one
+fails. Avoid running concurrent package upgrades against the same Mac.
 
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
