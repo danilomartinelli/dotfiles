@@ -71,10 +71,9 @@ actionable `mobile-setup` warning; normal setup never downloads runtimes,
 accepts licenses, opens an app, or boots a device.
 
 Existing destinations are never replaced silently. Interactive bootstrap lets
-you skip, overwrite, or back up a conflict. Topic installers remain
-non-interactive and select an explicit conflict policy: keep the existing file,
-back it up, or, for a path its tool regenerates on every run, replace it and
-report the replacement.
+you skip, overwrite, or back up a conflict, and stops rather than guess when it
+cannot read an answer. Topic installers remain non-interactive and select an
+explicit conflict policy: keep the existing file or back it up.
 
 Backing up uses one `.backup` slot per destination. When that slot already holds
 an earlier backup, the link cannot be made, so the run stops and names both
