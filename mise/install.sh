@@ -13,6 +13,7 @@ export MISE_CONFIG_DIR MISE_GLOBAL_CONFIG_FILE
 
 installer_link_tool_config mise "Mise config" config.toml
 installer_link_tool_config mise "Mise lock" mise.lock
+sh "$TOPIC_DIR/_configure-trust.sh"
 
 remove_legacy_link() {
   legacy_path=$1

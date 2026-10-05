@@ -3,8 +3,8 @@
 # Print the trusted roots, one absolute path per line: the directories beneath
 # which a project's own environment and tool configuration take effect on entry
 # without an approval per project. This is the one declaration of the list.
-# direnv/install.sh renders direnv's whitelist from it, and mise/mise.zsh hands
-# it to Mise, so the two tools cannot disagree about which projects they trust.
+# direnv/install.sh renders direnv's whitelist from it, and Mise uses it for
+# both its persistent settings and shell environment.
 #
 # Each root is printed physically resolved when it exists, because direnv
 # matches the resolved path of an .envrc: a root reached through a symbolic
