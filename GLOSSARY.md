@@ -10,6 +10,27 @@ Software explicitly selected as part of the managed Mac environment. Software
 installed independently is outside this set.
 _Avoid_: All installed software
 
+**Declaration**:
+The owner's explicit selection of one piece of declared software. A source that
+software comes from, such as a Homebrew tap, is not a declaration.
+_Avoid_: Entry, package line
+
+**Catalog description**:
+The owner's short explanation of a declaration, published beside it in the
+catalog of declared software.
+_Avoid_: Role, purpose
+
+**Pin**:
+A declaration that selects one exact release. The owner may move it to any newer
+release, including a new major version.
+_Avoid_: Fixed version
+
+**Channel**:
+A declaration that selects a moving line of releases, such as the latest
+release, a long-term-support line, or every release sharing a version prefix.
+Upgrades advance within the channel and never change it.
+_Avoid_: Floating version, range
+
 **Upgrade candidate**:
 A newer available release of declared software that the owner may select for
 installation. Availability alone does not authorize a version change.
