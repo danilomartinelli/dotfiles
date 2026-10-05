@@ -34,9 +34,7 @@ EOF
 invoke_runner() {
   local checkout=$1
   shift
-  scenario_capture "$checkout" env \
-    DOTFILES_TEST_ROOT="$checkout" \
-    "$checkout/_scripts/test" "$@"
+  scenario_capture "$checkout" "$checkout/_scripts/test" "$@"
 }
 
 test_all_passing_suites_report_success() {
@@ -105,30 +103,15 @@ test_unmatched_pattern_fails_rather_than_passing_vacuously() {
   assert_contains "$checkout/stderr.log" 'no suite matches'
 }
 
-test_checkout_root_suite_joins_the_run() {
-  local checkout
-  checkout=$(make_checkout)
-  write_suite "$checkout" alpha 0
-  scenario_write_executable "$checkout/_scripts/test-checkout-root" <<'EOF'
-#!/bin/sh
-exit 1
-EOF
-
-  if invoke_runner "$checkout"; then
-    scenario_fail 'runner ignored a failing test-checkout-root'
-  fi
-  assert_contains "$checkout/stderr.log" 'test-checkout-root'
-}
-
 test_invalid_usage_exits_two() {
   local checkout
   checkout=$(make_checkout)
   write_suite "$checkout" alpha 0
 
   assert_fails_with_status 2 \
-    env DOTFILES_TEST_ROOT="$checkout" "$checkout/_scripts/test" --nope 2>/dev/null
+    "$checkout/_scripts/test" --nope 2>/dev/null
   assert_fails_with_status 2 \
-    env DOTFILES_TEST_ROOT="$checkout" "$checkout/_scripts/test" one two 2>/dev/null
+    "$checkout/_scripts/test" one two 2>/dev/null
 }
 
 scenario_run 'a run of passing suites succeeds' test_all_passing_suites_report_success
@@ -136,6 +119,5 @@ scenario_run 'a failure in the first suite fails the run' test_an_early_failure_
 scenario_run 'every failing suite is named in the verdict' test_every_failing_suite_is_named
 scenario_run 'a pattern selects a subset' test_pattern_selects_a_subset
 scenario_run 'an unmatched pattern fails' test_unmatched_pattern_fails_rather_than_passing_vacuously
-scenario_run 'test-checkout-root runs with the tests directory' test_checkout_root_suite_joins_the_run
 scenario_run 'invalid usage exits 2' test_invalid_usage_exits_two
 scenario_finish

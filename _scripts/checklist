@@ -12,10 +12,7 @@
 set -e
 set -o pipefail
 
-CHECKLIST_PATH=${BASH_SOURCE[0]}
-SCRIPT_DIR="$(CDPATH='' cd -P -- "$(dirname -- "$CHECKLIST_PATH")" && pwd)"
-ROOT_RESOLVER=$SCRIPT_DIR/../dotfiles-root.symlink
-DOTFILES_ROOT=${DOTFILES_ROOT:-$("$ROOT_RESOLVER" "$CHECKLIST_PATH")}
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 export DOTFILES_ROOT
 CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checklist.tsv}
 

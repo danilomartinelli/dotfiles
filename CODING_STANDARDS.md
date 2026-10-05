@@ -157,12 +157,17 @@ own copy of the glyphs. `installer_success` closes the phase a banner opened and
 `installer_item` reports one step inside it; the indent is what distinguishes
 them, so a nested step uses `installer_item` rather than losing that level.
 
-Two modules resolve the checkout, and which one a file uses follows from how it
-is reached. A `bin/` adapter or a `*.zsh` startup file is reached through
-`PATH`, so it sources `_scripts/adapter-checkout.sh` and resolves through
-`dotfiles-root.symlink`. A topic installer is always
-`<checkout>/<topic>/install.sh`, so the preamble resolves `$0/..` and consults
-no resolver.
+A command acts on the checkout that contains it
+([ADR-0004](docs/adr/0004-each-entry-point-resolves-its-own-checkout.md)), so
+every entry point resolves that checkout in its own first line rather than
+through a shared module. A POSIX script writes
+`DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)`, a Bash
+script the same with `${BASH_SOURCE[0]}`, and `zsh/zshrc.symlink` resolves its
+own path with `:A` because `~/.zshrc` links to it. A topic installer takes the
+root from the preamble, which resolves `$0/..`. No executable reads an
+inherited `DOTFILES_ROOT` or falls back to one: every shell exports its active
+checkout's root, which is not the checkout a worktree's command belongs to. A
+sourced file reads the value of the process that sourced it.
 
 `_scripts/link-config --status <source> <target>` reports what an existing
 target is — `current`, `conflict`, or `absent` — and changes nothing. It is how
@@ -403,7 +408,7 @@ it reads it from there rather than restating it.
 | Setup phases and adapters                                       | `tests/setup_test.sh`                                                                                        |
 | Zsh startup or topic shell files                                | `tests/zsh_startup_test.sh` and `zsh -n`                                                                     |
 | Topic layout or discovery                                       | `tests/topic_catalog_test.sh`                                                                                |
-| Checkout resolution                                             | `_scripts/test-checkout-root`                                                                                |
+| Checkout resolution                                             | `tests/checkout_test.sh`                                                                                     |
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                   |
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |
@@ -427,9 +432,9 @@ it reads it from there rather than restating it.
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
 
 `_scripts/test` runs every safe suite and returns a single verdict. It discovers
-`tests/*_test.sh`, appends `_scripts/test-checkout-root`, and names every suite
-that failed. A shell loop over the same files reports only the last suite's
-status, so run the module rather than the loop:
+`tests/*_test.sh` and names every suite that failed. A shell loop over the same
+files reports only the last suite's status, so run the module rather than the
+loop:
 
 ```bash
 _scripts/test

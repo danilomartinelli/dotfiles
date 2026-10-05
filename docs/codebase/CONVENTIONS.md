@@ -51,8 +51,8 @@ part of the current repository-owned shell implementation.
 
 - A topic installer sources `_scripts/installer-preamble.sh` immediately after
   error-mode setup; it derives the topic/root from the installer location.
-- Public adapters source `_scripts/adapter-checkout.sh`, which delegates physical
-  checkout resolution to `dotfiles-root.symlink`.
+- Every other entry point resolves the checkout containing it in its first
+  line and never reads an inherited `DOTFILES_ROOT` (ADR-0004).
 - Sourced modules declare ShellCheck source hints or narrow suppressions when
   runtime-resolved paths prevent static resolution.
 - Shared shell modules expose named functions; there are no package barrels or

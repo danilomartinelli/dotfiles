@@ -59,3 +59,15 @@ _Avoid_: Agent shell, non-interactive shell, Conductor shell
 A unit of the managed environment that gathers the configuration, shell setup
 and optional installation step for one tool or concern.
 _Avoid_: Module, package, plugin
+
+### Checkouts
+
+**Checkout**:
+A copy of this repository on disk from which the environment can be applied. A
+Git worktree is a checkout too.
+_Avoid_: Clone, dotfiles directory
+
+**Active checkout**:
+The checkout whose configuration is in effect on the Mac. A command acts on the
+checkout that contains it, which need not be the active checkout.
+_Avoid_: Main checkout, physical checkout

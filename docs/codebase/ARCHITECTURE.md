@@ -15,15 +15,14 @@ Three constraints shape the implementation:
 - Private credentials and tool-owned runtime state must stay outside tracked
   configuration, while repeated installation must preserve user-owned state.
 
-See `AGENTS.md`, `dotfiles-root.symlink`, and `_scripts/link-config`.
+See `AGENTS.md`, ADR-0004, and `_scripts/link-config`.
 
 ## 2) System Flow
 
 ```text
-bin/dot
-  -> adapter-checkout.sh -> dotfiles-root.symlink
+bin/dot (resolves the checkout containing it)
   -> _scripts/setup update
-      -> resolver link -> advisory git pull -> private template -> safe links
+      -> advisory git pull -> private template -> safe links
       -> Homebrew availability -> advisory maintenance/update
       -> Brewfile reconciliation -> prerequisite topics -> remaining topics
           -> installer-preamble.sh -> catalogs/link-config/vendor commands
@@ -68,16 +67,15 @@ reaching the next shell.
 
 ## 3) Layer/Module Responsibilities
 
-| Layer or module                                | Owns                                                                                         | Must not own                                   | Evidence                                                                            |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `dotfiles-root.symlink`, `adapter-checkout.sh` | Physical path and symlink resolution for public entrypoints                                  | Installer-specific policies                    | Resolver and adapter sources                                                        |
-| `_scripts/setup`                               | Phase ordering, prerequisite ordering and failure severity                                   | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                              |
-| `_scripts/topic-catalog`                       | Deterministic kind/path classification                                                       | Applying discovered configuration              | `_scripts/topic-catalog`                                                            |
-| `installer-preamble.sh`                        | Installer context, guards, run-once markers and linking wrappers                             | Creating credentials                           | `_scripts/installer-preamble.sh`                                                    |
-| `link-dotfiles`, `link-config`                 | Conflict selection and target classification/mutation respectively                           | Package-manager orchestration                  | Both linker sources                                                                 |
-| Catalog/rendering modules                      | TSV reading, explicit placeholder expansion, generated-region validation and file comparison | Consumer-specific catalog meaning              | `_scripts/catalog.sh`, `_scripts/generated-region.sh`, `_scripts/generated-file.sh` |
-| Mobile target adapters                         | iOS/Android observations and explicit installation                                           | Implicit runtime downloads during normal setup | `_scripts/mobile-setup`, `xcode/install.sh`, `android-studio/install.sh`            |
-| Key-creation commands                          | Explicit generation with shared refusal/permission guards                                    | Generation during topic installation           | `ssh/create-key`, `sops/create-key`, `_scripts/key-provisioning.sh`                 |
+| Layer or module                | Owns                                                                                         | Must not own                                   | Evidence                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `_scripts/setup`               | Phase ordering, prerequisite ordering and failure severity                                   | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                              |
+| `_scripts/topic-catalog`       | Deterministic kind/path classification                                                       | Applying discovered configuration              | `_scripts/topic-catalog`                                                            |
+| `installer-preamble.sh`        | Installer context, guards, run-once markers and linking wrappers                             | Creating credentials                           | `_scripts/installer-preamble.sh`                                                    |
+| `link-dotfiles`, `link-config` | Conflict selection and target classification/mutation respectively                           | Package-manager orchestration                  | Both linker sources                                                                 |
+| Catalog/rendering modules      | TSV reading, explicit placeholder expansion, generated-region validation and file comparison | Consumer-specific catalog meaning              | `_scripts/catalog.sh`, `_scripts/generated-region.sh`, `_scripts/generated-file.sh` |
+| Mobile target adapters         | iOS/Android observations and explicit installation                                           | Implicit runtime downloads during normal setup | `_scripts/mobile-setup`, `xcode/install.sh`, `android-studio/install.sh`            |
+| Key-creation commands          | Explicit generation with shared refusal/permission guards                                    | Generation during topic installation           | `ssh/create-key`, `sops/create-key`, `_scripts/key-provisioning.sh`                 |
 
 ## 4) Reused Patterns
 
@@ -117,7 +115,7 @@ daemons are integrations, not an internal event architecture.
 ## 6) Evidence
 
 - [Update adapter](../../bin/dot), [setup](../../_scripts/setup)
-- [Resolver](../../dotfiles-root.symlink), [topic classifier](../../_scripts/topic-catalog)
+- [Checkout resolution decision](../adr/0004-each-entry-point-resolves-its-own-checkout.md), [topic classifier](../../_scripts/topic-catalog)
 - [Preamble](../../_scripts/installer-preamble.sh), [linker](../../_scripts/link-config)
 - [Catalog reader](../../_scripts/catalog.sh), [renderer](../../_scripts/render-software-catalog)
 - [Shell startup](../../zsh/_startup.zsh), [setup fixtures](../../tests/setup_test.sh)

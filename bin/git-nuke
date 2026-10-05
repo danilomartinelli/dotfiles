@@ -16,8 +16,7 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-# shellcheck disable=SC1091 # Loaded from the adapter checkout beside this script.
-. "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/adapter-checkout.sh"
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
 
 # shellcheck disable=SC1091 # Loaded from the resolved dotfiles checkout.
 . "$DOTFILES_ROOT/git/_branch-state.sh"

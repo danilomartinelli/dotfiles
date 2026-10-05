@@ -74,7 +74,10 @@ test_resolves_topic_dir_and_checkout_root() {
     'printf "%s\n" "$TOPIC_DIR" >"$HOME/topic_dir"
 printf "%s\n" "$DOTFILES_ROOT" >"$HOME/dotfiles_root"'
 
-  scenario_capture "$home" env HOME="$home" "$checkout/sample/install.sh"
+  # The inherited root names another checkout, as an exported one does when
+  # setup runs from a worktree; the installer still acts on its own.
+  scenario_capture "$home" env HOME="$home" DOTFILES_ROOT="$home/other-checkout" \
+    "$checkout/sample/install.sh"
   assert_equal "$checkout/sample" "$(cat "$home/topic_dir")" 'TOPIC_DIR'
   assert_equal "$checkout" "$(cat "$home/dotfiles_root")" 'DOTFILES_ROOT'
 }

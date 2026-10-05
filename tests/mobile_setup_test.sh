@@ -26,7 +26,6 @@ new_fixture() {
   stub_uname "$fixture/fake-bin"
   stub_xcrun "$fixture/fake-bin"
   stub_xcodebuild "$fixture/fake-bin"
-  ln -s "$REPOSITORY_ROOT/dotfiles-root.symlink" "$fixture/home/.dotfiles-root"
 
   stub_open "$fixture/fake-bin"
 
