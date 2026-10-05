@@ -142,11 +142,11 @@ and advisory vulnerability results but does not apply newly discovered releases.
 If `fzf` is unavailable, selection is skipped with an actionable warning.
 
 The picker includes declared Homebrew formulae, casks, App Store apps, and Mise
-tools. Homebrew pins are respected. Packages installed outside the declarations
-are not independent upgrade targets, although selected packages or newly
-installed declarations can require dependency changes. Homebrew itself and its
-catalog are refreshed before selection. Apps may also update themselves outside
-this flow; this repository does not disable their own updaters.
+tools. Formulae held with `brew pin` are left out. Packages installed outside
+the declarations are not independent upgrade targets, although selected packages
+or newly installed declarations can require dependency changes. Homebrew itself
+and its catalog are refreshed before selection. Apps may also update themselves
+outside this flow; this repository does not disable their own updaters.
 
 Versions already committed to the Mise lock, including those received by
 `git pull`, are applied before the picker. Selecting a new Mise release updates
