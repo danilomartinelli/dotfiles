@@ -2,23 +2,21 @@
 
 import json
 from pathlib import Path
-import shlex
 import subprocess
 import sys
-import tomllib
+
+# Importing the declaration reader must not leave a __pycache__ in the checkout.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "_scripts"))
+import declared_software  # noqa: E402
 
 
 def desired_extras(config):
-    declaration = tomllib.loads(config.read_text())["tools"]["pipx:mdformat"]
-    args = shlex.split(declaration.get("uvx_args", ""))
-    extras = {}
-    for index, arg in enumerate(args):
-        if arg == "--with":
-            package, separator, version = args[index + 1].partition("==")
-            if not separator or not version:
-                raise ValueError("mdformat extras must have explicit == version pins")
-            extras[package] = version
-    return extras
+    # The module refuses a --with that does not name an exact == version.
+    for declaration in declared_software.read_mise_config(config):
+        if declaration.name == "pipx:mdformat":
+            return dict(declaration.extras)
+    raise KeyError("pipx:mdformat is not declared")
 
 
 def installed_extras(directory, packages):

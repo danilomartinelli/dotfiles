@@ -14,6 +14,11 @@ import tomllib
 import urllib.request
 from dataclasses import dataclass
 
+# Importing the declaration reader must not leave a __pycache__ in the checkout.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declared_software  # noqa: E402
+
 
 @dataclass(frozen=True)
 class Candidate:
@@ -61,17 +66,6 @@ def execute(args, *, cwd, env):
         )
 
 
-def requested(value):
-    version = value.get("version") if isinstance(value, dict) else value
-    if not isinstance(version, str):
-        raise ValueError("interactive upgrades require one version per declaration")
-    return version
-
-
-def exact(version):
-    return bool(re.fullmatch(r"v?\d+\.\d+\.\d+(?:[-+][\w.+-]+)?", version))
-
-
 def mise_environment(root, env):
     return {
         **env,
@@ -81,14 +75,15 @@ def mise_environment(root, env):
     }
 
 
+def brewfile_declarations(root, kind):
+    brewfile = declared_software.read_brewfile(root / "Brewfile")
+    return [d for d in brewfile.declarations if d.kind == kind]
+
+
 def brew_candidates(root, brew, env):
     candidates = []
     for kind, key in (("formula", "formulae"), ("cask", "casks")):
-        names = run(
-            [brew, "bundle", "list", f"--{kind}", f"--file={root / 'Brewfile'}"],
-            cwd=root,
-            env=env,
-        ).splitlines()
+        names = [d.name for d in brewfile_declarations(root, kind)]
         if not names:
             continue
         args = [brew, "outdated", "--json=v2", f"--{kind}"]
@@ -122,15 +117,8 @@ def brew_candidates(root, brew, env):
 
 
 def mas_candidates(root, env):
-    # Bundle's --mas list contains display names, not the IDs that mas uses.
-    # Match this repository's literal declarations, never evaluate Brewfile Ruby.
-    ids = set(
-        re.findall(
-            r"^mas\s+['\"][^'\"]+['\"],\s*id:\s*(\d+)\s*(?:#.*)?$",
-            (root / "Brewfile").read_text(),
-            re.MULTILINE,
-        )
-    )
+    # An App Store app's identity is its App ID, which is what mas accepts.
+    ids = {d.identifier for d in brewfile_declarations(root, "mas")}
     if not ids:
         return []
     output = run(
@@ -151,12 +139,11 @@ def mas_candidates(root, env):
 
 
 def mise_candidates(root, env):
-    tools = read_toml(root / "mise/config.toml")["tools"]
+    declarations = declared_software.read_mise_config(root / "mise/config.toml")
     candidates = []
+    # Pins may advance to a new major; channels only move within themselves.
     for bump in (False, True):
-        names = [
-            name for name, value in tools.items() if exact(requested(value)) == bump
-        ]
+        names = [d.name for d in declarations if (d.selection == "pin") == bump]
         if not names:
             continue
         args = ["mise", "outdated", "--json"] + (["--bump"] if bump else []) + names
@@ -216,8 +203,15 @@ def audit(root, brew, env, candidates):
     # OSV accepts package ecosystem identities. The legacy Mise lock does not
     # contain an auditable dependency graph; do not claim a transitive scan.
     queries, labels, uncovered = [], [], []
-    tools = read_toml(root / "mise/config.toml")["tools"]
-    locked = read_toml(root / "mise/mise.lock")["tools"]
+    try:
+        tools = [
+            d.name
+            for d in declared_software.read_mise_config(root / "mise/config.toml")
+        ]
+        locked = read_toml(root / "mise/mise.lock")["tools"]
+    except (OSError, ValueError, KeyError) as error:
+        warn(f"Mise vulnerability coverage unavailable: {error}")
+        tools, locked = [], {}
     for name in tools:
         ecosystem = (
             "npm"
@@ -315,41 +309,6 @@ def choose(candidates, env):
     )
 
 
-def update_declarations(text, replacements):
-    """Change only version values in the repository's one-line tool declarations."""
-    lines, found, in_tools = [], set(), False
-    for line in text.splitlines(keepends=True):
-        if line.lstrip().startswith("["):
-            in_tools = line.strip() == "[tools]"
-        if in_tools and "=" in line and not line.lstrip().startswith("#"):
-            entry = tomllib.loads(line)
-            name = next(iter(entry))
-            if name in replacements:
-                prefix, value = line.split("=", 1)
-                if isinstance(entry[name], dict):
-                    value, count = re.subn(
-                        r'(\bversion\s*=\s*)"[^"\\]*"',
-                        lambda m: m[1] + json.dumps(replacements[name]),
-                        value,
-                        count=1,
-                    )
-                else:
-                    value, count = re.subn(
-                        r'^(\s*)"[^"\\]*"',
-                        lambda m: m[1] + json.dumps(replacements[name]),
-                        value,
-                        count=1,
-                    )
-                if count != 1:
-                    raise ValueError(f"unsupported declaration syntax: {name}")
-                line = prefix + "=" + value
-                found.add(name)
-        lines.append(line)
-    if found != set(replacements):
-        raise ValueError("a selected declaration disappeared")
-    return "".join(lines)
-
-
 def write_source(path, content):
     descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
@@ -365,7 +324,11 @@ def write_source(path, content):
 def apply_mise(root, env, selected):
     paths = [Path("mise/config.toml"), Path("mise/mise.lock"), Path("README.md")]
     original = {path: (root / path).read_bytes() for path in paths}
-    tools = tomllib.loads(original[paths[0]].decode())["tools"]
+    config_text = original[paths[0]].decode()
+    declarations = {
+        d.name: d
+        for d in declared_software.parse_mise_config(config_text, str(root / paths[0]))
+    }
     old_lock = tomllib.loads(original[paths[1]].decode())["tools"]
     chosen = {c.name: c.latest for c in selected}
     with tempfile.TemporaryDirectory(prefix="dotfiles-upgrade-") as temporary:
@@ -376,17 +339,17 @@ def apply_mise(root, env, selected):
         shutil.copyfile(root / "Brewfile", stage / "Brewfile")
         stage_config = stage / paths[0]
         stage_env = mise_environment(stage, env)
-        stage_config.write_text(
-            update_declarations(original[paths[0]].decode(), chosen)
-        )
+        stage_config.write_text(declared_software.rewrite_versions(config_text, chosen))
         run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
         # Keep channels such as lts and temurin-25 while advancing their lock.
         persistent = {
-            name: version if exact(requested(tools[name])) else requested(tools[name])
+            name: version
+            if declarations[name].selection == "pin"
+            else declarations[name].version
             for name, version in chosen.items()
         }
         stage_config.write_text(
-            update_declarations(original[paths[0]].decode(), persistent)
+            declared_software.rewrite_versions(config_text, persistent)
         )
         run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
         new_lock = read_toml(stage / paths[1])["tools"]
