@@ -34,9 +34,7 @@ args = sys.argv[1:]
 with open(os.environ["EVENTS"], "a") as log:
     log.write(json.dumps([command, *args]) + "\n")
 if command == "brew":
-    if args[:2] == ["bundle", "list"]:
-        print("git" if "--formula" in args else "example")
-    elif args[0] == "outdated":
+    if args[0] == "outdated":
         kind = "formulae" if "--formula" in args else "casks"
         name = "git" if kind == "formulae" else "example"
         if os.environ.get("OUTSIDER"): name = "undeclared"
@@ -198,6 +196,25 @@ class UpgradesTest(unittest.TestCase):
         )
         self.assertIn(["mas", "outdated", "--inaccurate", "123"], self.events())
         self.assertFalse(any("999" in e for e in self.events()))
+        # Discovery names the Brewfile's own declarations; Homebrew never
+        # evaluates the file to list them.
+        self.assertIn(
+            ["brew", "outdated", "--json=v2", "--formula", "git"], self.events()
+        )
+        self.assertFalse(any(e[:2] == ["brew", "bundle"] for e in self.events()))
+
+    def test_a_rejected_brewfile_line_leaves_mise_discovery_available(self):
+        with (self.root / "Brewfile").open("a") as stream:
+            stream.write("brew 'git', args: ['HEAD']\n")
+        status, output, errors = self.invoke()
+        self.assertEqual(0, status)
+        self.assertIn("Homebrew update discovery unavailable", errors)
+        self.assertIn("App Store update discovery unavailable", errors)
+        self.assertIn("Brewfile:4: ", errors)
+        self.assertIn("node  24.0.0 -> 24.1.0", output)
+        self.assertFalse(
+            any(e[0] in ("brew", "mas") and e[1] == "outdated" for e in self.events())
+        )
 
     def test_cancel_and_default_no_do_not_mutate(self):
         for overrides in ({"CANCEL": "1"}, {}):
@@ -401,6 +418,12 @@ if os.environ.get("FAIL_EXTRA_INSTALL"): sys.exit(1)
         marker.unlink()
         extras.reconcile(self.config, self.root)
         self.assertFalse(marker.exists())
+
+    def test_an_unpinned_plugin_fails_before_anything_is_installed(self):
+        self.config.write_text(self.config.read_text().replace("==1.0.0", ""))
+        with self.assertRaisesRegex(ValueError, "exact == version"):
+            extras.reconcile(self.config, self.root)
+        self.assertFalse((self.root / "install-args.json").exists())
 
     def test_failed_refresh_does_not_claim_matching_versions(self):
         with (
