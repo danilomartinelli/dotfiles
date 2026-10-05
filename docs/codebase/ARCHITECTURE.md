@@ -55,15 +55,16 @@ Shell startup is a separate flow:
 ```text
 zshenv.symlink -> person's shell or tool shell, and its locale
 zshrc.symlink -> physical checkout -> .localrc -> .commonrc
-  -> Homebrew and unique paths -> topic catalog/cache -> autoload functions
+  -> Homebrew and unique paths -> topic catalog -> autoload functions
   -> topic paths -> topic main files -> sole prompt -> compinit
   -> completions -> optional autosuggestions -> optional syntax highlighting
 ```
 
-`zsh/_startup.zsh` keys the catalog cache by checkout path, checks directory
-mtimes recursively for nested changes, and cleans its private loader variables
-after each pass. `tests/zsh_startup_test.sh` covers cached additions, renames and
-removals below an existing nested topic directory.
+`zsh/_startup.zsh` runs the classifier on every pass, without a cache, and
+cleans its private loader variables after each pass. The classifier starts one
+`find` and one `sort` whatever the topic count, which `tests/topic_catalog_test.sh`
+enforces. `tests/zsh_startup_test.sh` covers nested additions and removals
+reaching the next shell.
 
 ## 3) Layer/Module Responsibilities
 
@@ -95,9 +96,10 @@ shell variables. It explicitly forbids nested calls. Catalog stdout from
 
 ## 5) Known Architectural Risks
 
-- **Cached discovery depends on directory mtimes:** recursive checks now cover
-  nested changes, with regression coverage for additions, renames and removals.
-  Preserve that behavior when changing discovery or caching; see `CONCERNS.md`.
+- **Discovery cost is startup cost:** every interactive shell runs the
+  classifier. Keep it at one `find` and one `sort` rather than adding a cache,
+  whose freshness rule would have to agree with the classifier; see
+  `CONCERNS.md`.
 - **Shared helpers have broad reach:** a change to linking, preamble, catalogs,
   or setup affects many topics. Their fixture suites and the complete test runner
   are the validation boundary prescribed by `CODING_STANDARDS.md`.

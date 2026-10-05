@@ -80,9 +80,11 @@ Host PATH/environment leakage can invalidate isolation; see the safeguards in
 - Documentation coverage checks public names, dependency declarations, shared
   installer helpers, Homebrew tap/trust agreement and generated README tables.
   It does not prove all narrative claims or integration readiness.
-- Zsh fixtures cover repeated sourcing and cached additions, renames and
-  removals inside an existing nested topic directory. Fixed fixture timestamps
-  make the regression independent of clock resolution and sleeps.
+- Zsh fixtures cover repeated sourcing and nested topic additions and removals
+  reaching the next shell. They unset the XDG cache, data and state homes, so
+  startup writes only below the fixture's home.
+- The classifier fixture runs discovery on a `PATH` holding only Bash and
+  logging spies, and requires one `find` and one `sort` for several topics.
 - [TODO] Historical flakiness and remote CI results were not inspected. A local
   result does not establish remote CI status.
 

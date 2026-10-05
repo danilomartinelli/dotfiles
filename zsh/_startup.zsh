@@ -58,34 +58,17 @@ _dotfiles_path_files=()
 _dotfiles_main_files=()
 _dotfiles_completion_files=()
 
-# Memoized catalog. Classification only changes when files are added,
-# removed, or renamed, and those always bump a directory mtime; content
-# edits never change the catalog. Check nested directories too: adding a file
-# there does not update the topic directory's mtime. The cache is keyed by
-# checkout path so parallel worktrees never share entries, and the classifier
-# stays the single source of truth.
-typeset -g _dotfiles_catalog_cache="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/topic-catalog${DOTFILES_ROOT//\//%}"
-typeset -g _dotfiles_catalog=''
-if [[ -r $_dotfiles_catalog_cache ]]; then
-  typeset -g _dotfiles_catalog_stale=''
-  for _dotfiles_dir in "$DOTFILES_ROOT" "$DOTFILES_ROOT"/**/*(N/); do
-    if [[ $_dotfiles_dir -nt $_dotfiles_catalog_cache ]]; then
-      _dotfiles_catalog_stale=1
-      break
-    fi
-  done
-  [[ -z $_dotfiles_catalog_stale ]] && _dotfiles_catalog=$(<"$_dotfiles_catalog_cache")
-fi
-
-if [[ -z $_dotfiles_catalog ]]; then
-  if ! _dotfiles_catalog=$("$DOTFILES_ROOT/_scripts/topic-catalog" "$DOTFILES_ROOT" 2>/dev/null); then
-    print -u2 'dotfiles: topic catalog discovery failed'
-    unset ${(k)parameters[(I)_dotfiles_*]}
-    return 1
-  fi
-  # Cache writes are best-effort; a read-only cache dir must not break startup.
-  mkdir -p "${_dotfiles_catalog_cache:h}" 2>/dev/null \
-    && print -r -- "$_dotfiles_catalog" >| "$_dotfiles_catalog_cache" 2>/dev/null
+# Classify on every shell, without a memo. The classifier starts one find and
+# one sort however many topics there are, about 25 ms, and
+# tests/topic_catalog_test.sh holds it to that. A memo needs a freshness rule
+# of its own that agrees with the classifier on which files count: the one kept
+# here walked directories the classifier ignores, once missed nested additions,
+# and let tests write into the real cache. Keep the classifier fast rather than
+# bring a memo back.
+if ! _dotfiles_catalog=$("$DOTFILES_ROOT/_scripts/topic-catalog" "$DOTFILES_ROOT" 2>/dev/null); then
+  print -u2 'dotfiles: topic catalog discovery failed'
+  unset ${(k)parameters[(I)_dotfiles_*]}
+  return 1
 fi
 
 for _dotfiles_record in "${(@f)_dotfiles_catalog}"; do

@@ -2,6 +2,12 @@
 #
 # Classify the dotfiles repository layout once for setup, Zsh startup, and
 # documentation checks.
+#
+# Zsh startup runs this on every shell, without a memo, so its cost is startup
+# cost. It starts one find for all topics and one sort, however many topics
+# there are; everything else is a Bash builtin. A basename per entry and a find
+# per topic once made it take 440 ms. tests/topic_catalog_test.sh holds it to
+# this.
 
 set -e
 set -o pipefail
@@ -42,21 +48,18 @@ input_root=$1
 repository_root=$(CDPATH='' cd -P -- "$input_root" 2>/dev/null && pwd) \
   || fail "unreadable repository root: $input_root"
 
-records=$(mktemp "${TMPDIR:-/tmp}/topic-catalog.XXXXXX") \
-  || fail 'cannot create a temporary record file'
-trap 'rm -f "$records"' EXIT
+records=''
+topic_dirs=()
 
 record() {
-  printf '%s\t%s\n' "$1" "$2" >>"$records"
+  records+=$1$'\t'$2$'\n'
 }
 
 classify_zsh_file() {
   local file=$1
   local relative=$2
-  local base
 
-  base=$(basename -- "$file")
-  case $base in
+  case ${file##*/} in
     path.zsh)
       record path "$file"
       ;;
@@ -84,15 +87,10 @@ scan_topic() {
   local topic_dir=$1
   local topic_name=$2
   local entry
-  local entry_name
-  local file
-  local relative
-  local topic_files
 
   for entry in "$topic_dir"/*.symlink; do
     [ -f "$entry" ] || [ -d "$entry" ] || continue
-    entry_name=$(basename -- "$entry")
-    case $entry_name in
+    case ${entry##*/} in
       _*) continue ;;
     esac
     record link "$entry"
@@ -101,24 +99,11 @@ scan_topic() {
   if [ -f "$topic_dir/install.sh" ] && [ "$topic_name" != homebrew ]; then
     record installer "$topic_dir/install.sh"
   fi
-
-  topic_files=$(find "$topic_dir" \
-    -type d -name '*.symlink' -prune -o \
-    -type f -name '*.zsh' -print) \
-    || fail "discovery failed in topic: $topic_dir"
-  while IFS= read -r file; do
-    [ -n "$file" ] || continue
-    relative=${file#"$repository_root"/}
-    case $relative in
-      _* | .* | */_* | */.*) continue ;;
-    esac
-    classify_zsh_file "$file" "$relative"
-  done <<<"$topic_files"
 }
 
 for entry in "$repository_root"/*; do
   [ -e "$entry" ] || continue
-  entry_name=$(basename -- "$entry")
+  entry_name=${entry##*/}
   case $entry_name in
     _*) continue ;;
   esac
@@ -143,7 +128,23 @@ for entry in "$repository_root"/*; do
   esac
 
   record topic "$entry"
+  topic_dirs+=("$entry")
   scan_topic "$entry" "$entry_name"
 done
 
-LC_ALL=C sort "$records" || fail 'failed to sort catalog records'
+if [ "${#topic_dirs[@]}" -gt 0 ]; then
+  topic_files=$(find "${topic_dirs[@]}" \
+    -type d -name '*.symlink' -prune -o \
+    -type f -name '*.zsh' -print) \
+    || fail "discovery failed in topics of: $repository_root"
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    relative=${file#"$repository_root"/}
+    case $relative in
+      _* | .* | */_* | */.*) continue ;;
+    esac
+    classify_zsh_file "$file" "$relative"
+  done <<<"$topic_files"
+fi
+
+printf '%s' "$records" | LC_ALL=C sort || fail 'failed to sort catalog records'

@@ -52,3 +52,10 @@ _Avoid_: Interactive shell, terminal shell
 A shell whose output a program reads, such as a coding agent's command shell
 or an app's internal shell.
 _Avoid_: Agent shell, non-interactive shell, Conductor shell
+
+### Configuration
+
+**Topic**:
+A unit of the managed environment that gathers the configuration, shell setup
+and optional installation step for one tool or concern.
+_Avoid_: Module, package, plugin
