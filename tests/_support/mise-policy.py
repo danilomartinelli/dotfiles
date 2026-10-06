@@ -180,6 +180,17 @@ class MisePolicyTest(unittest.TestCase):
         self.assertIn('printf \'%s\\n\' "$policy" >> "$GITHUB_ENV"', workflow)
         self.assertNotIn("MISE_GLOBAL_CONFIG_FILE:", workflow)
 
+    def test_ci_neutralizes_inherited_version_selectors_before_installation(self):
+        inherited = {"MISE_NODE_VERSION": "99", "MISE_PYTHON_VERSION": "1"}
+        result = self.invoke("ci", **inherited)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        ci_env = dict(line.split("=", 1) for line in result.stdout.splitlines())
+        direct = subprocess.run([str(self.fixture / "bin/mise"), "install"],
+                                cwd=self.checkout, env={**self.env, **inherited, **ci_env},
+                                text=True, capture_output=True)
+        self.assertEqual(direct.returncode, 0, direct.stderr)
+        self.assertEqual(self.calls()[-1]["selectors"], {})
+
     def test_persistent_trust_uses_the_same_roots_as_managed_calls(self):
         result = self.invoke("trust")
         self.assertEqual(result.returncode, 0, result.stderr)

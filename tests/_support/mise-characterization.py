@@ -101,8 +101,9 @@ chmod +x "$ASDF_INSTALL_PATH/bin/fixture"''',
                   MISE_GLOBAL_CONFIG_FILE="/wrong/config.toml", MISE_ENV="foreign",
                   MISE_ASDF_FIXTURE_VERSION="2.0.0", MISE_LOCKED="false").strip() == "1.0.0"
     assert lock.read_bytes() == original_lock
-    ci_env = dict(line.split("=", 1) for line in invoke("ci", managed=True).splitlines())
-    assert invoke("exec", "--", "fixture", **ci_env).strip() == "1.0.0"
+    inherited = {"MISE_ASDF_FIXTURE_VERSION": "2.0.0", "MISE_ASDF__FIXTURE_VERSION": "2.0.0"}
+    ci_env = dict(line.split("=", 1) for line in invoke("ci", managed=True, **inherited).splitlines())
+    assert invoke("exec", "--", "fixture", **{**inherited, **ci_env}).strip() == "1.0.0"
     assert lock.read_bytes() == original_lock
     print("PASS: managed and CI execution exclude foreign configuration and inherited selectors")
 
