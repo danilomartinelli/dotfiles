@@ -297,7 +297,9 @@ prerequisite topics — those whose installers create state a later installer
 consumes — and runs them before the rest, which follow in catalog order. Add a
 topic to that list when another installer would otherwise read state that does
 not exist yet; do not work around the ordering by recreating that state inside
-the dependent installer.
+the dependent installer. Setup also names the Homebrew topic, whose installer
+runs before the Brewfile rather than with the other topic installers. The
+classifier lists every installer and decides none of this order.
 
 ## Zsh configuration
 
@@ -431,10 +433,10 @@ it reads it from there rather than restating it.
 | Change area                                                     | Required focused validation                                                                                  |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Public docs, commands, aliases, dependencies, installer helpers | `tests/documentation_test.sh`                                                                                |
-| Setup phases and adapters                                       | `tests/setup_test.sh`                                                                                        |
+| Setup phases                                                    | `tests/setup_test.sh`                                                                                        |
 | Zsh startup or topic shell files                                | `tests/zsh_startup_test.sh` and `zsh -n`                                                                     |
 | Topic layout or discovery                                       | `tests/topic_catalog_test.sh`                                                                                |
-| Checkout resolution                                             | `tests/checkout_test.sh`                                                                                     |
+| Checkout resolution and command adapters                        | `tests/checkout_test.sh`                                                                                     |
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                   |
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |

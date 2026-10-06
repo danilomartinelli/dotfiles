@@ -20,7 +20,7 @@ Emit tab-separated kind/path records, sorted by kind and absolute path:
 
   topic       visible top-level topic directory
   link        root-level or direct topic *.symlink file or directory
-  installer   direct topic install.sh (homebrew/install.sh excluded)
+  installer   direct topic install.sh
   path        visible topic path.zsh file
   main        other visible topic *.zsh file
   prompt      the sole authoritative prompt (zsh/prompt.zsh)
@@ -85,7 +85,6 @@ classify_zsh_file() {
 
 scan_topic() {
   local topic_dir=$1
-  local topic_name=$2
   local entry
 
   for entry in "$topic_dir"/*.symlink; do
@@ -96,7 +95,7 @@ scan_topic() {
     record link "$entry"
   done
 
-  if [ -f "$topic_dir/install.sh" ] && [ "$topic_name" != homebrew ]; then
+  if [ -f "$topic_dir/install.sh" ]; then
     record installer "$topic_dir/install.sh"
   fi
 }
@@ -129,7 +128,7 @@ for entry in "$repository_root"/*; do
 
   record topic "$entry"
   topic_dirs+=("$entry")
-  scan_topic "$entry" "$entry_name"
+  scan_topic "$entry"
 done
 
 if [ "${#topic_dirs[@]}" -gt 0 ]; then

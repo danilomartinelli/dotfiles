@@ -114,8 +114,10 @@ EOF
   scenario_write_file "$fixture/functions/helper.zsh" <<'EOF'
 reserved
 EOF
+  # Homebrew's installer runs in its own phase, but that is run order, and run
+  # order is setup's. The classifier lists it like any other installer.
   scenario_write_file "$fixture/homebrew/install.sh" <<'EOF'
-reserved phase
+installer
 EOF
   scenario_write_file "$fixture/spaced topic/spaced file.zsh" <<'EOF'
 main
@@ -136,6 +138,7 @@ golden_manifest() {
   printf '%s\t%s\n' aliases "$fixture/alpha/aliases.zsh"
   printf '%s\t%s\n' completion "$fixture/alpha/completion.zsh"
   printf '%s\t%s\n' installer "$fixture/alpha/install.sh"
+  printf '%s\t%s\n' installer "$fixture/homebrew/install.sh"
   printf '%s\t%s\n' link "$fixture/alpha/alpha.symlink"
   printf '%s\t%s\n' link "$fixture/alpha/bundle.symlink"
   printf '%s\t%s\n' link "$fixture/root.symlink"

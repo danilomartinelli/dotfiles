@@ -4,18 +4,6 @@ set -u
 
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 REPOSITORY_ROOT="$(cd "$TEST_DIR/.." && pwd -P)"
-
-# homebrew/_bundle.sh declares which taps it trusts and in what order; the
-# phase assertions below only need the first one, to say that a tap is created
-# before anything is trusted. Reading it here is what keeps retiring a tap from
-# failing a test about phase ordering.
-FIRST_TRUSTED_TAP=$(
-  sed -n "s/^TRUSTED_TAPS='\([^ ']*\).*/\1/p" "$REPOSITORY_ROOT/homebrew/_bundle.sh"
-)
-[ -n "$FIRST_TRUSTED_TAP" ] || {
-  printf 'setup_test: no TRUSTED_TAPS in homebrew/_bundle.sh\n' >&2
-  exit 1
-}
 # shellcheck source=tests/_support/shell-scenario.sh
 # shellcheck disable=SC1091
 source "$TEST_DIR/_support/shell-scenario.sh"
@@ -25,15 +13,53 @@ source "$TEST_DIR/_support/stubs.sh"
 scenario_init dotfiles-setup-tests
 TEST_ROOT=$SCENARIO_ROOT
 
-write_fixture_scripts() {
+# Setup is the only real module in this fixture. Every module it hands a phase
+# to is a stub that records what it was handed, so a case observes the run
+# plan — which phases run, in what order, with which links and installers —
+# without copying the modules that own each phase. What those modules then do
+# is their own suites' concern. One case keeps the real classifier and linker,
+# because the link sources cross that seam and both sides could drift apart.
+
+# A stub that records "<name> <arguments>" and exits with the status held in
+# its failure variable, so a case injects a failure by passing that variable.
+write_recording_stub() {
+  local path=$1
+  local name=$2
+  local failure=$3
+
+  scenario_write_executable "$path" <<EOF
+#!/bin/sh
+printf '%s %s\n' $name "\$*" >>"\$SCENARIO_EVENT_LOG"
+exit "\${$failure:-0}"
+EOF
+}
+
+# Topic catalog rows in the classifier's shape, naming fixture paths. Each
+# argument is "<kind> <path relative to the fixture>".
+catalog_rows() {
+  local fixture=$1
+  local row
+
+  shift
+  for row in "$@"; do
+    printf '%s\t%s/%s\n' "${row%% *}" "$fixture" "${row#* }"
+  done
+}
+
+make_fixture() {
+  local brew_state=${1:-present}
   local fixture
-  fixture=$1
+
+  fixture=$(scenario_tmpdir fixture)
+  mkdir -p "$fixture/_scripts" "$fixture/git" "$fixture/sample" \
+    "$fixture/fake-bin" "$fixture/fake-prefix/bin" "$fixture/home"
+
+  cp "$REPOSITORY_ROOT/_scripts/setup" "$fixture/_scripts/setup"
+  cp "$REPOSITORY_ROOT/_scripts/output.sh" "$fixture/_scripts/output.sh"
+  chmod +x "$fixture/_scripts/setup"
 
   stub_uname "$fixture/fake-bin"
-  stub_xcrun "$fixture/fake-bin"
-  stub_xcodebuild "$fixture/fake-bin"
   stub_mise "$fixture/fake-bin"
-
   scenario_write_executable "$fixture/fake-bin/git" <<'EOF'
 #!/bin/sh
 printf 'git %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
@@ -44,325 +70,363 @@ esac
 exit 0
 EOF
 
-  scenario_write_executable "$fixture/fake-bin/ssh-keygen" <<'EOF'
+  # The classifier stub prints the tree this fixture stands for. The real
+  # classifier would find the same rows, sorted the same way.
+  scenario_write_executable "$fixture/_scripts/topic-catalog" <<'EOF'
 #!/bin/sh
-printf 'ssh-keygen %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-exit 99
+printf 'topic-catalog %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
+cat "$1/classified.tsv"
 EOF
+  catalog_rows "$fixture" \
+    'installer alpha/install.sh' \
+    'installer homebrew/install.sh' \
+    'installer workspace/install.sh' \
+    'installer zulu/install.sh' \
+    'link sample/bundle.symlink' \
+    'link sample/config.symlink' \
+    'topic alpha' >"$fixture/classified.tsv"
 
-  stub_brew "$fixture/fake-bin" brew-template
+  write_recording_stub "$fixture/_scripts/link-dotfiles" link-dotfiles FAIL_LINKS
+  write_recording_stub "$fixture/_scripts/checklist" checklist FAIL_CHECKLIST
+  write_recording_stub "$fixture/_scripts/upgrade-software" software-upgrades \
+    FAIL_SOFTWARE_UPGRADES
+  write_recording_stub "$fixture/_macos/set-defaults.sh" macos-defaults FAIL_DEFAULTS
+  write_recording_stub "$fixture/_macos/set-hostname.sh" hostname FAIL_HOSTNAME
+  write_recording_stub "$fixture/homebrew/_maintenance.sh" homebrew-maintenance \
+    FAIL_HOMEBREW_MAINTENANCE
+  write_recording_stub "$fixture/homebrew/_bundle.sh" homebrew-bundle FAIL_HOMEBREW_BUNDLE
+  write_recording_stub "$fixture/alpha/install.sh" topic-alpha FAIL_TOPIC_ALPHA
+  write_recording_stub "$fixture/workspace/install.sh" topic-workspace FAIL_TOPIC_WORKSPACE
+  write_recording_stub "$fixture/zulu/install.sh" topic-zulu FAIL_TOPIC_ZULU
 
+  # Homebrew's installer puts brew where availability then finds it, which is
+  # how a case reaches the machine that has no Homebrew yet.
+  stub_brew "$fixture" brew-template
   scenario_write_executable "$fixture/homebrew/install.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' homebrew-installer >> "$SCENARIO_EVENT_LOG"
-if [ -n "${SETUP_TEST_BREW_TARGET:-}" ]; then
-  cp "$SETUP_TEST_BREW_TEMPLATE" "$SETUP_TEST_BREW_TARGET"
-  chmod +x "$SETUP_TEST_BREW_TARGET"
-fi
-exit "${FAIL_HOMEBREW_INSTALL:-0}"
+printf '%s\n' homebrew-installer >>"$SCENARIO_EVENT_LOG"
+[ "${FAIL_HOMEBREW_INSTALL:-0}" -eq 0 ] || exit "$FAIL_HOMEBREW_INSTALL"
+fixture=$(dirname "$0")/..
+[ -x "$fixture/fake-prefix/bin/brew" ] \
+  || cp "$fixture/brew-template" "$fixture/fake-prefix/bin/brew"
 EOF
-
-  scenario_write_executable "$fixture/_macos/set-defaults.sh" <<'EOF'
+  scenario_write_executable "$fixture/homebrew/_availability.sh" <<'EOF'
 #!/bin/sh
-printf '%s\n' macos-defaults >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_DEFAULTS:-0}"
+prefix=$(CDPATH='' cd -P -- "$(dirname "$0")/../fake-prefix" && pwd)
+case "$1" in
+  binary)
+    [ -x "$prefix/bin/brew" ] && printf '%s\n' "$prefix/bin/brew"
+    ;;
+  prefix)
+    [ "${FAIL_BREW_PREFIX:-0}" -eq 0 ] || exit "$FAIL_BREW_PREFIX"
+    printf '%s\n' "$prefix"
+    ;;
+esac
 EOF
-
-  scenario_write_executable "$fixture/_macos/set-hostname.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' hostname >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_HOSTNAME:-0}"
-EOF
-
-  scenario_write_executable "$fixture/alpha/install.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' topic-alpha >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_TOPIC_ALPHA:-0}"
-EOF
-
-  scenario_write_executable "$fixture/zulu/install.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' topic-zulu >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_TOPIC_ZULU:-0}"
-EOF
-
-  # Declared in PREREQUISITE_TOPICS, and alphabetically last, so its position in
-  # the event log is the whole proof that run order is declared.
-  scenario_write_executable "$fixture/workspace/install.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' topic-workspace >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_TOPIC_WORKSPACE:-0}"
-EOF
-
-  scenario_write_executable "$fixture/_ignored/install.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' topic-ignored >> "$SCENARIO_EVENT_LOG"
-EOF
-
-  scenario_write_executable "$fixture/bin/install.sh" <<'EOF'
-#!/bin/sh
-printf '%s\n' topic-bin >> "$SCENARIO_EVENT_LOG"
-EOF
-
-  scenario_write_executable "$fixture/fake-bin/editor" <<'EOF'
-#!/bin/sh
-printf 'editor %s\n' "$*" >> "$SCENARIO_EVENT_LOG"
-EOF
-
-  scenario_write_executable "$fixture/_scripts/upgrade-software" <<'EOF'
-#!/bin/sh
-printf '%s\n' software-upgrades >> "$SCENARIO_EVENT_LOG"
-exit "${FAIL_SOFTWARE_UPGRADES:-0}"
-EOF
-
-  stub_open "$fixture/fake-bin"
-}
-
-make_fixture() {
-  local brew_state
-  local fixture
-
-  brew_state=${1:-present}
-  fixture=$(scenario_tmpdir fixture)
-  mkdir -p \
-    "$fixture/_scripts" \
-    "$fixture/_macos" \
-    "$fixture/alpha" \
-    "$fixture/zulu" \
-    "$fixture/workspace" \
-    "$fixture/_ignored" \
-    "$fixture/homebrew" \
-    "$fixture/git" \
-    "$fixture/sample" \
-    "$fixture/sample/bundle.symlink" \
-    "$fixture/android-studio" \
-    "$fixture/ssh" \
-    "$fixture/bin" \
-    "$fixture/xcode" \
-    "$fixture/fake-bin" \
-    "$fixture/fake-prefix/bin" \
-    "$fixture/home"
-
-  cp "$REPOSITORY_ROOT/_scripts/setup" "$fixture/_scripts/setup"
-  cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$fixture/_scripts/bootstrap"
-  cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
-  cp "$REPOSITORY_ROOT/_scripts/installer-preamble.sh" "$fixture/_scripts/installer-preamble.sh"
-  cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
-  cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
-  cp "$REPOSITORY_ROOT/_scripts/checklist" "$fixture/_scripts/checklist"
-  cp "$fixture/_scripts/checklist" "$fixture/_scripts/checklist-real"
-  cp "$REPOSITORY_ROOT/_scripts/output.sh" "$fixture/_scripts/output.sh"
-  cp "$REPOSITORY_ROOT/_scripts/_checklist.tsv" "$fixture/_scripts/_checklist.tsv"
-  cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
-  cp "$REPOSITORY_ROOT/_scripts/checklist-rules.sh" "$fixture/_scripts/checklist-rules.sh"
-  cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$fixture/_scripts/installer-output.sh"
-  cp "$REPOSITORY_ROOT/bin/dot" "$fixture/bin/dot"
-  cp "$REPOSITORY_ROOT/bin/mobile-setup" "$fixture/bin/mobile-setup"
-  cp "$REPOSITORY_ROOT/bin/set-defaults" "$fixture/bin/set-defaults"
-  cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$fixture/homebrew/_availability.sh"
-  cp "$REPOSITORY_ROOT/homebrew/_bundle.sh" "$fixture/homebrew/_bundle.sh"
-  cp "$REPOSITORY_ROOT/homebrew/_maintenance.sh" "$fixture/homebrew/_maintenance.sh"
-  cp "$REPOSITORY_ROOT/ssh/install.sh" "$fixture/ssh/install.sh"
-  cp "$REPOSITORY_ROOT/ssh/config" "$fixture/ssh/config"
-  cp "$REPOSITORY_ROOT/ssh/config_local.example" "$fixture/ssh/config_local.example"
-  cp "$REPOSITORY_ROOT/_scripts/mobile-setup" "$fixture/_scripts/mobile-setup"
-  cp "$REPOSITORY_ROOT/_scripts/mobile-setup-readiness.sh" \
-    "$fixture/_scripts/mobile-setup-readiness.sh"
-  cp "$REPOSITORY_ROOT/_scripts/mobile-setup-ios.sh" "$fixture/_scripts/mobile-setup-ios.sh"
-  cp "$REPOSITORY_ROOT/_scripts/mobile-setup-android.sh" "$fixture/_scripts/mobile-setup-android.sh"
-  cp "$REPOSITORY_ROOT/android-studio/install.sh" "$fixture/android-studio/install.sh"
-  cp "$REPOSITORY_ROOT/xcode/install.sh" "$fixture/xcode/install.sh"
-  chmod +x \
-    "$fixture/_scripts/setup" \
-    "$fixture/_scripts/bootstrap" \
-    "$fixture/_scripts/checklist" \
-    "$fixture/_scripts/topic-catalog" \
-    "$fixture/_scripts/link-dotfiles" \
-    "$fixture/_scripts/link-config" \
-    "$fixture/bin/dot" \
-    "$fixture/bin/mobile-setup" \
-    "$fixture/bin/set-defaults" \
-    "$fixture/homebrew/_availability.sh" \
-    "$fixture/homebrew/_bundle.sh" \
-    "$fixture/homebrew/_maintenance.sh" \
-    "$fixture/ssh/install.sh" \
-    "$fixture/_scripts/mobile-setup" \
-    "$fixture/android-studio/install.sh" \
-    "$fixture/xcode/install.sh"
-
-  # Observe entry into the checklist without depending on its catalog or
-  # application-opening implementation. The standard setup paths must not
-  # reach either this sentinel or the separate open command double.
-  scenario_write_executable "$fixture/_scripts/checklist" <<'EOF'
-#!/bin/sh
-printf 'checklist-entry %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-if [ "$#" -eq 1 ] && [ "$1" = --open-apps ]; then
-  exec "$(dirname "$0")/checklist-real" "$@"
-fi
-exit "${FAIL_CHECKLIST:-0}"
-EOF
+  if [ "$brew_state" = present ]; then
+    cp "$fixture/brew-template" "$fixture/fake-prefix/bin/brew"
+  fi
 
   printf '%s\n' '# local environment' >"$fixture/.localrc.example"
-  printf '%s\n' '# Brewfile fixture' >"$fixture/Brewfile"
   printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink.example"
   printf '%s\n' '[user]' >"$fixture/git/gitconfig.local.symlink"
+  printf '%s\n' 'directory config' >"$fixture/sample/bundle.symlink"
   printf '%s\n' 'fixture config' >"$fixture/sample/config.symlink"
-  printf '%s\n' 'directory config' >"$fixture/sample/bundle.symlink/config.json"
-  printf '%s\n' 'tracked conflict' >"$fixture/sample/preserved.symlink"
-  printf '%s\n' 'reserved link' >"$fixture/_ignored/hidden.symlink"
-  printf '%s\n' 'reserved link' >"$fixture/bin/reserved.symlink"
-
-  write_fixture_scripts "$fixture"
-  if [ "$brew_state" = present ]; then
-    cp "$fixture/fake-bin/brew-template" "$fixture/fake-bin/brew"
-    chmod +x "$fixture/fake-bin/brew"
-  fi
 
   printf '%s\n' "$fixture"
 }
 
-invoke() {
-  local fixture
-  fixture=$1
-  shift
+# The real classifier and linker, in place of their stubs.
+use_real_classifier_and_linker() {
+  local fixture=$1
 
+  cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$fixture/_scripts/topic-catalog"
+  cp "$REPOSITORY_ROOT/_scripts/link-dotfiles" "$fixture/_scripts/link-dotfiles"
+  cp "$REPOSITORY_ROOT/_scripts/link-config" "$fixture/_scripts/link-config"
+  cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$fixture/_scripts/installer-output.sh"
+  chmod +x "$fixture/_scripts/topic-catalog" "$fixture/_scripts/link-dotfiles" \
+    "$fixture/_scripts/link-config"
+}
+
+# Supply the run's topic catalog from a file. The case then states which
+# topics and links exist rather than building them.
+declare_topic_catalog() {
+  local fixture=$1
+
+  shift
+  catalog_rows "$fixture" "$@" >"$fixture/declared.tsv"
+  printf '%s\n' "$fixture/declared.tsv"
+}
+
+# Leading KEY=value arguments reach setup's environment, which is how a case
+# injects a failure without exporting it into the next one.
+invoke() {
+  local fixture=$1
+
+  shift
   scenario_capture "$fixture" env \
     HOME="$fixture/home" \
     PATH="$fixture/fake-bin:/usr/bin:/bin" \
-    FAKE_BREW_PREFIX="$fixture/fake-prefix" \
-    DOTFILES_HOMEBREW_ROOT="$fixture/platform" \
-    EDITOR="$fixture/fake-bin/editor" \
     "$@"
 }
 
 test_setup_usage() {
   local fixture
-  local status
 
   fixture=$(make_fixture)
-  if invoke "$fixture" "$fixture/_scripts/setup" invalid; then
-    return 1
-  else
-    status=$?
-  fi
-
-  [ "$status" -eq 2 ]
+  assert_fails_with_status 2 invoke "$fixture" "$fixture/_scripts/setup" invalid
   assert_contains "$fixture/stderr.log" 'Usage: _scripts/setup bootstrap|update'
+  assert_fails_with_status 2 invoke "$fixture" "$fixture/_scripts/setup" checklist
+  assert_fails_with_status 2 \
+    invoke "$fixture" "$fixture/_scripts/setup" checklist --open-apps extra
+  assert_empty "$fixture/events.log"
 }
 
 test_bootstrap_sequence() {
   local fixture
-  local fixture_ssh_config
 
   fixture=$(make_fixture)
-  fixture_ssh_config=$(cd "$fixture/ssh" && pwd -P)/config
   invoke "$fixture" "$fixture/_scripts/setup" bootstrap
 
-  assert_before "$fixture/stdout.log" 'Git identity' 'dotfile links'
-  assert_before "$fixture/stdout.log" 'dotfile links' 'macOS defaults'
+  assert_before "$fixture/stdout.log" 'local environment' 'Git identity'
+  assert_before "$fixture/stdout.log" 'Git identity' 'topic catalog'
+  assert_before "$fixture/stdout.log" 'topic catalog' 'dotfile links'
+  assert_before "$fixture/events.log" topic-catalog 'link-dotfiles -- '
+  assert_before "$fixture/events.log" link-dotfiles macos-defaults
   assert_before "$fixture/events.log" macos-defaults hostname
   assert_before "$fixture/events.log" hostname homebrew-installer
-  assert_before "$fixture/events.log" "brew tap $FIRST_TRUSTED_TAP" 'brew trust --tap'
-  assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
-  assert_before "$fixture/events.log" 'brew bundle --file' topic-workspace
+  assert_before "$fixture/events.log" homebrew-installer homebrew-maintenance
+  assert_before "$fixture/events.log" homebrew-maintenance homebrew-bundle
+  assert_before "$fixture/events.log" homebrew-bundle topic-workspace
   assert_before "$fixture/events.log" topic-alpha topic-zulu
-  assert_count "$fixture/events.log" homebrew-installer 1
   assert_not_contains "$fixture/events.log" 'git '
   assert_not_contains "$fixture/events.log" 'brew update'
-  assert_not_contains "$fixture/events.log" 'brew upgrade'
-  assert_not_contains "$fixture/events.log" 'software-upgrades'
-  assert_not_contains "$fixture/events.log" ssh-keygen
-  assert_not_contains "$fixture/events.log" topic-ignored
-  assert_not_contains "$fixture/events.log" topic-bin
+  assert_not_contains "$fixture/events.log" software-upgrades
   assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
-  [ -L "$fixture/home/.localrc" ]
-  [ -L "$fixture/home/.config" ]
-  [ ! -L "$fixture/home/.dotfiles-root" ]
-  [ ! -e "$fixture/home/.hidden" ]
-  [ ! -e "$fixture/home/.reserved" ]
-  [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
+  assert_mode "$fixture/.localrc" 600
 }
 
 test_update_sequence_and_cwd_independence() {
   local fixture
-  local fixture_ssh_config
 
   fixture=$(make_fixture)
-  printf '%s\n' 'local conflict' >"$fixture/home/.preserved"
-  fixture_ssh_config=$(cd "$fixture/ssh" && pwd -P)/config
   (
     cd "$TEST_ROOT" || exit 1
     invoke "$fixture" "$fixture/_scripts/setup" update
   )
 
-  assert_before "$fixture/events.log" 'rev-parse --is-inside-work-tree' ' pull'
   assert_before "$fixture/stdout.log" 'checkout refresh' 'local environment'
-  assert_before "$fixture/stdout.log" 'local environment' 'dotfile links'
-  assert_before "$fixture/stdout.log" 'dotfile links' 'Homebrew available'
-  assert_before "$fixture/events.log" ' pull' homebrew-installer
-  assert_before "$fixture/events.log" homebrew-installer 'brew update'
-  assert_before "$fixture/events.log" 'brew tap' 'brew update'
-  assert_before "$fixture/events.log" 'brew update' "brew tap $FIRST_TRUSTED_TAP"
-  assert_before "$fixture/events.log" topic-zulu 'software-upgrades'
-  assert_not_contains "$fixture/events.log" 'brew upgrade'
-  assert_before "$fixture/events.log" 'brew trust --tap' 'brew bundle --file'
-  assert_before "$fixture/events.log" 'brew bundle --file' topic-alpha
+  assert_before "$fixture/stdout.log" 'local environment' 'topic catalog'
+  assert_before "$fixture/stdout.log" 'topic catalog' 'dotfile links'
+  assert_before "$fixture/events.log" 'rev-parse --is-inside-work-tree' ' pull'
+  assert_before "$fixture/events.log" ' pull' topic-catalog
+  assert_before "$fixture/events.log" topic-catalog 'link-dotfiles --batch skip -- '
+  assert_before "$fixture/events.log" link-dotfiles homebrew-installer
+  assert_before "$fixture/events.log" homebrew-installer homebrew-maintenance
+  assert_before "$fixture/events.log" homebrew-maintenance 'brew update'
+  assert_before "$fixture/events.log" 'brew update' homebrew-bundle
+  assert_before "$fixture/events.log" homebrew-bundle topic-workspace
+  assert_before "$fixture/events.log" topic-zulu software-upgrades
   assert_not_contains "$fixture/events.log" macos-defaults
   assert_not_contains "$fixture/events.log" hostname
   assert_not_contains "$fixture/stdout.log" 'Git identity'
-  assert_not_contains "$fixture/events.log" ssh-keygen
-  assert_not_contains "$fixture/events.log" topic-bin
   assert_contains "$fixture/stdout.log" 'setup update complete'
-  [ ! -L "$fixture/home/.dotfiles-root" ]
-  [ -L "$fixture/home/.config" ]
-  [ -L "$fixture/home/.bundle" ]
-  assert_contains "$fixture/home/.bundle/config.json" 'directory config'
-  assert_contains "$fixture/home/.preserved" 'local conflict'
-  [ ! -L "$fixture/home/.preserved" ]
-  [ "$(readlink "$fixture/home/.ssh/config")" = "$fixture_ssh_config" ]
 }
 
-test_standard_modes_never_open_apps_or_launch_checklist() {
-  local bootstrap_fixture
-  local update_fixture
-
-  bootstrap_fixture=$(make_fixture)
-  invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/setup" bootstrap
-  assert_not_contains "$bootstrap_fixture/events.log" 'open '
-  assert_not_contains "$bootstrap_fixture/events.log" 'checklist-entry '
-  assert_not_contains "$bootstrap_fixture/stdout.log" 'Post-bootstrap checklist'
-
-  update_fixture=$(make_fixture)
-  invoke "$update_fixture" "$update_fixture/_scripts/setup" update
-  assert_not_contains "$update_fixture/events.log" 'open '
-  assert_not_contains "$update_fixture/events.log" 'checklist-entry '
-  assert_not_contains "$update_fixture/stdout.log" 'Post-bootstrap checklist'
-}
-
-test_checklist_opening_requires_interactive_opt_in() {
+# The classifier runs once, and the links and the installers both come from
+# that one reading.
+test_one_topic_catalog_feeds_links_and_installers() {
   local fixture
-  local status=0
 
   fixture=$(make_fixture)
-  invoke "$fixture" "$fixture/_scripts/setup" checklist --open-apps || status=$?
+  invoke "$fixture" "$fixture/_scripts/setup" update
 
-  assert_equal 1 "$status" 'non-interactive checklist status'
+  assert_count "$fixture/events.log" topic-catalog 1
+  assert_contains "$fixture/events.log" "topic-catalog $fixture"
+  assert_contains "$fixture/events.log" \
+    "link-dotfiles --batch skip -- $fixture/sample/bundle.symlink $fixture/sample/config.symlink"
+  assert_count "$fixture/events.log" homebrew-installer 1
+  assert_count "$fixture/events.log" topic-alpha 1
+  assert_count "$fixture/events.log" topic-workspace 1
+  assert_count "$fixture/events.log" topic-zulu 1
+}
+
+test_the_declared_catalog_decides_what_runs_and_in_what_order() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" \
+    'installer zulu/install.sh' \
+    'installer homebrew/install.sh' \
+    'installer workspace/install.sh' \
+    'link sample/bundle.symlink')
+
+  invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" "$fixture/_scripts/setup" bootstrap
+
+  # The declared catalog replaces the classifier rather than adding to it.
+  assert_not_contains "$fixture/events.log" topic-catalog
+  assert_contains "$fixture/events.log" "link-dotfiles -- $fixture/sample/bundle.symlink"
+  assert_not_contains "$fixture/events.log" config.symlink
+  # workspace is a prerequisite topic, so it runs first whatever place the
+  # catalog gives it; zulu follows in catalog order.
+  assert_before "$fixture/events.log" topic-workspace topic-zulu
+  # alpha is on disk and absent from the catalog, so nothing runs it.
+  assert_not_contains "$fixture/events.log" topic-alpha
+  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
+}
+
+# Homebrew's installer has its own phase, before the Brewfile, so a catalog
+# that lists it among the topics does not run it a second time with them.
+test_a_listed_homebrew_installer_runs_once_in_its_own_phase() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" \
+    'installer workspace/install.sh' \
+    'installer homebrew/install.sh' \
+    'installer zulu/install.sh')
+
+  invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" "$fixture/_scripts/setup" update
+
+  assert_count "$fixture/events.log" homebrew-installer 1
+  assert_before "$fixture/events.log" homebrew-installer homebrew-bundle
+  assert_contains "$fixture/stdout.log" 'setup update complete'
+}
+
+test_a_catalog_without_the_homebrew_installer_stops_the_run() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" \
+    'installer workspace/install.sh' \
+    'link sample/config.symlink')
+
+  assert_fails_with_status 1 invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" \
+    "$fixture/_scripts/setup" update
+
+  assert_contains "$fixture/stderr.log" 'Homebrew topic has no installer: homebrew'
+  assert_not_contains "$fixture/events.log" link-dotfiles
+  assert_not_contains "$fixture/events.log" homebrew-installer
+}
+
+# A declared catalog decides what this run links and executes, and an exported
+# value reaches a real bootstrap, so each row must have the shape the
+# classifier emits for this checkout. Every row below leaves it, and each is
+# refused before anything consumes the catalog.
+test_a_declared_catalog_may_not_name_a_path_outside_the_checkout() {
+  local fixture outsider escape row
+
+  fixture=$(make_fixture)
+  outsider=$(scenario_tmpdir outsider)
+  write_recording_stub "$outsider/evil/install.sh" topic-evil FAIL_EVIL
+  printf '%s\n' 'outside' >"$outsider/evil.symlink"
+  escape=$fixture/../${outsider##*/}
+
+  for row in \
+    "installer"$'\t'"$outsider/evil/install.sh" \
+    "installer"$'\t'"$escape/evil/install.sh" \
+    "installer"$'\t'"$fixture/../install.sh" \
+    "installer"$'\t'"$fixture/zulu/nested/install.sh" \
+    "link"$'\t'"$outsider/evil.symlink" \
+    "link"$'\t'"$escape/evil.symlink" \
+    "link"$'\t'"$fixture/sample/..symlink"; do
+    {
+      catalog_rows "$fixture" 'installer homebrew/install.sh' 'installer workspace/install.sh'
+      printf '%s\n' "$row"
+    } >"$fixture/declared.tsv"
+
+    assert_fails_with_status 1 invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/declared.tsv" \
+      "$fixture/_scripts/setup" bootstrap
+    assert_contains "$fixture/stderr.log" "outside the checkout layout: ${row#*$'\t'}"
+    assert_empty "$fixture/events.log"
+  done
+}
+
+test_a_declared_catalog_may_not_repeat_a_row() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" \
+    'installer homebrew/install.sh' \
+    'installer workspace/install.sh' \
+    'installer zulu/install.sh' \
+    'installer zulu/install.sh')
+
+  assert_fails_with_status 1 invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" \
+    "$fixture/_scripts/setup" bootstrap
+
   assert_contains "$fixture/stderr.log" \
-    'app checklist opening requires an interactive terminal'
-  assert_not_contains "$fixture/events.log" 'open '
-  assert_contains "$fixture/_scripts/setup" \
-    "[ \"\$#\" -eq 2 ] && [ \"\$1\" = checklist ] && [ \"\$2\" = --open-apps ]"
+    "declared topic catalog repeats a row: $fixture/zulu/install.sh"
+  assert_empty "$fixture/events.log"
 }
 
-# Setup decides when the checklist runs and nothing about what it holds. What
-# the checklist does with a row belongs to tests/checklist_test.sh, which drives
-# the module through DOTFILES_CHECKLIST_CATALOG rather than reading its source.
-test_setup_names_no_application_or_checklist_content() {
+test_an_unreadable_declared_catalog_stops_the_run() {
   local fixture
 
   fixture=$(make_fixture)
-  assert_not_contains "$fixture/_scripts/setup" '/Applications/'
-  assert_not_contains "$fixture/_scripts/setup" 'CHECKLIST_OPEN_PATHS'
+
+  assert_fails_with_status 1 invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/absent.tsv" \
+    "$fixture/_scripts/setup" bootstrap
+
+  assert_contains "$fixture/stderr.log" 'topic catalog not readable'
+  assert_empty "$fixture/events.log"
+}
+
+test_prerequisite_topics_run_first() {
+  local fixture
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
+
+  # workspace sorts after alpha and runs first; alpha and zulu keep catalog
+  # order.
+  assert_before "$fixture/events.log" topic-workspace topic-alpha
+  assert_before "$fixture/events.log" topic-workspace topic-zulu
+  assert_before "$fixture/events.log" topic-alpha topic-zulu
+}
+
+# The plan is checked whole when the catalog is read, so a missing prerequisite
+# stops the run before the first link rather than after the Brewfile.
+test_unknown_prerequisite_topic_stops_the_run() {
+  local fixture catalog
+
+  fixture=$(make_fixture)
+  catalog=$(declare_topic_catalog "$fixture" \
+    'installer alpha/install.sh' \
+    'installer homebrew/install.sh')
+
+  assert_fails_with_status 1 invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" \
+    "$fixture/_scripts/setup" bootstrap
+
+  assert_contains "$fixture/stderr.log" \
+    'declared prerequisite topic has no installer: workspace'
+  assert_empty "$fixture/events.log"
+  assert_not_contains "$fixture/stdout.log" 'setup bootstrap complete'
+}
+
+test_standard_modes_never_launch_the_checklist() {
+  local fixture
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
+  assert_not_contains "$fixture/events.log" checklist
+
+  invoke "$fixture" "$fixture/_scripts/setup" update
+  assert_not_contains "$fixture/events.log" checklist
+}
+
+# Setup decides only that the checklist runs. The opt-in reaches the module
+# unchanged, and the module's verdict is the run's.
+test_the_checklist_mode_hands_the_opt_in_to_the_checklist() {
+  local fixture
+
+  fixture=$(make_fixture)
+  invoke "$fixture" "$fixture/_scripts/setup" checklist --open-apps
+  assert_equal 'checklist --open-apps' "$(command cat "$fixture/events.log")" \
+    'checklist invocation'
+
+  assert_fails_with_status 1 invoke "$fixture" FAIL_CHECKLIST=1 \
+    "$fixture/_scripts/setup" checklist --open-apps
 }
 
 test_app_installers_never_launch_apps_implicitly() {
@@ -381,112 +445,81 @@ test_app_installers_never_launch_apps_implicitly() {
   done
 }
 
-test_legacy_homebrew_cleanup_precedes_upgrade() {
+test_advisory_failures_continue() {
   local fixture
 
   fixture=$(make_fixture)
-  export FAKE_BREW_TAPS=xo/xo
-  invoke "$fixture" "$fixture/_scripts/setup" update
-  unset FAKE_BREW_TAPS
+  invoke "$fixture" FAIL_HOSTNAME=1 "$fixture/_scripts/setup" bootstrap
+  assert_contains "$fixture/stderr.log" 'hostname normalization failed; continuing'
+  assert_contains "$fixture/events.log" topic-zulu
+  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
 
-  assert_contains "$fixture/events.log" 'brew untap xo/xo'
-  assert_before "$fixture/events.log" 'brew untap xo/xo' 'brew update'
-}
+  fixture=$(make_fixture)
+  invoke "$fixture" FAIL_GIT_PULL=1 FAIL_HOMEBREW_MAINTENANCE=1 FAIL_BREW_UPDATE=1 \
+    FAIL_SOFTWARE_UPGRADES=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'checkout refresh failed; continuing'
+  assert_contains "$fixture/stderr.log" 'Homebrew legacy cleanup failed; continuing'
+  assert_contains "$fixture/stderr.log" 'Homebrew update failed; continuing'
+  assert_contains "$fixture/stderr.log" 'Declared software upgrades failed; continuing'
+  assert_contains "$fixture/events.log" topic-zulu
+  assert_contains "$fixture/stdout.log" 'setup update complete'
 
-test_advisory_failures_continue() {
-  local bootstrap_fixture
-  local non_git_fixture
-  local update_fixture
-
-  bootstrap_fixture=$(make_fixture)
-  export FAIL_HOSTNAME=1
-  invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/setup" bootstrap
-  unset FAIL_HOSTNAME
-  assert_contains "$bootstrap_fixture/stderr.log" 'hostname normalization failed; continuing'
-  assert_contains "$bootstrap_fixture/events.log" topic-zulu
-  assert_contains "$bootstrap_fixture/stdout.log" 'setup bootstrap complete'
-
-  update_fixture=$(make_fixture)
-  export FAIL_GIT_PULL=1 FAIL_BREW_UPDATE=1 FAIL_SOFTWARE_UPGRADES=1
-  invoke "$update_fixture" "$update_fixture/_scripts/setup" update
-  unset FAIL_GIT_PULL FAIL_BREW_UPDATE FAIL_SOFTWARE_UPGRADES
-  assert_contains "$update_fixture/stderr.log" 'checkout refresh failed; continuing'
-  assert_contains "$update_fixture/stderr.log" 'Homebrew update failed; continuing'
-  assert_contains "$update_fixture/stderr.log" 'Declared software upgrades failed; continuing'
-  assert_contains "$update_fixture/events.log" topic-zulu
-  assert_contains "$update_fixture/stdout.log" 'setup update complete'
-
-  non_git_fixture=$(make_fixture)
-  export FAIL_GIT_CHECKOUT=1
-  invoke "$non_git_fixture" "$non_git_fixture/_scripts/setup" update
-  unset FAIL_GIT_CHECKOUT
-  assert_contains "$non_git_fixture/stderr.log" 'is not a Git checkout'
-  assert_contains "$non_git_fixture/stderr.log" 'checkout refresh failed; continuing'
-  assert_not_contains "$non_git_fixture/events.log" ' pull'
-  assert_contains "$non_git_fixture/events.log" topic-zulu
+  fixture=$(make_fixture)
+  invoke "$fixture" FAIL_GIT_CHECKOUT=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'is not a Git checkout'
+  assert_contains "$fixture/stderr.log" 'checkout refresh failed; continuing'
+  assert_not_contains "$fixture/events.log" ' pull'
+  assert_contains "$fixture/events.log" topic-zulu
 }
 
 test_critical_failures_stop() {
-  local defaults_fixture
-  local bundle_fixture
-  local homebrew_fixture
-  local prefix_fixture
-  local topic_fixture
-
-  defaults_fixture=$(make_fixture)
-  export FAIL_DEFAULTS=1
-  if invoke "$defaults_fixture" "$defaults_fixture/_scripts/setup" bootstrap; then
-    return 1
-  fi
-  unset FAIL_DEFAULTS
-  assert_contains "$defaults_fixture/stderr.log" 'macOS defaults'
-  assert_not_contains "$defaults_fixture/events.log" homebrew-installer
-  assert_not_contains "$defaults_fixture/stdout.log" 'setup bootstrap complete'
-
-  homebrew_fixture=$(make_fixture)
-  export FAIL_HOMEBREW_INSTALL=1
-  if invoke "$homebrew_fixture" "$homebrew_fixture/_scripts/setup" update; then
-    return 1
-  fi
-  unset FAIL_HOMEBREW_INSTALL
-  assert_contains "$homebrew_fixture/stderr.log" 'Homebrew available'
-  assert_not_contains "$homebrew_fixture/events.log" 'brew update'
-  assert_not_contains "$homebrew_fixture/events.log" topic-alpha
-
-  prefix_fixture=$(make_fixture)
-  export FAIL_BREW_PREFIX=1
-  if invoke "$prefix_fixture" "$prefix_fixture/_scripts/setup" update; then
-    return 1
-  fi
-  unset FAIL_BREW_PREFIX
-  assert_contains "$prefix_fixture/stderr.log" 'Homebrew available'
-  assert_not_contains "$prefix_fixture/events.log" 'brew update'
-  assert_not_contains "$prefix_fixture/events.log" topic-alpha
-
-  bundle_fixture=$(make_fixture)
-  export FAIL_BREW_BUNDLE=1
-  if invoke "$bundle_fixture" "$bundle_fixture/_scripts/setup" update; then
-    return 1
-  fi
-  unset FAIL_BREW_BUNDLE
-  assert_contains "$bundle_fixture/stderr.log" 'Brewfile dependencies'
-  assert_not_contains "$bundle_fixture/events.log" topic-alpha
-  assert_not_contains "$bundle_fixture/stdout.log" 'setup update complete'
-
-  topic_fixture=$(make_fixture)
-  export FAIL_TOPIC_ALPHA=1
-  if invoke "$topic_fixture" "$topic_fixture/_scripts/setup" update; then
-    return 1
-  fi
-  unset FAIL_TOPIC_ALPHA
-  assert_contains "$topic_fixture/stderr.log" 'topic installer: alpha/install.sh'
-  assert_not_contains "$topic_fixture/events.log" topic-zulu
-}
-
-test_interactive_git_identity() {
   local fixture
 
   fixture=$(make_fixture)
+  assert_fails_with_status 1 invoke "$fixture" FAIL_LINKS=1 "$fixture/_scripts/setup" bootstrap
+  assert_contains "$fixture/stderr.log" 'dotfile links'
+  assert_not_contains "$fixture/events.log" macos-defaults
+
+  fixture=$(make_fixture)
+  assert_fails_with_status 1 invoke "$fixture" FAIL_DEFAULTS=1 "$fixture/_scripts/setup" bootstrap
+  assert_contains "$fixture/stderr.log" 'macOS defaults'
+  assert_not_contains "$fixture/events.log" homebrew-installer
+  assert_not_contains "$fixture/stdout.log" 'setup bootstrap complete'
+
+  fixture=$(make_fixture)
+  assert_fails_with_status 1 \
+    invoke "$fixture" FAIL_HOMEBREW_INSTALL=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'Homebrew available'
+  assert_not_contains "$fixture/events.log" 'brew update'
+  assert_not_contains "$fixture/events.log" topic-alpha
+
+  fixture=$(make_fixture)
+  assert_fails_with_status 1 invoke "$fixture" FAIL_BREW_PREFIX=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'Homebrew available'
+  assert_not_contains "$fixture/events.log" 'brew update'
+  assert_not_contains "$fixture/events.log" topic-alpha
+
+  fixture=$(make_fixture)
+  assert_fails_with_status 1 \
+    invoke "$fixture" FAIL_HOMEBREW_BUNDLE=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'Brewfile dependencies'
+  assert_not_contains "$fixture/events.log" topic-alpha
+  assert_not_contains "$fixture/stdout.log" 'setup update complete'
+
+  fixture=$(make_fixture)
+  assert_fails_with_status 1 invoke "$fixture" FAIL_TOPIC_ALPHA=1 "$fixture/_scripts/setup" update
+  assert_contains "$fixture/stderr.log" 'topic installer: alpha/install.sh'
+  assert_not_contains "$fixture/events.log" topic-zulu
+}
+
+# Bootstrap writes the Git identity before it reads the topic catalog, so the
+# identity it just wrote is among the links. This is the case that keeps the
+# real classifier and linker: the sources leave setup and must arrive.
+test_bootstrap_links_the_git_identity_it_wrote() {
+  local fixture
+
+  fixture=$(make_fixture)
+  use_real_classifier_and_linker "$fixture"
   rm "$fixture/git/gitconfig.local.symlink"
   scenario_write_file "$fixture/git/gitconfig.local.symlink.example" <<'EOF'
 [user]
@@ -497,229 +530,70 @@ test_interactive_git_identity() {
 EOF
 
   printf '%s\n%s\n' 'Dan & Co|Ops' 'dan+test@example.com' \
-    | scenario_capture "$fixture" env \
-      HOME="$fixture/home" \
-      PATH="$fixture/fake-bin:/usr/bin:/bin" \
-      FAKE_BREW_PREFIX="$fixture/fake-prefix" \
-      "$fixture/_scripts/setup" bootstrap
+    | invoke "$fixture" "$fixture/_scripts/setup" bootstrap
 
   assert_contains "$fixture/git/gitconfig.local.symlink" 'name = Dan & Co|Ops'
   assert_contains "$fixture/git/gitconfig.local.symlink" 'email = dan+test@example.com'
   assert_contains "$fixture/git/gitconfig.local.symlink" 'helper = osxkeychain'
-  [ -L "$fixture/home/.gitconfig.local" ]
+  assert_equal "$fixture/git/gitconfig.local.symlink" \
+    "$(readlink "$fixture/home/.gitconfig.local")" 'Git identity link'
+  assert_equal "$fixture/sample/config.symlink" \
+    "$(readlink "$fixture/home/.config")" 'topic link'
+  assert_equal "$fixture/.localrc" "$(readlink "$fixture/home/.localrc")" 'localrc link'
+  assert_count "$fixture/events.log" homebrew-installer 1
+  assert_before "$fixture/events.log" topic-workspace topic-alpha
+  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
 }
 
 test_platform_and_fresh_homebrew() {
-  local linux_fixture
-  local fresh_brew_fixture
-
-  linux_fixture=$(make_fixture)
-  export FAKE_UNAME=Linux
-  invoke "$linux_fixture" "$linux_fixture/_scripts/setup" bootstrap
-  unset FAKE_UNAME
-  assert_not_contains "$linux_fixture/events.log" macos-defaults
-  assert_not_contains "$linux_fixture/events.log" hostname
-  assert_contains "$linux_fixture/stdout.log" 'macOS configuration skipped on this platform'
-
-  fresh_brew_fixture=$(make_fixture absent)
-  export SETUP_TEST_BREW_TARGET="$fresh_brew_fixture/fake-bin/brew"
-  export SETUP_TEST_BREW_TEMPLATE="$fresh_brew_fixture/fake-bin/brew-template"
-  invoke "$fresh_brew_fixture" "$fresh_brew_fixture/_scripts/setup" update
-  unset SETUP_TEST_BREW_TARGET SETUP_TEST_BREW_TEMPLATE
-  [ -x "$fresh_brew_fixture/fake-bin/brew" ]
-  assert_count "$fresh_brew_fixture/events.log" homebrew-installer 1
-  assert_contains "$fresh_brew_fixture/events.log" 'brew bundle --file'
-}
-
-test_command_adapters() {
-  local bootstrap_fixture
-  local update_fixture
-  local defaults_fixture
-  local edit_fixture
-  local edit_fixture_root
-  local mobile_fixture
-
-  bootstrap_fixture=$(make_fixture)
-  invoke "$bootstrap_fixture" "$bootstrap_fixture/_scripts/bootstrap"
-  assert_contains "$bootstrap_fixture/stdout.log" 'setup bootstrap complete'
-  assert_not_contains "$bootstrap_fixture/events.log" 'git '
-
-  update_fixture=$(make_fixture)
-  invoke "$update_fixture" "$update_fixture/bin/dot"
-  assert_contains "$update_fixture/stdout.log" 'setup update complete'
-  assert_contains "$update_fixture/events.log" 'git -C'
-  assert_not_contains "$update_fixture/events.log" 'open '
-
-  defaults_fixture=$(make_fixture)
-  invoke "$defaults_fixture" "$defaults_fixture/bin/set-defaults"
-  assert_count "$defaults_fixture/events.log" macos-defaults 1
-  assert_not_contains "$defaults_fixture/events.log" hostname
-
-  edit_fixture=$(make_fixture)
-  edit_fixture_root=$(cd "$edit_fixture" && pwd -P)
-  invoke "$edit_fixture" "$edit_fixture/bin/dot" --edit
-  assert_contains "$edit_fixture/events.log" "editor $edit_fixture_root"
-  assert_not_contains "$edit_fixture/events.log" 'git '
-
-  mobile_fixture=$(make_fixture)
-  invoke "$mobile_fixture" "$mobile_fixture/bin/mobile-setup" --help
-  assert_contains "$mobile_fixture/stdout.log" \
-    'Usage: mobile-setup [--check] [ios|android|all]'
-}
-
-test_mobile_checks_are_advisory_during_normal_setup() {
   local fixture
 
   fixture=$(make_fixture)
-  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
+  invoke "$fixture" FAKE_UNAME=Linux "$fixture/_scripts/setup" bootstrap
+  assert_not_contains "$fixture/events.log" macos-defaults
+  assert_not_contains "$fixture/events.log" hostname
+  assert_contains "$fixture/stdout.log" 'macOS configuration skipped on this platform'
 
-  assert_contains "$fixture/stderr.log" 'Run: mobile-setup ios'
-  assert_contains "$fixture/stderr.log" 'Run: mobile-setup android'
-  assert_not_contains "$fixture/events.log" 'xcodebuild '
-  assert_not_contains "$fixture/events.log" 'sdkmanager '
-  assert_not_contains "$fixture/events.log" 'avdmanager '
-  assert_not_contains "$fixture/events.log" 'open '
-  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
-
-  fixture=$(make_fixture)
+  fixture=$(make_fixture absent)
   invoke "$fixture" "$fixture/_scripts/setup" update
-
-  assert_contains "$fixture/stderr.log" 'Run: mobile-setup ios'
-  assert_contains "$fixture/stderr.log" 'Run: mobile-setup android'
-  assert_not_contains "$fixture/events.log" 'xcodebuild '
-  assert_not_contains "$fixture/events.log" 'sdkmanager '
-  assert_not_contains "$fixture/events.log" 'avdmanager '
-  assert_not_contains "$fixture/events.log" 'open '
-  assert_contains "$fixture/stdout.log" 'setup update complete'
-}
-
-# Run order is the whole reason these topics exist in the fixture, and observing
-# it used to mean building a topic tree and letting the classifier find it. The
-# catalog seam states the list directly, so a case can put a topic in a different
-# place, or leave one out, without touching the tree at all.
-declare_topic_catalog() {
-  local fixture=$1
-  shift
-  local topic
-
-  : >"$fixture/topic-catalog.tsv"
-  for topic in "$@"; do
-    printf 'installer\t%s/%s/install.sh\n' "$fixture" "$topic" \
-      >>"$fixture/topic-catalog.tsv"
-  done
-  printf '%s\n' "$fixture/topic-catalog.tsv"
-}
-
-test_the_declared_catalog_decides_which_topics_run_and_in_what_order() {
-  local fixture catalog
-
-  fixture=$(make_fixture)
-  catalog=$(declare_topic_catalog "$fixture" zulu workspace)
-
-  invoke "$fixture" DOTFILES_TOPIC_CATALOG="$catalog" \
-    "$fixture/_scripts/setup" bootstrap
-
-  # workspace is a declared prerequisite, so it runs first whatever place the
-  # catalog gives it; zulu follows in catalog order.
-  assert_before "$fixture/events.log" topic-workspace topic-zulu
-  # alpha is on disk and absent from the catalog, so nothing runs it.
-  assert_not_contains "$fixture/events.log" topic-alpha
-  assert_contains "$fixture/stdout.log" 'setup bootstrap complete'
-}
-
-# install_topics executes what the catalog names, so a supplied roster may only
-# name installers inside the checkout. An exported value reaches a real
-# bootstrap, and nothing else in the run would notice.
-test_a_declared_catalog_may_not_name_an_installer_outside_the_checkout() {
-  local fixture outsider
-
-  fixture=$(make_fixture)
-  outsider=$(scenario_tmpdir outsider)
-  mkdir -p "$outsider/evil"
-  scenario_write_executable "$outsider/evil/install.sh" <<EOF
-#!/bin/sh
-printf 'topic-evil\\n' >>"\$SCENARIO_EVENT_LOG"
-EOF
-  printf 'installer\t%s/evil/install.sh\n' "$outsider" >"$fixture/outside.tsv"
-
-  if invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/outside.tsv" \
-    "$fixture/_scripts/setup" bootstrap; then
-    return 1
-  fi
-
-  assert_contains "$fixture/stderr.log" 'names an installer outside the checkout'
-  assert_not_contains "$fixture/events.log" topic-evil
-}
-
-test_an_unreadable_declared_catalog_stops_the_run() {
-  local fixture
-
-  fixture=$(make_fixture)
-
-  if invoke "$fixture" DOTFILES_TOPIC_CATALOG="$fixture/absent.tsv" \
-    "$fixture/_scripts/setup" bootstrap; then
-    return 1
-  fi
-
-  assert_contains "$fixture/stderr.log" 'topic catalog not readable'
-  assert_not_contains "$fixture/events.log" topic-alpha
-}
-
-test_prerequisite_topics_run_first() {
-  local fixture
-
-  fixture=$(make_fixture)
-  invoke "$fixture" "$fixture/_scripts/setup" bootstrap
-
-  # workspace sorts last and runs first; alpha and zulu keep catalog order.
-  assert_before "$fixture/events.log" topic-workspace topic-alpha
-  assert_before "$fixture/events.log" topic-workspace topic-zulu
-  assert_before "$fixture/events.log" topic-alpha topic-zulu
-}
-
-test_unknown_prerequisite_topic_stops_the_run() {
-  local fixture
-
-  fixture=$(make_fixture)
-  rm -rf "$fixture/workspace"
-
-  if invoke "$fixture" "$fixture/_scripts/setup" bootstrap; then
-    return 1
-  fi
-
-  assert_contains "$fixture/stderr.log" \
-    'declared prerequisite topic has no installer: workspace'
-  assert_not_contains "$fixture/events.log" topic-alpha
-  assert_not_contains "$fixture/stdout.log" 'setup bootstrap complete'
+  [ -x "$fixture/fake-prefix/bin/brew" ] \
+    || scenario_fail 'the Homebrew installer did not provide brew'
+  assert_count "$fixture/events.log" homebrew-installer 1
+  assert_before "$fixture/events.log" homebrew-installer 'brew update'
+  assert_contains "$fixture/events.log" homebrew-bundle
 }
 
 scenario_run 'setup rejects unknown modes' test_setup_usage
-scenario_run 'the declared catalog decides which topics run and in what order' \
-  test_the_declared_catalog_decides_which_topics_run_and_in_what_order
+scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
+scenario_run 'update follows the checkout-first sequence from any cwd' \
+  test_update_sequence_and_cwd_independence
+scenario_run 'one topic catalog feeds the links and the installers' \
+  test_one_topic_catalog_feeds_links_and_installers
+scenario_run 'the declared catalog decides what runs and in what order' \
+  test_the_declared_catalog_decides_what_runs_and_in_what_order
+scenario_run 'a listed Homebrew installer runs once, in its own phase' \
+  test_a_listed_homebrew_installer_runs_once_in_its_own_phase
+scenario_run 'a catalog without the Homebrew installer stops the run' \
+  test_a_catalog_without_the_homebrew_installer_stops_the_run
+scenario_run 'a declared catalog may not name a path outside the checkout' \
+  test_a_declared_catalog_may_not_name_a_path_outside_the_checkout
+scenario_run 'a declared catalog may not repeat a row' \
+  test_a_declared_catalog_may_not_repeat_a_row
 scenario_run 'an unreadable declared catalog stops the run' \
   test_an_unreadable_declared_catalog_stops_the_run
-scenario_run 'a declared catalog may not name an installer outside the checkout' \
-  test_a_declared_catalog_may_not_name_an_installer_outside_the_checkout
 scenario_run 'declared prerequisite topics run before the remainder' \
   test_prerequisite_topics_run_first
 scenario_run 'a declared prerequisite without an installer stops the run' \
   test_unknown_prerequisite_topic_stops_the_run
-scenario_run 'bootstrap follows the identity-first phase sequence' test_bootstrap_sequence
-scenario_run 'update follows the checkout-first sequence from any cwd' test_update_sequence_and_cwd_independence
-scenario_run 'standard modes never open apps or launch the checklist' \
-  test_standard_modes_never_open_apps_or_launch_checklist
-scenario_run 'checklist opening requires explicit interactive opt-in' \
-  test_checklist_opening_requires_interactive_opt_in
+scenario_run 'standard modes never launch the checklist' \
+  test_standard_modes_never_launch_the_checklist
+scenario_run 'the checklist mode hands the opt-in to the checklist' \
+  test_the_checklist_mode_hands_the_opt_in_to_the_checklist
 scenario_run 'app installers never launch apps implicitly' \
   test_app_installers_never_launch_apps_implicitly
-scenario_run 'setup names no application paths or checklist content' \
-  test_setup_names_no_application_or_checklist_content
-scenario_run 'legacy Homebrew cleanup precedes update and upgrade' test_legacy_homebrew_cleanup_precedes_upgrade
 scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
 scenario_run 'critical failures stop the run' test_critical_failures_stop
-scenario_run 'bootstrap creates and links an interactive Git identity' test_interactive_git_identity
+scenario_run 'bootstrap links the Git identity it wrote' \
+  test_bootstrap_links_the_git_identity_it_wrote
 scenario_run 'platform skips and fresh Homebrew discovery work' test_platform_and_fresh_homebrew
-scenario_run 'public commands adapt to the canonical modes' test_command_adapters
-scenario_run 'mobile checks remain advisory during normal setup' \
-  test_mobile_checks_are_advisory_during_normal_setup
 scenario_finish

@@ -60,6 +60,12 @@ A unit of the managed environment that gathers the configuration, shell setup
 and optional installation step for one tool or concern.
 _Avoid_: Module, package, plugin
 
+**Prerequisite topic**:
+A topic whose installer must run before the topics that depend on state it
+creates, so its place in the run order is declared rather than inherited from
+its name.
+_Avoid_: Ordered topic, priority topic, first-run topic
+
 **Catalog**:
 A tracked table the owner edits by hand, each row naming one piece of
 configuration that a single consumer applies in row order. The topic catalog and

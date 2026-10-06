@@ -51,6 +51,43 @@ EOF
     'checkout reached through a directory link'
 }
 
+# Each adapter hands its whole job to one module of the checkout containing it.
+# The modules are stubs that record which file was reached and how; what setup
+# and the macOS defaults then do is their own suites' concern.
+test_adapters_reach_their_module_in_the_checkout_containing_them() {
+  local case_root checkout other
+
+  case_root=$(scenario_tmpdir adapters)
+  checkout=$case_root/checkout
+  other=$case_root/other-checkout
+  mkdir -p "$checkout/bin" "$checkout/_scripts" "$other"
+  cp "$REPOSITORY_ROOT/bin/dot" "$REPOSITORY_ROOT/bin/set-defaults" "$checkout/bin/"
+  cp "$REPOSITORY_ROOT/_scripts/bootstrap" "$checkout/_scripts/bootstrap"
+  chmod +x "$checkout/bin/dot" "$checkout/bin/set-defaults" "$checkout/_scripts/bootstrap"
+  scenario_write_executable "$checkout/_scripts/setup" <<'EOF'
+#!/bin/sh
+printf '%s %s\n' "$0" "$*" >>"$SCENARIO_EVENT_LOG"
+EOF
+  scenario_write_executable "$checkout/_macos/set-defaults.sh" <<'EOF'
+#!/bin/sh
+printf '%s %s\n' "$0" "$*" >>"$SCENARIO_EVENT_LOG"
+EOF
+
+  reached_by() {
+    local run=$case_root/$1
+    shift
+    scenario_capture "$run" env DOTFILES_ROOT="$other" "$@" || return 1
+    command cat "$run/events.log"
+  }
+
+  assert_equal "$checkout/_scripts/setup bootstrap" \
+    "$(reached_by bootstrap "$checkout/_scripts/bootstrap")" '_scripts/bootstrap'
+  assert_equal "$checkout/_scripts/setup update" \
+    "$(reached_by dot "$checkout/bin/dot")" 'dot'
+  assert_equal "$checkout/_macos/set-defaults.sh " \
+    "$(reached_by set-defaults "$checkout/bin/set-defaults")" 'set-defaults'
+}
+
 # The regression this pins is a command reading the value its caller exported.
 # An executable that names DOTFILES_ROOT assigns it from its own location, or
 # takes it from the installer preamble; a sourced file reads the value of the
@@ -84,6 +121,8 @@ test_no_command_reads_an_inherited_root() {
 
 scenario_run 'dot --edit opens the checkout containing it' \
   test_dot_edit_opens_the_checkout_containing_it
+scenario_run 'adapters reach their module in the checkout containing them' \
+  test_adapters_reach_their_module_in_the_checkout_containing_them
 scenario_run 'no command reads an inherited checkout root' \
   test_no_command_reads_an_inherited_root
 scenario_finish

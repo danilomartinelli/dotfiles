@@ -22,31 +22,36 @@ See `AGENTS.md`, ADR-0004, and `_scripts/link-config`.
 ```text
 bin/dot (resolves the checkout containing it)
   -> _scripts/setup update
-      -> advisory git pull -> private template -> safe links
-      -> Homebrew availability -> advisory maintenance/update
+      -> advisory git pull -> private template -> topic catalog -> safe links
+      -> Homebrew installer and availability -> advisory maintenance/update
       -> Brewfile reconciliation -> prerequisite topics -> remaining topics
           -> installer-preamble.sh -> catalogs/link-config/vendor commands
       -> upgrade-software -> advisory audit -> interactive selection/confirmation
   -> phase output and exit status
 ```
 
-1. `bin/dot` selects edit or update and obtains `DOTFILES_ROOT` through the
-   adapter resolver.
-1. `_scripts/setup` repairs the resolver link, tries checkout refresh, creates a
-   missing private environment template and links with `--batch skip`.
-1. Homebrew availability and declared dependencies are critical. Legacy cleanup,
-   `brew update`, interactive upgrades, and checkout refresh are advisory.
-   Bundle reconciliation uses `--no-upgrade`; new releases need selection.
-1. Discovery supplies installer paths. `workspace` runs first because subsequent
-   topics consume the layout it creates; remaining installers follow catalog order.
+1. `bin/dot` selects edit or update and resolves `DOTFILES_ROOT` from its own
+   location.
+1. `_scripts/setup` tries checkout refresh, creates a missing private
+   environment template, reads the topic catalog once, and hands its link
+   sources to the linker with `--batch skip`.
+1. The Homebrew topic's installer runs before the Brewfile rather than with the
+   topic installers. Homebrew availability and declared dependencies are
+   critical. Legacy cleanup, `brew update`, interactive upgrades, and checkout
+   refresh are advisory. Bundle reconciliation uses `--no-upgrade`; new releases
+   need selection.
+1. The same topic catalog supplies installer paths. `workspace` runs first
+   because subsequent topics consume the layout it creates; remaining installers
+   follow catalog order.
 1. Each installer sources the preamble, checks its dependencies, and applies its
    own settings through shared helpers. Mise installs with `--locked`.
 1. Critical failures stop setup; optional operations report why they skipped.
    Success means the executed operations completed, not that manual sign-ins or
    all optional integrations are ready.
 
-Bootstrap instead creates private Git identity when absent, links files,
-applies macOS defaults, and enters the dependency pipeline. Daily update does
+Bootstrap instead creates private Git identity when absent, reads the topic
+catalog after it so a new identity is linked, links files, applies macOS
+defaults, and enters the dependency pipeline. Daily update does
 not reapply those defaults. These orders come from `_scripts/setup`.
 
 Shell startup is a separate flow:
@@ -69,7 +74,7 @@ reaching the next shell.
 
 | Layer or module                | Owns                                                                                         | Must not own                                   | Evidence                                                                            |
 | ------------------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `_scripts/setup`               | Phase ordering, prerequisite ordering and failure severity                                   | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                              |
+| `_scripts/setup`               | One run plan per topic catalog, phase and prerequisite ordering, failure severity            | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                              |
 | `_scripts/topic-catalog`       | Deterministic kind/path classification                                                       | Applying discovered configuration              | `_scripts/topic-catalog`                                                            |
 | `installer-preamble.sh`        | Installer context, guards, run-once markers and linking wrappers                             | Creating credentials                           | `_scripts/installer-preamble.sh`                                                    |
 | `link-dotfiles`, `link-config` | Conflict selection and destination classification/mutation respectively                      | Package-manager orchestration                  | Both linker sources                                                                 |
