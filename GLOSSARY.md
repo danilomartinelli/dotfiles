@@ -37,6 +37,12 @@ _Avoid_: Floating version, range
 A newer available release of declared software that the owner may select for
 installation. Availability alone does not authorize a version change.
 
+**Reconciliation**:
+Applying the owner's existing software declarations and recorded version
+selections to the Mac, without selecting new releases or regenerating those
+selections.
+_Avoid_: Upgrade, lock regeneration
+
 **Controlled upgrade**:
 A change to installed software that follows the owner's explicit selection of
 upgrade candidates, including dependencies required by those selections.
