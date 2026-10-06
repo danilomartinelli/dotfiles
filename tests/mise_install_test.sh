@@ -113,4 +113,45 @@ test_formatter_reconciliation_failure_stops_before_pruning() {
 scenario_run 'formatter reconciliation failure stops before pruning' \
   test_formatter_reconciliation_failure_stops_before_pruning
 
+test_owned_legacy_links_are_retired_without_the_old_sources() {
+  local fixture
+  fixture=$(new_fixture)
+  ln -s "$fixture/repository/mise/mise.toml.symlink" "$fixture/home/.mise.toml"
+  ln -s '../repository/mise/mise.lock.symlink' "$fixture/home/.mise.lock"
+
+  invoke_mise "$fixture"
+
+  [[ ! -L $fixture/home/.mise.toml ]] || scenario_fail 'legacy config link remains'
+  [[ ! -L $fixture/home/.mise.lock ]] || scenario_fail 'legacy lock link remains'
+  assert_contains "$fixture/stdout.log" "Removed legacy Mise link $fixture/home/.mise.toml"
+  assert_contains "$fixture/stdout.log" "Removed legacy Mise link $fixture/home/.mise.lock"
+  assert_equal "$fixture/repository/mise/config.toml" \
+    "$(readlink "$fixture/home/.config/mise/config.toml")" 'current config linked'
+  assert_equal "$fixture/repository/mise/mise.lock" \
+    "$(readlink "$fixture/home/.config/mise/mise.lock")" 'current lock linked'
+  assert_contains "$fixture/events.log" 'mise install'
+
+  invoke_mise "$fixture"
+  assert_not_contains "$fixture/stdout.log" 'Removed legacy Mise link'
+}
+
+test_unowned_legacy_destinations_are_preserved() {
+  local fixture
+  fixture=$(new_fixture)
+  printf 'local config\n' >"$fixture/home/.mise.toml"
+  ln -s './local.lock' "$fixture/home/.mise.lock"
+
+  invoke_mise "$fixture"
+
+  assert_contains "$fixture/home/.mise.toml" 'local config'
+  assert_equal './local.lock' "$(readlink "$fixture/home/.mise.lock")" 'foreign legacy link preserved'
+  assert_not_contains "$fixture/stdout.log" 'Removed legacy Mise link'
+  assert_contains "$fixture/events.log" 'mise install'
+}
+
+scenario_run 'owned legacy links are retired without the old sources' \
+  test_owned_legacy_links_are_retired_without_the_old_sources
+scenario_run 'unowned legacy destinations are preserved' \
+  test_unowned_legacy_destinations_are_preserved
+
 scenario_finish

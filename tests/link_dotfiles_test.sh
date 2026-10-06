@@ -228,7 +228,51 @@ test_an_empty_source_list_links_only_localrc() {
   assert_empty "$repo/events.log"
 }
 
+test_a_missing_source_is_named_before_changing_its_destination() {
+  local repo source
+
+  repo=$(make_repo)
+  source=$repo/missing-topic/missing.symlink
+  printf 'keep\n' >"$repo/home/.missing"
+
+  assert_fails_with_status 1 invoke_linker "$repo" --batch overwrite -- "$source"
+  assert_contains "$repo/stderr.log" "source not found: $source"
+  assert_contains "$repo/home/.missing" 'keep'
+  assert_absent "$repo/home/.missing.backup" 'missing source leaves no backup'
+}
+
+test_a_missing_localrc_is_named() {
+  local repo
+
+  repo=$(make_repo)
+  rm "$repo/.localrc"
+
+  assert_fails_with_status 1 invoke_linker "$repo" --batch overwrite
+  assert_contains "$repo/stderr.log" "source not found: $repo/.localrc"
+  assert_absent "$repo/home/.localrc" 'missing localrc is not linked'
+  assert_absent "$repo/home/.config" 'failure stops later links'
+}
+
+test_a_dangling_source_symlink_is_linked() {
+  local repo source
+
+  repo=$(make_repo)
+  source=$repo/sample/dangling.symlink
+  ln -s './missing.conf' "$source"
+
+  invoke_linker "$repo" --batch overwrite -- "$source"
+  assert_equal "$source" "$(readlink "$repo/home/.dangling")" 'dangling source is linked'
+  assert_empty "$repo/stderr.log"
+
+  invoke_linker "$repo" --batch overwrite -- "$source"
+  assert_contains "$repo/stdout.log" "already linked $repo/home/.dangling"
+}
+
 scenario_run 'batch overwrite links localrc and topic symlinks' test_batch_link_and_idempotent
+scenario_run 'a missing localrc is named' test_a_missing_localrc_is_named
+scenario_run 'a dangling source symlink is linked' test_a_dangling_source_symlink_is_linked
+scenario_run 'a missing source is named before changing its destination' \
+  test_a_missing_source_is_named_before_changing_its_destination
 scenario_run 'given sources are linked without classifying the checkout' \
   test_links_exactly_the_sources_it_is_given
 scenario_run 'an empty source list links only localrc' \

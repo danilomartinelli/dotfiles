@@ -13,31 +13,10 @@ installer_link_tool_config mise "Mise config" config.toml
 installer_link_tool_config mise "Mise lock" mise.lock
 sh "$TOPIC_DIR/_configure-trust.sh"
 
-remove_legacy_link() {
-  legacy_path=$1
-  legacy_source=$2
-
-  [ -L "$legacy_path" ] || return 0
-
-  legacy_target=$(readlink "$legacy_path") || return 0
-  case "$legacy_target" in
-    /*) ;;
-    *) legacy_target=$(dirname -- "$legacy_path")/$legacy_target ;;
-  esac
-
-  legacy_target_dir=$(CDPATH='' cd -P -- "$(dirname -- "$legacy_target")" 2>/dev/null && pwd) || return 0
-  legacy_target=$legacy_target_dir/$(basename -- "$legacy_target")
-  legacy_source_dir=$(CDPATH='' cd -P -- "$(dirname -- "$legacy_source")" 2>/dev/null && pwd) || return 0
-  legacy_source=$legacy_source_dir/$(basename -- "$legacy_source")
-
-  if [ "$legacy_target" = "$legacy_source" ]; then
-    rm -f "$legacy_path"
-    installer_note "Removed legacy Mise link $legacy_path"
-  fi
-}
-
-remove_legacy_link "$HOME/.mise.toml" "$TOPIC_DIR/mise.toml.symlink"
-remove_legacy_link "$HOME/.mise.lock" "$TOPIC_DIR/mise.lock.symlink"
+installer_link_config --remove-owned --label "legacy Mise link $HOME/.mise.toml" \
+  "$TOPIC_DIR/mise.toml.symlink" "$HOME/.mise.toml"
+installer_link_config --remove-owned --label "legacy Mise link $HOME/.mise.lock" \
+  "$TOPIC_DIR/mise.lock.symlink" "$HOME/.mise.lock"
 
 # Install exactly what the lock records and never write it. A plain install
 # rewrites the lock into a shape `mise lock` does not produce, so every run

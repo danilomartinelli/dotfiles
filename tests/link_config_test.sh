@@ -239,6 +239,89 @@ test_status_refuses_a_missing_source() {
   assert_contains "$home/stderr.log" 'source not found'
 }
 
+test_removes_an_owned_link_even_when_its_source_is_gone() {
+  local home source destination
+
+  home=$(scenario_tmpdir remove-owned)
+  source=$home/checkout/topic/old.symlink
+  destination=$home/.old
+  mkdir -p "$home/checkout/topic"
+  ln -s "$home/checkout" "$home/checkout-alias"
+  ln -s './checkout-alias/topic/old.symlink' "$destination"
+
+  invoke_link "$home" --remove-owned --label 'legacy config' "$source" "$destination"
+  [[ ! -e $destination && ! -L $destination ]] || scenario_fail 'owned link was not removed'
+  assert_contains "$home/stdout.log" 'Removed legacy config'
+  assert_empty "$home/stderr.log"
+
+  invoke_link "$home" --remove-owned "$source" "$destination"
+  [[ ! -e $destination && ! -L $destination ]] || scenario_fail 'removal recreated the link'
+  assert_empty "$home/stdout.log"
+  assert_empty "$home/stderr.log"
+}
+
+test_removal_preserves_every_destination_it_does_not_own() {
+  local home source destination
+
+  home=$(scenario_tmpdir remove-conflicts)
+  source=$home/source.conf
+  printf 'tracked\n' >"$source"
+  printf 'local\n' >"$home/local.conf"
+  mkdir "$home/local-directory"
+  printf 'keep\n' >"$home/local-directory/entry"
+  ln -s './local.conf' "$home/other-link"
+  ln -s './missing.conf' "$home/dangling-link"
+  ln -s './missing-directory/../source.conf' "$home/unresolvable-link"
+
+  for destination in "$source" "$home/local.conf" "$home/local-directory" \
+    "$home/other-link" "$home/dangling-link" "$home/unresolvable-link" \
+    "$home/absent-directory/config"; do
+    invoke_link "$home" --remove-owned "$source" "$destination"
+    assert_empty "$home/stdout.log"
+    assert_empty "$home/stderr.log"
+  done
+
+  assert_contains "$source" 'tracked'
+  assert_contains "$home/local.conf" 'local'
+  assert_contains "$home/local-directory/entry" 'keep'
+  assert_equal './local.conf' "$(readlink "$home/other-link")" 'foreign link preserved'
+  assert_equal './missing.conf' "$(readlink "$home/dangling-link")" 'dangling conflict preserved'
+  assert_equal './missing-directory/../source.conf' "$(readlink "$home/unresolvable-link")" \
+    'unresolvable link preserved'
+  [[ ! -e $home/absent-directory ]] || scenario_fail 'removal created a directory'
+}
+
+test_removal_leaves_the_source_and_existing_backup_untouched() {
+  local home source destination
+
+  home=$(scenario_tmpdir remove-existing)
+  source=$home/source.conf
+  destination=$home/.config
+  printf 'tracked\n' >"$source"
+  printf 'backup\n' >"$destination.backup"
+  ln -s "$source" "$destination"
+
+  invoke_link "$home" --remove-owned "$source" "$destination"
+  [[ ! -e $destination && ! -L $destination ]] || scenario_fail 'owned link was not removed'
+  assert_contains "$source" 'tracked'
+  assert_contains "$destination.backup" 'backup'
+}
+
+test_status_cannot_be_combined_with_removal() {
+  local home source destination
+
+  home=$(scenario_tmpdir removal-mode)
+  source=$home/source.conf
+  destination=$home/.config
+  printf 'tracked\n' >"$source"
+  ln -s "$source" "$destination"
+
+  assert_fails_with_status 2 invoke_link "$home" --status --remove-owned "$source" "$destination"
+  assert_equal "$source" "$(readlink "$destination")" 'status never removes a link'
+  assert_fails_with_status 2 invoke_link "$home" --remove-owned --status "$source" "$destination"
+  assert_equal "$source" "$(readlink "$destination")" 'reversed modes never remove a link'
+}
+
 test_missing_source_fails() {
   local home
 
@@ -262,4 +345,12 @@ scenario_run 'a missing parent directory is created, never by status' \
   test_creates_a_missing_parent_directory
 scenario_run 'status refuses a missing source' test_status_refuses_a_missing_source
 scenario_run 'missing source fails' test_missing_source_fails
+scenario_run 'an owned link is removed even when its source is gone' \
+  test_removes_an_owned_link_even_when_its_source_is_gone
+scenario_run 'removal preserves every destination it does not own' \
+  test_removal_preserves_every_destination_it_does_not_own
+scenario_run 'removal leaves the source and existing backup untouched' \
+  test_removal_leaves_the_source_and_existing_backup_untouched
+scenario_run 'status cannot be combined with removal' \
+  test_status_cannot_be_combined_with_removal
 scenario_finish
