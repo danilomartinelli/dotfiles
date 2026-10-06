@@ -1,4 +1,4 @@
-# Dock layout catalog consumed by install.sh.
+# Dock layout catalog consumed by install.sh and checked by _layout-rules.sh.
 # Columns: section, path, view, display (section ∈ apps|others)
 # A "-" omits the flag; view ∈ grid|fan|list|auto, display ∈ folder|stack.
 # Row order within a section is apply order, so the last "others" row is the

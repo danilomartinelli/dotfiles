@@ -140,37 +140,57 @@ test_missing_entry_is_skipped_and_the_rest_still_applies() {
     || scenario_fail 'run-once marker not recorded after a skipped entry'
 }
 
+# Every fault in the layout is reported in one run, by line, and none of them
+# reaches the Dock: the check runs before the wipe, so a typo in the last row
+# cannot leave the Dock cleared and never restarted.
 # shellcheck disable=SC2016  # rows keep $HOME literal; the applier expands it
-test_invalid_rows_fail_the_apply() {
+test_an_invalid_layout_leaves_the_dock_untouched() {
   local fixture
+  local stderr
 
   fixture=$(make_fixture)
-  printf 'sidebar\t$HOME/Downloads\t-\t-\n' >"$fixture/layout.tsv"
+  scenario_write_file "$fixture/layout.tsv" <<'EOF'
+apps	$HOME/Applications/One.app	-	-
+sidebar	$HOME/Applications/Two.app	-	-
+others	$WORKSPACE	carousel	folder
+others	$HOME/Downloads	list	drawer
+others	$HOEM/Desktop
+apps	$HOME/Applications/One.app	-	-
+EOF
   if invoke_dock "$fixture" "$fixture/run1"; then
     return 1
   fi
-  assert_contains "$fixture/run1/stderr.log" "unknown catalog section 'sidebar'"
+  stderr=$fixture/run1/stderr.log
 
+  assert_contains "$stderr" "$fixture/layout.tsv:2: unknown section 'sidebar'"
+  assert_contains "$stderr" "$fixture/layout.tsv:3: unknown view 'carousel'"
+  assert_contains "$stderr" "$fixture/layout.tsv:4: unknown display 'drawer'"
+  assert_contains "$stderr" "$fixture/layout.tsv:5: unknown placeholder \$HOEM"
+  assert_contains "$stderr" "$fixture/layout.tsv:5: missing view"
+  assert_contains "$stderr" "$fixture/layout.tsv:5: missing display"
+  assert_contains "$stderr" "$fixture/layout.tsv:6: duplicates line 1"
+  assert_contains "$stderr" "Error: invalid Dock layout catalog: $fixture/layout.tsv"
+  assert_not_contains "$fixture/run1/events.log" 'dockutil'
+  assert_not_contains "$fixture/run1/events.log" 'killall'
+  [[ ! -f $fixture/state/dotfiles/dock-applied ]] \
+    || scenario_fail 'run-once marker recorded for an invalid layout'
+}
+
+# The layout is read again only on a reset, so a row broken after the first
+# apply would otherwise stay hidden behind the marker until then.
+# shellcheck disable=SC2016  # rows keep $HOME literal; the applier expands it
+test_a_broken_layout_is_reported_after_the_dock_was_applied() {
+  local fixture
   fixture=$(make_fixture)
+  invoke_dock "$fixture" "$fixture/run1"
+
   printf 'others\t$HOME/Downloads\tcarousel\tfolder\n' >"$fixture/layout.tsv"
   if invoke_dock "$fixture" "$fixture/run2"; then
     return 1
   fi
-  assert_contains "$fixture/run2/stderr.log" "unknown catalog view 'carousel'"
-
-  fixture=$(make_fixture)
-  printf 'others\t$HOME/Downloads\tlist\tdrawer\n' >"$fixture/layout.tsv"
-  if invoke_dock "$fixture" "$fixture/run3"; then
-    return 1
-  fi
-  assert_contains "$fixture/run3/stderr.log" "unknown catalog display 'drawer'"
-
-  fixture=$(make_fixture)
-  printf 'others\t$HOME/Downloads\n' >"$fixture/layout.tsv"
-  if invoke_dock "$fixture" "$fixture/run4"; then
-    return 1
-  fi
-  assert_contains "$fixture/run4/stderr.log" 'invalid catalog row'
+  assert_contains "$fixture/run2/stderr.log" "$fixture/layout.tsv:1: unknown view 'carousel'"
+  assert_not_contains "$fixture/run2/stdout.log" 'already applied'
+  assert_not_contains "$fixture/run2/events.log" 'dockutil'
 }
 
 test_missing_catalog_fails_the_apply() {
@@ -195,6 +215,9 @@ scenario_run 'the catalog decides order, section, and path expansion' \
   test_catalog_order_and_expansion
 scenario_run 'a missing entry is skipped and the remaining rows still apply' \
   test_missing_entry_is_skipped_and_the_rest_still_applies
-scenario_run 'invalid catalog rows fail the apply' test_invalid_rows_fail_the_apply
+scenario_run 'an invalid layout leaves the Dock untouched' \
+  test_an_invalid_layout_leaves_the_dock_untouched
+scenario_run 'a broken layout is reported after the Dock was applied' \
+  test_a_broken_layout_is_reported_after_the_dock_was_applied
 scenario_run 'a missing catalog fails the apply' test_missing_catalog_fails_the_apply
 scenario_finish
