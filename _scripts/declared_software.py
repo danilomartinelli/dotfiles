@@ -9,10 +9,11 @@ closed literal shape docs/adr/0002 records and fails on any other line, naming
 the file and line, so a declaration no consumer understands cannot pass
 silently.
 
-Python consumers import it. Shell consumers run it as a command that prints
-tab-separated rows:
+Python consumers import it. Shell consumers request taps or ready-to-render
+catalog cells as tab-separated rows; declaration columns never cross the
+process boundary:
 
-  declared_software.py {taps|formulae|casks|mas|mise} [repository-root]
+  declared_software.py {taps|<catalog-region>} [repository-root]
 """
 
 import sys
@@ -32,7 +33,7 @@ import tomllib
 
 
 class DeclarationError(ValueError):
-    """A declaration file holds a line outside its accepted grammar."""
+    """A declaration cannot be read or published in the software catalog."""
 
 
 @dataclass(frozen=True)
@@ -294,26 +295,44 @@ def rewrite_versions(text, versions, source="mise/config.toml"):
     return rewritten
 
 
-# Each command's kind and the columns it prints, in order.
-COLUMNS = {
-    "formulae": ("formula", lambda d: (d.name, d.description)),
-    "casks": ("cask", lambda d: (d.name, d.group, d.description)),
-    "mas": ("mas", lambda d: (d.name, d.identifier, d.description)),
+CATALOG_KINDS = {
+    "homebrew-formulae": "formula",
+    "homebrew-casks": "cask",
+    "mac-app-store": "mas",
+    "mise-tools": "mise",
 }
-COMMANDS = ("taps", *COLUMNS, "mise")
+COMMANDS = ("taps", *CATALOG_KINDS)
 
 
-def _rows(command, root):
-    if command == "mise":
-        return [
-            (d.name, d.version, d.selection, d.description)
-            for d in read_mise_config(root / "mise/config.toml")
-        ]
-    brewfile = read_brewfile(root / "Brewfile")
-    if command == "taps":
-        return [(tap,) for tap in brewfile.taps]
-    kind, columns = COLUMNS[command]
-    return [columns(d) for d in brewfile.declarations if d.kind == kind]
+def catalog_rows(region, root):
+    """Build a region's table cells directly from named declaration fields."""
+    kind = CATALOG_KINDS[region]
+    declarations = (
+        read_mise_config(root / "mise/config.toml")
+        if kind == "mise"
+        else read_brewfile(root / "Brewfile").declarations
+    )
+    rows, groups = [], {}
+    for declaration in declarations:
+        if declaration.kind != kind:
+            continue
+        if not declaration.description:
+            raise DeclarationError(f"{declaration.name} has no catalog description")
+        name = f"`{declaration.name}`"
+        if kind == "formula":
+            rows.append((name, declaration.description))
+        elif kind == "mas":
+            rows.append((name, f"`{declaration.identifier}`", declaration.description))
+        elif kind == "mise":
+            rows.append((name, f"`{declaration.version}`", declaration.description))
+        else:
+            if not declaration.group:
+                raise DeclarationError(f"cask {declaration.name} has no catalog group")
+            groups.setdefault(declaration.group, []).append(name)
+    if kind == "cask":
+        # Preserve first-seen group order and declaration order within a group.
+        return [(group, ", ".join(names)) for group, names in groups.items()]
+    return rows
 
 
 def main(argv):
@@ -325,7 +344,11 @@ def main(argv):
         return 2
     root = Path(argv[1]) if len(argv) == 2 else Path(__file__).resolve().parent.parent
     try:
-        rows = _rows(argv[0], root)
+        rows = (
+            [(tap,) for tap in read_brewfile(root / "Brewfile").taps]
+            if argv[0] == "taps"
+            else catalog_rows(argv[0], root)
+        )
         for row in rows:
             if any("\t" in field for field in row):
                 raise DeclarationError(f"a field holds a tab: {row[0]}")

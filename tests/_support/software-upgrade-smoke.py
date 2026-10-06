@@ -28,7 +28,7 @@ class UpgradeSmokeTest(unittest.TestCase):
                 "upgrade-software", "upgrade_adapters.py", "source_staging.py",
                 "declared_software.py", "mise-policy", "trusted-roots",
                 "render-software-catalog", "markdown-table.sh", "generated-region.sh",
-                "generated-file.sh", "installer-preamble.sh", "installer-output.sh",
+                "installer-preamble.sh", "installer-output.sh",
                 "catalog.sh", "link-config",
             ):
                 shutil.copy2(ROOT / "_scripts" / name, root / "_scripts" / name)

@@ -254,8 +254,10 @@ owns the marker syntax, the refusal of a file with no region or a malformed
 one, byte-for-byte preservation of everything outside a region's interior, and
 the blank lines Markdown puts around a body. It returns `2` for
 invalid usage and `1` for any render failure. Output streams as it is
-produced, so render into a staging file and pass it to `generated_file_sync`
-only when the render returned zero.
+produced, so render into a staging file and compare or publish it only when
+the render returned zero. The software catalog renderer owns its single-file
+verdict: `--check` reports a stale README with a diff and fails; write mode
+replaces it only when its bytes differ.
 
 A tool's configuration directory is `installer_config_dir <tool>`, which
 resolves `$HOME/.config/<tool>` and deliberately ignores `XDG_CONFIG_HOME`. Do
@@ -359,8 +361,11 @@ classifier lists every installer and decides none of this order.
   parses either file itself.
 - A trailing comment on a `brew`, `cask`, `mas`, or `[tools]` declaration is
   that entry's catalog description, and the comment above a `cask` block is its
-  catalog group. `_scripts/render-software-catalog` renders both into
-  `README.md`, so a declaration without one stops the render.
+  catalog group. `_scripts/declared_software.py` builds each catalog region's
+  cells from named fields, with one description rule for all declarations;
+  shell consumers never address declaration columns by position. Casks also
+  require a group. `_scripts/render-software-catalog` formats those cells into
+  `README.md` tables.
 - Put runtimes and language-package CLIs in Mise; put system binaries,
   applications, fonts, MAS apps, and taps in Homebrew.
 - A third-party Homebrew formula requires both its tap declaration and a narrow
@@ -458,10 +463,10 @@ it reads it from there rather than restating it.
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                                 |
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                                            |
 | Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                                      |
-| Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                                            |
+| Software catalog rendering and staleness                        | `tests/generated_renderer_test.sh`                                                                                        |
 | Catalog reading and checking                                    | `tests/catalog_test.sh`                                                                                                   |
 | Tracked catalog content and rules                               | `tests/catalog_rules_test.sh`                                                                                             |
-| Declared software reading                                       | `tests/declared_software_test.sh`                                                                                         |
+| Declared software reading and catalog rows                      | `tests/declared_software_test.sh`                                                                                         |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                                          |
 | Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                                |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh`              |

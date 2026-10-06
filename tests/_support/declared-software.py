@@ -239,16 +239,47 @@ class CommandTest(unittest.TestCase):
             text=True,
         )
 
-    def test_each_command_prints_its_columns(self):
-        for command, rows in (
-            ("taps", "vendor/tap\n"),
-            ("formulae", "git\tVersion control\n"),
-            ("casks", "zed\tEditors\tEditor\n"),
-            ("mas", "Xcode\t497799835\tIDE\n"),
-            ("mise", "node\tlts\tchannel\tNode.js\ngo\t1.27.1\tpin\t\n"),
+    def test_taps_are_reported_without_catalog_formatting(self):
+        result = self.command("taps", str(self.root))
+        self.assertEqual(
+            (0, "vendor/tap\n", ""),
+            (result.returncode, result.stdout, result.stderr),
+        )
+
+    def test_each_catalog_region_prints_ready_to_render_cells(self):
+        with (self.root / "Brewfile").open("a") as stream:
+            stream.write(
+                "brew 'vendor/tap/tool' # Vendor CLI\n"
+                "# Browsers\n"
+                "cask 'dia' # Browser\n"
+                "# Editors\n"
+                "cask 'emacs' # Extensible editor\n"
+                'mas "Logic Pro\'s", id: 634148309 # Music\n'
+            )
+        (self.root / "mise/config.toml").write_text(
+            '[tools]\n'
+            'node = "lts" # Node.js\n'
+            'go = "1.27.1" # Go\n'
+            '"npm:tool" = { version = "latest", npm_args = "--x" } # CLI\n'
+        )
+        for region, rows in (
+            (
+                "homebrew-formulae",
+                "`git`\tVersion control\n`vendor/tap/tool`\tVendor CLI\n",
+            ),
+            ("homebrew-casks", "Editors\t`zed`, `emacs`\nBrowsers\t`dia`\n"),
+            (
+                "mac-app-store",
+                "`Xcode`\t`497799835`\tIDE\n`Logic Pro's`\t`634148309`\tMusic\n",
+            ),
+            (
+                "mise-tools",
+                "`node`\t`lts`\tNode.js\n`go`\t`1.27.1`\tGo\n"
+                "`npm:tool`\t`latest`\tCLI\n",
+            ),
         ):
-            with self.subTest(command=command):
-                result = self.command(command, str(self.root))
+            with self.subTest(region=region):
+                result = self.command(region, str(self.root))
                 self.assertEqual(
                     (0, rows, ""), (result.returncode, result.stdout, result.stderr)
                 )
@@ -259,16 +290,66 @@ class CommandTest(unittest.TestCase):
                 self.assertEqual(2, self.command(*args).returncode)
         with (self.root / "Brewfile").open("a") as stream:
             stream.write("brew 'git', args: ['HEAD']\n")
-        result = self.command("formulae", str(self.root))
+        result = self.command("homebrew-formulae", str(self.root))
         self.assertEqual(1, result.returncode)
         self.assertEqual("", result.stdout)
         self.assertIn("Brewfile:6: ", result.stderr)
 
+    def test_every_catalog_declaration_needs_a_description_before_rows_are_printed(self):
+        for region, source, prefix, declaration, name in (
+            (
+                "homebrew-formulae",
+                "Brewfile",
+                "brew 'git' # Version control\n",
+                "brew 'undescribed-formula'",
+                "undescribed-formula",
+            ),
+            (
+                "homebrew-casks",
+                "Brewfile",
+                "# Editors\ncask 'zed' # Editor\n",
+                "cask 'undescribed-cask'",
+                "undescribed-cask",
+            ),
+            (
+                "mac-app-store",
+                "Brewfile",
+                "mas 'Xcode', id: 497799835 # IDE\n",
+                "mas 'Undescribed App', id: 123",
+                "Undescribed App",
+            ),
+            (
+                "mise-tools",
+                "mise/config.toml",
+                '[tools]\nnode = "lts" # Node.js\n',
+                '"npm:undescribed" = "latest"',
+                "npm:undescribed",
+            ),
+        ):
+            for comment in ("", " #", " #   "):
+                with self.subTest(region=region, comment=comment):
+                    (self.root / source).write_text(prefix + declaration + comment + "\n")
+                    result = self.command(region, str(self.root))
+                    self.assertEqual(
+                        (1, "", f"declared_software: {name} has no catalog description\n"),
+                        (result.returncode, result.stdout, result.stderr),
+                    )
+
     def test_a_tab_cannot_reach_a_row(self):
         (self.root / "Brewfile").write_text("brew 'git' # Version\tcontrol\n")
-        result = self.command("formulae", str(self.root))
+        result = self.command("homebrew-formulae", str(self.root))
         self.assertEqual((1, ""), (result.returncode, result.stdout))
         self.assertIn("tab", result.stderr)
+
+    def test_casks_still_need_a_group(self):
+        (self.root / "Brewfile").write_text(
+            "# Editors\ncask 'zed' # Editor\n\ncask 'orphan' # Described app\n"
+        )
+        result = self.command("homebrew-casks", str(self.root))
+        self.assertEqual(
+            (1, "", "declared_software: cask orphan has no catalog group\n"),
+            (result.returncode, result.stdout, result.stderr),
+        )
 
 
 if __name__ == "__main__":
