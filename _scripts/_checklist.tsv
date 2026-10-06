@@ -1,4 +1,5 @@
-# Post-bootstrap checklist catalog consumed by _scripts/setup.
+# Post-bootstrap checklist catalog consumed by _scripts/checklist and checked
+# by _scripts/checklist-rules.sh.
 # Columns: kind, app, label, note (kind is credential|app|shell)
 #
 # The app column is the single owner of what `checklist --open-apps` opens AND
