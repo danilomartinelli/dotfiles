@@ -65,8 +65,6 @@ elif args[:1] in (["exec"], ["install"], ["prune"], ["outdated"], ["ls"], ["lock
                 options = {"compile": "false", "precompiled_url": "jdx/ruby"}
             entries[name] = [e for e in entries.get(name, []) if e.get("options", {}) != options]
             entries[name].append({"version": version, "options": options})
-        if os.environ.get("FAKE_MISE_LOCK_DRIFT"):
-            entries["npm:kept"][0]["version"] = "9.0.0"
         with lock.open("w") as out:
             for name, versions in entries.items():
                 for entry in versions:
@@ -101,8 +99,6 @@ elif args[:1] in (["exec"], ["install"], ["prune"], ["outdated"], ["ls"], ["lock
         elif os.environ.get("MISE_LOCKFILE") != "false":
             with lock.open("a") as out:
                 out.write("\n# fake mise refreshed lock\n")
-        if command == "install" and os.environ.get("FAKE_MISE_CONCURRENT_EDIT"):
-            Path(os.environ["FAKE_MISE_CONCURRENT_EDIT"]).write_text("concurrent user edit\n")
         if command == "install" and os.environ.get("FAKE_MISE_EXTRAS_FILE"):
             Path(os.environ["FAKE_MISE_EXTRAS_FILE"]).write_text(os.environ["FAKE_MISE_EXTRAS"])
         if command == "exec":

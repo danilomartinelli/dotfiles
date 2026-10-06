@@ -472,6 +472,8 @@ it reads it from there rather than restating it.
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                              |
 | Mise invocation policy, shell integration, and CI environment   | `tests/mise_policy_test.sh`, `tests/mise_install_test.sh`, `tests/software_upgrades_test.sh`, `tests/zsh_startup_test.sh` |
 | Interactive upgrades and source preservation                    | `tests/software_upgrades_test.sh`                                                                                         |
+| Staged source publication and recovery                          | `tests/source_staging_test.sh`                                                                                            |
+| Mise formatter plugin reconciliation                            | `tests/mise_extras_test.sh`                                                                                               |
 | Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                              |
 
 `_scripts/test` runs every safe suite and returns a single verdict. It discovers
