@@ -695,17 +695,30 @@ test_associations_fail_without_a_catalog() {
   assert_not_contains "$checkout/home/stdout.log" 'sample associations set'
 }
 
-test_associations_fail_on_an_unknown_failure_mode() {
-  local checkout status
+# Every fault is reported by line before the first duti call, so a typo in the
+# last row cannot leave the rows above it claimed and the step re-armed.
+test_an_invalid_association_catalog_claims_nothing() {
+  local catalog checkout status
   checkout=$(make_checkout)
-  write_association_fixture "$checkout" "$(printf '%b\n' '.md\teditor\tigore\t-')"
+  catalog=$checkout/sample/_associations.tsv
+  write_association_fixture "$checkout" "$(printf '%b\n' \
+    '.md\teditor\treport\t-' \
+    '.rst\tediter\treport\t-' \
+    '.txt\teditor\tigore\t-' \
+    '.csv\teditor\treport' \
+    '.md\teditor\tignore\t-')"
 
   status=0
   invoke_associations "$checkout" || status=$?
   # Defaulting a typo either way would decide silently whether a failure is
   # heard, so an unknown mode is a catalog bug rather than a tolerated value.
-  assert_equal 1 "$status" 'exit status for an unknown failure mode'
-  assert_contains "$checkout/home/stderr.log" "Error: unknown failure mode 'igore' for .md"
+  assert_equal 1 "$status" 'exit status for an invalid association catalog'
+  assert_contains "$checkout/home/stderr.log" "$catalog:2: unknown role 'editer'"
+  assert_contains "$checkout/home/stderr.log" "$catalog:3: unknown failure mode 'igore'"
+  assert_contains "$checkout/home/stderr.log" "$catalog:4: missing label"
+  assert_contains "$checkout/home/stderr.log" "$catalog:5: duplicates line 1"
+  assert_contains "$checkout/home/stderr.log" "Error: invalid association catalog: $catalog"
+  assert_not_contains "$checkout/home/events.log" 'duti'
 }
 
 test_preamble_not_in_topic_catalog() {
@@ -769,6 +782,22 @@ test_claim_reset_re_arms_the_step() {
 
 # A machine with the app but without duti has applied nothing, so the step has
 # to stay armed for the run that follows installing duti.
+# The catalog is read again only on a reset, so a row broken after the first
+# claim would otherwise stay hidden behind the marker until then.
+test_claim_reports_a_broken_catalog_after_it_applied() {
+  local checkout status
+  checkout=$(make_checkout)
+  write_claim_fixture "$checkout"
+  invoke_claim "$checkout"
+
+  printf '%b\n' '.md\teditor\tigore\t-' >"$checkout/sample/_associations.tsv"
+  status=0
+  invoke_claim "$checkout" || status=$?
+  assert_equal 1 "$status" 'exit status for a broken catalog after the claim applied'
+  assert_contains "$checkout/home/stderr.log" "unknown failure mode 'igore'"
+  assert_not_contains "$checkout/home/stdout.log" 'already applied'
+}
+
 test_claim_without_duti_leaves_the_step_armed() {
   local checkout
   checkout=$(make_checkout)
@@ -790,6 +819,8 @@ scenario_run 'DOTFILES_RESET re-arms a claimed catalog' \
   test_claim_reset_re_arms_the_step
 scenario_run 'a claim without duti leaves the step armed' \
   test_claim_without_duti_leaves_the_step_armed
+scenario_run 'a claim reports a broken catalog after it applied' \
+  test_claim_reports_a_broken_catalog_after_it_applied
 scenario_run 'resolves TOPIC_DIR and DOTFILES_ROOT from the installer' \
   test_resolves_topic_dir_and_checkout_root
 scenario_run 'Darwin guard exits successfully on non-Darwin' \
@@ -853,6 +884,6 @@ scenario_run 'a best-effort association failure is neither named nor counted' \
   test_associations_swallow_a_best_effort_failure
 scenario_run 'a missing association catalog fails loudly' \
   test_associations_fail_without_a_catalog
-scenario_run 'an unknown association failure mode fails loudly' \
-  test_associations_fail_on_an_unknown_failure_mode
+scenario_run 'an invalid association catalog claims nothing' \
+  test_an_invalid_association_catalog_claims_nothing
 scenario_finish
