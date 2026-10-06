@@ -111,38 +111,33 @@ installer_workspace_root() {
 # Where run-once markers live. Honours XDG_STATE_HOME where
 # installer_config_dir ignores XDG_CONFIG_HOME, because this path is ours: no
 # tool has to agree with us about where our own markers sit. Private: the
-# run-once helpers are its only consumers.
+# run-once module is its only consumer.
 _installer_state_dir() {
   printf '%s\n' "${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles"
 }
 
-# Gate for a run-once step: report and skip successfully (exit 0) when the step
-# has already been applied, so an update run never rebuilds state the user may
-# have rearranged by hand. DOTFILES_RESET re-arms it, accepting a
-# space-separated list of keys or the word "all".
-# Usage: installer_skip_if_applied <key> <label> <success>
-installer_skip_if_applied() {
+# Apply a step once, preserving later installer work when it is skipped.
+# Call directly under set -e, like catalog_each_row: testing the call in a
+# conditional would disable error handling inside a shell-function step.
+# Usage: installer_run_once <key> <label> <command> [argument...]
+installer_run_once() {
+  _installer_once_marker=$(_installer_state_dir)/$1-applied
   case " ${DOTFILES_RESET:-} " in
-    *" $1 "* | *" all "*) return 0 ;;
+    *" $1 "* | *" all "*) rm -f -- "$_installer_once_marker" ;;
+    *)
+      if [ -f "$_installer_once_marker" ]; then
+        installer_note "$2 already applied; run DOTFILES_RESET=$1 dot to reapply"
+        unset _installer_once_marker
+        return 0
+      fi
+      ;;
   esac
 
-  _installer_marker=$(_installer_state_dir)/$1-applied
-  if [ -f "$_installer_marker" ]; then
-    installer_note "$2 already applied; run DOTFILES_RESET=$1 dot to reapply"
-    installer_success "$3"
-    exit 0
-  fi
-  unset _installer_marker
-}
-
-# Record that a run-once step completed. Deliberately not tolerant of failure:
-# an unwritable state directory would silently re-arm the step on the next run.
-# Usage: installer_mark_applied <key>
-installer_mark_applied() {
-  _installer_marker=$(_installer_state_dir)/$1-applied
-  mkdir -p "$(dirname -- "$_installer_marker")"
-  touch "$_installer_marker"
-  unset _installer_marker
+  shift 2
+  "$@"
+  mkdir -p "$(dirname -- "$_installer_once_marker")"
+  touch "$_installer_once_marker"
+  unset _installer_once_marker
 }
 
 # Apply a topic's declared file-type associations and report the outcome.
@@ -245,40 +240,23 @@ _installer_apply_association() {
   return 0
 }
 
-# A topic claims its declared file types. This is the whole ritual the claiming
-# topics used to spell out in order: check TOPIC_DIR/_associations.tsv, gate on
-# the run-once marker, require duti, apply the catalog, then record the marker.
-# The order is the decision — a broken catalog is reported even once the step
-# has applied, and the marker is written only after the apply returns, so a run
-# that bailed leaves the step armed — and it is implementation here rather than
-# something each topic has to re-honour.
-#
-# The run-once key is derived from the topic directory, so no installer spells
-# "<topic>-associations" by hand and no topic can gate on one key and mark
-# another.
+# Check even an already-claimed catalog; the run-once module owns the rest of
+# its lifecycle. Derive the key from the topic so installers never spell it.
 # Usage: installer_claim_file_types <name> <bundle> <applied>
 installer_claim_file_types() {
-  _installer_claim_name=$1
-  _installer_claim_bundle=$2
-  _installer_claim_applied=$3
-  _installer_claim_key="$(basename -- "$TOPIC_DIR")-associations"
-
   _installer_check_associations
 
-  installer_skip_if_applied "$_installer_claim_key" 'file associations' \
-    "$_installer_claim_name configured"
+  installer_run_once "$(basename -- "$TOPIC_DIR")-associations" 'file associations' \
+    _installer_claim_checked_file_types "$@"
+  installer_success "$1 configured"
+}
 
+# Missing duti leaves the step armed. Keep this guard inside the step so a
+# previously applied claim does not need duti just to report its marker.
+_installer_claim_checked_file_types() {
   installer_optional_command duti \
-    "duti is required to set $_installer_claim_name as the default app for its declared file types"
-
-  _installer_apply_checked_associations "$_installer_claim_name" \
-    "$_installer_claim_bundle" "$_installer_claim_applied"
-
-  installer_mark_applied "$_installer_claim_key"
-  installer_success "$_installer_claim_name configured"
-
-  unset _installer_claim_name _installer_claim_bundle _installer_claim_applied \
-    _installer_claim_key
+    "duti is required to set $1 as the default app for its declared file types"
+  _installer_apply_checked_associations "$@"
 }
 
 installer_link_config() {

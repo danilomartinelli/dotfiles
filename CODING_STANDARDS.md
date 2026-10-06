@@ -126,8 +126,7 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_optional_app`       | Warn and skip when an optional application is absent                |
   | `installer_config_dir`         | Resolve a tool's configuration directory without creating it        |
   | `installer_workspace_root`     | Resolve the Workspace root without creating it                      |
-  | `installer_skip_if_applied`    | Skip successfully when a run-once step has already been applied     |
-  | `installer_mark_applied`       | Record that a run-once step completed                               |
+  | `installer_run_once`           | Skip an applied step or run it and record success, then return      |
   | `installer_claim_file_types`   | Check, gate, apply, and record a topic's file-type associations     |
   | `installer_apply_associations` | Check and apply a topic's declared associations and report failures |
   | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
@@ -268,17 +267,29 @@ does not on macOS. A single tool moves through its own variable, such as
 `SOPS_AGE_KEY_FILE`.
 
 A run-once step rebuilds state a person may have rearranged by hand, so it
-applies on first run only. Gate it with `installer_skip_if_applied` and record
-it with `installer_mark_applied`, both keyed by a short topic key. `DOTFILES_RESET`
-re-arms one or more steps by key, or every step with `all`; nothing else may
-define a per-topic reset variable.
+applies on first run only. Call
+`installer_run_once <key> <label> <command> [argument...]` from the preamble,
+naming the short topic key once and passing a shell function or command for
+the step. The module reports an already-applied step and returns, so later work
+and other run-once steps still run; the installer owns its closing success
+message. A consumer still checks its whole catalog before calling the module,
+in its own voice.
+
+Call it directly under `set -e`, just like `catalog_each_row`, rather than in a
+conditional that disables shell-function error handling. A failing step stops
+the installer before its marker is written, and a marker write failure also
+stops the installer. Markers live under
+`${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles`. `DOTFILES_RESET` accepts a
+space-separated list of whole keys, or `all` for every step, and removes the
+selected step's old marker before attempting it, so a failed reset leaves it
+armed for the next run. Nothing else may define a per-topic reset variable.
 
 A topic that claims file types declares them in `<topic>/_associations.tsv`
-and claims them with `installer_claim_file_types`, which checks the catalog,
-gates the run-once step, requires `duti`, applies the catalog, and records the
-marker in that order. Call it rather than spelling the sequence out: the
-run-once key is derived from the topic directory, so no installer can gate on
-one key and mark another, and the marker is written only after the apply returns.
+and claims them with `installer_claim_file_types`, which checks the catalog
+and passes the claim to `installer_run_once`. The step requires `duti` and
+applies the checked catalog; the module records its marker only after it
+returns. Call it rather than spelling the sequence out: the run-once key is
+derived from the topic directory. Dock uses the same module for its layout.
 `installer_apply_associations` remains the applying half for a topic that needs
 it alone; no installer writes its own association loop. A row whose failure mode is `ignore` is best-effort,
 because Launch Services does not recognise every identifier on every macOS

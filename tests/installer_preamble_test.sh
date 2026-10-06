@@ -331,13 +331,16 @@ test_optional_command_accepts_formula_override() {
   assert_contains "$home/stderr.log" '  → Install with: brew install sample-formula'
 }
 
-# Body shared by the run-once scenarios: gate, do the work, record the marker.
+# The same module interface applies and skips without ending the installer.
 write_run_once_installer() {
   write_synthetic_installer "$1" \
-    'installer_skip_if_applied sample-step "sample layout" "sample configured"
-printf "ran\n" >"$HOME/ran"
-installer_mark_applied sample-step
-installer_success "sample configured"'
+    'apply_sample() {
+  [ "${FAIL_SAMPLE:-0}" -eq 0 ]
+  printf "ran\n" >"$HOME/ran"
+}
+installer_run_once sample-step "sample layout" apply_sample
+installer_success "sample configured"
+printf "continued\n" >"$HOME/continued"'
 }
 
 # The linking half of the same rule. installer_config_dir only resolves, so the
@@ -428,7 +431,7 @@ test_config_dir_ignores_xdg_config_home() {
     || scenario_fail 'resolver wrote below XDG_CONFIG_HOME'
 }
 
-test_skip_if_applied_runs_the_step_without_a_marker() {
+test_run_once_runs_the_step_without_a_marker() {
   local checkout home
 
   checkout=$(make_checkout)
@@ -444,7 +447,7 @@ test_skip_if_applied_runs_the_step_without_a_marker() {
   assert_not_contains "$home/stderr.log" 'unbound variable'
 }
 
-test_skip_if_applied_skips_when_the_marker_exists() {
+test_run_once_skips_when_the_marker_exists() {
   local checkout home status
 
   checkout=$(make_checkout)
@@ -459,13 +462,13 @@ test_skip_if_applied_skips_when_the_marker_exists() {
   assert_equal 0 "$status" 'exit status for an already-applied run-once step'
   assert_contains "$home/stdout.log" \
     '  → sample layout already applied; run DOTFILES_RESET=sample-step dot to reapply'
-  # The gate owns the closing line, because the caller cannot print after it.
+  [[ -f $home/continued ]] || scenario_fail 'skipping the step ended the installer'
   assert_contains "$home/stdout.log" '✓ sample configured'
   assert_count "$home/stdout.log" '✓ sample configured' 1
   [[ ! -e $home/ran ]] || scenario_fail 'run-once step ran despite its marker'
 }
 
-test_skip_if_applied_reset_re_arms_the_step() {
+test_run_once_reset_re_arms_the_step() {
   local checkout home
 
   checkout=$(make_checkout)
@@ -479,7 +482,7 @@ test_skip_if_applied_reset_re_arms_the_step() {
   [[ -e $home/ran ]] || scenario_fail 'DOTFILES_RESET did not re-arm the named step'
 }
 
-test_skip_if_applied_reset_all_re_arms_every_step() {
+test_run_once_reset_all_re_arms_every_step() {
   local checkout home
 
   checkout=$(make_checkout)
@@ -493,7 +496,7 @@ test_skip_if_applied_reset_all_re_arms_every_step() {
   [[ -e $home/ran ]] || scenario_fail 'DOTFILES_RESET=all did not re-arm the step'
 }
 
-test_skip_if_applied_reset_matches_whole_keys_only() {
+test_run_once_reset_matches_whole_keys_only() {
   local checkout home
 
   checkout=$(make_checkout)
@@ -508,18 +511,114 @@ test_skip_if_applied_reset_matches_whole_keys_only() {
   [[ ! -e $home/ran ]] || scenario_fail 'a partial key match re-armed the step'
 }
 
-test_mark_applied_falls_back_to_local_state() {
+test_run_once_falls_back_to_local_state() {
   local checkout home
 
   checkout=$(make_checkout)
   home=$checkout/home
-  write_synthetic_installer "$checkout/sample/install.sh" \
-    'installer_mark_applied sample-step'
+  write_run_once_installer "$checkout/sample/install.sh"
 
   scenario_capture "$home" env -u XDG_STATE_HOME HOME="$home" \
     "$checkout/sample/install.sh"
   [[ -f $home/.local/state/dotfiles/sample-step-applied ]] \
     || scenario_fail 'marker not created under the default state directory'
+}
+
+test_failed_reset_leaves_the_step_armed_for_retry() {
+  local checkout home status
+
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_run_once_installer "$checkout/sample/install.sh"
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  rm "$home/ran" "$home/continued"
+
+  status=0
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET=sample-step FAIL_SAMPLE=1 \
+    "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for a failed reset'
+  [[ ! -e $home/ran && ! -e $home/continued ]] \
+    || scenario_fail 'work continued after a failed step'
+  [[ ! -f $home/state/dotfiles/sample-step-applied ]] \
+    || scenario_fail 'a failed reset left the step marked as applied'
+
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  [[ -f $home/ran ]] || scenario_fail 'the next run did not retry the failed step'
+}
+
+test_failed_first_apply_leaves_the_step_armed() {
+  local checkout home status
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_run_once_installer "$checkout/sample/install.sh"
+
+  status=0
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" FAIL_SAMPLE=1 \
+    "$checkout/sample/install.sh" || status=$?
+  assert_equal 1 "$status" 'exit status for a failed first apply'
+  [[ ! -e $home/ran && ! -e $home/continued ]] \
+    || scenario_fail 'work continued after a failed first apply'
+  [[ ! -f $home/state/dotfiles/sample-step-applied ]] \
+    || scenario_fail 'a failed first apply recorded its marker'
+
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  [[ -f $home/ran ]] || scenario_fail 'the next run did not retry the first apply'
+}
+
+test_multiple_steps_skip_and_reset_independently() {
+  local checkout home
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_synthetic_installer "$checkout/sample/install.sh" \
+    'apply_step() {
+  printf "applied %s\n" "$1"
+}
+installer_run_once first-step "first layout" apply_step "first layout"
+installer_run_once second-step "second layout" apply_step "second layout"
+printf "continued\n"'
+
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  assert_contains "$home/stdout.log" 'applied first layout'
+  assert_contains "$home/stdout.log" 'applied second layout'
+
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh"
+  assert_not_contains "$home/stdout.log" 'applied first layout'
+  assert_not_contains "$home/stdout.log" 'applied second layout'
+  assert_contains "$home/stdout.log" 'continued'
+
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET=second-step "$checkout/sample/install.sh"
+  assert_not_contains "$home/stdout.log" 'applied first layout'
+  assert_contains "$home/stdout.log" 'applied second layout'
+  assert_contains "$home/stdout.log" 'continued'
+
+  scenario_capture "$home" env HOME="$home" XDG_STATE_HOME="$home/state" \
+    DOTFILES_RESET=all "$checkout/sample/install.sh"
+  assert_contains "$home/stdout.log" 'applied first layout'
+  assert_contains "$home/stdout.log" 'applied second layout'
+}
+
+test_run_once_fails_when_the_marker_cannot_be_recorded() {
+  local checkout home status
+  checkout=$(make_checkout)
+  home=$checkout/home
+  write_run_once_installer "$checkout/sample/install.sh"
+  touch "$home/state"
+
+  status=0
+  scenario_capture "$home" env -u DOTFILES_RESET HOME="$home" \
+    XDG_STATE_HOME="$home/state" "$checkout/sample/install.sh" || status=$?
+  [[ $status -ne 0 ]] || scenario_fail 'a marker write failure reported success'
+  [[ -f $home/ran ]] || scenario_fail 'the step did not run before recording its marker'
+  [[ ! -f $home/continued ]] || scenario_fail 'work continued without recording the marker'
+  assert_not_contains "$home/stdout.log" 'sample configured'
 }
 
 test_fail_reports_and_exits() {
@@ -585,13 +684,14 @@ write_claim_fixture() {
 
   write_association_fixture "$checkout" "$(printf '%b\n' '.md\teditor\treport\t-')"
   write_synthetic_installer "$checkout/sample/install.sh" \
-    'installer_claim_file_types Sample com.example.sample "sample associations set"'
+    'installer_claim_file_types Sample com.example.sample "sample associations set"
+printf "continued\n"'
 }
 
 invoke_claim() {
   local checkout=$1
   shift
-  scenario_capture "$checkout/home" env \
+  scenario_capture "$checkout/home" env -u DOTFILES_RESET \
     HOME="$checkout/home" \
     XDG_STATE_HOME="$checkout/home/state" \
     PATH="$checkout/home/fake-bin:/usr/bin:/bin" \
@@ -767,6 +867,7 @@ test_claim_applies_once_and_reports_the_marker() {
   assert_contains "$checkout/home/stdout.log" \
     'file associations already applied; run DOTFILES_RESET=sample-associations dot to reapply'
   assert_contains "$checkout/home/stdout.log" '✓ Sample configured'
+  assert_contains "$checkout/home/stdout.log" 'continued'
 }
 
 test_claim_reset_re_arms_the_step() {
@@ -778,6 +879,9 @@ test_claim_reset_re_arms_the_step() {
   invoke_claim "$checkout" DOTFILES_RESET=sample-associations
   assert_contains "$checkout/home/events.log" 'duti -s com.example.sample .md editor'
   assert_contains "$checkout/home/stdout.log" '✓ sample associations set'
+
+  invoke_claim "$checkout" DOTFILES_RESET=all
+  assert_contains "$checkout/home/events.log" 'duti -s com.example.sample .md editor'
 }
 
 # A machine with the app but without duti has applied nothing, so the step has
@@ -850,17 +954,25 @@ scenario_run 'config_dir resolves a tool directory under HOME without creating i
 scenario_run 'config_dir ignores XDG_CONFIG_HOME' \
   test_config_dir_ignores_xdg_config_home
 scenario_run 'run-once step applies without a marker and records one' \
-  test_skip_if_applied_runs_the_step_without_a_marker
+  test_run_once_runs_the_step_without_a_marker
 scenario_run 'run-once step skips once its marker exists' \
-  test_skip_if_applied_skips_when_the_marker_exists
+  test_run_once_skips_when_the_marker_exists
 scenario_run 'DOTFILES_RESET re-arms a named run-once step' \
-  test_skip_if_applied_reset_re_arms_the_step
+  test_run_once_reset_re_arms_the_step
 scenario_run 'DOTFILES_RESET=all re-arms every run-once step' \
-  test_skip_if_applied_reset_all_re_arms_every_step
+  test_run_once_reset_all_re_arms_every_step
 scenario_run 'DOTFILES_RESET matches whole keys only' \
-  test_skip_if_applied_reset_matches_whole_keys_only
+  test_run_once_reset_matches_whole_keys_only
 scenario_run 'run-once markers fall back to ~/.local/state' \
-  test_mark_applied_falls_back_to_local_state
+  test_run_once_falls_back_to_local_state
+scenario_run 'a failed reset leaves the step armed for the next run' \
+  test_failed_reset_leaves_the_step_armed_for_retry
+scenario_run 'a failed first apply leaves the step armed for retry' \
+  test_failed_first_apply_leaves_the_step_armed
+scenario_run 'multiple run-once steps skip and reset independently' \
+  test_multiple_steps_skip_and_reset_independently
+scenario_run 'a marker write failure stops the installer' \
+  test_run_once_fails_when_the_marker_cannot_be_recorded
 scenario_run 'fail reports on stderr and exits 1' test_fail_reports_and_exits
 scenario_run 'fail terminates the installer from inside a read loop' \
   test_fail_exits_from_inside_a_read_loop
