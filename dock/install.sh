@@ -6,6 +6,9 @@ set -e
 # shellcheck disable=SC1091
 . "$(CDPATH='' cd -P -- "$(dirname -- "$0")/../_scripts" && pwd)/installer-preamble.sh"
 
+# shellcheck source=dock/_layout-rules.sh
+. "$TOPIC_DIR/_layout-rules.sh"
+
 installer_require_darwin
 installer_banner "configuring dock"
 
@@ -14,11 +17,16 @@ installer_require_command dockutil
 CATALOG=${DOTFILES_DOCK_CATALOG:-$TOPIC_DIR/_layout.tsv}
 
 # Checked before the run-once gate: the catalog is a tracked repository file, so
-# its absence is a repository error rather than a fact about this machine, and
-# hiding it behind an already-applied marker would report it only on the one run
-# that still had work to do.
+# its absence or a malformed row is a repository error rather than a fact about
+# this machine, and hiding it behind an already-applied marker would report it
+# only on the one run that still had work to do. Checking the whole layout is
+# also what keeps a typo in its last row from leaving the Dock cleared.
 if [ ! -f "$CATALOG" ]; then
   installer_fail "Dock layout catalog not found: $CATALOG"
+fi
+
+if ! catalog_check "$CATALOG" dock_layout_check_row; then
+  installer_fail "invalid Dock layout catalog: $CATALOG"
 fi
 
 # The declared layout wipes the Dock before rebuilding it, so it only runs on
@@ -36,27 +44,14 @@ entry_label() {
   basename -- "$1" .app
 }
 
-# One catalog row. Always returns zero: a missing app is a fact about this
-# machine, not a reason to stop rebuilding the rest of the Dock.
+# One catalog row, already checked. Always returns zero: a missing app is a
+# fact about this machine, not a reason to stop rebuilding the rest of the Dock.
 apply_catalog_row() {
   section=$1
-  entry_declared=$2
   view=$3
   display=$4
 
-  if [ -z "$entry_declared" ] || [ -z "$view" ] || [ -z "$display" ]; then
-    installer_fail "invalid catalog row: $section $entry_declared   $view   $display"
-  fi
-
-  case "$section" in
-    apps | others) ;;
-    *) installer_fail "unknown catalog section '$section' for $entry_declared" ;;
-  esac
-
-  # Rows spell paths the way a person writes them. Only these two names are
-  # declared, so a `$` anywhere else stays a literal `$`.
-  entry_path=$(catalog_expand "$entry_declared" \
-    WORKSPACE "$WORKSPACE_ROOT" HOME "$HOME")
+  entry_path=$(dock_layout_placeholders catalog_expand "$2" "$WORKSPACE_ROOT")
   entry_name=$(entry_label "$entry_path")
 
   if [ ! -e "$entry_path" ]; then
@@ -64,19 +59,10 @@ apply_catalog_row() {
     return 0
   fi
 
+  # A "-" omits the flag.
   set -- --add "$entry_path" --section "$section"
-
-  case "$view" in
-    -) ;;
-    grid | fan | list | auto) set -- "$@" --view "$view" ;;
-    *) installer_fail "unknown catalog view '$view' for $entry_path" ;;
-  esac
-
-  case "$display" in
-    -) ;;
-    folder | stack) set -- "$@" --display "$display" ;;
-    *) installer_fail "unknown catalog display '$display' for $entry_path" ;;
-  esac
+  [ "$view" = - ] || set -- "$@" --view "$view"
+  [ "$display" = - ] || set -- "$@" --display "$display"
 
   if dockutil "$@" --no-restart >/dev/null 2>&1; then
     installer_success "Added $entry_name"
