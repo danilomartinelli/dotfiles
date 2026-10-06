@@ -8,6 +8,8 @@ CATALOG=${DOTFILES_MACOS_DEFAULTS_CATALOG:-$SCRIPT_DIR/defaults.tsv}
 
 # shellcheck source=_scripts/catalog.sh
 . "$SCRIPT_DIR/../_scripts/catalog.sh"
+# shellcheck source=_macos/defaults-rules.sh
+. "$SCRIPT_DIR/defaults-rules.sh"
 
 # Printed in the installer vocabulary: setup runs these two under its own
 # phase reporting, and the steps below are items inside that phase.
@@ -25,37 +27,19 @@ if [ ! -f "$CATALOG" ]; then
   exit 1
 fi
 
+# Checked whole before the first write, including the screenshot directory
+# below: a malformed row is a repository error, and stopping halfway would leave
+# the preferences above it applied and the services never restarted.
+if ! catalog_check "$CATALOG" defaults_check_row; then
+  echo "Error: invalid defaults catalog: $CATALOG" >&2
+  exit 1
+fi
+
+# One catalog row, already checked. The catalog's type names are the flags
+# `defaults write` takes, so the type is the flag.
 apply_catalog_row() {
-  domain=$1
-  key=$2
-  type=$3
-  value=$4
-
-  if [ -z "$key" ] || [ -z "$type" ] || [ -z "$value" ]; then
-    echo "Error: invalid catalog row: $domain $key    $type   $value" >&2
-    exit 1
-  fi
-
-  value=$(catalog_expand "$value" HOME "$HOME")
-
-  case "$type" in
-    bool)
-      defaults write "$domain" "$key" -bool "$value"
-      ;;
-    int)
-      defaults write "$domain" "$key" -int "$value"
-      ;;
-    float)
-      defaults write "$domain" "$key" -float "$value"
-      ;;
-    string)
-      defaults write "$domain" "$key" -string "$value"
-      ;;
-    *)
-      echo "Error: unknown catalog type '$type' for $domain $key" >&2
-      exit 1
-      ;;
-  esac
+  value=$(defaults_placeholders catalog_expand "$4")
+  defaults write "$1" "$2" "-$3" "$value"
   return 0
 }
 
