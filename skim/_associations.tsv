@@ -1,4 +1,5 @@
 # Skim file-type association catalog consumed by installer_apply_associations.
+# Checked by _installer_check_association in _scripts/installer-preamble.sh.
 # Columns: identifier, role, failure, label
 # identifier is a UTI or a filename extension; failure ∈ report|ignore, where
 # "ignore" is best-effort because Launch Services does not know every

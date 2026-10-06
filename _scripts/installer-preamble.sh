@@ -147,18 +147,67 @@ installer_mark_applied() {
 
 # Apply a topic's declared file-type associations and report the outcome.
 # Reads TOPIC_DIR/_associations.tsv so a topic gains an association by editing
-# data. A "report" row names and counts its failure; an "ignore" row is
-# best-effort, because Launch Services does not recognise every identifier on
-# every macOS version. A "-" label falls back to the identifier.
+# data, and checks the whole catalog before the first duti call. A "report" row
+# names and counts its failure; an "ignore" row is best-effort, because Launch
+# Services does not recognise every identifier on every macOS version. A "-"
+# label falls back to the identifier.
 # Usage: installer_apply_associations <name> <bundle> <success>
 installer_apply_associations() {
+  _installer_check_associations
+  _installer_apply_checked_associations "$@"
+}
+
+# Stop the installer unless TOPIC_DIR/_associations.tsv is readable and every
+# row satisfies _installer_check_association. Private: the claim checks before
+# its run-once gate, and the apply before its first effect.
+_installer_check_associations() {
+  _installer_assoc_catalog=$TOPIC_DIR/_associations.tsv
+
+  if [ ! -r "$_installer_assoc_catalog" ]; then
+    installer_fail "association catalog not readable: $_installer_assoc_catalog"
+  fi
+
+  if ! catalog_check "$_installer_assoc_catalog" _installer_check_association; then
+    installer_fail "invalid association catalog: $_installer_assoc_catalog"
+  fi
+
+  unset _installer_assoc_catalog
+}
+
+# What an association row must satisfy on its text alone. Whether Launch
+# Services knows the identifier is a fact about this machine, which is what the
+# failure mode is for. Roles are duti's.
+# Usage: catalog_check <catalog> _installer_check_association
+_installer_check_association() {
+  case $2 in
+    '') catalog_reject 'missing role' ;;
+    all | viewer | editor | shell | none) ;;
+    *) catalog_reject "unknown role '$2'" ;;
+  esac
+
+  # An unknown mode is a catalog bug, and defaulting it either way would
+  # decide silently whether a failure is heard.
+  case $3 in
+    '') catalog_reject 'missing failure mode' ;;
+    report | ignore) ;;
+    *) catalog_reject "unknown failure mode '$3'" ;;
+  esac
+
+  [ -n "$4" ] || catalog_reject "missing label (use '-' for the identifier)"
+  [ -z "$2" ] || catalog_reject_duplicate "$1" "$2"
+
+  return 0
+}
+
+# The applying half, for a catalog already checked. Private, so the claim can
+# check before its gate without checking the catalog twice.
+_installer_apply_checked_associations() {
   _installer_assoc_name=$1
   _installer_assoc_bundle=$2
   _installer_assoc_success=$3
   _installer_assoc_failed=0
 
-  catalog_each_row "$TOPIC_DIR/_associations.tsv" _installer_apply_association \
-    || installer_fail "association catalog not readable: $TOPIC_DIR/_associations.tsv"
+  catalog_each_row "$TOPIC_DIR/_associations.tsv" _installer_apply_association
 
   if [ "$_installer_assoc_failed" -eq 0 ]; then
     installer_success "$_installer_assoc_success"
@@ -171,23 +220,14 @@ installer_apply_associations() {
     _installer_assoc_failed
 }
 
-# One association row. Counts into _installer_assoc_failed, which the caller
-# owns, and always returns zero so a reported failure does not stop the run.
+# One association row, already checked. Counts into _installer_assoc_failed,
+# which the caller owns, and always returns zero so a reported failure does not
+# stop the run.
 _installer_apply_association() {
   _installer_assoc_id=$1
   _installer_assoc_role=$2
   _installer_assoc_failure=$3
   _installer_assoc_label=$4
-
-  # An unknown mode is a catalog bug, and defaulting it either way would
-  # decide silently whether a failure is heard.
-  case $_installer_assoc_failure in
-    report | ignore) ;;
-    *)
-      installer_fail \
-        "unknown failure mode '$_installer_assoc_failure' for $_installer_assoc_id in $TOPIC_DIR/_associations.tsv"
-      ;;
-  esac
 
   if duti -s "$_installer_assoc_bundle" "$_installer_assoc_id" \
     "$_installer_assoc_role" 2>/dev/null; then
@@ -206,10 +246,11 @@ _installer_apply_association() {
 }
 
 # A topic claims its declared file types. This is the whole ritual the claiming
-# topics used to spell out in order: gate on the run-once marker, require duti,
-# apply TOPIC_DIR/_associations.tsv, then record the marker. The order is the
-# decision — the marker is written only after the apply returns, so a run that
-# bailed leaves the step armed — and it is implementation here rather than
+# topics used to spell out in order: check TOPIC_DIR/_associations.tsv, gate on
+# the run-once marker, require duti, apply the catalog, then record the marker.
+# The order is the decision — a broken catalog is reported even once the step
+# has applied, and the marker is written only after the apply returns, so a run
+# that bailed leaves the step armed — and it is implementation here rather than
 # something each topic has to re-honour.
 #
 # The run-once key is derived from the topic directory, so no installer spells
@@ -222,13 +263,15 @@ installer_claim_file_types() {
   _installer_claim_applied=$3
   _installer_claim_key="$(basename -- "$TOPIC_DIR")-associations"
 
+  _installer_check_associations
+
   installer_skip_if_applied "$_installer_claim_key" 'file associations' \
     "$_installer_claim_name configured"
 
   installer_optional_command duti \
     "duti is required to set $_installer_claim_name as the default app for its declared file types"
 
-  installer_apply_associations "$_installer_claim_name" \
+  _installer_apply_checked_associations "$_installer_claim_name" \
     "$_installer_claim_bundle" "$_installer_claim_applied"
 
   installer_mark_applied "$_installer_claim_key"
