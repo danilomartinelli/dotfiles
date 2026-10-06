@@ -6,18 +6,17 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 import tomllib
-import urllib.request
 from dataclasses import dataclass
 
 # Importing the declaration reader must not leave a __pycache__ in the checkout.
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import declared_software  # noqa: E402
+from source_staging import SourceChangedError, StagedSources  # noqa: E402
+from upgrade_adapters import OsvAdvisories, SubprocessCommands, TerminalInteraction  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -41,10 +40,8 @@ def warn(message):
     print(f"Warning: {message}", file=sys.stderr)
 
 
-def run(args, *, cwd, env, statuses=(0,), timeout=180):
-    result = subprocess.run(
-        args, cwd=cwd, env=env, text=True, capture_output=True, timeout=timeout
-    )
+def run(commands, args, *, cwd, env, statuses=(0,), timeout=180):
+    result = commands.run(args, cwd=cwd, env=env, timeout=timeout)
     if result.returncode not in statuses:
         raise RuntimeError(f"{' '.join(args)} failed: {result.stderr.strip()}")
     if result.stderr.strip():
@@ -56,26 +53,14 @@ def read_toml(path):
     return tomllib.loads(path.read_text())
 
 
-def execute(args, *, cwd, env):
+def execute(commands, args, *, cwd, env):
     # Installs can need sudo and take minutes. Keep their progress and terminal
     # interaction visible instead of capturing it like a discovery query.
-    result = subprocess.run(args, cwd=cwd, env=env)
+    result = commands.run(args, cwd=cwd, env=env, capture=False)
     if result.returncode:
         raise RuntimeError(
             f"{' '.join(args)} failed; earlier upgrades may already have completed"
         )
-
-
-def write_source(path, content):
-    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(content)
-        os.chmod(temporary, path.stat().st_mode & 0o777)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
 
 
 def brewfile_declarations(root, kind):
@@ -93,8 +78,9 @@ def brewfile_declarations(root, kind):
 class Homebrew:
     label = "Homebrew"
 
-    def __init__(self, root, brew, env):
+    def __init__(self, root, brew, env, commands):
         self.root, self.brew, self.env = root, brew, env
+        self.commands = commands
 
     def discover(self):
         candidates = []
@@ -108,7 +94,10 @@ class Homebrew:
             # Named outdated queries return 1 when updates exist. Malformed or
             # missing JSON remains an error rather than an empty candidate set.
             data = json.loads(
-                run(args + names, cwd=self.root, env=self.env, statuses=(0, 1))
+                run(
+                    self.commands, args + names, cwd=self.root,
+                    env=self.env, statuses=(0, 1),
+                )
             )
             for item in data[key]:
                 matches = [
@@ -136,6 +125,7 @@ class Homebrew:
     def audit(self, candidates):
         try:
             output = run(
+                self.commands,
                 [
                     self.brew,
                     "vulns",
@@ -174,14 +164,15 @@ class Homebrew:
             command = [self.brew, "upgrade", f"--{kind}"]
             if kind == "cask":
                 command.append("--greedy")
-            execute(command + [candidate.name], cwd=self.root, env=self.env)
+            execute(self.commands, command + [candidate.name], cwd=self.root, env=self.env)
 
 
 class AppStore:
     label = "App Store"
 
-    def __init__(self, root, env):
+    def __init__(self, root, env, commands):
         self.root, self.env = root, env
+        self.commands = commands
 
     def discover(self):
         # An App Store app's identity is its App ID, which is what mas accepts.
@@ -189,6 +180,7 @@ class AppStore:
         if not ids:
             return []
         output = run(
+            self.commands,
             ["mas", "outdated", "--inaccurate", *sorted(ids)],
             cwd=self.root,
             env={**self.env, "MAS_NO_AUTO_INDEX": "1"},
@@ -211,23 +203,24 @@ class AppStore:
 
     def apply(self, selected):
         for candidate in selected:
-            mas = shutil.which("mas")
+            mas = self.commands.find("mas", self.env)
             if mas is None:
                 raise RuntimeError("mas became unavailable; restore it and retry")
-            command = (["sudo"] if os.geteuid() != 0 else []) + [
+            command = (["sudo"] if not self.commands.is_root() else []) + [
                 mas,
                 "upgrade",
                 "--inaccurate",
                 candidate.name,
             ]
-            execute(command, cwd=self.root, env=self.env)
+            execute(self.commands, command, cwd=self.root, env=self.env)
 
 
 class Mise:
     label = "Mise"
 
-    def __init__(self, root, env):
+    def __init__(self, root, env, commands, advisories):
         self.root, self.env = root, env
+        self.commands, self.advisories = commands, advisories
 
     def command(self, operation, *args, stage=None):
         command = [str(self.root / "_scripts/mise-policy"), str(self.root)]
@@ -246,7 +239,9 @@ class Mise:
             if not names:
                 continue
             args = ["outdated", "--json"] + (["--bump"] if bump else []) + names
-            data = json.loads(run(self.command("run", *args), cwd=self.root, env=self.env))
+            data = json.loads(
+                run(self.commands, self.command("run", *args), cwd=self.root, env=self.env)
+            )
             for name, item in data.items():
                 if name not in names:
                     # Mise can report a short backend name (e.g. shellcheck).
@@ -304,13 +299,7 @@ class Mise:
                 labels.append(f"{name} {version}")
         if queries:
             try:
-                request = urllib.request.Request(
-                    "https://api.osv.dev/v1/querybatch",
-                    data=json.dumps({"queries": queries}).encode(),
-                    headers={"Content-Type": "application/json"},
-                )
-                with urllib.request.urlopen(request, timeout=30) as response:
-                    results = json.load(response)["results"]
+                results = self.advisories.lookup(queries)
                 if len(results) != len(queries):
                     raise ValueError("incomplete OSV response")
                 count = 0
@@ -337,28 +326,26 @@ class Mise:
         ]
 
     def apply(self, selected):
-        paths = [Path("mise/config.toml"), Path("mise/mise.lock"), Path("README.md")]
-        original = {path: (self.root / path).read_bytes() for path in paths}
-        config_text = original[paths[0]].decode()
-        declarations = {
-            d.name: d
-            for d in declared_software.parse_mise_config(
-                config_text, str(self.root / paths[0])
-            )
-        }
-        old_lock = tomllib.loads(original[paths[1]].decode())["tools"]
+        paths = (Path("mise/config.toml"), Path("mise/mise.lock"), Path("README.md"))
         chosen = {c.name: c.latest for c in selected}
-        with tempfile.TemporaryDirectory(prefix="dotfiles-upgrade-") as temporary:
-            stage = Path(temporary)
-            (stage / "mise").mkdir()
-            for path, content in original.items():
-                (stage / path).write_bytes(content)
-            shutil.copyfile(self.root / "Brewfile", stage / "Brewfile")
+        with StagedSources(self.root, paths, inputs=(Path("Brewfile"),)) as sources:
+            stage = sources.path
+            config_text = (stage / paths[0]).read_text()
+            declarations = {
+                d.name: d
+                for d in declared_software.parse_mise_config(
+                    config_text, str(self.root / paths[0])
+                )
+            }
+            old_lock = read_toml(stage / paths[1])["tools"]
             stage_config = stage / paths[0]
             stage_config.write_text(
                 declared_software.rewrite_versions(config_text, chosen)
             )
-            run(self.command("lock", *chosen, stage=stage), cwd=stage, env=self.env)
+            run(
+                self.commands, self.command("lock", *chosen, stage=stage),
+                cwd=stage, env=self.env,
+            )
             # Keep channels such as lts and temurin-25 while advancing their lock.
             persistent = {
                 name: version
@@ -369,14 +356,18 @@ class Mise:
             stage_config.write_text(
                 declared_software.rewrite_versions(config_text, persistent)
             )
-            run(self.command("lock", *chosen, stage=stage), cwd=stage, env=self.env)
+            run(
+                self.commands, self.command("lock", *chosen, stage=stage),
+                cwd=stage, env=self.env,
+            )
             new_lock = read_toml(stage / paths[1])["tools"]
-            for name in old_lock.keys() | new_lock.keys():
+            for name in sorted(old_lock.keys() | new_lock.keys()):
                 if name in chosen:
                     # Mise owns backend defaults and platform-specific variants
                     # (Ruby, for example). Ask its resolver which version is active.
                     active = json.loads(
                         run(
+                            self.commands,
                             self.command("run", "ls", "--json", "--current", name, stage=stage),
                             cwd=stage,
                             env=self.env,
@@ -390,34 +381,27 @@ class Mise:
                         f"lock changed outside the selection or missed its target: {name}"
                     )
             run(
+                self.commands,
                 [str(self.root / "_scripts/render-software-catalog"), str(stage)],
                 cwd=stage,
                 env=self.env,
             )
-            execute(self.command("run", "install", *chosen, stage=stage), cwd=stage, env=self.env)
-            if any(
-                (self.root / path).read_bytes() != content
-                for path, content in original.items()
-            ):
+            execute(
+                self.commands, self.command("run", "install", *chosen, stage=stage),
+                cwd=stage, env=self.env,
+            )
+            try:
+                sources.publish()
+            except SourceChangedError as error:
                 raise RuntimeError(
                     "source changed during upgrade; installed tools were not activated; retry"
-                )
-            # Preserve the repository-owned files and global symlinks. Restore the
-            # source snapshot if publishing any file fails; installed copies remain.
-            written = []
-            try:
-                for path in paths:
-                    write_source(self.root / path, (stage / path).read_bytes())
-                    written.append(path)
-            except OSError:
-                for path in written:
-                    write_source(self.root / path, original[path])
-                raise
+                ) from error
         print(
             "Mise declarations, lock, and README updated; review the Git diff and commit when ready."
         )
         # The normal installer also repairs agent binaries after their postinstall.
         execute(
+            self.commands,
             [str(self.root / "mise/install.sh")],
             cwd=self.root,
             env=self.env,
@@ -432,26 +416,9 @@ def audit(managers, found):
     print("  Not covered: " + ", ".join(gaps[:-1] + ["and " + gaps[-1]]))
 
 
-def choose(candidates, env):
+def choose(candidates, env, interaction):
     rows = [f"{i}\t{c.label()}" for i, c in enumerate(candidates)]
-    picker_env = {**env, "FZF_DEFAULT_OPTS": "", "FZF_DEFAULT_OPTS_FILE": ""}
-    result = subprocess.run(
-        [
-            "fzf",
-            "--multi",
-            "--delimiter=\t",
-            "--with-nth=2..",
-            "--no-sort",
-            "--wrap",
-            "--bind=space:toggle,ctrl-a:select-all,ctrl-d:deselect-all",
-            "--header=Upgrades | Tab/Space: select | Ctrl-A: all | Enter: review | Esc: skip",
-            "--prompt=Upgrade> ",
-        ],
-        input="\n".join(rows),
-        text=True,
-        capture_output=True,
-        env=picker_env,
-    )
+    result = interaction.pick(rows, env)
     if result.returncode in (1, 130):
         return []
     if result.returncode != 0:
@@ -470,27 +437,23 @@ def choose(candidates, env):
         print("  " + candidate.label())
     return (
         selected
-        if input("Apply selected upgrades? [y/N] ").strip().lower() in ("y", "yes")
+        if interaction.confirm("Apply selected upgrades? [y/N] ").strip().lower() in ("y", "yes")
         else []
     )
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--brew", required=True)
-    args = parser.parse_args()
-    root = Path(__file__).resolve().parent.parent
+def upgrade(root, brew, environment, *, commands, advisories, interaction):
     # Every subprocess inherits these, not only brew: a manager that applies
     # earlier and reaches brew indirectly must not refresh Homebrew's catalog
     # between the requery and the confirmed Homebrew upgrades.
     env = {
-        **os.environ,
+        **environment,
         "HOMEBREW_NO_AUTO_UPDATE": "1",
         "HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK": "1",
     }
-    homebrew = Homebrew(root, args.brew, env)
-    app_store = AppStore(root, env)
-    mise = Mise(root, env)
+    homebrew = Homebrew(root, brew, env, commands)
+    app_store = AppStore(root, env, commands)
+    mise = Mise(root, env, commands, advisories)
     managers = (homebrew, app_store, mise)
     found = {}
     for manager in managers:
@@ -512,15 +475,15 @@ def main():
     print("\nAvailable upgrades:")
     for candidate in candidates:
         print("  " + candidate.label())
-    if not sys.stdin.isatty() or not sys.stdout.isatty():
+    if not interaction.interactive():
         print("Non-interactive run: upgrades were not selected or applied.")
         return 0
-    if not shutil.which("fzf"):
+    if not interaction.available(env):
         warn(
             "fzf unavailable; no upgrades applied. Restore the declared fzf package and retry."
         )
         return 0
-    selected = choose(candidates, env)
+    selected = choose(candidates, env, interaction)
     if not selected:
         print("No upgrades selected.")
         return 0
@@ -544,6 +507,18 @@ def main():
         "Selected upgrades completed. Package-manager operations are not an atomic rollback."
     )
     return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--brew", required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    commands = SubprocessCommands()
+    return upgrade(
+        root, args.brew, os.environ, commands=commands,
+        advisories=OsvAdvisories(), interaction=TerminalInteraction(commands),
+    )
 
 
 if __name__ == "__main__":

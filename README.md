@@ -166,11 +166,27 @@ The package names and versions queried are sent to the public OSV service.
 
 Candidates are checked again before applying. Selected Mise tools apply first,
 then Homebrew packages, then App Store apps. Mise prepares and validates its
-source changes in a temporary directory; failed preparation or installation
-leaves tracked declarations intact and stops the run before any other upgrade.
-A failed install may leave an inactive tool copy. Package-manager operations are
-not a transaction: an earlier successful upgrade is retained if a later one
-fails. Avoid running concurrent package upgrades against the same Mac.
+source changes in a temporary directory. Failed preparation or installation
+from that directory leaves tracked declarations intact and stops the run before
+any other upgrade. A failed install may leave an inactive tool copy. Before
+publishing, the flow checks that the configuration, lock, README, and `Brewfile`
+still match their snapshots; a concurrent edit aborts publication. `Brewfile`
+is checked because it supplies the catalog, but is never published or restored.
+
+If a source write fails, restoration attempts every file already published.
+The error reports the initial failure and any files that could not be restored.
+Originals are saved before publication and removed after success or complete
+restoration. An incomplete restoration retains them in the reported recovery
+directory: inspect those copies and the current checkout to recover, then remove
+the recovery directory when finished. Publication is not atomic across files
+and does not provide recovery after a crash; see the
+[publication decision](docs/adr/0007-isolate-upgrade-effects-and-source-publication.md).
+
+After publishing, the normal Mise installer repairs links, extras, and agent
+binaries. A failure there retains the published sources and stops later
+upgrades. Package-manager operations are not a transaction: an earlier
+successful upgrade is retained if a later one fails. Avoid running concurrent
+package upgrades against the same Mac.
 
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
