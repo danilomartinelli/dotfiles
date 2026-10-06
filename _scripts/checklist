@@ -19,6 +19,9 @@ CHECKLIST_CATALOG=${DOTFILES_CHECKLIST_CATALOG:-$DOTFILES_ROOT/_scripts/_checkli
 # shellcheck source=_scripts/catalog.sh
 # shellcheck disable=SC1091
 . "$DOTFILES_ROOT/_scripts/catalog.sh"
+# shellcheck source=_scripts/checklist-rules.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/checklist-rules.sh"
 
 usage() {
   cat >&2 <<'EOF'
@@ -68,51 +71,28 @@ CHECKLIST_SHELL=()
 CHECKLIST_OPEN_PATHS=()
 CHECKLIST_LOADED=false
 
+# Checked whole before any row loads, so a fault anywhere prints no checklist
+# at all rather than one missing a section.
 load_checklist() {
   [ "$CHECKLIST_LOADED" = false ] || return 0
 
-  catalog_each_row "$CHECKLIST_CATALOG" load_checklist_row \
-    || fail "checklist catalog not found: $CHECKLIST_CATALOG"
+  [ -r "$CHECKLIST_CATALOG" ] || fail "checklist catalog not found: $CHECKLIST_CATALOG"
+  catalog_check "$CHECKLIST_CATALOG" checklist_check_row \
+    || fail "invalid checklist catalog: $CHECKLIST_CATALOG"
+  catalog_each_row "$CHECKLIST_CATALOG" load_checklist_row
 
   CHECKLIST_LOADED=true
 }
 
-validate_app_candidates() {
-  local candidates=$1
-  local label=$2
-  local candidate
-
-  while IFS= read -r candidate; do
-    case "$candidate" in
-      /*.app) ;;
-      *)
-        fail "invalid checklist row: app $label (checklist candidate is not an app path: $candidate)"
-        ;;
-    esac
-  done <<<"${candidates//|/$'\n'}"
-}
-
+# One catalog row, already checked.
 load_checklist_row() {
   local kind=$1
   local app=$2
   local label=$3
-  local note=$4
+  local note
   local resolved
 
-  if [ -z "$app" ] || [ -z "$label" ] || [ -z "$note" ]; then
-    fail "invalid checklist row: $kind $label"
-  fi
-
-  case "$kind" in
-    credential | shell)
-      [ "$app" = - ] || fail "invalid checklist row: $kind $label"
-      ;;
-    app)
-      [ "$app" = - ] || validate_app_candidates "$app" "$label"
-      ;;
-  esac
-
-  note=$(catalog_expand "$note" DOTFILES_ROOT "$DOTFILES_ROOT")
+  note=$(checklist_placeholders catalog_expand "$4" "$DOTFILES_ROOT")
 
   case "$kind" in
     credential) CHECKLIST_CREDENTIAL+=("$label"$'\t'"$note") ;;
@@ -127,7 +107,6 @@ load_checklist_row() {
         CHECKLIST_ABSENT+=("$label"$'\t'"$note")
       fi
       ;;
-    *) fail "unknown checklist kind '$kind' for $label" ;;
   esac
   return 0
 }

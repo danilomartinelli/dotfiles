@@ -154,7 +154,8 @@ test_an_incomplete_row_stops_the_checklist() {
     "shell"$'\t'"-"$'\t'"a-step"
 
   assert_fails 'incomplete row' invoke_checklist "$fixture"
-  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:1: missing note"
+  assert_contains "$fixture/stderr.log" "invalid checklist catalog: $fixture/catalog.tsv"
 }
 
 test_an_unknown_kind_stops_the_checklist() {
@@ -165,7 +166,7 @@ test_an_unknown_kind_stops_the_checklist() {
     "wishlist"$'\t'"-"$'\t'"a-step"$'\t'"run it once"
 
   assert_fails 'unknown kind' invoke_checklist "$fixture"
-  assert_contains "$fixture/stderr.log" "unknown checklist kind 'wishlist'"
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:1: unknown kind 'wishlist'"
 }
 
 test_a_non_app_row_rejects_a_non_dash_app_field() {
@@ -179,7 +180,8 @@ test_a_non_app_row_rejects_a_non_dash_app_field() {
   invoke_checklist "$fixture" || status=$?
 
   assert_equal 1 "$status" 'non-app row with an app path status'
-  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:1: a credential row opens no app; use '-': '$fixture/Unexpected.app'"
   assert_empty "$fixture/stdout.log"
 }
 
@@ -194,7 +196,8 @@ test_an_app_row_rejects_an_existing_non_app_path() {
   invoke_checklist "$fixture" || status=$?
 
   assert_equal 1 "$status" 'app row with an existing non-app path status'
-  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:1: not an app path: '$fixture/Unexpected'"
   assert_empty "$fixture/stdout.log"
 }
 
@@ -208,7 +211,29 @@ test_an_app_row_rejects_a_missing_non_app_path() {
   invoke_checklist "$fixture" || status=$?
 
   assert_equal 1 "$status" 'app row with a missing non-app path status'
-  assert_contains "$fixture/stderr.log" 'invalid checklist row'
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:1: not an app path: '$fixture/Missing'"
+  assert_empty "$fixture/stdout.log"
+}
+
+# A misspelt name would otherwise print literally, pointing the reader at a
+# path that does not exist.
+test_an_undeclared_placeholder_stops_the_checklist() {
+  local fixture status=0
+  fixture=$(new_fixture)
+
+  # shellcheck disable=SC2016 # The misspelt placeholder is the input under test.
+  write_catalog "$fixture" \
+    "shell"$'\t'"-"$'\t'"a-step"$'\t'"see \$DOTFILES_ROOT/README.md" \
+    "shell"$'\t'"-"$'\t'"b-step"$'\t'"see \$DOTFILES_RO0T/README.md"
+
+  invoke_checklist "$fixture" || status=$?
+
+  assert_equal 1 "$status" 'undeclared placeholder status'
+  # shellcheck disable=SC2016 # The reported name is literal.
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:2: unknown placeholder \$DOTFILES_RO0T (expands \$DOTFILES_ROOT)"
+  assert_not_contains "$fixture/stderr.log" 'catalog.tsv:1:'
   assert_empty "$fixture/stdout.log"
 }
 
@@ -357,6 +382,8 @@ scenario_run 'an app row rejects an existing non-app path' \
   test_an_app_row_rejects_an_existing_non_app_path
 scenario_run 'an app row rejects a missing non-app path' \
   test_an_app_row_rejects_a_missing_non_app_path
+scenario_run 'an undeclared placeholder stops the checklist' \
+  test_an_undeclared_placeholder_stops_the_checklist
 scenario_run 'a missing catalog stops the checklist' \
   test_a_missing_catalog_stops_the_checklist
 scenario_run 'printing never opens anything' test_printing_never_opens_anything
