@@ -72,15 +72,16 @@ reaching the next shell.
 
 ## 3) Layer/Module Responsibilities
 
-| Layer or module                | Owns                                                                                         | Must not own                                   | Evidence                                                                            |
-| ------------------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `_scripts/setup`               | One run plan per topic catalog, phase and prerequisite ordering, failure severity            | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                              |
-| `_scripts/topic-catalog`       | Deterministic kind/path classification                                                       | Applying discovered configuration              | `_scripts/topic-catalog`                                                            |
-| `installer-preamble.sh`        | Installer context, guards, run-once markers and linking wrappers                             | Creating credentials                           | `_scripts/installer-preamble.sh`                                                    |
-| `link-dotfiles`, `link-config` | Conflict selection and destination classification/mutation respectively                      | Package-manager orchestration                  | Both linker sources                                                                 |
-| Catalog/rendering modules      | TSV reading, explicit placeholder expansion, generated-region validation and file comparison | Consumer-specific catalog meaning              | `_scripts/catalog.sh`, `_scripts/generated-region.sh`, `_scripts/generated-file.sh` |
-| Mobile target adapters         | iOS/Android observations and explicit installation                                           | Implicit runtime downloads during normal setup | `_scripts/mobile-setup`, `xcode/install.sh`, `android-studio/install.sh`            |
-| Key-creation commands          | Explicit generation with shared refusal/permission guards                                    | Generation during topic installation           | `ssh/create-key`, `sops/create-key`, `_scripts/key-provisioning.sh`                 |
+| Layer or module                | Owns                                                                                 | Must not own                                   | Evidence                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `_scripts/setup`               | One run plan per topic catalog, phase and prerequisite ordering, failure severity    | App lists or per-tool link behavior            | `_scripts/setup`, `_scripts/checklist`                                   |
+| `_scripts/topic-catalog`       | Deterministic kind/path classification                                               | Applying discovered configuration              | `_scripts/topic-catalog`                                                 |
+| `installer-preamble.sh`        | Installer context, guards, run-once markers and linking wrappers                     | Creating credentials                           | `_scripts/installer-preamble.sh`                                         |
+| `link-dotfiles`, `link-config` | Conflict selection and destination classification/mutation respectively              | Package-manager orchestration                  | Both linker sources                                                      |
+| Catalog/rendering modules      | TSV reading, explicit placeholder expansion and generated-region validation          | Consumer-specific catalog meaning              | `_scripts/catalog.sh`, `_scripts/generated-region.sh`                    |
+| Software catalog               | Named declaration fields to table cells, description validation and README staleness | Package-manager effects                        | `_scripts/declared_software.py`, `_scripts/render-software-catalog`      |
+| Mobile target adapters         | iOS/Android observations and explicit installation                                   | Implicit runtime downloads during normal setup | `_scripts/mobile-setup`, `xcode/install.sh`, `android-studio/install.sh` |
+| Key-creation commands          | Explicit generation with shared refusal/permission guards                            | Generation during topic installation           | `ssh/create-key`, `sops/create-key`, `_scripts/key-provisioning.sh`      |
 
 ## 4) Reused Patterns
 

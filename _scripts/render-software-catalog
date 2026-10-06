@@ -62,10 +62,6 @@ fail() {
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/generated-region.sh"
 
-# shellcheck source=_scripts/generated-file.sh
-# shellcheck disable=SC1091
-. "$SCRIPT_DIR/generated-file.sh"
-
 repository_root=$(CDPATH='' cd -P -- "$repository_root" 2>/dev/null && pwd) \
   || fail "repository root not found: $repository_root"
 
@@ -77,95 +73,31 @@ for required in "$brewfile" "$mise_config" "$readme"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
 
-# What is declared comes from _scripts/declared_software.py, the one reader of
-# both files; the emitters below only turn its rows into table cells.
-declared() {
-  python3 "$SCRIPT_DIR/declared_software.py" "$1" "$repository_root"
-}
-
-# Every emitter writes tab-separated cells and stops on a declaration with no
-# catalog description, because a blank cell in the rendered table would read as
-# a package nobody had to explain rather than one nobody did.
-emit_formula_rows() {
-  declared formulae | awk -F'\t' '
-    $2 == "" {
-      printf "render-software-catalog: brew %s has no catalog description\n", $1 > "/dev/stderr"
-      exit 1
-    }
-    { printf "`%s`\t%s\n", $1, $2 }
-  '
-}
-
-# A cask's group is the comment directly above its block, so the Brewfile
-# states the grouping the table renders instead of the table inventing one.
-emit_cask_rows() {
-  declared casks | awk -F'\t' '
-    $2 == "" {
-      printf "render-software-catalog: cask %s has no catalog group\n", $1 > "/dev/stderr"
-      failed = 1
-      exit 1
-    }
-    {
-      if (!($2 in members)) {
-        order[++groups] = $2
-      }
-      members[$2] = members[$2] (members[$2] == "" ? "" : ", ") "`" $1 "`"
-    }
-    END {
-      if (failed) {
-        exit 1
-      }
-      for (index_ = 1; index_ <= groups; index_++) {
-        printf "%s\t%s\n", order[index_], members[order[index_]]
-      }
-    }
-  '
-}
-
-emit_mas_rows() {
-  declared mas | awk -F'\t' '
-    $3 == "" {
-      printf "render-software-catalog: mas %s has no catalog description\n", $1 > "/dev/stderr"
-      exit 1
-    }
-    { printf "`%s`\t`%s`\t%s\n", $1, $2, $3 }
-  '
-}
-
-# Versions are read from the declaration rather than restated, so a channel
-# such as "latest" and a pin are both reported as declared.
-emit_mise_rows() {
-  declared mise | awk -F'\t' '
-    $4 == "" {
-      printf "render-software-catalog: mise tool %s has no catalog description\n", $1 > "/dev/stderr"
-      exit 1
-    }
-    { printf "`%s`\t`%s`\t%s\n", $1, $2, $4 }
-  '
-}
-
 # The content handler for README.md's generated regions. It owns which region
 # names exist; a name it does not know fails the render instead of emptying the
 # region.
 render_region() {
+  local header
   case "$1" in
     homebrew-formulae)
-      emit_formula_rows | markdown_table "$(printf 'Formula\tPurpose')"
+      header=$'Formula\tPurpose'
       ;;
     homebrew-casks)
-      emit_cask_rows | markdown_table "$(printf 'Group\tHomebrew casks')"
+      header=$'Group\tHomebrew casks'
       ;;
     mac-app-store)
-      emit_mas_rows | markdown_table "$(printf 'Mac App Store app\tApp ID\tPurpose')"
+      header=$'Mac App Store app\tApp ID\tPurpose'
       ;;
     mise-tools)
-      emit_mise_rows | markdown_table "$(printf 'Tool\tDeclared version\tRole')"
+      header=$'Tool\tDeclared version\tRole'
       ;;
     *)
       printf 'render-software-catalog: unknown generated region: %s\n' "$1" >&2
       return 1
       ;;
   esac
+  python3 "$SCRIPT_DIR/declared_software.py" "$1" "$repository_root" \
+    | markdown_table "$header"
 }
 
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-software-catalog.XXXXXX")
@@ -176,10 +108,18 @@ rendered=$work_dir/README.md
 generated_regions_render "$readme" render_region >"$rendered" \
   || fail "cannot render $readme"
 
-if [ "$check_only" = true ]; then
-  generated_file_mode check
-else
-  generated_file_mode write
+if cmp -s "$rendered" "$readme"; then
+  if [ "$check_only" = true ]; then
+    printf 'README software catalog is up to date.\n'
+  fi
+  exit 0
 fi
-generated_file_sync "$rendered" "$readme" "$repository_root"
-generated_file_verdict 'README software catalog is' _scripts/render-software-catalog
+
+if [ "$check_only" = true ]; then
+  printf 'stale: README.md\n' >&2
+  diff -u "$readme" "$rendered" >&2 || true
+  fail 'README software catalog is out of date; run _scripts/render-software-catalog'
+fi
+
+cp -- "$rendered" "$readme"
+printf '  → rendered README.md\n'

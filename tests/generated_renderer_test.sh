@@ -173,7 +173,25 @@ test_a_generation_failure_leaves_the_stored_file_intact() {
 
   assert_left_intact "$fixture/generator" "$destination" "$fixture/before"
   assert_contains "$fixture/generator/stderr.log" \
-    'brew undescribed-formula has no catalog description'
+    'undescribed-formula has no catalog description'
+}
+
+test_a_cask_without_a_description_cannot_be_published() {
+  local fixture mode
+  fixture=$(renderer_fixture undescribed-cask)
+  printf '\n%s\n' '# Editors' "cask 'undescribed-cask'" >>"$fixture/Brewfile"
+  cp "$fixture/README.md" "$fixture/before"
+
+  for mode in write check; do
+    if [ "$mode" = check ]; then
+      run_renderer "$fixture/$mode" "$fixture" --check
+    else
+      run_renderer "$fixture/$mode" "$fixture"
+    fi
+    assert_left_intact "$fixture/$mode" "$fixture/README.md" "$fixture/before"
+    assert_contains "$fixture/$mode/stderr.log" \
+      'undescribed-cask has no catalog description'
+  done
 }
 
 # A Brewfile line outside the grammar the declaration reader accepts stops the
@@ -213,24 +231,29 @@ test_a_stale_region_is_reported_by_check_and_restored_by_a_write() {
 
   run_renderer "$fixture/check" "$fixture" --check
   assert_equal 1 "$RENDER_STATUS" 'check status for a stale region'
-  assert_contains "$fixture/check/stderr.log" 'stale: '
-  assert_contains "$fixture/check/stderr.log" 'out of date (1 file(s))'
+  assert_contains "$fixture/check/stderr.log" 'stale: README.md'
+  assert_contains "$fixture/check/stderr.log" '-| stale |'
+  assert_contains "$fixture/check/stderr.log" '+| Formula'
+  assert_contains "$fixture/check/stderr.log" \
+    'README software catalog is out of date; run _scripts/render-software-catalog'
+  assert_equal '' "$(cat "$fixture/check/stdout.log")" 'stale check stdout'
   cmp -s "$fixture/before" "$destination" \
     || scenario_fail '--check wrote the stale file'
 
   run_renderer "$fixture/write" "$fixture"
   assert_equal 0 "$RENDER_STATUS" 'write status'
-  assert_contains "$fixture/write/stdout.log" 'rendered'
+  assert_contains "$fixture/write/stdout.log" 'rendered README.md'
   cmp -s "$tracked" "$destination" \
     || scenario_fail 'the write did not restore the tracked bytes'
 
   run_renderer "$fixture/again" "$fixture"
   assert_equal 0 "$RENDER_STATUS" 'second write status'
-  assert_not_contains "$fixture/again/stdout.log" 'rendered'
+  assert_equal '' "$(cat "$fixture/again/stdout.log")" 'unchanged write stdout'
 
   run_renderer "$fixture/clean" "$fixture" --check
   assert_equal 0 "$RENDER_STATUS" 'check status after the write'
   assert_contains "$fixture/clean/stdout.log" 'up to date'
+  assert_equal '' "$(cat "$fixture/clean/stderr.log")" 'clean check stderr'
 }
 
 scenario_run 'a marker mention cannot pass for a region' \
@@ -241,6 +264,8 @@ scenario_run 'a malformed region leaves the stored file intact' \
   test_a_malformed_region_leaves_the_stored_file_intact
 scenario_run 'a generation failure leaves the stored file intact' \
   test_a_generation_failure_leaves_the_stored_file_intact
+scenario_run 'a cask without a description cannot be published' \
+  test_a_cask_without_a_description_cannot_be_published
 scenario_run 'a rejected declaration leaves the stored file intact' \
   test_a_rejected_declaration_leaves_the_stored_file_intact
 scenario_run 'a stale region is reported by check and restored by a write' \
