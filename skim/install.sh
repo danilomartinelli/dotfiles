@@ -12,5 +12,8 @@ installer_optional_app Skim skim /Applications/Skim.app
 
 SKIM_BUNDLE="net.sourceforge.skim-app.skim"
 
+# shellcheck source=_scripts/file-associations.sh
+. "$DOTFILES_ROOT/_scripts/file-associations.sh"
+
 installer_claim_file_types Skim "$SKIM_BUNDLE" \
   "Skim set as default app for PDF files"

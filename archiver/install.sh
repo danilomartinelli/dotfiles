@@ -32,5 +32,8 @@ if [ ! -x "$LSREGISTER_BIN" ] || ! "$LSREGISTER_BIN" -f "$ARCHIVER_APP" >/dev/nu
   exit 0
 fi
 
+# shellcheck source=_scripts/file-associations.sh
+. "$DOTFILES_ROOT/_scripts/file-associations.sh"
+
 installer_claim_file_types Archiver "$ARCHIVER_BUNDLE" \
   "Archiver set as default for compressed files"

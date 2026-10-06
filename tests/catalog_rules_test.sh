@@ -18,16 +18,14 @@ scenario_init dotfiles-catalog-rules-tests
 
 READER=$REPOSITORY_ROOT/_scripts/catalog.sh
 
-# Catalog, rules file, and validator, repository-relative. The association rules
-# live in the preamble, which resolves its topic from the catalog's directory
-# exactly as it does from an installer's.
+# Catalog, rules file, and public validator, repository-relative.
 CATALOG_RULES=(
   '_macos/defaults.tsv _macos/defaults-rules.sh defaults_check_row'
   '_scripts/_checklist.tsv _scripts/checklist-rules.sh checklist_check_row'
-  'archiver/_associations.tsv _scripts/installer-preamble.sh _installer_check_association'
+  'archiver/_associations.tsv _scripts/file-associations-rules.sh associations_check_row'
   'dock/_layout.tsv dock/_layout-rules.sh dock_layout_check_row'
-  'skim/_associations.tsv _scripts/installer-preamble.sh _installer_check_association'
-  'zed/_associations.tsv _scripts/installer-preamble.sh _installer_check_association'
+  'skim/_associations.tsv _scripts/file-associations-rules.sh associations_check_row'
+  'zed/_associations.tsv _scripts/file-associations-rules.sh associations_check_row'
 )
 
 # Run <validator> from <rules> over <catalog> under `set -eu`, the way the
@@ -39,8 +37,8 @@ check_catalog() {
   local validator=$4
 
   # shellcheck disable=SC2016 # The body is evaluated by the child sh process.
-  scenario_capture "$fixture" env INSTALLER_ANCHOR="$REPOSITORY_ROOT/$catalog" \
-    sh -c 'set -eu; . "$1"; . "$2"; catalog_check "$3" "$4"' sh \
+  scenario_capture "$fixture" sh -c \
+    'set -eu; . "$1"; . "$2"; catalog_check "$3" "$4"' sh \
     "$READER" "$REPOSITORY_ROOT/$rules" "$REPOSITORY_ROOT/$catalog" "$validator"
 }
 
