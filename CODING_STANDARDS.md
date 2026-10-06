@@ -118,27 +118,25 @@ without updating adapters, tests, and user documentation in the same change.
 - Topic installers source `_scripts/installer-preamble.sh` immediately after
   error-mode setup and use its shared interface:
 
-  | Helper                         | Contract                                                            |
-  | ------------------------------ | ------------------------------------------------------------------- |
-  | `installer_require_darwin`     | Skip successfully outside macOS                                     |
-  | `installer_require_command`    | Stop with an actionable formula hint when a required CLI is absent  |
-  | `installer_optional_command`   | Warn and skip when an optional CLI is absent                        |
-  | `installer_optional_app`       | Warn and skip when an optional application is absent                |
-  | `installer_config_dir`         | Resolve a tool's configuration directory without creating it        |
-  | `installer_workspace_root`     | Resolve the Workspace root without creating it                      |
-  | `installer_run_once`           | Skip an applied step or run it and record success, then return      |
-  | `installer_claim_file_types`   | Check, gate, apply, and record a topic's file-type associations     |
-  | `installer_apply_associations` | Check and apply a topic's declared associations and report failures |
-  | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
-  | `installer_link_tool_config`   | Link one file into a tool's configuration directory                 |
-  | `installer_banner`             | Print a phase heading to stdout                                     |
-  | `installer_success`            | Print successful completion to stdout                               |
-  | `installer_item`               | Print one completed step inside a phase, indented under it          |
-  | `installer_note`               | Print non-error detail to stdout                                    |
-  | `installer_warn`               | Print a warning to stderr                                           |
-  | `installer_error`              | Print an error to stderr                                            |
-  | `installer_hint`               | Continue a warning or error with an actionable stderr hint          |
-  | `installer_fail`               | Print an error and stop the installer                               |
+  | Helper                       | Contract                                                           |
+  | ---------------------------- | ------------------------------------------------------------------ |
+  | `installer_require_darwin`   | Skip successfully outside macOS                                    |
+  | `installer_require_command`  | Stop with an actionable formula hint when a required CLI is absent |
+  | `installer_optional_command` | Warn and skip when an optional CLI is absent                       |
+  | `installer_optional_app`     | Warn and skip when an optional application is absent               |
+  | `installer_config_dir`       | Resolve a tool's configuration directory without creating it       |
+  | `installer_workspace_root`   | Resolve the Workspace root without creating it                     |
+  | `installer_run_once`         | Skip an applied step or run it and record success, then return     |
+  | `installer_link_config`      | Delegate configuration linking to `_scripts/link-config`           |
+  | `installer_link_tool_config` | Link one file into a tool's configuration directory                |
+  | `installer_banner`           | Print a phase heading to stdout                                    |
+  | `installer_success`          | Print successful completion to stdout                              |
+  | `installer_item`             | Print one completed step inside a phase, indented under it         |
+  | `installer_note`             | Print non-error detail to stdout                                   |
+  | `installer_warn`             | Print a warning to stderr                                          |
+  | `installer_error`            | Print an error to stderr                                           |
+  | `installer_hint`             | Continue a warning or error with an actionable stderr hint         |
+  | `installer_fail`             | Print an error and stop the installer                              |
 
 A topic that links a file into `$HOME/.config/<tool>` calls
 `installer_link_tool_config`, which resolves the directory and composes the
@@ -285,17 +283,21 @@ selected step's old marker before attempting it, so a failed reset leaves it
 armed for the next run. Nothing else may define a per-topic reset variable.
 
 A topic that claims file types declares them in `<topic>/_associations.tsv`
-and claims them with `installer_claim_file_types`, which checks the catalog
-and passes the claim to `installer_run_once`. The step requires `duti` and
-applies the checked catalog; the module records its marker only after it
-returns. Call it rather than spelling the sequence out: the run-once key is
-derived from the topic directory. Dock uses the same module for its layout.
-`installer_apply_associations` remains the applying half for a topic that needs
-it alone; no installer writes its own association loop. A row whose failure mode is `ignore` is best-effort,
-because Launch Services does not recognise every identifier on every macOS
-version, and only `report` rows are named and counted. Applying a catalog is a run-once
-step in every topic that claims file types, so editing a row changes what the
-next apply would set without setting it; `DOTFILES_RESET=<topic>-associations dot` applies it.
+and sources `_scripts/file-associations.sh` after the preamble. Only topics
+that claim file types load this module. Its one entry point,
+`installer_claim_file_types`, takes `<name> <bundle> <applied>` and checks the
+catalog with `associations_check_row` from the adjacent
+`_scripts/file-associations-rules.sh` and passes the claim to
+`installer_run_once`. The step requires `duti` and applies the checked catalog;
+the run-once module records its marker only after it returns. Call the claim
+rather than spelling the sequence out: the run-once key is derived from the
+topic directory. Dock uses the same run-once module for its layout. No
+installer writes its own association loop. A row whose failure mode is `ignore`
+is best-effort, because Launch Services does not recognise every identifier on
+every macOS version, and only `report` rows are named and counted. Applying a
+catalog is a run-once step in every topic that claims file types, so editing a
+row changes what the next apply would set without setting it;
+`DOTFILES_RESET=<topic>-associations dot` applies it.
 
 A missing `duti` skips a topic's associations through
 `installer_optional_command` rather than stopping the run. A default
@@ -452,6 +454,7 @@ it reads it from there rather than restating it.
 | Checkout resolution and command adapters                        | `tests/checkout_test.sh`                                                                                                  |
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                                |
 | Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                                        |
+| File-type claims                                                | `tests/file_associations_test.sh`, `tests/archiver_install_test.sh`                                                       |
 | Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                                 |
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                                            |
 | Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                                      |

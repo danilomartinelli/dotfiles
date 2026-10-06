@@ -31,7 +31,7 @@ unset _installer_anchor _installer_topic_dir _installer_dotfiles_root INSTALLER_
 # The progress vocabulary. Sourced rather than defined here so the modules an
 # installer calls out to — link-config, and the _macos scripts setup runs — can
 # print in the same voice without also taking checkout resolution, the run-once
-# marker directory, and file-type associations.
+# marker directory, and installer guards.
 # shellcheck source=_scripts/installer-output.sh
 # shellcheck disable=SC1091
 . "$DOTFILES_ROOT/_scripts/installer-output.sh"
@@ -138,125 +138,6 @@ installer_run_once() {
   mkdir -p "$(dirname -- "$_installer_once_marker")"
   touch "$_installer_once_marker"
   unset _installer_once_marker
-}
-
-# Apply a topic's declared file-type associations and report the outcome.
-# Reads TOPIC_DIR/_associations.tsv so a topic gains an association by editing
-# data, and checks the whole catalog before the first duti call. A "report" row
-# names and counts its failure; an "ignore" row is best-effort, because Launch
-# Services does not recognise every identifier on every macOS version. A "-"
-# label falls back to the identifier.
-# Usage: installer_apply_associations <name> <bundle> <success>
-installer_apply_associations() {
-  _installer_check_associations
-  _installer_apply_checked_associations "$@"
-}
-
-# Stop the installer unless TOPIC_DIR/_associations.tsv is readable and every
-# row satisfies _installer_check_association. Private: the claim checks before
-# its run-once gate, and the apply before its first effect.
-_installer_check_associations() {
-  _installer_assoc_catalog=$TOPIC_DIR/_associations.tsv
-
-  if [ ! -r "$_installer_assoc_catalog" ]; then
-    installer_fail "association catalog not readable: $_installer_assoc_catalog"
-  fi
-
-  if ! catalog_check "$_installer_assoc_catalog" _installer_check_association; then
-    installer_fail "invalid association catalog: $_installer_assoc_catalog"
-  fi
-
-  unset _installer_assoc_catalog
-}
-
-# What an association row must satisfy on its text alone. Whether Launch
-# Services knows the identifier is a fact about this machine, which is what the
-# failure mode is for. Roles are duti's.
-# Usage: catalog_check <catalog> _installer_check_association
-_installer_check_association() {
-  case $2 in
-    '') catalog_reject 'missing role' ;;
-    all | viewer | editor | shell | none) ;;
-    *) catalog_reject "unknown role '$2'" ;;
-  esac
-
-  # An unknown mode is a catalog bug, and defaulting it either way would
-  # decide silently whether a failure is heard.
-  case $3 in
-    '') catalog_reject 'missing failure mode' ;;
-    report | ignore) ;;
-    *) catalog_reject "unknown failure mode '$3'" ;;
-  esac
-
-  [ -n "$4" ] || catalog_reject "missing label (use '-' for the identifier)"
-  [ -z "$2" ] || catalog_reject_duplicate "$1" "$2"
-
-  return 0
-}
-
-# The applying half, for a catalog already checked. Private, so the claim can
-# check before its gate without checking the catalog twice.
-_installer_apply_checked_associations() {
-  _installer_assoc_name=$1
-  _installer_assoc_bundle=$2
-  _installer_assoc_success=$3
-  _installer_assoc_failed=0
-
-  catalog_each_row "$TOPIC_DIR/_associations.tsv" _installer_apply_association
-
-  if [ "$_installer_assoc_failed" -eq 0 ]; then
-    installer_success "$_installer_assoc_success"
-  else
-    installer_warn \
-      "Some $_installer_assoc_name file associations could not be configured ($_installer_assoc_failed failed)"
-  fi
-
-  unset _installer_assoc_name _installer_assoc_bundle _installer_assoc_success \
-    _installer_assoc_failed
-}
-
-# One association row, already checked. Counts into _installer_assoc_failed,
-# which the caller owns, and always returns zero so a reported failure does not
-# stop the run.
-_installer_apply_association() {
-  _installer_assoc_id=$1
-  _installer_assoc_role=$2
-  _installer_assoc_failure=$3
-  _installer_assoc_label=$4
-
-  if duti -s "$_installer_assoc_bundle" "$_installer_assoc_id" \
-    "$_installer_assoc_role" 2>/dev/null; then
-    return 0
-  fi
-
-  [ "$_installer_assoc_failure" = report ] || return 0
-
-  if [ "$_installer_assoc_label" = '-' ]; then
-    _installer_assoc_label=$_installer_assoc_id
-  fi
-  installer_warn \
-    "Failed to set $_installer_assoc_name as default for $_installer_assoc_label"
-  _installer_assoc_failed=$((_installer_assoc_failed + 1))
-  return 0
-}
-
-# Check even an already-claimed catalog; the run-once module owns the rest of
-# its lifecycle. Derive the key from the topic so installers never spell it.
-# Usage: installer_claim_file_types <name> <bundle> <applied>
-installer_claim_file_types() {
-  _installer_check_associations
-
-  installer_run_once "$(basename -- "$TOPIC_DIR")-associations" 'file associations' \
-    _installer_claim_checked_file_types "$@"
-  installer_success "$1 configured"
-}
-
-# Missing duti leaves the step armed. Keep this guard inside the step so a
-# previously applied claim does not need duti just to report its marker.
-_installer_claim_checked_file_types() {
-  installer_optional_command duti \
-    "duti is required to set $1 as the default app for its declared file types"
-  _installer_apply_checked_associations "$@"
 }
 
 installer_link_config() {

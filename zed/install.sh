@@ -15,5 +15,8 @@ ZED_BUNDLE="dev.zed.Zed"
 
 installer_optional_app Zed zed /Applications/Zed.app
 
+# shellcheck source=_scripts/file-associations.sh
+. "$DOTFILES_ROOT/_scripts/file-associations.sh"
+
 installer_claim_file_types Zed "$ZED_BUNDLE" \
   "Zed set as default app for tracked text/source extensions"
