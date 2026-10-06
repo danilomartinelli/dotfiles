@@ -325,7 +325,10 @@ default application you set in Finder both outlive an update run. Editing a row
 therefore takes effect on the next `DOTFILES_RESET=dock dot`,
 `DOTFILES_RESET=archiver-associations dot`, `DOTFILES_RESET=skim-associations dot`,
 or `DOTFILES_RESET=zed-associations dot`; `DOTFILES_RESET=all dot` re-arms every
-run-once step.
+run-once step. Both catalogs are still checked whenever their installer runs,
+even once applied, and before anything changes: a malformed row stops `dot` at
+that installer and names the file and line. CI runs the same checks over every
+tracked catalog.
 
 ### Mise runtimes and global CLIs
 

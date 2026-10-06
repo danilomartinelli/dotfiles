@@ -126,6 +126,10 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   `_scripts/catalog.sh`, which the preamble sources. No such consumer writes
   its own `read` loop. A catalog arriving as a command's stdout, such as
   `_scripts/topic-catalog` output, is read directly.
+- Check a catalog whole with `catalog_check` before its consumer's first effect
+  and before any run-once gate. Its rules live in a rules file beside the
+  consumer, and `tests/catalog_rules_test.sh` runs them over every tracked
+  catalog, so a new catalog adds a row there.
 - Do not duplicate checkout resolution, Darwin detection, dependency hints,
   output conventions, or conflict handling in individual topics.
 - Only `*.symlink` files and directories are linked automatically.

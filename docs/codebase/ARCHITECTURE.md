@@ -83,14 +83,18 @@ reaching the next shell.
 | ----------------------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Public adapter delegates to private owner | `bin/dot`, `bin/mobile-setup`                       | Stable user commands with one implementation owner                                 |
 | Catalog plus handler                      | `catalog_each_row`, defaults, Dock, associations    | Preserves ordering, handles final lines and keeps child commands off catalog input |
+| Check before the first effect             | `catalog_check`, the rules files beside consumers   | Reports every malformed row by line before anything is applied or gated            |
 | Explicit conflict policy                  | `_scripts/link-config`                              | Chooses preservation, backup or confirmed replacement without hiding outcomes      |
 | Run-once marker                           | `_scripts/installer-preamble.sh`, `dock/install.sh` | Preserves manually rearranged state unless `DOTFILES_RESET` re-arms it             |
 | Staged generated output                   | `_scripts/render-software-catalog`                  | Validates all regions before replacing the documented file                         |
 | Command stubs and injected paths          | `tests/_support/fixture.sh`, `tests/setup_test.sh`  | Exercises process/filesystem boundaries without applying to the real host          |
 
 `catalog_each_row` passes seven arguments on file descriptor 3 and uses shared
-shell variables. It explicitly forbids nested calls. Catalog stdout from
-`topic-catalog` is the documented exception to the catalog-file reader rule.
+shell variables. It explicitly forbids nested calls. `catalog_check` runs a
+validator over the same rows first; the validator decides from the row's text
+only, so `tests/catalog_rules_test.sh` can run it over every tracked catalog.
+Catalog stdout from `topic-catalog` is the documented exception to the
+catalog-file reader rule.
 
 ## 5) Known Architectural Risks
 

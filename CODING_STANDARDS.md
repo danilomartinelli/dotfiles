@@ -127,8 +127,8 @@ without updating adapters, tests, and user documentation in the same change.
   | `installer_workspace_root`     | Resolve the Workspace root without creating it                      |
   | `installer_skip_if_applied`    | Skip successfully when a run-once step has already been applied     |
   | `installer_mark_applied`       | Record that a run-once step completed                               |
-  | `installer_claim_file_types`   | Gate, apply, and record a topic's declared file-type associations   |
-  | `installer_apply_associations` | Apply a topic's declared file-type associations and report failures |
+  | `installer_claim_file_types`   | Check, gate, apply, and record a topic's file-type associations     |
+  | `installer_apply_associations` | Check and apply a topic's declared associations and report failures |
   | `installer_link_config`        | Delegate configuration linking to `_scripts/link-config`            |
   | `installer_link_tool_config`   | Link one file into a tool's configuration directory                 |
   | `installer_banner`             | Print a phase heading to stdout                                     |
@@ -192,6 +192,30 @@ descriptor 3 so a handler running `duti` or `dockutil` cannot consume
 the rows still to come. A handler must return zero: consumers run under
 `set -e`, so a non-zero return stops the run rather than skipping a row.
 
+A consumer checks its whole catalog with `catalog_check <catalog> <validator>`
+before its first effect and before any run-once gate, and stops when it returns
+non-zero. A row that is wrong on its text alone is a repository error: checked
+while applying, it leaves the rows above it applied, and checked behind a gate,
+it stays hidden until a reset. The validator is called like a handler and must
+also return zero. It rejects a row through `catalog_reject <reason>`,
+`catalog_reject_duplicate <column>...`, or
+`catalog_reject_undeclared <value> <NAME> <replacement>...`, as many times as
+the row has faults; the module prints each as `<catalog>:<line>: <reason>` and
+the consumer adds one line in its own voice. A validator decides from the text
+only. Whether an app exists or a tool accepts an identifier is a fact about the
+machine, and stays a warning in the handler, which applies a checked row
+without repeating the checks.
+
+The validator lives in a rules file beside its consumer, such as
+`dock/_layout-rules.sh`, so `tests/catalog_rules_test.sh` can run it over the
+tracked catalog without running the consumer. That suite fails for a tracked
+catalog missing from its table, so a new catalog gets a rules file and a row
+there in the same change. A rules file declares the placeholders its catalog
+honours once, in one function that forwards the same pairs to `catalog_expand`
+or `catalog_reject_undeclared`, so no name is accepted without being expanded.
+[ADR-0005](docs/adr/0005-validate-catalogs-before-any-effect.md) records why the
+rules are shell rather than a schema declared in the catalog.
+
 A catalog value that names a path through a placeholder is expanded with
 `catalog_expand <value> <NAME> <replacement>...`, from the same module. The
 caller names what its catalog honours and what each name stands for; the module
@@ -249,11 +273,11 @@ re-arms one or more steps by key, or every step with `all`; nothing else may
 define a per-topic reset variable.
 
 A topic that claims file types declares them in `<topic>/_associations.tsv`
-and claims them with `installer_claim_file_types`, which gates the run-once
-step, requires `duti`, applies the catalog, and records the marker in that
-order. Call it rather than spelling the sequence out: the run-once key is
-derived from the topic directory, so no installer can gate on one key and mark
-another, and the marker is written only after the apply returns.
+and claims them with `installer_claim_file_types`, which checks the catalog,
+gates the run-once step, requires `duti`, applies the catalog, and records the
+marker in that order. Call it rather than spelling the sequence out: the
+run-once key is derived from the topic directory, so no installer can gate on
+one key and mark another, and the marker is written only after the apply returns.
 `installer_apply_associations` remains the applying half for a topic that needs
 it alone; no installer writes its own association loop. A row whose failure mode is `ignore` is best-effort,
 because Launch Services does not recognise every identifier on every macOS
@@ -417,7 +441,8 @@ it reads it from there rather than restating it.
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                               |
 | Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                         |
 | Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                               |
-| Catalog reading                                                 | `tests/catalog_test.sh`                                                                                      |
+| Catalog reading and checking                                    | `tests/catalog_test.sh`                                                                                      |
+| Tracked catalog content and rules                               | `tests/catalog_rules_test.sh`                                                                                |
 | Declared software reading                                       | `tests/declared_software_test.sh`                                                                            |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
 | Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                   |
