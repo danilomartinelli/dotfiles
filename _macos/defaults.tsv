@@ -1,4 +1,5 @@
-# macOS preference catalog consumed by set-defaults.sh
+# macOS preference catalog consumed by set-defaults.sh and checked by
+# defaults-rules.sh, which also holds each value to its type.
 # Columns: domain, key, type, value (type ∈ bool|int|float|string)
 
 # KEYBOARD & INPUT

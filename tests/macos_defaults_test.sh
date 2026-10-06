@@ -18,6 +18,7 @@ make_fixture() {
   fixture=$(installer_fixture)
   mkdir -p "$fixture/_macos" "$fixture/_scripts" "$fixture/home/Library"
   cp "$REPOSITORY_ROOT/_macos/set-defaults.sh" "$fixture/_macos/set-defaults.sh"
+  cp "$REPOSITORY_ROOT/_macos/defaults-rules.sh" "$fixture/_macos/defaults-rules.sh"
   cp "$REPOSITORY_ROOT/_scripts/catalog.sh" "$fixture/_scripts/catalog.sh"
   cp "$REPOSITORY_ROOT/_scripts/installer-output.sh" "$fixture/_scripts/installer-output.sh"
   chmod +x "$fixture/_macos/set-defaults.sh"
@@ -93,18 +94,43 @@ test_no_dns_mutation() {
   assert_contains "$fixture/events.log" 'killall Finder'
 }
 
-test_invalid_type_fails() {
-  local fixture
+# `defaults write` accepts a malformed value and writes 0 or a truncation in its
+# place, so the value is checked against its type before anything is written,
+# and a fault anywhere in the catalog writes nothing at all.
+test_an_invalid_catalog_writes_nothing() {
+  local catalog fixture
 
   fixture=$(make_fixture)
-  printf 'NSGlobalDomain\tKeyRepeat\tarray\t1\n' >"$fixture/_macos/defaults.tsv"
+  catalog=$fixture/_macos/defaults.tsv
+  cat >"$catalog" <<'EOF'
+NSGlobalDomain	KeyRepeat	int	1
+NSGlobalDomain	InitialKeyRepeat	array	1
+NSGlobalDomain	AppleKeyboardUIMode	int	abc
+com.apple.dock	autohide-delay	float	x1
+com.apple.dock	autohide	bool	maybe
+com.apple.finder	NewWindowTargetPath	string	file://$HOEM/
+-g	KeyRepeat	int	2
+com.apple.finder	ShowStatusBar	bool
+EOF
   if invoke_defaults "$fixture"; then
     return 1
   fi
-  assert_contains "$fixture/stderr.log" "unknown catalog type 'array'"
+
+  assert_contains "$fixture/stderr.log" "$catalog:2: unknown type 'array'"
+  assert_contains "$fixture/stderr.log" "$catalog:3: int value is not an integer: 'abc'"
+  assert_contains "$fixture/stderr.log" "$catalog:4: float value is not a number: 'x1'"
+  assert_contains "$fixture/stderr.log" "$catalog:5: bool value is not true or false: 'maybe'"
+  assert_contains "$fixture/stderr.log" "$catalog:6: unknown placeholder \$HOEM"
+  assert_contains "$fixture/stderr.log" "$catalog:7: duplicates line 1"
+  assert_contains "$fixture/stderr.log" "$catalog:8: missing value"
+  assert_contains "$fixture/stderr.log" "Error: invalid defaults catalog: $catalog"
+  assert_not_contains "$fixture/events.log" 'defaults write'
+  assert_not_contains "$fixture/events.log" 'killall'
+  [[ ! -d $fixture/home/Downloads/Screenshots ]] \
+    || scenario_fail 'screenshot directory created for an invalid catalog'
 }
 
 scenario_run 'catalog applies in order with HOME expansion' test_catalog_order_and_expansion
 scenario_run 'the apply never mutates DNS' test_no_dns_mutation
-scenario_run 'invalid catalog types fail the apply' test_invalid_type_fails
+scenario_run 'an invalid catalog writes nothing' test_an_invalid_catalog_writes_nothing
 scenario_finish
