@@ -153,6 +153,189 @@ EOF
   assert_contains "$fixture/stdout.log" 'no leaks'
 }
 
+# Run catalog_check over <catalog> with a validator named `row`, defined by
+# <body>, the way a consumer does before its first effect.
+invoke_check() {
+  local fixture=$1
+  local catalog=$2
+  local body=$3
+
+  cat >"$fixture/consumer.sh" <<EOF
+#!/bin/sh
+set -e
+. "$READER"
+$body
+if catalog_check "$catalog" row; then
+  printf 'valid\n'
+else
+  printf 'invalid %s\n' "\$?"
+fi
+EOF
+  chmod +x "$fixture/consumer.sh"
+  scenario_capture "$fixture" "$fixture/consumer.sh"
+}
+
+test_a_catalog_without_rejections_is_valid() {
+  local fixture
+  fixture=$(scenario_tmpdir check-valid)
+
+  printf '%s\n' 'alpha	one' 'bravo	two' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" 'row() { return 0; }'
+  assert_contains "$fixture/stdout.log" 'valid'
+  assert_not_contains "$fixture/stdout.log" 'invalid'
+  assert_empty "$fixture/stderr.log"
+}
+
+# The whole point of checking first: every fault in the file is reported in one
+# run, and each one names the line an editor shows, comments and blanks
+# included.
+test_every_rejection_names_its_line() {
+  local fixture
+  fixture=$(scenario_tmpdir check-lines)
+
+  printf '%s\n' \
+    '# a comment' \
+    '' \
+    'alpha	bad' \
+    'bravo	good' \
+    'charlie	bad' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { [ \"\$2\" = good ] || catalog_reject \"bad \$1\"; return 0; }"
+  assert_contains "$fixture/stdout.log" 'invalid 1'
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:3: bad alpha"
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:5: bad charlie"
+  assert_not_contains "$fixture/stderr.log" 'bravo'
+}
+
+test_a_row_may_be_rejected_more_than_once() {
+  local fixture
+  fixture=$(scenario_tmpdir check-twice)
+
+  printf '%s\n' 'alpha	one	two' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { catalog_reject \"first \$2\"; catalog_reject \"second \$3\"; return 0; }"
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:1: first one"
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:1: second two"
+}
+
+test_a_duplicate_names_the_line_that_declared_it_first() {
+  local fixture
+  fixture=$(scenario_tmpdir check-duplicate)
+
+  printf '%s\n' \
+    'alpha	one	x' \
+    'alpha	two	x' \
+    'alpha	one	y' \
+    'alpha	one	z' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { catalog_reject_duplicate \"\$1\" \"\$2\"; return 0; }"
+  assert_contains "$fixture/stdout.log" 'invalid 1'
+  assert_not_contains "$fixture/stderr.log" 'catalog.tsv:2:'
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:3: duplicates line 1"
+  assert_contains "$fixture/stderr.log" "$fixture/catalog.tsv:4: duplicates line 1"
+}
+
+# The pairs are catalog_expand's, so one declaration can feed both: what is
+# accepted here is exactly what expands there.
+test_only_declared_placeholders_are_accepted() {
+  local fixture
+  fixture=$(scenario_tmpdir check-placeholders)
+
+  # shellcheck disable=SC2016 # Literal placeholders are the input under test.
+  printf '%s\n' \
+    'file://$HOME/	declared' \
+    '$WORKSPACE	declared' \
+    '$HOEM/Downloads	misspelt' \
+    '$HOME_DIR	longer' \
+    'costs $5 at $/unit	literal' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { catalog_reject_undeclared \"\$1\" HOME /h WORKSPACE /w; return 0; }"
+  assert_contains "$fixture/stdout.log" 'invalid 1'
+  assert_not_contains "$fixture/stderr.log" 'catalog.tsv:1:'
+  assert_not_contains "$fixture/stderr.log" 'catalog.tsv:2:'
+  # shellcheck disable=SC2016 # The reported name is literal.
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:3: unknown placeholder \$HOEM (expands \$HOME, \$WORKSPACE)"
+  # shellcheck disable=SC2016 # The reported name is literal.
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:4: unknown placeholder \$HOME_DIR"
+  assert_not_contains "$fixture/stderr.log" 'catalog.tsv:5:'
+}
+
+test_a_catalog_that_expands_nothing_rejects_every_placeholder() {
+  local fixture
+  fixture=$(scenario_tmpdir check-no-placeholders)
+
+  # shellcheck disable=SC2016 # A literal placeholder is the input under test.
+  printf '%s\n' '$HOME/x	value' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { catalog_reject_undeclared \"\$1\"; return 0; }"
+  # shellcheck disable=SC2016 # The reported name is literal.
+  assert_contains "$fixture/stderr.log" \
+    "$fixture/catalog.tsv:1: unknown placeholder \$HOME (expands nothing)"
+}
+
+test_a_placeholder_name_without_a_replacement_is_refused() {
+  local fixture
+  fixture=$(scenario_tmpdir check-arity)
+
+  printf '%s\n' 'alpha	one' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    "row() { catalog_reject_undeclared \"\$1\" HOME || printf 'refused\n'; return 0; }"
+  assert_contains "$fixture/stdout.log" 'refused'
+  assert_contains "$fixture/stderr.log" 'placeholder name has no replacement: HOME'
+}
+
+test_an_unreadable_catalog_fails_the_check() {
+  local fixture
+  fixture=$(scenario_tmpdir check-unreadable)
+
+  invoke_check "$fixture" "$fixture/missing.tsv" 'row() { return 0; }'
+  assert_contains "$fixture/stdout.log" 'invalid 1'
+  assert_contains "$fixture/stderr.log" 'catalog: not readable'
+}
+
+test_an_undefined_validator_fails_the_check() {
+  local fixture
+  fixture=$(scenario_tmpdir check-undefined)
+
+  printf '%s\n' 'alpha	one' >"$fixture/catalog.tsv"
+
+  invoke_check "$fixture" "$fixture/catalog.tsv" 'other() { return 0; }'
+  assert_contains "$fixture/stdout.log" 'invalid 1'
+  assert_contains "$fixture/stderr.log" 'catalog: no such validator: row'
+}
+
+test_the_check_leaks_no_variables_on_either_exit() {
+  local fixture
+  fixture=$(scenario_tmpdir check-leak)
+
+  printf '%s\n' 'alpha	one' 'alpha	one' >"$fixture/catalog.tsv"
+
+  cat >"$fixture/consumer.sh" <<EOF
+#!/bin/sh
+. "$READER"
+valid() { catalog_reject_undeclared "\$1" HOME /h; return 0; }
+invalid() { catalog_reject_duplicate "\$1"; return 0; }
+catalog_check "$fixture/catalog.tsv" valid
+printf 'after valid: %s\\n' "\$(set | grep -c '^_catalog' || true)"
+catalog_check "$fixture/catalog.tsv" invalid 2>/dev/null || true
+printf 'after invalid: %s\\n' "\$(set | grep -c '^_catalog' || true)"
+EOF
+  chmod +x "$fixture/consumer.sh"
+  scenario_capture "$fixture" "$fixture/consumer.sh"
+
+  assert_contains "$fixture/stdout.log" 'after valid: 0'
+  assert_contains "$fixture/stdout.log" 'after invalid: 0'
+}
+
 # A catalog row spells paths the way a person writes them. Which names expand is
 # the catalog's own fact, so the caller names them and everything else stays a
 # literal `$`.
@@ -283,6 +466,27 @@ scenario_run 'an unreadable catalog reports and fails' \
   test_an_unreadable_catalog_reports_and_fails
 scenario_run 'the reader leaks no variables' \
   test_the_reader_leaks_no_variables
+
+scenario_run 'a catalog without rejections is valid' \
+  test_a_catalog_without_rejections_is_valid
+scenario_run 'every rejection names its line' \
+  test_every_rejection_names_its_line
+scenario_run 'a row may be rejected more than once' \
+  test_a_row_may_be_rejected_more_than_once
+scenario_run 'a duplicate names the line that declared it first' \
+  test_a_duplicate_names_the_line_that_declared_it_first
+scenario_run 'only declared placeholders are accepted' \
+  test_only_declared_placeholders_are_accepted
+scenario_run 'a catalog that expands nothing rejects every placeholder' \
+  test_a_catalog_that_expands_nothing_rejects_every_placeholder
+scenario_run 'a placeholder name without a replacement is refused' \
+  test_a_placeholder_name_without_a_replacement_is_refused
+scenario_run 'an unreadable catalog fails the check' \
+  test_an_unreadable_catalog_fails_the_check
+scenario_run 'an undefined validator fails the check' \
+  test_an_undefined_validator_fails_the_check
+scenario_run 'the check leaks no variables on either exit' \
+  test_the_check_leaks_no_variables_on_either_exit
 
 scenario_run 'only the named placeholders expand' \
   test_only_the_named_placeholders_expand
