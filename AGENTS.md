@@ -102,11 +102,13 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Setup orchestration                             | `_scripts/setup`                |
 | Global coding-agent instructions                | `agents/instructions.md`        |
 | Trusted roots for direnv and Mise               | `_scripts/trusted-roots`        |
+| Mise configuration, trust, and lock policy      | `_scripts/mise-policy`          |
 | Public lifecycle and commands                   | `README.md`                     |
 | Coding and validation rules                     | `CODING_STANDARDS.md`           |
 
-Never edit `mise/mise.lock` manually. Regenerate it with `mise lock --global`
-from the repository root and review the generated diff narrowly. Normal
+Never edit `mise/mise.lock` manually. Regenerate selected entries with
+`_scripts/mise-policy "$PWD" lock <tool>...` from the repository root and review
+the generated diff narrowly. Normal
 reconciliation installs with `--locked` without rewriting it. Only explicitly
 selected interactive upgrades stage and regenerate the selected tools' lock
 entries before publishing their config, lock, and rendered catalog together.
@@ -180,7 +182,7 @@ OpenCode discards without a word.
 
 `_scripts/trusted-roots` is the one declaration of the trusted roots. direnv's
 whitelist is rendered from it by `direnv/install.sh` and Mise receives it
-through `mise/mise.zsh`; a project outside those roots keeps its explicit
+through `_scripts/mise-policy`; a project outside those roots keeps its explicit
 `direnv allow` or `mise trust`.
 
 ## Editing and simplification

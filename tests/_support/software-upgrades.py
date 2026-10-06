@@ -6,6 +6,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 from pathlib import Path
 import sys
 import tempfile
@@ -66,45 +67,7 @@ elif command == "fzf":
         print("999\tunknown")
     else:
         for index in os.environ.get("PICK", "0").split(","): print(rows[int(index)])
-elif command == "mise":
-    config = pathlib.Path(os.environ["MISE_GLOBAL_CONFIG_FILE"])
-    tools = tomllib.loads(config.read_text())["tools"]
-    lock = config.parent / "mise.lock"
-    entries = tomllib.loads(lock.read_text())["tools"]
-    if args[0] == "outdated":
-        result = {}
-        for name in tools:
-            if name not in args or name == "npm:kept": continue
-            version = tools[name]
-            version = version["version"] if isinstance(version, dict) else version
-            latest = "24.1.0" if name == "node" else "2.0.0"
-            if name == "node" and "--bump" in args: latest = "26.0.0"
-            result[name] = {"requested": version, "current": entries[name][-1]["version"], "latest": latest}
-        print(json.dumps(result))
-    elif args[0] == "ls":
-        print(json.dumps([{"version": entries[args[-1]][-1]["version"], "active": True}]))
-    elif args[0] == "lock":
-        if os.environ.get("FAIL_LOCK"): sys.exit(1)
-        for name in args[2:]:
-            value = tools[name]
-            version = value.get("version") if isinstance(value, dict) else value
-            if version in ("lts", "4.0"): version = entries[name][-1]["version"]
-            options = {k: v for k, v in value.items() if k != "version"} if isinstance(value, dict) else {}
-            if name == "ruby": options = {"compile": "false", "precompiled_url": "jdx/ruby"}
-            entries[name] = [e for e in entries[name] if e.get("options", {}) != options]
-            entries[name].append({"version": version, "options": options})
-        if os.environ.get("LOCK_DRIFT"): entries["npm:kept"][0]["version"] = "9.0.0"
-        with lock.open("w") as out:
-            for name, versions in entries.items():
-                for entry in versions:
-                    out.write(f"[[tools.{json.dumps(name)}]]\nversion = {json.dumps(entry['version'])}\n")
-                    if entry.get("options"):
-                        out.write(f"[tools.{json.dumps(name)}.options]\n")
-                        for k, v in entry["options"].items(): out.write(f"{k} = {json.dumps(v)}\n")
-    elif args[0] == "install":
-        if os.environ.get("FAIL_INSTALL"): sys.exit(1)
-        if os.environ.get("CONCURRENT_EDIT"):
-            pathlib.Path(os.environ["CONCURRENT_EDIT"]).write_text("concurrent user edit\n")
+
 """
 
 
@@ -123,7 +86,7 @@ class UpgradesTest(unittest.TestCase):
             "HOMEBREW_NO_AUTO_UPDATE": "1",
         }
         self.brew = str(self.root / "fake-bin/brew")
-        for command in ("brew", "mise", "mas", "fzf"):
+        for command in ("brew", "mas", "fzf"):
             self.executable(self.root / "fake-bin" / command, MANAGER)
         self.executable(
             self.root / "fake-bin/sudo",
@@ -133,7 +96,12 @@ class UpgradesTest(unittest.TestCase):
             self.root / "_scripts/render-software-catalog",
             'import pathlib, sys\n(pathlib.Path(sys.argv[1]) / "README.md").write_text("rendered\\n")',
         )
-        self.executable(self.root / "mise/install.sh", 'print("agent repairs")')
+        self.executable(self.root / "fake-bin/mise", (ROOT / "tests/_support/mise.py").read_text())
+        for name in ("mise-policy", "trusted-roots", "installer-preamble.sh",
+                     "catalog.sh", "installer-output.sh", "link-config"):
+            shutil.copy2(ROOT / "_scripts" / name, self.root / "_scripts")
+        for name in ("install.sh", "_configure-trust.sh"):
+            shutil.copy2(ROOT / "mise" / name, self.root / "mise")
         (self.root / "Brewfile").write_text(
             "brew 'git'\ncask 'example'\nmas 'Example', id: 123 # Example\n"
         )
@@ -284,12 +252,12 @@ class UpgradesTest(unittest.TestCase):
         )
         self.assertEqual("rendered\n", (self.root / "README.md").read_text())
         self.assertIn(
-            ["mise", "install", "--locked", "node", "npm:sample"], self.events()
+            ["mise", "install", "node", "npm:sample"], self.events()
         )
 
     def test_install_failure_or_unselected_lock_drift_preserves_source(self):
         selected = [upgrades.Candidate("mise", "npm:sample", "1.0.0", "2.0.0")]
-        for failure in ("FAIL_LOCK", "FAIL_INSTALL", "LOCK_DRIFT"):
+        for failure in ("FAIL_MISE_LOCK", "FAIL_MISE_INSTALL", "FAKE_MISE_LOCK_DRIFT"):
             with self.assertRaises((RuntimeError, ValueError)):
                 upgrades.Mise(self.root, {**self.env, failure: "1"}).apply(selected)
             self.assertEqual(self.before, self.sources())
@@ -316,7 +284,7 @@ class UpgradesTest(unittest.TestCase):
     def test_concurrent_source_edit_is_preserved(self):
         # The fake install edits the checkout's README while the staged
         # upgrade is still unpublished.
-        env = {**self.env, "CONCURRENT_EDIT": str(self.root / "README.md")}
+        env = {**self.env, "FAKE_MISE_CONCURRENT_EDIT": str(self.root / "README.md")}
         with self.assertRaises(RuntimeError):
             upgrades.Mise(self.root, env).apply(
                 [upgrades.Candidate("mise", "node", "24.0.0", "24.1.0")]
@@ -362,6 +330,7 @@ class UpgradesTest(unittest.TestCase):
                 ["mise", "lock"],
                 ["mise", "lock"],
                 ["mise", "install"],
+                ["mise", "install"],
                 ["brew", "upgrade"],
                 ["mas", "upgrade"],
             ],
@@ -374,8 +343,12 @@ class FormatterExtrasTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="dotfiles-formatter-test-")
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
-        (self.root / "bin").mkdir()
-        self.config = self.root / "config.toml"
+        for name in ("bin", "_scripts", "mise", "home"):
+            (self.root / name).mkdir()
+        for name in ("mise-policy", "trusted-roots"):
+            shutil.copy2(ROOT / "_scripts" / name, self.root / "_scripts")
+        (self.root / "mise/mise.lock").write_text('[[tools."pipx:mdformat"]]\nversion = "1.0.0"\n')
+        self.config = self.root / "mise/config.toml"
         self.config.write_text(
             '[tools]\n"pipx:mdformat" = { version = "1.0.0", uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.1.2" }\n'
         )
@@ -394,52 +367,45 @@ class FormatterExtrasTest(unittest.TestCase):
         )
         interpreter.chmod(0o755)
         installer = self.root / "bin/mise"
-        installer.write_text(
-            f"#!{sys.executable}\n"
-            + """
-import json, os, sys
-from pathlib import Path
-root = Path(__file__).resolve().parents[1]
-(root / "install-args.json").write_text(json.dumps(sys.argv[1:]))
-if os.environ.get("FAIL_EXTRA_INSTALL"): sys.exit(1)
-(root / "versions.json").write_text(os.environ["DESIRED_EXTRAS"])
-"""
-        )
+        installer.write_text(f"#!{sys.executable}\n" + (ROOT / "tests/_support/mise.py").read_text())
         installer.chmod(0o755)
         self.environment = patch.dict(
             os.environ,
             {
                 "PATH": str(self.root / "bin") + ":/usr/bin:/bin",
-                "DESIRED_EXTRAS": json.dumps(self.desired),
+                "HOME": str(self.root / "home"),
+                "EVENTS": str(self.root / "install-args.json"),
+                "FAKE_MISE_EXTRAS_FILE": str(self.versions),
+                "FAKE_MISE_EXTRAS": json.dumps(self.desired),
             },
         )
         self.environment.start()
         self.addCleanup(self.environment.stop)
 
     def test_existing_formatter_refreshes_only_when_pinned_plugins_differ(self):
-        extras.reconcile(self.config, self.root)
+        extras.reconcile(self.root, self.root)
         self.assertEqual(self.desired, json.loads(self.versions.read_text()))
         marker = self.root / "install-args.json"
         self.assertEqual(
-            ["install", "--force", "--locked", "pipx:mdformat"],
+            ["mise", "install", "--force", "pipx:mdformat"],
             json.loads(marker.read_text()),
         )
         marker.unlink()
-        extras.reconcile(self.config, self.root)
+        extras.reconcile(self.root, self.root)
         self.assertFalse(marker.exists())
 
     def test_an_unpinned_plugin_fails_before_anything_is_installed(self):
         self.config.write_text(self.config.read_text().replace("==1.0.0", ""))
         with self.assertRaisesRegex(ValueError, "exact == version"):
-            extras.reconcile(self.config, self.root)
+            extras.reconcile(self.root, self.root)
         self.assertFalse((self.root / "install-args.json").exists())
 
     def test_failed_refresh_does_not_claim_matching_versions(self):
         with (
-            patch.dict(os.environ, {"FAIL_EXTRA_INSTALL": "1"}),
+            patch.dict(os.environ, {"FAIL_MISE_INSTALL": "1"}),
             self.assertRaises(extras.subprocess.CalledProcessError),
         ):
-            extras.reconcile(self.config, self.root)
+            extras.reconcile(self.root, self.root)
         self.assertNotEqual(self.desired, json.loads(self.versions.read_text()))
 
 

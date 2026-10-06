@@ -322,9 +322,7 @@ run_dependency_pipeline() {
 
   if [ "$mode" = update ]; then
     run_advisory 'Declared software upgrades' \
-      env MISE_CONFIG_DIR="$DOTFILES_ROOT/mise" \
-      MISE_GLOBAL_CONFIG_FILE="$DOTFILES_ROOT/mise/config.toml" \
-      mise -C "$DOTFILES_ROOT" exec --locked python -- \
+      "$DOTFILES_ROOT/_scripts/mise-policy" "$DOTFILES_ROOT" run exec python -- \
       "$DOTFILES_ROOT/_scripts/upgrade-software" --brew "$BREW_BIN"
   fi
 }

@@ -88,47 +88,18 @@ exit "${FAIL_XCODEBUILD:-0}"
 EOF
 }
 
-# Mise, as mobile-setup and the mise topic reach it. The caller supplies the
-# Java path through FAKE_MISE_JAVA_HOME so this never exposes a host
-# installation to a test; every other tool is not installed, so `mise where`
-# fails for it as Mise does. FAIL_MISE_INSTALL is the exit status of
-# `mise install`, and `mise prune` records whether lockfile writes were on.
+# All fixtures use the same Mise process contract, including Python callers.
+# The interpreter is selected before entering the fixture's minimal PATH.
+# FAIL_MISE_<SUBCOMMAND> supplies status; FAKE_MISE_* supplies fixture state.
 # Usage: stub_mise <bin-dir>
 stub_mise() {
-  _stub_write "$1/mise" <<'EOF'
-#!/bin/sh
-printf 'mise %s\n' "$*" >>"$SCENARIO_EVENT_LOG"
-if [ "$1" = -C ]; then
-  cd "$2" || exit 1
-  shift 2
-fi
-case "$*" in
-  'where pipx:mdformat')
-    [ -n "${FAKE_MISE_MDFORMAT_HOME:-}" ] || exit 1
-    printf '%s\n' "$FAKE_MISE_MDFORMAT_HOME"
-    ;;
-  'exec --locked python -- python3 '*)
-    exit "${FAIL_MISE_EXEC:-0}"
-    ;;
-  'exec --locked python -- '*)
-    shift 4
-    exec "$@"
-    ;;
-  'where java')
-    printf '%s\n' "$FAKE_MISE_JAVA_HOME"
-    ;;
-  'trust '*) ;;
-  'prune '*)
-    printf 'mise prune lockfile=%s\n' "${MISE_LOCKFILE-unset}" >>"$SCENARIO_EVENT_LOG"
-    ;;
-  'install' | 'install '*)
-    exit "${FAIL_MISE_INSTALL:-0}"
-    ;;
-  *)
-    exit 1
-    ;;
-esac
-EOF
+  local interpreter support
+  interpreter=$(python3 -c 'import sys; print(sys.executable)')
+  support=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+  {
+    printf '#!%s\n' "$interpreter"
+    cat "$support/mise.py"
+  } | _stub_write "$1/mise"
 }
 
 # Launch Services default-application assignment. FAIL_DUTI is the exit status;

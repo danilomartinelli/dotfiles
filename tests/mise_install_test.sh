@@ -16,6 +16,11 @@ scenario_init dotfiles-mise-install-tests
 new_fixture() {
   local fixture
   fixture=$(installer_fixture)
+  mkdir -p "$fixture/repository/mise"
+  cp -R "$REPOSITORY_ROOT/_scripts" "$fixture/repository/_scripts"
+  for source in install.sh _configure-trust.sh _extras.py config.toml mise.lock; do
+    cp "$REPOSITORY_ROOT/mise/$source" "$fixture/repository/mise/$source"
+  done
   stub_mise "$fixture/fake-bin"
   printf '%s\n' "$fixture"
 }
@@ -23,7 +28,7 @@ new_fixture() {
 invoke_mise() {
   local fixture=$1
   shift
-  fixture_run "$fixture" "$@" -- "$REPOSITORY_ROOT/mise/install.sh"
+  fixture_run "$fixture" "FAKE_MISE_TRACE=$fixture/mise-trace.jsonl" "$@" -- "$fixture/repository/mise/install.sh"
 }
 
 # A plain install rewrites the lock into a shape `mise lock` does not produce,
@@ -35,7 +40,7 @@ test_the_run_installs_what_the_lock_records() {
 
   invoke_mise "$fixture"
 
-  assert_contains "$fixture/events.log" 'mise install --locked'
+  assert_contains "$fixture/events.log" 'mise install'
   assert_count "$fixture/events.log" 'mise install' 1
   assert_contains "$fixture/stdout.log" 'Mise runtimes installed successfully'
 }
@@ -51,7 +56,7 @@ test_a_lock_behind_its_declarations_names_the_refresh() {
 
   assert_equal 1 "$status" 'failed install status'
   assert_contains "$fixture/stderr.log" 'Failed to install Mise runtimes'
-  assert_contains "$fixture/stderr.log" "mise lock --global"
+  assert_contains "$fixture/stderr.log" "mise-policy <checkout> lock <tool>"
   assert_not_contains "$fixture/events.log" 'mise prune'
 }
 
@@ -63,7 +68,10 @@ test_pruning_leaves_the_lock_alone() {
 
   invoke_mise "$fixture"
 
-  assert_contains "$fixture/events.log" 'mise prune lockfile=false'
+  assert_contains "$fixture/events.log" 'mise prune --yes'
+  cmp "$fixture/repository/mise/mise.lock" "$REPOSITORY_ROOT/mise/mise.lock"
+  assert_not_contains "$fixture/events.log" 'mise trust'
+  assert_not_contains "$fixture/mise-trace.jsonl" '"locked": false'
 }
 
 # The postinstall repairs look their tool up with `mise where`, which fails for a
@@ -97,7 +105,7 @@ test_formatter_reconciliation_failure_stops_before_pruning() {
   invoke_mise "$fixture" FAKE_MISE_MDFORMAT_HOME="$fixture/formatter" \
     FAIL_MISE_EXEC=1 || status=$?
   assert_equal 1 "$status" 'formatter mismatch status'
-  assert_contains "$fixture/events.log" 'mise exec --locked python -- python3'
+  assert_contains "$fixture/events.log" 'mise exec python -- python3'
   assert_contains "$fixture/stderr.log" 'Failed to reconcile Mise formatter plugins'
   assert_not_contains "$fixture/events.log" 'mise prune'
 }

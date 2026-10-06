@@ -335,15 +335,31 @@ tracked catalog.
 Versions may be floating declarations such as `latest`, `lts`, or a minor
 series. Reproducibility comes from the generated `mise/mise.lock`, and `dot`
 installs exactly what it records with `mise install --locked`. Reconciliation
-does not rewrite it; only explicitly selected new releases change it.
+does not rewrite it. `_scripts/mise-policy` selects the calling checkout's
+declarations, applies the trusted roots, and enforces locked execution for
+setup, the installer, controlled upgrades, and CI.
 
-`mise lock --global`, run from the checkout, is the one command that writes the
-lock. The interactive updater runs it against staged copies for selected tools.
-After changing a declaration manually, run it and commit the lock with the
-declaration; until then `dot` stops at the Mise topic and names that command.
-`mise lock --global --bump` advances the floating declarations deliberately. A
-plain `mise install` or `mise upgrade` still writes the lock in a shape of its
-own, and `mise lock --global` settles it again.
+After changing declarations manually, regenerate only the selected tools from
+the checkout root, then review and commit the declaration and generated lock
+together:
+
+```bash
+_scripts/mise-policy "$PWD" lock node
+```
+
+Use `lock --bump node` to advance that tool's channel deliberately. The
+interactive updater uses the same operation against staged copies and verifies
+that unselected entries did not change. The explicit checkout argument keeps
+regeneration in a worktree from accidentally writing the active checkout's
+global lock. A missing or incompatible lock stops reconciliation with guidance.
+
+The root `.mise.toml` also makes ordinary execution inside this checkout consume
+recorded versions without rewriting the lock. If a required resolution is
+missing or incompatible, the command fails instead of resolving a newer release.
+This local policy preserves normal project and global configuration discovery.
+Outside the checkout, ordinary Mise commands can still write the global lock
+through its link to the active checkout; that path is outside this protection.
+See [Mise maintenance](mise/README.md) for the policy interface and validation.
 
 <!-- generated: mise-tools -->
 
@@ -683,7 +699,7 @@ trusted root: this checkout, `$WORKSPACE`, or `~/conductor`. Everywhere else,
 direnv and Mise still ask. `_scripts/trusted-roots` is the one declaration of
 that list. `direnv/install.sh` renders it into the whitelist of
 `~/.config/direnv/direnv.toml`, which also loads `.env` files, and
-`mise/mise.zsh` exports it as `MISE_TRUSTED_CONFIG_PATHS`. Moving `WORKSPACE`
+`_scripts/mise-policy` supplies it to Mise startup and managed commands. Moving `WORKSPACE`
 in `.localrc` therefore takes effect for direnv on the next `dot` run.
 
 ## Validation
