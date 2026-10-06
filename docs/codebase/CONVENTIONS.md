@@ -57,8 +57,9 @@ part of the current repository-owned shell implementation.
   runtime-resolved paths prevent static resolution.
 - Shared shell modules expose named functions; there are no package barrels or
   language import aliases. Zsh public functions are discovered through `fpath`.
-- TSV catalog files use `catalog_each_row`. `topic-catalog` stdout is consumed
-  directly, as prescribed in `CODING_STANDARDS.md`.
+- TSV catalog files use `catalog_each_row`, after `catalog_check` with the
+  validator from the rules file beside the consumer. `topic-catalog` stdout is
+  consumed directly, as prescribed in `CODING_STANDARDS.md`.
 - Secrets and user-specific runtime files are not module payloads. Generated
   locks and README regions are changed through their owning generators.
 
