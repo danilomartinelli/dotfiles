@@ -43,14 +43,15 @@ print(json.dumps(versions))
     return json.loads(result.stdout)
 
 
-def reconcile(config, directory):
-    desired = desired_extras(config)
+def reconcile(checkout, directory):
+    desired = desired_extras(checkout / "mise/config.toml")
     if installed_extras(directory, list(desired)) == desired:
         print("Mise formatter extras match their declared pins")
         return
     print("Refreshing mdformat to apply its declared plugin versions")
     subprocess.run(
-        ["mise", "install", "--force", "--locked", "pipx:mdformat"], check=True
+        [str(checkout / "_scripts/mise-policy"), str(checkout),
+         "run", "install", "--force", "pipx:mdformat"], check=True
     )
     if installed_extras(directory, list(desired)) != desired:
         raise RuntimeError("mdformat extras still differ from their declared pins")
@@ -58,7 +59,7 @@ def reconcile(config, directory):
 
 if __name__ == "__main__":
     try:
-        reconcile(Path(sys.argv[1]), Path(sys.argv[2]))
+        reconcile(Path(__file__).resolve().parent.parent, Path(sys.argv[1]))
     except (
         OSError,
         ValueError,

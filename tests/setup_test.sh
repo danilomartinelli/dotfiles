@@ -58,6 +58,10 @@ make_fixture() {
   cp "$REPOSITORY_ROOT/_scripts/output.sh" "$fixture/_scripts/output.sh"
   chmod +x "$fixture/_scripts/setup"
 
+  mkdir -p "$fixture/mise"
+  cp "$REPOSITORY_ROOT/_scripts/mise-policy" "$REPOSITORY_ROOT/_scripts/trusted-roots" "$fixture/_scripts/"
+  printf '[tools]\npython = "3.14.0"\n' >"$fixture/mise/config.toml"
+  printf '[[tools.python]]\nversion = "3.14.0"\n' >"$fixture/mise/mise.lock"
   stub_uname "$fixture/fake-bin"
   stub_mise "$fixture/fake-bin"
   scenario_write_executable "$fixture/fake-bin/git" <<'EOF'

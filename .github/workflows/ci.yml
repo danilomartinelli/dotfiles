@@ -26,18 +26,20 @@ jobs:
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
       HOMEBREW_NO_INSTALL_CLEANUP: "1"
-      MISE_CONFIG_DIR: ${{ github.workspace }}/mise
-      MISE_GLOBAL_CONFIG_FILE: ${{ github.workspace }}/mise/config.toml
-      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}/mise
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare Mise policy
+        run: |
+          policy="$(_scripts/mise-policy "$GITHUB_WORKSPACE" ci)"
+          printf '%s\n' "$policy" >> "$GITHUB_ENV"
 
       - name: Install locked check tools
         uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
           version: "2026.9.15"
           install_args: >-
-            --locked aqua:koalaman/shellcheck go go:mvdan.cc/sh/v3/cmd/shfmt
+            aqua:koalaman/shellcheck go go:mvdan.cc/sh/v3/cmd/shfmt
             python uv pipx:mdformat
           cache_key_prefix: ci-mise-${{ hashFiles('mise/config.toml', 'mise/mise.lock') }}
 

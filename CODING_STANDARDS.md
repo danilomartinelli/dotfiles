@@ -44,6 +44,7 @@ catalogs, validation lists, or subsystem runbooks between files.
 | Setup orchestration                            | `_scripts/setup`                  |
 | Global coding-agent instructions               | `agents/instructions.md`          |
 | Trusted roots for direnv and Mise              | `_scripts/trusted-roots`          |
+| Mise configuration, trust, and lock policy     | `_scripts/mise-policy`            |
 | Public commands and lifecycle                  | `README.md`                       |
 | Agent workflow                                 | `AGENTS.md`                       |
 
@@ -351,8 +352,9 @@ classifier lists every installer and decides none of this order.
   applications, fonts, MAS apps, and taps in Homebrew.
 - A third-party Homebrew formula requires both its tap declaration and a narrow
   trust entry in `homebrew/_bundle.sh`.
-- Regenerate `mise/mise.lock` with `mise lock --global` from the repository
-  root, in the same change as the declaration. Never edit its versions,
+- Regenerate selected `mise/mise.lock` entries with
+  `_scripts/mise-policy "$PWD" lock <tool>...` from the repository root, in the
+  same change as the declaration. Never edit its versions,
   checksums, or generated structure by hand, and never commit the shape a plain
   `mise install` leaves.
 - Interactive upgrades use that generator against staged config and lock
@@ -430,35 +432,36 @@ it reads it from there rather than restating it.
 
 ### Focused validation matrix
 
-| Change area                                                     | Required focused validation                                                                                  |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Public docs, commands, aliases, dependencies, installer helpers | `tests/documentation_test.sh`                                                                                |
-| Setup phases                                                    | `tests/setup_test.sh`                                                                                        |
-| Zsh startup or topic shell files                                | `tests/zsh_startup_test.sh` and `zsh -n`                                                                     |
-| Topic layout or discovery                                       | `tests/topic_catalog_test.sh`                                                                                |
-| Checkout resolution and command adapters                        | `tests/checkout_test.sh`                                                                                     |
-| Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                   |
-| Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                           |
-| Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                    |
-| Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                               |
-| Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                         |
-| Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                               |
-| Catalog reading and checking                                    | `tests/catalog_test.sh`                                                                                      |
-| Tracked catalog content and rules                               | `tests/catalog_rules_test.sh`                                                                                |
-| Declared software reading                                       | `tests/declared_software_test.sh`                                                                            |
-| Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                             |
-| Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                   |
-| Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh` |
-| macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                               |
-| SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                          |
-| Aider                                                           | `tests/aider_install_test.sh`                                                                                |
-| Archiver                                                        | `tests/archiver_install_test.sh`                                                                             |
-| Dock layout                                                     | `tests/dock_install_test.sh`                                                                                 |
-| Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                               |
-| Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                               |
-| Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                 |
-| Interactive upgrades and source preservation                    | `tests/software_upgrades_test.sh`                                                                            |
-| Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                 |
+| Change area                                                     | Required focused validation                                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Public docs, commands, aliases, dependencies, installer helpers | `tests/documentation_test.sh`                                                                                             |
+| Setup phases                                                    | `tests/setup_test.sh`                                                                                                     |
+| Zsh startup or topic shell files                                | `tests/zsh_startup_test.sh` and `zsh -n`                                                                                  |
+| Topic layout or discovery                                       | `tests/topic_catalog_test.sh`                                                                                             |
+| Checkout resolution and command adapters                        | `tests/checkout_test.sh`                                                                                                  |
+| Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                                |
+| Shared installer helpers                                        | `tests/installer_preamble_test.sh`                                                                                        |
+| Post-bootstrap checklist                                        | `tests/checklist_test.sh`                                                                                                 |
+| Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                                            |
+| Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                                      |
+| Rendered file staleness                                         | `tests/generated_file_test.sh`                                                                                            |
+| Catalog reading and checking                                    | `tests/catalog_test.sh`                                                                                                   |
+| Tracked catalog content and rules                               | `tests/catalog_rules_test.sh`                                                                                             |
+| Declared software reading                                       | `tests/declared_software_test.sh`                                                                                         |
+| Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                                          |
+| Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                                |
+| Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh`              |
+| macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                                            |
+| SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
+| Aider                                                           | `tests/aider_install_test.sh`                                                                                             |
+| Archiver                                                        | `tests/archiver_install_test.sh`                                                                                          |
+| Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
+| Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
+| Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                                            |
+| Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                              |
+| Mise invocation policy, shell integration, and CI environment   | `tests/mise_policy_test.sh`, `tests/mise_install_test.sh`, `tests/software_upgrades_test.sh`, `tests/zsh_startup_test.sh` |
+| Interactive upgrades and source preservation                    | `tests/software_upgrades_test.sh`                                                                                         |
+| Zed JSON and JSONC formatting                                   | `tests/zed_settings_test.sh`                                                                                              |
 
 `_scripts/test` runs every safe suite and returns a single verdict. It discovers
 `tests/*_test.sh` and names every suite that failed. A shell loop over the same

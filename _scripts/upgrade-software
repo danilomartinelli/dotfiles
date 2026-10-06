@@ -229,13 +229,11 @@ class Mise:
     def __init__(self, root, env):
         self.root, self.env = root, env
 
-    def environment(self, root):
-        return {
-            **self.env,
-            "MISE_CONFIG_DIR": str(root / "mise"),
-            "MISE_GLOBAL_CONFIG_FILE": str(root / "mise/config.toml"),
-            "MISE_TRUSTED_CONFIG_PATHS": str(root / "mise"),
-        }
+    def command(self, operation, *args, stage=None):
+        command = [str(self.root / "_scripts/mise-policy"), str(self.root)]
+        if stage is not None:
+            command += ["--declarations", str(stage / "mise")]
+        return [*command, operation, *args]
 
     def discover(self):
         declarations = declared_software.read_mise_config(
@@ -247,8 +245,8 @@ class Mise:
             names = [d.name for d in declarations if (d.selection == "pin") == bump]
             if not names:
                 continue
-            args = ["mise", "outdated", "--json"] + (["--bump"] if bump else []) + names
-            data = json.loads(run(args, cwd=self.root, env=self.environment(self.root)))
+            args = ["outdated", "--json"] + (["--bump"] if bump else []) + names
+            data = json.loads(run(self.command("run", *args), cwd=self.root, env=self.env))
             for name, item in data.items():
                 if name not in names:
                     # Mise can report a short backend name (e.g. shellcheck).
@@ -357,11 +355,10 @@ class Mise:
                 (stage / path).write_bytes(content)
             shutil.copyfile(self.root / "Brewfile", stage / "Brewfile")
             stage_config = stage / paths[0]
-            stage_env = self.environment(stage)
             stage_config.write_text(
                 declared_software.rewrite_versions(config_text, chosen)
             )
-            run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
+            run(self.command("lock", *chosen, stage=stage), cwd=stage, env=self.env)
             # Keep channels such as lts and temurin-25 while advancing their lock.
             persistent = {
                 name: version
@@ -372,7 +369,7 @@ class Mise:
             stage_config.write_text(
                 declared_software.rewrite_versions(config_text, persistent)
             )
-            run(["mise", "lock", "--global", *chosen], cwd=stage, env=stage_env)
+            run(self.command("lock", *chosen, stage=stage), cwd=stage, env=self.env)
             new_lock = read_toml(stage / paths[1])["tools"]
             for name in old_lock.keys() | new_lock.keys():
                 if name in chosen:
@@ -380,9 +377,9 @@ class Mise:
                     # (Ruby, for example). Ask its resolver which version is active.
                     active = json.loads(
                         run(
-                            ["mise", "ls", "--json", "--current", name],
+                            self.command("run", "ls", "--json", "--current", name, stage=stage),
                             cwd=stage,
-                            env=stage_env,
+                            env=self.env,
                         )
                     )
                     valid = [entry["version"] for entry in active] == [chosen[name]]
@@ -397,7 +394,7 @@ class Mise:
                 cwd=stage,
                 env=self.env,
             )
-            execute(["mise", "install", "--locked", *chosen], cwd=stage, env=stage_env)
+            execute(self.command("run", "install", *chosen, stage=stage), cwd=stage, env=self.env)
             if any(
                 (self.root / path).read_bytes() != content
                 for path, content in original.items()
@@ -423,7 +420,7 @@ class Mise:
         execute(
             [str(self.root / "mise/install.sh")],
             cwd=self.root,
-            env=self.environment(self.root),
+            env=self.env,
         )
 
 

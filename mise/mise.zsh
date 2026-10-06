@@ -1,16 +1,11 @@
-# The old export bypasses conf.d, including the persistent trust settings.
-# Keep explicit overrides pointing somewhere else available to callers.
-if [[ ${MISE_GLOBAL_CONFIG_FILE:-} == "$HOME/.config/mise/config.toml" ]]; then
-  unset MISE_GLOBAL_CONFIG_FILE
-fi
+() {
+  local checkout=${${(%):-%x}:A:h:h}
+  local activation
+  typeset -g _dotfiles_mise_ready=0
+  (( $+commands[mise] )) || return 0
 
-# Project configuration beneath a trusted root needs no `mise trust`.
-# _scripts/trusted-roots owns the list, which direnv's whitelist shares.
-export MISE_TRUSTED_CONFIG_PATHS="${(j/:/)${(f)"$("$DOTFILES_ROOT/_scripts/trusted-roots")"}}"
-
-# sup mise
-# https://mise.jdx.dev/
-if (( $+commands[mise] ))
-then
-  eval "$(mise activate zsh)"
-fi
+  if activation=$("$checkout/_scripts/mise-policy" "$checkout" shell); then
+    eval "$activation" && _dotfiles_mise_ready=1
+  fi
+  return 0
+}
