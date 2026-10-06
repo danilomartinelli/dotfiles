@@ -92,6 +92,9 @@ test_reset_re_arms_the_dock_rebuild() {
   invoke_dock "$fixture" "$fixture/run2" DOTFILES_RESET=dock
 
   assert_contains "$fixture/run2/events.log" 'dockutil --remove all'
+
+  invoke_dock "$fixture" "$fixture/run3" DOTFILES_RESET=all
+  assert_contains "$fixture/run3/events.log" 'dockutil --remove all'
 }
 
 test_catalog_order_and_expansion() {

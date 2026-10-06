@@ -29,14 +29,6 @@ if ! catalog_check "$CATALOG" dock_layout_check_row; then
   installer_fail "invalid Dock layout catalog: $CATALOG"
 fi
 
-# The declared layout wipes the Dock before rebuilding it, so it only runs on
-# the first apply (or when forced). Daily `dot` runs must never destroy manual
-# Dock arrangements — every other installer in this repo preserves user state.
-# Editing the catalog therefore does not reapply it.
-installer_skip_if_applied dock "dock layout" "dock configured"
-
-WORKSPACE_ROOT=$(installer_workspace_root)
-
 # The warning needs a name a person recognises, and the path already carries
 # one: /Applications/Spark Desktop.app is "Spark Desktop", $WORKSPACE is
 # "Workspace". Nothing has to restate it in a column.
@@ -72,18 +64,23 @@ apply_catalog_row() {
   return 0
 }
 
-if ! dockutil --remove all --no-restart >/dev/null 2>&1 </dev/null; then
-  installer_warn "Failed to clear dock"
-fi
+apply_dock_layout() {
+  WORKSPACE_ROOT=$(installer_workspace_root)
 
-catalog_each_row "$CATALOG" apply_catalog_row
+  if ! dockutil --remove all --no-restart >/dev/null 2>&1 </dev/null; then
+    installer_warn "Failed to clear dock"
+  fi
 
-if killall Dock >/dev/null 2>&1; then
-  installer_success "Dock restarted"
-else
-  installer_warn "Failed to restart Dock"
-fi
+  catalog_each_row "$CATALOG" apply_catalog_row
 
-installer_mark_applied dock
+  if killall Dock >/dev/null 2>&1; then
+    installer_success "Dock restarted"
+  else
+    installer_warn "Failed to restart Dock"
+  fi
+}
 
+# Rebuilding would overwrite manual arrangements, so catalog edits take effect
+# only on the first apply or an explicit reset.
+installer_run_once dock "dock layout" apply_dock_layout
 installer_success "dock configured"
