@@ -30,7 +30,7 @@ if trace := os.environ.get("FAKE_MISE_TRACE"):
             "locked": locked,
             "trust": os.environ.get("MISE_TRUSTED_CONFIG_PATHS"),
             "selectors": {k: v for k, v in os.environ.items()
-                          if k.startswith("MISE_") and k.endswith("_VERSION")},
+                          if v and k.startswith("MISE_") and k.endswith("_VERSION")},
         }) + "\n")
 
 if args == ["where", "java"]:

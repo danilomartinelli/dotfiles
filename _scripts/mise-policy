@@ -148,16 +148,20 @@ MISE_NO_CONFIG=false
 EOF
 )
 
+# Version selectors must not override the checkout's declarations. These are
+# variable names only; neither inherited values nor other environment is logged.
+for selector in $(env | sed -n 's/^\(MISE_[A-Za-z0-9_]*_VERSION\)=.*/\1/p'); do
+  if [ "$operation" = ci ]; then
+    # GITHUB_ENV cannot unset inherited variables; Mise ignores empty selectors.
+    printf '%s=\n' "$selector"
+  else
+    unset "$selector"
+  fi
+done
 if [ "$operation" = ci ]; then
   printf '%s\n' "$settings"
   exit 0
 fi
-
-# Version selectors must not override the checkout's declarations. These are
-# variable names only; neither inherited values nor other environment is logged.
-for selector in $(env | sed -n 's/^\(MISE_[A-Za-z0-9_]*_VERSION\)=.*/\1/p'); do
-  unset "$selector"
-done
 while IFS= read -r setting; do
   export "${setting?}"
 done <<EOF
