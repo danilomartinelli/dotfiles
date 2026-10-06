@@ -15,12 +15,17 @@ overwrite_all=false
 backup_all=false
 skip_all=false
 batch_mode=
+sources_given=false
+sources=()
 
 usage() {
   cat >&2 <<'EOF'
-Usage: link-dotfiles [--batch skip|overwrite|backup]
+Usage: link-dotfiles [--batch skip|overwrite|backup] [-- SOURCE...]
 
   Link .localrc and topic *.symlink entries into $HOME.
+  After --, link .localrc and exactly the given sources, none if none are
+  given, instead of classifying the checkout. Setup passes the links of the
+  topic catalog it read.
   Without --batch, prompts on conflicts (bootstrap) and stops when no
   answer can be read.
 EOF
@@ -46,6 +51,12 @@ while [ "$#" -gt 0 ]; do
     -h | --help)
       usage
       exit 0
+      ;;
+    --)
+      shift
+      sources_given=true
+      sources=("$@")
+      break
       ;;
     *)
       usage
@@ -186,14 +197,20 @@ link_file() {
   "$LINK_CONFIG" --policy "$policy" --label "$dst" "$src_abs" "$dst" || return 1
 }
 
-catalog=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || exit 1
+# Every source is known before the first conflict prompt, because stdin
+# belongs to that prompt. Reading catalog rows from it while linking made the
+# prompt read catalog characters as answers and swallow the rest of the line
+# it read them from.
+if [ "$sources_given" != true ]; then
+  catalog=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || exit 1
+  while IFS=$'\t' read -r kind src; do
+    [ "$kind" = link ] || continue
+    sources+=("$src")
+  done <<<"$catalog"
+fi
 
 link_file "$DOTFILES_ROOT/.localrc" "$HOME/.localrc" || exit 1
 
-# The catalog arrives on its own descriptor because stdin belongs to the
-# conflict prompt. Sharing it made the prompt read catalog characters as
-# answers and swallow the rest of the line it read them from.
-while IFS=$'\t' read -r -u 3 kind src; do
-  [ "$kind" = link ] || continue
+for src in "${sources[@]}"; do
   link_file "$src" "$HOME/.$(basename "${src%.*}")" || exit 1
-done 3<<<"$catalog"
+done

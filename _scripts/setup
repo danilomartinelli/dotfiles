@@ -10,6 +10,12 @@ export DOTFILES_ROOT
 HOMEBREW_AVAILABILITY=$DOTFILES_ROOT/homebrew/_availability.sh
 TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 
+# The topic whose installer makes Homebrew available. That installer runs
+# before the Brewfile and every other topic installer runs after it, so the run
+# plan takes it out of the topic installers. The classifier lists it like any
+# other installer: when an installer runs is run order, which is setup's.
+HOMEBREW_TOPIC=homebrew
+
 # Topics whose installers create state that later installers consume, in the
 # order they must run. Everything else follows in catalog order. Run order is
 # orchestration and lives here: the catalog classifies topics by name, and
@@ -17,8 +23,13 @@ TOPIC_CATALOG=$DOTFILES_ROOT/_scripts/topic-catalog
 PREREQUISITE_TOPICS=(workspace)
 
 BREW_BIN=''
-CATALOG_SNAPSHOT=''
-CATALOG_CAPTURED=false
+
+# The run plan, from the one topic catalog this run reads. plan_run fills it
+# before the first link, and every later phase reads it rather than
+# classifying the checkout again.
+LINK_SOURCES=()
+HOMEBREW_INSTALLER=''
+TOPIC_INSTALLERS=()
 
 # shellcheck source=_scripts/output.sh
 # shellcheck disable=SC1091
@@ -120,49 +131,116 @@ setup_gitconfig() {
     >"$DOTFILES_ROOT/git/gitconfig.local.symlink"
 }
 
-# The classification this run orchestrates. DOTFILES_TOPIC_CATALOG supplies it
-# from a file instead of running the classifier, which is the seam the Dock, the
-# checklist, and the macOS defaults have each had for their own list. Without
-# one, observing run order meant building a topic tree on disk, and the tests
-# that would not pay for that read this file's source text instead.
-#
-# The rows are still read the way topic-catalog's stdout is read, not through
-# catalog_each_row: what changes here is where the classification comes from, not
-# which shape it has.
-# install_topics executes column 2 of every installer row, so a supplied catalog
-# decides what this run runs. An exported value survives into a real bootstrap,
-# and nothing else here would notice, so every path it names must be inside the
-# checkout. This is the same shape as the linker refusing an unattended removal
-# outside the paths it owns: the seam stays open and its blast radius does not.
-assert_catalog_is_local() {
-  local kind path
+# Whether a path component is a name the classifier could emit: a visible
+# name, which also rules out . and .., and never a path of its own.
+is_visible_name() {
+  case "$1" in
+    '' | .* | _* | */*) return 1 ;;
+  esac
+}
+
+# Whether a row has the shape the classifier emits for this checkout: an
+# installer at <checkout>/<topic>/install.sh, a link at
+# <checkout>/<name>.symlink or <checkout>/<topic>/<name>.symlink.
+row_fits_layout() {
+  local kind=$1
+  local relative=${2#"$DOTFILES_ROOT"/}
+
+  [ "$relative" != "$2" ] || return 1
+  case "$kind:$relative" in
+    installer:*/install.sh) is_visible_name "${relative%/install.sh}" ;;
+    link:*/*.symlink)
+      is_visible_name "${relative%%/*}" && is_visible_name "${relative#*/}"
+      ;;
+    link:*.symlink) is_visible_name "$relative" ;;
+    *) return 1 ;;
+  esac
+}
+
+# A declared catalog decides what this run links and executes, and an exported
+# value survives into a real bootstrap, where nothing else would notice it. So
+# every row it names must have a shape the classifier could have emitted for
+# this checkout, and no row may appear twice. This is the same shape as the
+# linker refusing an unattended removal outside the paths it owns: the seam
+# stays open and its blast radius does not.
+check_declared_catalog() {
+  local kind path noun
+  local -a seen=()
 
   while IFS=$'\t' read -r kind path; do
-    [ "$kind" = installer ] || continue
-    case "$path" in
-      "$DOTFILES_ROOT"/*/install.sh) ;;
-      *) fail "declared topic catalog names an installer outside the checkout: $path" ;;
+    case "$kind" in
+      installer) noun='an installer' ;;
+      link) noun='a link' ;;
+      *) continue ;;
     esac
+    if ! row_fits_layout "$kind" "$path"; then
+      fail "declared topic catalog names $noun outside the checkout layout: $path"
+    fi
+    if list_contains "$kind"$'\t'"$path" "${seen[@]}"; then
+      fail "declared topic catalog repeats a row: $path"
+    fi
+    seen+=("$kind"$'\t'"$path")
   done <<<"$1"
 }
 
-setup_catalog() {
-  if [ "$CATALOG_CAPTURED" != true ]; then
-    if [ -n "${DOTFILES_TOPIC_CATALOG:-}" ]; then
-      [ -r "$DOTFILES_TOPIC_CATALOG" ] \
-        || fail "topic catalog not readable: $DOTFILES_TOPIC_CATALOG"
-      CATALOG_SNAPSHOT=$(cat -- "$DOTFILES_TOPIC_CATALOG") || return 1
-      assert_catalog_is_local "$CATALOG_SNAPSHOT" || return 1
-    else
-      CATALOG_SNAPSHOT=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
-    fi
-    CATALOG_CAPTURED=true
+# Read the topic catalog this run orchestrates, once, and turn it into the run
+# plan. DOTFILES_TOPIC_CATALOG supplies it from a file instead of running the
+# classifier, which is the seam the Dock, the checklist, and the macOS defaults
+# have each had for their own list.
+#
+# The rows are still read the way topic-catalog's stdout is read, not through
+# catalog_each_row: what changes here is where the catalog comes from, not
+# which shape it has.
+#
+# Bootstrap writes a link source in its Git identity phase, so this runs after
+# it. It runs before the first link, so a plan that cannot run stops the run
+# before any phase has consumed it.
+plan_run() {
+  local catalog kind path prerequisite installer
+  local -a installers=()
+
+  if [ -n "${DOTFILES_TOPIC_CATALOG:-}" ]; then
+    [ -r "$DOTFILES_TOPIC_CATALOG" ] \
+      || fail "topic catalog not readable: $DOTFILES_TOPIC_CATALOG"
+    catalog=$(cat -- "$DOTFILES_TOPIC_CATALOG") || return 1
+    check_declared_catalog "$catalog"
+  else
+    catalog=$("$TOPIC_CATALOG" "$DOTFILES_ROOT") || return 1
   fi
-  printf '%s\n' "$CATALOG_SNAPSHOT"
+
+  while IFS=$'\t' read -r kind path; do
+    case "$kind" in
+      link) LINK_SOURCES+=("$path") ;;
+      installer) installers+=("$path") ;;
+    esac
+  done <<<"$catalog"
+
+  HOMEBREW_INSTALLER=$DOTFILES_ROOT/$HOMEBREW_TOPIC/install.sh
+  if ! list_contains "$HOMEBREW_INSTALLER" "${installers[@]}"; then
+    fail "Homebrew topic has no installer: $HOMEBREW_TOPIC"
+  fi
+
+  # A declared prerequisite the catalog does not list is a typo or a deleted
+  # topic. Stop: silently skipping it would restore the alphabetical order the
+  # declaration exists to override, and only the dependent topic would notice.
+  for prerequisite in "${PREREQUISITE_TOPICS[@]}"; do
+    installer=$DOTFILES_ROOT/$prerequisite/install.sh
+    if ! list_contains "$installer" "${installers[@]}"; then
+      fail "declared prerequisite topic has no installer: $prerequisite"
+    fi
+    TOPIC_INSTALLERS+=("$installer")
+  done
+
+  for installer in "${installers[@]}"; do
+    if [ "$installer" != "$HOMEBREW_INSTALLER" ] \
+      && ! list_contains "$installer" "${TOPIC_INSTALLERS[@]}"; then
+      TOPIC_INSTALLERS+=("$installer")
+    fi
+  done
 }
 
 install_dotfile_links() {
-  "$DOTFILES_ROOT/_scripts/link-dotfiles" "$@"
+  "$DOTFILES_ROOT/_scripts/link-dotfiles" "$@" -- "${LINK_SOURCES[@]}"
 }
 
 apply_macos_configuration() {
@@ -187,7 +265,7 @@ update_checkout() {
 ensure_homebrew() {
   local brew_prefix
 
-  "$DOTFILES_ROOT/homebrew/install.sh" || return 1
+  "$HOMEBREW_INSTALLER" || return 1
   hash -r
 
   if ! BREW_BIN=$("$HOMEBREW_AVAILABILITY" binary); then
@@ -212,39 +290,10 @@ reconcile_homebrew_legacy_state() {
 }
 
 install_topics() {
-  local catalog
-  local kind
   local installer
   local relative_installer
-  local prerequisite
-  local -a discovered=()
-  local -a ordered=()
 
-  catalog=$(setup_catalog) || return 1
-
-  while IFS=$'\t' read -r kind installer; do
-    [ "$kind" = installer ] || continue
-    discovered+=("$installer")
-  done <<<"$catalog"
-
-  # A declared prerequisite that discovery never found is a typo or a deleted
-  # topic. Stop: silently skipping it would restore the alphabetical order the
-  # declaration exists to override, and only the dependent topic would notice.
-  for prerequisite in "${PREREQUISITE_TOPICS[@]}"; do
-    installer=$DOTFILES_ROOT/$prerequisite/install.sh
-    if ! list_contains "$installer" "${discovered[@]}"; then
-      fail "declared prerequisite topic has no installer: $prerequisite"
-    fi
-    ordered+=("$installer")
-  done
-
-  for installer in "${discovered[@]}"; do
-    if ! list_contains "$installer" "${ordered[@]}"; then
-      ordered+=("$installer")
-    fi
-  done
-
-  for installer in "${ordered[@]}"; do
+  for installer in "${TOPIC_INSTALLERS[@]}"; do
     relative_installer=${installer#"$DOTFILES_ROOT"/}
 
     info "topic installer: $relative_installer"
@@ -289,6 +338,7 @@ open_app_checklist() {
 run_bootstrap() {
   run_critical 'local environment' setup_local_environment
   run_critical 'Git identity' setup_gitconfig
+  run_critical 'topic catalog' plan_run
   run_critical 'dotfile links' install_dotfile_links
   apply_macos_configuration
   run_dependency_pipeline bootstrap
@@ -297,6 +347,7 @@ run_bootstrap() {
 run_update() {
   run_advisory 'checkout refresh' update_checkout
   run_critical 'local environment' setup_local_environment
+  run_critical 'topic catalog' plan_run
   run_critical 'dotfile links' install_dotfile_links --batch skip
   run_dependency_pipeline update
 }

@@ -191,7 +191,48 @@ test_links_the_checkout_containing_the_linker() {
   assert_equal "$repo/sample/config.symlink" "$(readlink "$repo/home/.config")" 'topic link source'
 }
 
+# Setup reads one topic catalog per run and hands the linker its link sources,
+# so a linker given sources must not classify the checkout a second time. The
+# classifier here fails if it runs at all.
+refuse_classification() {
+  scenario_write_executable "$1/_scripts/topic-catalog" <<'EOF'
+#!/bin/sh
+printf '%s\n' 'topic-catalog' >>"$SCENARIO_EVENT_LOG"
+exit 1
+EOF
+}
+
+test_links_exactly_the_sources_it_is_given() {
+  local repo
+
+  repo=$(make_repo)
+  refuse_classification "$repo"
+  invoke_linker "$repo" --batch overwrite -- "$repo/sample/config.symlink"
+  assert_symlink "$repo/home/.localrc" 'localrc link'
+  assert_symlink "$repo/home/.config" 'the given source is linked'
+  assert_absent "$repo/home/.bundle" 'a source that was not given is not linked'
+  assert_empty "$repo/events.log"
+}
+
+# A supplied topic catalog may hold no links. That must mean no links, not
+# "classify the checkout instead", which would link what nobody listed.
+test_an_empty_source_list_links_only_localrc() {
+  local repo
+
+  repo=$(make_repo)
+  refuse_classification "$repo"
+  invoke_linker "$repo" --batch overwrite --
+  assert_symlink "$repo/home/.localrc" 'localrc link'
+  assert_absent "$repo/home/.config" 'no topic link without a source'
+  assert_absent "$repo/home/.bundle" 'no directory link without a source'
+  assert_empty "$repo/events.log"
+}
+
 scenario_run 'batch overwrite links localrc and topic symlinks' test_batch_link_and_idempotent
+scenario_run 'given sources are linked without classifying the checkout' \
+  test_links_exactly_the_sources_it_is_given
+scenario_run 'an empty source list links only localrc' \
+  test_an_empty_source_list_links_only_localrc
 scenario_run 'links come from the checkout containing the linker' \
   test_links_the_checkout_containing_the_linker
 scenario_run 'batch backup and skip honor conflict policy' test_batch_backup_and_skip

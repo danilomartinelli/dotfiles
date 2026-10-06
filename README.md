@@ -562,6 +562,12 @@ classified as non-topics.
 availability, maintenance, and bundle reconciliation remain separate private
 phases so failures have clear ownership.
 
+Each run reads the topic catalog once, after the Git identity and before the
+first link, and every later phase takes its links and installers from that one
+reading. The Homebrew topic's installer runs before the Brewfile is reconciled.
+The prerequisite topics run next, in declared order, and the remaining topic
+installers follow in catalog order.
+
 ### Zsh loading order
 
 `zsh/zshenv.symlink` is linked as `~/.zshenv`, the one startup file every Zsh
