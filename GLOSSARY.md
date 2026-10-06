@@ -60,6 +60,17 @@ A unit of the managed environment that gathers the configuration, shell setup
 and optional installation step for one tool or concern.
 _Avoid_: Module, package, plugin
 
+**Catalog**:
+A tracked table the owner edits by hand, each row naming one piece of
+configuration that a single consumer applies in row order. The topic catalog and
+the software catalog are computed or rendered, not catalogs in this sense.
+_Avoid_: Manifest, list
+
+**Run-once step**:
+Configuration applied only on a machine's first apply, because reapplying it
+would overwrite arrangements the owner made by hand. A reset re-arms it.
+_Avoid_: First-run only, one-shot
+
 ### Linking
 
 **Destination**:
