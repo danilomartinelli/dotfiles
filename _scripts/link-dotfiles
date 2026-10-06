@@ -149,15 +149,9 @@ link_file() {
   src=$1
   dst=$2
 
-  if [ ! -f "$src" ] && [ ! -d "$src" ]; then
-    return 1
-  fi
-
-  src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
-
-  # The linker classifies the destination it owns. Deriving it here a second time is
-  # what let the two modules disagree about the same link.
-  status=$("$LINK_CONFIG" --status "$src_abs" "$dst") || return 1
+  # The linker validates the source and classifies the destination it owns.
+  # Let it report the original path, including when its parent is missing.
+  status=$("$LINK_CONFIG" --status "$src" "$dst") || return 1
 
   case "$status" in
     current)
@@ -194,6 +188,7 @@ link_file() {
   # The linker reports what it did — linked, kept, backed up, replaced — so
   # saying "linked" here too would be a second voice, and a wrong one whenever
   # the policy was preserve-existing.
+  src_abs="$(cd "$(dirname "$src")" && pwd -P)/$(basename "$src")"
   "$LINK_CONFIG" --policy "$policy" --label "$dst" "$src_abs" "$dst" || return 1
 }
 

@@ -174,9 +174,18 @@ destination holds — `current`, `conflict`, or `absent` — and changes nothing
 `_scripts/link-dotfiles` decides which conflict policy to ask for; no caller
 derives that classification for itself.
 
+`_scripts/link-config --remove-owned <source> <destination>` retires a link
+only when it points to that source. The source may already be gone, but its
+parent must still resolve for ownership to be established. An absent destination,
+a conflict, or an unresolvable link is left unchanged. Callers name the retired
+source and destination; only the linker reads the link target and removes it.
+Source validation for normal linking also belongs to the linker, so a missing
+source is reported by path before a caller decides how to handle a conflict.
+
 On the acting path the linker's exit status is its outcome: `0` when the
-destination matches the declaration or the policy kept it deliberately, `1` when the link
-could not be made, and `2` for invalid usage or a removal it refuses to perform.
+destination matches the declaration, the policy kept it deliberately, or an
+owned-link removal completed (including a no-op); `1` when the link could not be
+made or removed; and `2` for invalid usage or a removal it refuses to perform.
 A caller does not parse the prose to learn which happened.
 
 Every tab-separated catalog file is read through `_scripts/catalog.sh`, which

@@ -4,6 +4,12 @@
 Every caller passes its own resolved checkout; the module never discovers one
 from the current directory or an inherited `DOTFILES_ROOT`.
 
+The installer links `config.toml` and `mise.lock` into `~/.config/mise`. It also
+asks the config linker to remove legacy `~/.mise.toml` and `~/.mise.lock` links
+only when they point to this checkout's retired `mise/*.symlink` sources.
+Those sources need not still exist. Local files and links to other sources are
+preserved.
+
 ## Interface
 
 ```text

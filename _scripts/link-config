@@ -17,15 +17,18 @@ usage() {
   cat >&2 <<'EOF'
 Usage: link-config [--policy POLICY] [--label LABEL] <source> <destination>
        link-config --status <source> <destination>
+       link-config --remove-owned [--label LABEL] <source> <destination>
 
 Options:
   --status  Print what the destination holds — current, conflict, or absent —
             and exit without changing anything.
+  --remove-owned  Remove only a link to the given source, even if that source
+                  no longer exists. Leave every other destination unchanged.
 
 Exit status:
   0  the destination now matches the declaration, or the policy kept it
-     deliberately
-  1  the link, or the directory that holds it, could not be made
+     deliberately; removal completed or found no owned link
+  1  the link could not be made or removed, or its directory could not be made
   2  invalid usage, or a removal the linker refuses to perform
 
 Policies:
@@ -40,7 +43,7 @@ EOF
 
 policy=replace-with-backup
 label=
-status_only=false
+mode='link'
 source_path=
 destination_path=
 
@@ -62,8 +65,12 @@ while [ "$#" -gt 0 ]; do
       label=$2
       shift 2
       ;;
-    --status)
-      status_only=true
+    --status | --remove-owned)
+      if [ "$mode" != link ]; then
+        usage
+        exit 2
+      fi
+      mode=${1#--}
       shift
       ;;
     -h | --help)
@@ -105,7 +112,7 @@ if [ -z "$label" ]; then
   label=$(basename -- "$destination_path")
 fi
 
-if [ ! -e "$source_path" ] && [ ! -L "$source_path" ]; then
+if [ "$mode" != remove-owned ] && [ ! -e "$source_path" ] && [ ! -L "$source_path" ]; then
   echo "link-config: source not found: $source_path" >&2
   exit 1
 fi
@@ -192,13 +199,23 @@ link_is_current() {
 # this a second time, by different path arithmetic, and reported it in a second
 # voice; the module that owns what happens to a conflict owns what a
 # destination holds. Prints one word and changes nothing.
-if [ "$status_only" = true ]; then
+if [ "$mode" = status ]; then
   if link_is_current; then
     echo current
   elif [ -e "$destination_path" ] || [ -L "$destination_path" ]; then
     echo conflict
   else
     echo absent
+  fi
+  exit 0
+fi
+
+# Retiring a declaration must also work for a dangling link. Ownership uses
+# the same comparison as linking; conflicts and unresolvable paths stay put.
+if [ "$mode" = remove-owned ]; then
+  if link_is_current; then
+    rm -f -- "$destination_path"
+    installer_note "Removed $label"
   fi
   exit 0
 fi
