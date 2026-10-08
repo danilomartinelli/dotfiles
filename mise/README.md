@@ -10,6 +10,57 @@ only when they point to this checkout's retired `mise/*.symlink` sources.
 Those sources need not still exist. Local files and links to other sources are
 preserved.
 
+## Post-install reconciliation
+
+After a successful locked installation, `install.sh` calls
+`sh "$TOPIC_DIR/_post-install.sh"`. This private executable takes no arguments
+and resolves its own checkout. It reconciles formatter plugins, prunes unused
+tool versions, runs the Claude Code package postinstall, and repairs the
+OpenCode native executable, in that order.
+
+`_post-install.sh` owns package discovery, repair choices, ordering, and failure
+propagation. The caller observes its exit status and normal installer output;
+warnings do not imply a failing status. Tests use that same interface without
+first linking configuration or installing every declared tool.
+
+Configuration links, persistent trust, legacy-link retirement, and the initial
+locked installation remain in the installer. `_scripts/mise-policy` retains
+Mise invocation policy, and `_extras.py` retains formatter-pin interpretation
+and refresh verification. The controlled upgrade continues to invoke the full
+installer after publishing sources; subsequent installer failures do not roll
+back that publication, as specified by
+[ADR-0007](../docs/adr/0007-isolate-upgrade-effects-and-source-publication.md).
+
+The extraction preserves current outcomes, including their asymmetry:
+
+| Condition                                                                           | Outcome                              |
+| ----------------------------------------------------------------------------------- | ------------------------------------ |
+| Package lookup fails or returns no directory                                        | Skip that package's step silently    |
+| Formatter reconciliation fails                                                      | Stop before pruning or agent repairs |
+| Pruning fails                                                                       | Discard its output and continue      |
+| Claude's package installer is missing                                               | Skip the Claude step                 |
+| Claude's package installer fails                                                    | Warn and continue to OpenCode        |
+| Either OpenCode file is missing, or the destination is already identified as Mach-O | Skip the repair                      |
+| OpenCode hard link fails                                                            | Try copying the native binary        |
+| Both OpenCode hard link and copy fail                                               | Warn and continue                    |
+| Making the repaired OpenCode executable fails                                       | Stop with a nonzero status           |
+
+Each run invokes Claude's package installer when present; its own script owns
+the repeated-run behavior. OpenCode accepts an existing Mach-O destination
+without checking its version, architecture, or executable permission. An
+unsuccessful file-type probe enters the repair path when both files exist.
+Preserving behavior also preserves the existing repair mechanism and diagnostics;
+the extraction adds no rollback or stronger integrity guarantee.
+
+`tests/mise_post_install_test.sh` invokes the same private entrypoint as the
+installer, using temporary package directories and fake external commands.
+It covers the outcomes above, execution order, successful and repeated repairs,
+and the copy fallback. Its formatter scenarios run the real `_extras.py` against
+a fixture environment. `mise_install` retains installer composition coverage,
+and `software_upgrades` retains the test for failures after source publication.
+Run these suites and `mise_extras` when changing this path, followed by the
+complete safe suite for changes to shared installation behavior.
+
 ## Interface
 
 ```text

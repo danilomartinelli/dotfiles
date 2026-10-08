@@ -36,10 +36,17 @@ if trace := os.environ.get("FAKE_MISE_TRACE"):
 if args == ["where", "java"]:
     print(os.environ["FAKE_MISE_JAVA_HOME"])
 elif args[:1] == ["where"]:
-    if args[1:] == ["pipx:mdformat"] and os.environ.get("FAKE_MISE_MDFORMAT_HOME"):
-        print(os.environ["FAKE_MISE_MDFORMAT_HOME"])
-    else:
+    if status := int(os.environ.get("FAIL_MISE_WHERE", "0")):
+        sys.exit(status)
+    homes = {
+        "pipx:mdformat": "FAKE_MISE_MDFORMAT_HOME",
+        "npm:@anthropic-ai/claude-code": "FAKE_MISE_CLAUDE_HOME",
+        "npm:opencode-ai": "FAKE_MISE_OPENCODE_HOME",
+    }
+    directory = os.environ.get(homes.get(args[1], ""))
+    if not directory:
         sys.exit(1)
+    print(directory)
 elif args[:1] in (["activate"], ["completion"]):
     print("export FAKE_MISE_ACTIVATED=1" if args[0] == "activate"
           else "typeset -g _fake_mise_completion=1")

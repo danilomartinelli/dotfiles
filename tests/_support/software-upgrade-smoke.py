@@ -32,7 +32,7 @@ class UpgradeSmokeTest(unittest.TestCase):
                 "catalog.sh", "link-config",
             ):
                 shutil.copy2(ROOT / "_scripts" / name, root / "_scripts" / name)
-            for name in ("install.sh", "_configure-trust.sh"):
+            for name in ("install.sh", "_configure-trust.sh", "_post-install.sh"):
                 shutil.copy2(ROOT / "mise" / name, root / "mise" / name)
             (root / "Brewfile").write_text("brew 'git' # Git\nmas 'Example', id: 123 # Example\n")
             (root / "mise/config.toml").write_text('[tools]\nnode = "lts" # Node\n[settings]\nlockfile = true\n')
