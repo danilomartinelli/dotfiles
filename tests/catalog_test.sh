@@ -428,9 +428,9 @@ test_expansion_leaks_no_variables_on_either_exit() {
 #!/bin/sh
 . "$READER"
 catalog_expand 'value' HOME /home/a >/dev/null
-printf 'after success: %s\\n' "\$(set | grep -c '^_catalog_expand' || true)"
+printf 'after success: %s\\n' "\$(set | grep -c '^_catalog_' || true)"
 catalog_expand 'value' HOME >/dev/null 2>&1 || true
-printf 'after refusal: %s\\n' "\$(set | grep -c '^_catalog_expand' || true)"
+printf 'after refusal: %s\\n' "\$(set | grep -c '^_catalog_' || true)"
 EOF
   chmod +x "$fixture/consumer.sh"
   scenario_capture "$fixture" "$fixture/consumer.sh"
@@ -450,6 +450,171 @@ test_a_replacement_containing_a_dollar_is_not_rescanned() {
   assert_contains "$fixture/stdout.log" '$HOME/end'
 }
 
+# shellcheck disable=SC2016 # These are literal catalog inputs.
+test_placeholder_names_are_ascii_in_every_locale() {
+  local fixture test_locale
+  fixture=$(scenario_tmpdir placeholder-locales)
+  printf '%s\tvalue\n' '$HOMEé $HÔME $NAME2 $_ROOT $home' >"$fixture/catalog.tsv"
+
+  for test_locale in C en_US.UTF-8; do
+    LC_ALL="$test_locale" invoke_check "$fixture" "$fixture/catalog.tsv" \
+      'row() { catalog_reject_undeclared "$1" HOME /home H /h NAME2 two _ROOT root home lower; }'
+    assert_equal valid "$(cat "$fixture/stdout.log")" "ASCII validation in $test_locale"
+    assert_empty "$fixture/stderr.log"
+
+    LC_ALL="$test_locale" expand_in_sh "$fixture" '$HOMEé $HÔME $NAME2 $_ROOT $home' \
+      HOME /home H /h NAME2 two _ROOT root home lower
+    assert_equal '/homeé /hÔME two root lower' "$(cat "$fixture/stdout.log")" \
+      "ASCII expansion in $test_locale"
+    assert_empty "$fixture/stderr.log"
+  done
+}
+
+assert_placeholder_call_rejected() {
+  local fixture=$1 expected=$2 helper status
+  shift 2
+
+  for helper in catalog_expand catalog_reject_undeclared; do
+    status=0
+    # shellcheck disable=SC2016 # The child invokes the public helper with argv.
+    scenario_capture "$fixture" sh -uc '. "$1"; shift; "$@"' \
+      sh "$READER" "$helper" "$@" || status=$?
+    assert_equal 1 "$status" "$helper rejects an invalid declaration"
+    assert_empty "$fixture/stdout.log"
+    assert_contains "$fixture/stderr.log" "$expected"
+  done
+}
+
+# shellcheck disable=SC2016 # Literal inputs must not be interpreted by Bash.
+test_invalid_placeholder_declarations_fail_before_scanning() {
+  local fixture invalid_name
+  fixture=$(scenario_tmpdir placeholder-declarations)
+
+  assert_placeholder_call_rejected "$fixture" 'catalog: missing placeholder input'
+  assert_placeholder_call_rejected "$fixture" 'name has no replacement: LATER' \
+    '$HOME $UNKNOWN' HOME /h LATER
+  for invalid_name in '' 1HOME HOME-DIR 'HOME DIR' HÔME; do
+    assert_placeholder_call_rejected "$fixture" 'catalog: invalid placeholder name:' \
+      '$HOME $UNKNOWN' HOME /h "$invalid_name" /invalid
+  done
+  assert_placeholder_call_rejected "$fixture" 'catalog: duplicate placeholder name: HOME' \
+    '$HOME' HOME /first HOME /second
+  assert_placeholder_call_rejected "$fixture" 'catalog: duplicate placeholder name: HOME' \
+    '' HOME /same HOME /same
+}
+
+# shellcheck disable=SC2016 # Declared names and their boundaries are the input.
+test_complete_names_do_not_depend_on_declaration_order() {
+  local fixture
+  fixture=$(scenario_tmpdir placeholder-prefixes)
+
+  expand_in_sh "$fixture" '$HOME $HOME_DIR $HOME$HOME_DIR' HOME /h HOME_DIR /long
+  assert_equal '/h /long /h/long' "$(cat "$fixture/stdout.log")" 'short name first'
+  expand_in_sh "$fixture" '$HOME $HOME_DIR $HOME$HOME_DIR' HOME_DIR /long HOME /h
+  assert_equal '/h /long /h/long' "$(cat "$fixture/stdout.log")" 'long name first'
+  expand_in_sh "$fixture" '$HOME_DIR $HOME' HOME /h
+  assert_equal '$HOME_DIR /h' "$(cat "$fixture/stdout.log")" 'unknown name stays whole'
+
+  printf '%s\tvalue\n' '$HOME $HOME_DIR $HOME$HOME_DIR' >"$fixture/catalog.tsv"
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    'row() { catalog_reject_undeclared "$1" HOME /h HOME_DIR /long; }'
+  assert_equal valid "$(cat "$fixture/stdout.log")" 'both complete names are valid'
+  assert_empty "$fixture/stderr.log"
+}
+
+# shellcheck disable=SC2016 # Only dollar-name sequences are special.
+test_shell_like_text_keeps_its_literal_syntax() {
+  local fixture input
+  fixture=$(scenario_tmpdir placeholder-syntax)
+  input='${HOME} $$HOME \$HOME ${HOME:-$HOME} $5 $/ $9HOME $(printf untouched) `printf untouched` $'
+
+  expand_in_sh "$fixture" "$input" HOME /h
+  assert_equal '${HOME} $/h \/h ${HOME:-/h} $5 $/ $9HOME $(printf untouched) `printf untouched` $' \
+    "$(cat "$fixture/stdout.log")" 'shell-like syntax stays literal'
+  assert_empty "$fixture/stderr.log"
+
+  printf '%s\tvalue\n' "$input" >"$fixture/catalog.tsv"
+  invoke_check "$fixture" "$fixture/catalog.tsv" \
+    'row() { catalog_reject_undeclared "$1" HOME /h; }'
+  assert_equal valid "$(cat "$fixture/stdout.log")" 'the same syntax validates'
+  assert_empty "$fixture/stderr.log"
+}
+
+# shellcheck disable=SC2016 # Replacement text includes shell syntax as data.
+test_replacement_text_is_preserved_byte_for_byte() {
+  local fixture replacement
+  fixture=$(scenario_tmpdir placeholder-literal)
+  replacement='first $HOME $(printf untouched) `printf untouched` "quoted" \ & * ?'
+  replacement+=$'\nlast\n'
+
+  expand_in_sh "$fixture" '<$WORKSPACE>' WORKSPACE "$replacement" HOME /h
+  printf '<first $HOME $(printf untouched) `printf untouched` "quoted" \\ & * ?\nlast\n>\n' \
+    >"$fixture/expected.log"
+  cmp -s "$fixture/expected.log" "$fixture/stdout.log" \
+    || scenario_fail 'replacement bytes or output newline changed'
+  assert_empty "$fixture/stderr.log"
+}
+
+# shellcheck disable=SC2016 # Unmapped names remain literal.
+test_empty_input_values_and_maps_remain_valid() {
+  local fixture
+  fixture=$(scenario_tmpdir placeholder-empty)
+
+  expand_in_sh "$fixture" ''
+  printf '\n' >"$fixture/expected.log"
+  cmp -s "$fixture/expected.log" "$fixture/stdout.log" \
+    || scenario_fail 'empty input did not produce its output newline'
+  expand_in_sh "$fixture" '<$HOME>' HOME ''
+  assert_equal '<>' "$(cat "$fixture/stdout.log")" 'empty replacement'
+  expand_in_sh "$fixture" '$HOME ${HOME} $'
+  assert_equal '$HOME ${HOME} $' "$(cat "$fixture/stdout.log")" 'empty map'
+
+  scenario_capture "$fixture" sh -uc '. "$1"; catalog_reject_undeclared ""' sh "$READER"
+  assert_empty "$fixture/stdout.log"
+  assert_empty "$fixture/stderr.log"
+}
+
+test_invalid_placeholder_calls_leave_the_shell_usable() {
+  local fixture
+  fixture=$(scenario_tmpdir placeholder-cleanup)
+
+  scenario_write_executable "$fixture/consumer.sh" <<'EOF'
+#!/bin/sh
+set -eu
+. "$1"
+for helper in catalog_expand catalog_reject_undeclared; do
+  "$helper" >/dev/null 2>&1 || :
+  "$helper" text HOME >/dev/null 2>&1 || :
+  "$helper" text 'HOME-DIR' /h >/dev/null 2>&1 || :
+  "$helper" text HOME /first HOME /second >/dev/null 2>&1 || :
+  if set | grep '^_catalog_'; then
+    exit 1
+  fi
+  "$helper" text HOME /h
+  if set | grep '^_catalog_'; then
+    exit 1
+  fi
+done
+EOF
+  scenario_capture "$fixture" "$fixture/consumer.sh" "$READER"
+  assert_equal text "$(cat "$fixture/stdout.log")" 'a valid call still works'
+  assert_empty "$fixture/stderr.log"
+}
+
+scenario_run 'complete names do not depend on declaration order' \
+  test_complete_names_do_not_depend_on_declaration_order
+scenario_run 'shell-like text keeps its literal syntax' \
+  test_shell_like_text_keeps_its_literal_syntax
+scenario_run 'replacement text is preserved byte for byte' \
+  test_replacement_text_is_preserved_byte_for_byte
+scenario_run 'empty input, values, and maps remain valid' \
+  test_empty_input_values_and_maps_remain_valid
+scenario_run 'invalid placeholder calls leave the shell usable' \
+  test_invalid_placeholder_calls_leave_the_shell_usable
+scenario_run 'invalid placeholder declarations fail before scanning' \
+  test_invalid_placeholder_declarations_fail_before_scanning
+scenario_run 'placeholder names are ASCII in every locale' \
+  test_placeholder_names_are_ascii_in_every_locale
 scenario_run 'comment and blank rows are skipped' \
   test_comment_and_blank_rows_are_skipped
 scenario_run 'a final row without a trailing newline is delivered' \

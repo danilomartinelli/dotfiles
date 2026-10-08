@@ -231,12 +231,32 @@ reach for `sed`, `${var//}`, or a jq `sub()` at a call site, and do not read a
 replacement out of the environment on the caller's behalf: passing it explicitly
 is what keeps `eval` out of a module every installer sources.
 
-A token ends where its name ends, so no honoured name may prefix another one in
-the same call. A value substituted into JSON source text rather than into a
-decoded string is escaped by its caller first: the module expands text and does
-not know the syntax the result lands in. APFS allows both `"` and `\` in a path
-component, so a checkout path spliced in raw is a value `jq` refuses to parse,
-and `tests/catalog_test.sh` holds the module to that.
+Validation and expansion recognize the same complete, case-sensitive ASCII
+name: `[A-Za-z_][A-Za-z0-9_]*`, independently of locale. A non-ASCII character
+ends the name. Only placeholders in the original input expand; replacement
+values remain literal. Names may share a prefix and declaration order does not
+affect the result. Validation rejects undeclared names with catalog/line
+diagnostics, while expansion preserves those tokens whole.
+
+Every dollar is examined independently. `${HOME}` is literal, `$$HOME` retains
+its first dollar and expands HOME, and `\$HOME` retains its backslash and expands
+HOME. Braces, quotes, and backslashes do not shield placeholders inside them;
+no escapes, default values, or shell expressions are evaluated.
+
+Both helpers check the complete call before scanning. Missing input, incomplete
+name/value pairs, invalid names, and duplicate names (even with equal values)
+return `1`, report the declaration error on stderr, and leave stdout empty.
+Empty input, empty replacement values, and an input with no pairs are valid.
+Expansion prints the result followed by a newline, and both helpers clear their
+temporary variables on success and failure.
+[ADR-0008](docs/adr/0008-expand-catalog-placeholders-as-literal-values.md) records
+why replacement values are literal and recognition is shared.
+
+A value substituted into JSON source text rather than into a decoded string is
+escaped by its caller first: the module expands text and does not know the
+syntax the result lands in. APFS allows both `"` and `\` in a path component, so
+a checkout path spliced in raw is a value `jq` refuses to parse, and
+`tests/catalog_test.sh` holds the module to that.
 
 A catalog that arrives as a command's stdout rather than a file is read
 directly by its consumer. `_scripts/topic-catalog` output is the only one.

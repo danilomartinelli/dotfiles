@@ -126,6 +126,20 @@ test_catalog_order_and_expansion() {
   assert_contains "$events" 'killall Dock'
 }
 
+# shellcheck disable=SC2016 # The directory contains a literal placeholder name.
+test_workspace_path_preserves_literal_placeholders() {
+  local fixture workspace_path
+  fixture=$(make_fixture)
+  workspace_path="$fixture/home/"'literal-$HOME workspace'
+  mkdir -p "$workspace_path"
+
+  invoke_dock "$fixture" "$fixture/run1" "WORKSPACE=$workspace_path"
+
+  assert_contains "$fixture/run1/events.log" \
+    "dockutil --add $workspace_path --section others --view list --display folder --no-restart"
+  assert_empty "$fixture/run1/stderr.log"
+}
+
 test_missing_entry_is_skipped_and_the_rest_still_applies() {
   local fixture
   fixture=$(make_fixture)
@@ -216,6 +230,8 @@ scenario_run 'DOTFILES_RESET=dock re-arms the rebuild' \
   test_reset_re_arms_the_dock_rebuild
 scenario_run 'the catalog decides order, section, and path expansion' \
   test_catalog_order_and_expansion
+scenario_run 'a workspace path preserves literal placeholders' \
+  test_workspace_path_preserves_literal_placeholders
 scenario_run 'a missing entry is skipped and the remaining rows still apply' \
   test_missing_entry_is_skipped_and_the_rest_still_applies
 scenario_run 'an invalid layout leaves the Dock untouched' \
