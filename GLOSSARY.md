@@ -78,6 +78,11 @@ configuration that a single consumer applies in row order. The topic catalog and
 the software catalog are computed or rendered, not catalogs in this sense.
 _Avoid_: Manifest, list
 
+**Catalog placeholder**:
+A named reference in a catalog to a value supplied by its consumer, such as the
+home or workspace directory. The supplied value is literal text.
+_Avoid_: Shell variable, environment interpolation
+
 **Run-once step**:
 Configuration applied only on a machine's first apply, because reapplying it
 would overwrite arrangements the owner made by hand. A reset re-arms it.

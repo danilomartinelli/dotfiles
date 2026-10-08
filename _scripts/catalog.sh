@@ -178,12 +178,17 @@ catalog_reject_duplicate_unset() {
 # in one function that forwards to either, and no name can be accepted here
 # without also being expanded there.
 #
-# A placeholder is a `$` followed by the longest run of letters, digits, and
-# underscores that starts with a letter or underscore. Anything else after a
+# A placeholder is a `$` followed by the longest run of ASCII letters, digits,
+# and underscores that starts with a letter or underscore. Anything else after a
 # `$` — `$5`, `$/`, `${` — is not a placeholder and is left alone.
 #
 # Usage: catalog_reject_undeclared <value> [<NAME> <replacement>...]
 catalog_reject_undeclared() {
+  if ! catalog_placeholder_check_arguments placeholder "$@"; then
+    catalog_reject_undeclared_unset
+    return 1
+  fi
+
   _catalog_undeclared_rest=$1
   shift
 
@@ -195,22 +200,15 @@ catalog_reject_undeclared() {
     shift 2
   done
 
-  if [ "$#" -ne 0 ]; then
-    printf 'catalog: placeholder name has no replacement: %s\n' "$1" >&2
-    catalog_reject_undeclared_unset
-    return 1
-  fi
-
   while :; do
     case $_catalog_undeclared_rest in
       *'$'*) _catalog_undeclared_rest=${_catalog_undeclared_rest#*\$} ;;
       *) break ;;
     esac
 
-    _catalog_undeclared_name=${_catalog_undeclared_rest%%[![:alnum:]_]*}
-    case $_catalog_undeclared_name in
-      '' | [0-9]*) continue ;;
-    esac
+    catalog_placeholder_name "$_catalog_undeclared_rest"
+    _catalog_undeclared_name=$_catalog_placeholder_name
+    [ -n "$_catalog_undeclared_name" ] || continue
 
     case $_catalog_undeclared_names in
       *" $_catalog_undeclared_name "*) ;;
@@ -227,6 +225,57 @@ catalog_reject_undeclared() {
 catalog_reject_undeclared_unset() {
   unset _catalog_undeclared_rest _catalog_undeclared_names \
     _catalog_undeclared_list _catalog_undeclared_name
+  catalog_placeholder_unset
+}
+
+# Read one complete name after a dollar. Explicit characters keep recognition
+# independent of locale without changing the caller's environment. Both public
+# helpers use this result; neither supplied values nor shell syntax are parsed.
+catalog_placeholder_name() {
+  _catalog_placeholder_name=${1%%[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789]*}
+  case $_catalog_placeholder_name in
+    [0123456789]*) _catalog_placeholder_name='' ;;
+  esac
+}
+
+# Both helpers reject a malformed declaration before reading the input. Empty
+# values and an empty map are valid; duplicate names would reintroduce ordering
+# as caller knowledge, even when today's replacement values happen to match.
+catalog_placeholder_check_arguments() {
+  _catalog_placeholder_label=$1
+  shift
+  if [ "$#" -eq 0 ]; then
+    printf 'catalog: missing placeholder input\n' >&2
+    return 1
+  fi
+  shift
+
+  _catalog_placeholder_seen=' '
+  while [ "$#" -gt 1 ]; do
+    catalog_placeholder_name "$1"
+    if [ -z "$_catalog_placeholder_name" ] || [ "$_catalog_placeholder_name" != "$1" ]; then
+      printf 'catalog: invalid placeholder name: %s\n' "$1" >&2
+      return 1
+    fi
+    case $_catalog_placeholder_seen in
+      *" $1 "*)
+        printf 'catalog: duplicate placeholder name: %s\n' "$1" >&2
+        return 1
+        ;;
+    esac
+    _catalog_placeholder_seen="$_catalog_placeholder_seen$1 "
+    shift 2
+  done
+
+  if [ "$#" -ne 0 ]; then
+    printf 'catalog: %s name has no replacement: %s\n' "$_catalog_placeholder_label" "$1" >&2
+    return 1
+  fi
+  return 0
+}
+
+catalog_placeholder_unset() {
+  unset _catalog_placeholder_name _catalog_placeholder_label _catalog_placeholder_seen
 }
 
 # Expand the placeholders a catalog value declares, and only those.
@@ -242,57 +291,67 @@ catalog_reject_undeclared_unset() {
 # on the caller's behalf. Indirect expansion needs `eval` under `set -u`, and
 # that line does not belong in a module everything sources.
 #
-# Names apply left to right, so a replacement may contain a token a later name
-# expands. No replacement is rescanned for the name that produced it.
+# Only the original input is scanned. A supplied value is literal text, even
+# when it contains another declared placeholder, so declaration order does not
+# change a path. Complete names may share a prefix.
 #
-# A token ends where the name ends — there is no delimiter — so one honoured
-# name must not prefix another. Declaring HOME beside HOMEBREW_PREFIX would
-# rewrite `$HOMEBREW_PREFIX` as `<home>BREW_PREFIX` with no error. No catalog
-# declares such a pair; a catalog that needs one has to spell the longer name
-# first and is still wrong on the shorter, so the answer is a different name.
-#
-# Usage: catalog_expand <value> <NAME> <replacement> [<NAME> <replacement>...]
+# Usage: catalog_expand <value> [<NAME> <replacement>...]
 catalog_expand() {
-  _catalog_expand_result=$1
-  shift
-
-  while [ "$#" -gt 1 ]; do
-    _catalog_expand_token=\$$1
-    _catalog_expand_replacement=$2
-    shift 2
-
-    _catalog_expand_done=''
-    _catalog_expand_rest=$_catalog_expand_result
-    while :; do
-      case $_catalog_expand_rest in
-        *"$_catalog_expand_token"*)
-          _catalog_expand_done=$_catalog_expand_done${_catalog_expand_rest%%"$_catalog_expand_token"*}$_catalog_expand_replacement
-          _catalog_expand_rest=${_catalog_expand_rest#*"$_catalog_expand_token"}
-          ;;
-        *)
-          _catalog_expand_done=$_catalog_expand_done$_catalog_expand_rest
-          break
-          ;;
-      esac
-    done
-    _catalog_expand_result=$_catalog_expand_done
-  done
-
-  if [ "$#" -ne 0 ]; then
-    printf 'catalog: expansion name has no replacement: %s\n' "$1" >&2
+  if ! catalog_placeholder_check_arguments expansion "$@"; then
     catalog_expand_unset
     return 1
   fi
+
+  _catalog_expand_rest=$1
+  _catalog_expand_result=''
+  shift
+
+  while :; do
+    case $_catalog_expand_rest in
+      *'$'*)
+        _catalog_expand_result=$_catalog_expand_result${_catalog_expand_rest%%\$*}
+        _catalog_expand_rest=${_catalog_expand_rest#*\$}
+        ;;
+      *)
+        _catalog_expand_result=$_catalog_expand_result$_catalog_expand_rest
+        break
+        ;;
+    esac
+
+    catalog_placeholder_name "$_catalog_expand_rest"
+    _catalog_expand_name=$_catalog_placeholder_name
+    case $_catalog_expand_name in
+      '')
+        _catalog_expand_result=$_catalog_expand_result\$
+        continue
+        ;;
+    esac
+    _catalog_expand_rest=${_catalog_expand_rest#"$_catalog_expand_name"}
+    catalog_expand_lookup "$@"
+    _catalog_expand_result=$_catalog_expand_result$_catalog_expand_replacement
+  done
 
   printf '%s\n' "$_catalog_expand_result"
 
   catalog_expand_unset
 }
 
+catalog_expand_lookup() {
+  _catalog_expand_replacement=\$$_catalog_expand_name
+  while [ "$#" -gt 1 ]; do
+    if [ "$1" = "$_catalog_expand_name" ]; then
+      _catalog_expand_replacement=$2
+      break
+    fi
+    shift 2
+  done
+}
+
 # Both exits clear the same names. The refusal used to return before the unset,
 # so a caller that mispaired its arguments kept _catalog_expand_result — in a
 # module sourced by every installer and by the interactive shell's startup.
 catalog_expand_unset() {
-  unset _catalog_expand_result _catalog_expand_token _catalog_expand_replacement \
-    _catalog_expand_done _catalog_expand_rest
+  unset _catalog_expand_result _catalog_expand_name _catalog_expand_replacement \
+    _catalog_expand_rest
+  catalog_placeholder_unset
 }
