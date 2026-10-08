@@ -43,6 +43,12 @@ selections to the Mac, without selecting new releases or regenerating those
 selections.
 _Avoid_: Upgrade, lock regeneration
 
+**Post-install reconciliation**:
+The part of reconciliation after installation that aligns formatter plugins,
+removes unused tool versions, and repairs agent executables while retaining the
+owner's recorded version selections.
+_Avoid_: Upgrade, package postinstall
+
 **Controlled upgrade**:
 A change to installed software that follows the owner's explicit selection of
 upgrade candidates, including dependencies required by those selections.

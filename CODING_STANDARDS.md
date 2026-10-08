@@ -487,6 +487,7 @@ it reads it from there rather than restating it.
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
 | Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                                            |
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                              |
+| Mise post-install reconciliation                                | `tests/mise_post_install_test.sh`, `tests/mise_install_test.sh`, `tests/mise_extras_test.sh`                              |
 | Mise invocation policy, shell integration, and CI environment   | `tests/mise_policy_test.sh`, `tests/mise_install_test.sh`, `tests/software_upgrades_test.sh`, `tests/zsh_startup_test.sh` |
 | Interactive upgrades and source preservation                    | `tests/software_upgrades_test.sh`                                                                                         |
 | Staged source publication and recovery                          | `tests/source_staging_test.sh`                                                                                            |

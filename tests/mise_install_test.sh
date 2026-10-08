@@ -18,7 +18,7 @@ new_fixture() {
   fixture=$(installer_fixture)
   mkdir -p "$fixture/repository/mise"
   cp -R "$REPOSITORY_ROOT/_scripts" "$fixture/repository/_scripts"
-  for source in install.sh _configure-trust.sh _extras.py config.toml mise.lock; do
+  for source in install.sh _configure-trust.sh _post-install.sh _extras.py config.toml mise.lock; do
     cp "$REPOSITORY_ROOT/mise/$source" "$fixture/repository/mise/$source"
   done
   stub_mise "$fixture/fake-bin"
