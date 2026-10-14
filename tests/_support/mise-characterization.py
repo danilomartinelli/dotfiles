@@ -64,6 +64,8 @@ chmod +x "$ASDF_INSTALL_PATH/bin/fixture"''',
                                 text=True, capture_output=True)
         if (expected == 0 and result.returncode != 0) or (expected != 0 and result.returncode == 0):
             raise AssertionError(f"{command + list(args)}: {result.returncode}\n{result.stdout}\n{result.stderr}")
+        if "error loading tracked config file" in result.stderr:
+            raise AssertionError(f"{command + list(args)}:\n{result.stderr}")
         return result.stdout
 
     print(invoke("--version").strip())
@@ -92,6 +94,30 @@ chmod +x "$ASDF_INSTALL_PATH/bin/fixture"''',
     config.write_text(original_config)
     lock.write_bytes(original_lock)
 
+    # A project loaded under ordinary discovery remains in Mise's tracker when
+    # maintenance suppresses discovery. Reshim and prune must still parse it.
+    project = root / "home/Workspace/project"
+    project.mkdir(parents=True)
+    versions = project / ".tool-versions"
+    versions.write_text("asdf:fixture 0.9.0\n")
+    (root / "home/releases").write_text("0.9.0 1.0.0 2.0.0\n")
+    invoke("install", cwd=project, MISE_LOCKFILE="false")
+    project_tool = Path(invoke("where", "asdf:fixture@0.9.0", cwd=project).strip()) / "bin/fixture"
+    assert project_tool.is_file()
+    assert lock.read_bytes() == original_lock
+    invoke("run", "install", managed=True)
+    ci_env = dict(line.split("=", 1) for line in invoke("ci", managed=True).splitlines())
+    invoke("install", **ci_env)
+    invoke("run", "prune", "--yes", managed=True)
+    assert project_tool.is_file(), "prune removed a version used by a tracked .tool-versions"
+    assert (root / "data/installs/asdf-fixture/1.0.0/bin/fixture").is_file()
+    assert not (root / "data/installs/asdf-fixture/2.0.0").exists()
+    assert versions.read_text() == "asdf:fixture 0.9.0\n"
+    assert lock.read_bytes() == original_lock
+    print("PASS: managed and CI installation parse tracked .tool-versions; prune keeps project versions")
+
+    for extra in (checkout / ".tool-versions", root / "home/.tool-versions"):
+        extra.write_text("asdf:fixture 99.0.0\n")
     for extra in (checkout / "mise.local.toml", checkout / ".miserc.toml",
                   checkout / "mise/miserc.toml", root / "system/config.toml"):
         extra.write_text("invalid TOML !\n")
