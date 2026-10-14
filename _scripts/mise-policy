@@ -32,6 +32,7 @@ fi
 operation=$1
 shift
 locked=true
+locked_scopes=global,project,system
 case "$operation" in
   run)
     [ "$#" -gt 0 ] || usage
@@ -39,6 +40,9 @@ case "$operation" in
       install | exec | where | ls | outdated | prune) ;;
       *) usage ;;
     esac
+    # Prune also resolves other projects' tracked requests. Protect our global
+    # lock without requiring unrelated projects to have their own lockfiles.
+    [ "$1" != prune ] || locked_scopes=global
     ;;
   lock)
     selection=false
@@ -127,12 +131,15 @@ fi
 # Only the selected configuration participates. Absolute discovery patterns
 # suppress project/ancestor config; the non-directory disables optional system
 # and legacy files without creating anything in the checkout or home.
+# Keep the default .tool-versions name for tracked-file type recognition;
+# its discovery override still excludes those files from active configuration.
 settings=$(
   cat <<EOF
 MISE_CONFIG_DIR=/dev/null
 MISE_GLOBAL_CONFIG_FILE=$declarations/config.toml
 MISE_OVERRIDE_CONFIG_FILENAMES=/dev/null/config.toml
 MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=/dev/null/.tool-versions
+MISE_DEFAULT_TOOL_VERSIONS_FILENAME=.tool-versions
 MISE_SYSTEM_CONFIG_DIR=/dev/null
 MISE_SYSTEM_CONFIG_FILE=/dev/null/config.toml
 MISE_CEILING_PATHS=$checkout
@@ -143,7 +150,7 @@ MISE_IDIOMATIC_VERSION_FILE_ENABLE_TOOLS=
 MISE_TRUSTED_CONFIG_PATHS=$trust
 MISE_LOCKFILE=true
 MISE_LOCKED=$locked
-MISE_LOCKED_SCOPES=global,project,system
+MISE_LOCKED_SCOPES=$locked_scopes
 MISE_NO_CONFIG=false
 EOF
 )

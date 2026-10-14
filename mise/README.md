@@ -77,6 +77,14 @@ disabled. Missing or incompatible resolutions fail; installation does not fall
 back to a new release. Other inherited environment, including package-manager
 credentials and installation/cache locations, remains available to subprocesses.
 
+Discovery overrides exclude project `.tool-versions` files from active tool
+selection. `MISE_DEFAULT_TOOL_VERSIONS_FILENAME=.tool-versions` preserves their
+type recognition when Mise revisits previously tracked projects during shim
+rebuilding and pruning. Those files remain readable without influencing the
+managed installation. During `prune`, locked mode applies only to the selected
+global configuration: other tracked projects can keep their requested versions
+without providing a lockfile. The dotfiles lock remains protected.
+
 `--declarations` selects a separate directory containing staged `config.toml`
 and `mise.lock` copies. It does not change where the module finds the checkout's
 helpers. Trust includes every root from `_scripts/trusted-roots`, plus the staged
@@ -128,4 +136,7 @@ python3 -B tests/_support/mise-characterization.py /absolute/path/to/mise
 Run it when changing the Mise version or its policy. It covers a missing tool,
 missing/incompatible lock resolutions, the external write boundary, foreign
 configuration, CI environment, and staged regeneration without using personal
-configuration or installing software into the real home.
+configuration or installing software into the real home. It also checks that
+managed and CI installation accept tracked `.tool-versions` files without
+warnings, pruning preserves their project versions, and project and home
+`.tool-versions` files cannot override the selected declarations.
