@@ -385,33 +385,33 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
 | `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
-| `bun`                                       | `1.4.2`          | JavaScript runtime and toolkit                  |
+| `bun`                                       | `1.4.3`          | JavaScript runtime and toolkit                  |
 | `elixir`                                    | `1.20`           | Elixir runtime                                  |
 | `erlang`                                    | `29`             | BEAM runtime                                    |
-| `go`                                        | `1.27.1`         | Go toolchain                                    |
+| `go`                                        | `1.27.3`         | Go toolchain                                    |
 | `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
 | `java`                                      | `temurin-25`     | Java runtime                                    |
 | `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.286`        | Claude Code CLI                                 |
-| `npm:@agentclientprotocol/claude-agent-acp` | `0.85.0`         | Claude ACP agent                                |
-| `npm:@agentclientprotocol/codex-acp`        | `2.1.1`          | Codex ACP agent                                 |
-| `npm:@earendil-works/pi-coding-agent`       | `0.99.2`         | Pi coding agent                                 |
-| `npm:@moonshot-ai/kimi-code`                | `2.1.1`          | Kimi Code CLI                                   |
-| `npm:@colbymchenry/codegraph`               | `1.6.1`          | Repository code graph CLI                       |
-| `npm:@swmansion/argent`                     | `0.26.0`         | Device and simulator control MCP                |
-| `npm:@openai/codex`                         | `0.159.3`        | Codex CLI                                       |
-| `npm:eas-cli`                               | `24.8.0`         | Expo Application Services CLI                   |
-| `npm:neonctl`                               | `7.0.2`          | Neon CLI                                        |
+| `npm:@anthropic-ai/claude-code`             | `2.1.306`        | Claude Code CLI                                 |
+| `npm:@agentclientprotocol/claude-agent-acp` | `0.94.0`         | Claude ACP agent                                |
+| `npm:@agentclientprotocol/codex-acp`        | `2.2.2`          | Codex ACP agent                                 |
+| `npm:@earendil-works/pi-coding-agent`       | `1.3.0`          | Pi coding agent                                 |
+| `npm:@moonshot-ai/kimi-code`                | `2.3.0`          | Kimi Code CLI                                   |
+| `npm:@colbymchenry/codegraph`               | `1.6.2`          | Repository code graph CLI                       |
+| `npm:@swmansion/argent`                     | `0.30.0`         | Device and simulator control MCP                |
+| `npm:@openai/codex`                         | `0.163.0`        | Codex CLI                                       |
+| `npm:eas-cli`                               | `25.3.0`         | Expo Application Services CLI                   |
+| `npm:neonctl`                               | `8.10.2`         | Neon CLI                                        |
 | `npm:opencode-ai`                           | `1`              | OpenCode CLI                                    |
-| `npm:skills`                                | `1.7.0`          | Agent skills CLI                                |
-| `npm:wrangler`                              | `4.145.0`        | Cloudflare Workers CLI                          |
+| `npm:skills`                                | `1.7.4`          | Agent skills CLI                                |
+| `npm:wrangler`                              | `4.151.3`        | Cloudflare Workers CLI                          |
 | `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
-| `pnpm`                                      | `12.8.1`         | JavaScript package manager                      |
-| `python`                                    | `3.14.8`         | Python runtime                                  |
+| `pnpm`                                      | `12.15.0`        | JavaScript package manager                      |
+| `python`                                    | `3.15.1`         | Python runtime                                  |
 | `ruby`                                      | `4.0`            | Ruby runtime                                    |
-| `rust`                                      | `1.99.0`         | Rust toolchain                                  |
-| `terraform`                                 | `1.16.4`         | Infrastructure as code CLI                      |
+| `rust`                                      | `1.99.1`         | Rust toolchain                                  |
+| `terraform`                                 | `1.17.0`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
 | `yarn`                                      | `4.18.1`         | JavaScript package manager                      |
 
