@@ -640,6 +640,30 @@ the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
 Reloading is idempotent: paths, hooks, and implementation state remain
 de-duplicated.
 
+`pnpm/path.zsh` supplies `PNPM_HOME` (defaulting to `~/Library/pnpm`) and adds
+both `$PNPM_HOME/bin`, where pnpm 11 and newer link global executables, and
+`$PNPM_HOME`, which can hold standalone pnpm and older global commands. A
+custom `PNPM_HOME` is preserved. `pnpm setup` is unnecessary: the tracked topic
+already supplies the environment without rewriting `~/.zshrc`.
+
+If a tool replaces `~/.zshrc` with a regular file, startup can report
+`no such file or directory: /Users/zsh/_startup.zsh`. Without startup, `dot`
+may resolve to Graphviz and wait for graph input. Restore just the startup
+link with the existing linker, without running maintenance:
+
+```bash
+checkout="$HOME/.dotfiles" # Use the checkout whose configuration should be active.
+"$checkout/_scripts/link-config" --policy numbered-backup \
+  "$checkout/zsh/zshrc.symlink" "$HOME/.zshrc"
+exec zsh -l
+```
+
+The replaced file, including any lines a tool appended, is preserved as
+`~/.zshrc.backup` (or the next free numbered suffix). Review those additions
+before moving any needed environment settings to `~/.localrc`; keep
+`~/.zshrc` as the managed link. `command -v dot` should then name the active
+checkout's `bin/dot`, and `dot --help` should print the dotfiles management help.
+
 ### Configuration ownership
 
 | Configuration          | Installed location             | Ownership rule                                                             |
@@ -681,7 +705,9 @@ precedence.
   discard. `~/.claude.json` and the rest of `~/.claude` stay machine-local.
 - **Codex** runs from Mise. Its `config.toml` records project trust, plugin
   state and desktop preferences, so it is not versioned; `codex/completion.zsh`
-  caches the shell completion Codex generates.
+  caches the shell completion Codex generates. Upgrade the managed CLI through
+  `dot`'s software picker; its package-manager self-update installs a separate
+  copy outside the Mise declaration and lock.
 - **Kimi Code** runs from Mise. Only `tui.toml` is linked, because
   `config.toml` holds provider credentials and every login rewrites it.
 - **Conductor** links `~/.conductor/settings.toml`, the user layer its Settings

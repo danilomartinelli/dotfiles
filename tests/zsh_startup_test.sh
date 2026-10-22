@@ -149,6 +149,7 @@ mkdir -p \
   "$FIXTURE/functions" \
   "$FIXTURE/git" \
   "$FIXTURE/homebrew" \
+  "$FIXTURE/pnpm" \
   "$FIXTURE/system" \
   "$FIXTURE/zsh" \
   "$FIXTURE/_ignored" \
@@ -174,6 +175,7 @@ cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
+cp "$REPOSITORY_ROOT/pnpm/path.zsh" "$FIXTURE/pnpm/path.zsh"
 
 # shellcheck disable=SC2016 # The line is evaluated by the child Zsh process.
 printf '%s\n' 'print -r -- prompt >> "$SCENARIO_EVENT_LOG"' >>"$FIXTURE/zsh/prompt.zsh"
@@ -316,7 +318,8 @@ assert_equal() {
 
 source "$HOME/.zshrc"
 
-expected_path="$STARTUP_FIXTURE_ROOT/bin:$FAKE_HOMEBREW_PREFIX/bin"
+expected_path="$HOME/Library/pnpm/bin:$HOME/Library/pnpm"
+expected_path+=":$STARTUP_FIXTURE_ROOT/bin:$FAKE_HOMEBREW_PREFIX/bin"
 expected_path+=":$FAKE_HOMEBREW_PREFIX/sbin:/usr/local/bin:/usr/local/sbin"
 expected_path+=":/base/bin:/usr/bin:/bin:/local/bin:/common/bin"
 expected_path+=":/alpha/bin:/bravo/bin:$HOME/.local/bin"
@@ -408,7 +411,7 @@ STARTUP_PATH="$BREW_PREFIX/bin:/base/bin:/usr/local/bin:/usr/bin:/bin"
 # file writing below them reached the real home: the catalog cache once filled
 # ~/.cache/dotfiles with test entries. Unset, they fall back below each
 # scenario's HOME.
-STARTUP_ENV=(env -u ZSH -u WORKSPACE -u PROJECTS
+STARTUP_ENV=(env -u ZSH -u WORKSPACE -u PROJECTS -u PNPM_HOME
   -u XDG_CACHE_HOME -u XDG_DATA_HOME -u XDG_STATE_HOME)
 
 test_startup_order_and_reload() {
@@ -573,6 +576,111 @@ EOF
   assert_empty "$fixture/stderr.log"
 }
 
+# Package-manager setup can replace ~/.zshrc with a regular copy and append
+# its own environment block. Relinking must preserve that copy and restore
+# both login startup and the managed dot ahead of Graphviz's command.
+test_relinking_a_replaced_zshrc_restores_startup_and_dot() {
+  local fixture directory
+  fixture=$(scenario_tmpdir replaced-zshrc)
+  mkdir -p "$fixture/home" "$fixture/elsewhere"
+  cp "$FIXTURE/zsh/zshrc.symlink" "$fixture/home/.zshrc"
+  cat >>"$fixture/home/.zshrc" <<'EOF'
+
+# pnpm
+export PNPM_HOME="$HOME/Library/pnpm"
+export PATH="$PNPM_HOME/bin:$PATH"
+# pnpm end
+EOF
+  cp "$fixture/home/.zshrc" "$fixture/original-zshrc"
+  cp "$REPOSITORY_ROOT/bin/dot" "$FIXTURE/bin/dot"
+  scenario_write_executable "$fixture/fake-bin/dot" <<'EOF'
+#!/bin/sh
+printf '%s\n' 'Graphviz dot must not shadow dotfiles maintenance' >&2
+exit 1
+EOF
+  scenario_write_file "$fixture/probe.zsh" <<'EOF'
+[[ $DOTFILES_ROOT == "$STARTUP_FIXTURE_ROOT" ]] || exit 1
+[[ $(command -v dot) == "$STARTUP_FIXTURE_ROOT/bin/dot" ]] || exit 1
+dot --help
+EOF
+
+  # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+  local -a startup=("${STARTUP_ENV[@]}"
+    HOME="$fixture/home"
+    ZDOTDIR="$fixture/home"
+    PATH="$fixture/fake-bin:$STARTUP_PATH"
+    STARTUP_FIXTURE_ROOT="$FIXTURE"
+    DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform"
+    FAKE_HOMEBREW_PREFIX="$BREW_PREFIX"
+    "$ZSH_BIN" -d -ilc 'source "$1"' zsh "$fixture/probe.zsh")
+
+  assert_fails_with_status 1 scenario_capture "$fixture/broken" "${startup[@]}"
+  assert_contains "$fixture/broken/stderr.log" 'no such file or directory:'
+  assert_contains "$fixture/broken/stderr.log" '/zsh/_startup.zsh'
+
+  scenario_capture "$fixture/relink" "$REPOSITORY_ROOT/_scripts/link-config" \
+    --policy numbered-backup "$FIXTURE/zsh/zshrc.symlink" "$fixture/home/.zshrc"
+  assert_equal "$FIXTURE/zsh/zshrc.symlink" "$(readlink "$fixture/home/.zshrc")" \
+    'restored startup link'
+  cmp "$fixture/original-zshrc" "$fixture/home/.zshrc.backup"
+
+  for directory in "$fixture/home" "$fixture/elsewhere"; do
+    (
+      cd "$directory"
+      scenario_capture "$fixture/restored" "${startup[@]}"
+    )
+    assert_contains "$fixture/restored/stdout.log" 'dot -- dotfiles management'
+    assert_empty "$fixture/restored/stderr.log"
+  done
+}
+
+test_pnpm_global_commands_work_without_setup() {
+  local fixture selection pnpm_home
+  fixture=$(scenario_tmpdir pnpm-global-commands)
+
+  scenario_write_file "$fixture/probe.zsh" <<'EOF'
+[[ $PNPM_HOME == "$EXPECTED_PNPM_HOME" ]] || exit 1
+[[ $(pnpm-global-fixture) == global-command ]] || exit 1
+[[ $(pnpm-legacy-fixture) == legacy-command ]] || exit 1
+first_path=$PATH
+source "$HOME/.zshrc" || exit 1
+[[ $PATH == "$first_path" ]] || exit 1
+[[ $(pnpm-global-fixture) == global-command ]] || exit 1
+EOF
+
+  for selection in default custom; do
+    mkdir -p "$fixture/$selection/home"
+    ln -s "$FIXTURE/zsh/zshrc.symlink" "$fixture/$selection/home/.zshrc"
+    pnpm_home="$fixture/$selection/home/Library/pnpm"
+    local -a startup=("${STARTUP_ENV[@]}")
+    if [ "$selection" = custom ]; then
+      pnpm_home="$fixture/custom pnpm home"
+      startup+=("PNPM_HOME=$pnpm_home")
+    fi
+    scenario_write_executable "$pnpm_home/bin/pnpm-global-fixture" <<'EOF'
+#!/bin/sh
+printf '%s\n' global-command
+EOF
+    scenario_write_executable "$pnpm_home/pnpm-legacy-fixture" <<'EOF'
+#!/bin/sh
+printf '%s\n' legacy-command
+EOF
+    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+    scenario_capture "$fixture/$selection" "${startup[@]}" \
+      HOME="$fixture/$selection/home" \
+      ZDOTDIR="$fixture/$selection/home" \
+      PATH="$STARTUP_PATH" \
+      EXPECTED_PNPM_HOME="$pnpm_home" \
+      STARTUP_FIXTURE_ROOT="$FIXTURE" \
+      DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
+      FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
+      "$ZSH_BIN" -d -ilc 'source "$1"' zsh "$fixture/probe.zsh"
+    assert_empty "$fixture/$selection/stderr.log"
+    assert_equal "$FIXTURE/zsh/zshrc.symlink" \
+      "$(readlink "$fixture/$selection/home/.zshrc")" 'startup link after pnpm configuration'
+  done
+}
+
 scenario_run 'startup follows the documented order and remains idempotent' test_startup_order_and_reload
 scenario_run 'tool shells export English messages whichever app started them' test_tool_shells_export_english_messages
 scenario_run "a person's shell exports Portuguese messages on a terminal" test_person_shells_export_portuguese_messages
@@ -585,4 +693,8 @@ scenario_run 'nested topic additions and removals reach the next shell' \
   test_nested_topic_changes_reach_the_next_shell
 scenario_run 'startup acts on the checkout containing it' \
   test_startup_acts_on_the_checkout_containing_it
+scenario_run 'relinking a replaced zshrc restores login startup and the managed dot' \
+  test_relinking_a_replaced_zshrc_restores_startup_and_dot
+scenario_run 'pnpm global commands work without setup, including a custom home and reload' \
+  test_pnpm_global_commands_work_without_setup
 scenario_finish
