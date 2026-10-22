@@ -318,8 +318,8 @@ assert_equal() {
 
 source "$HOME/.zshrc"
 
-expected_path="$HOME/Library/pnpm/bin:$HOME/Library/pnpm"
-expected_path+=":$STARTUP_FIXTURE_ROOT/bin:$FAKE_HOMEBREW_PREFIX/bin"
+expected_path="$STARTUP_FIXTURE_ROOT/bin:$HOME/Library/pnpm/bin:$HOME/Library/pnpm"
+expected_path+=":$FAKE_HOMEBREW_PREFIX/bin"
 expected_path+=":$FAKE_HOMEBREW_PREFIX/sbin:/usr/local/bin:/usr/local/sbin"
 expected_path+=":/base/bin:/usr/bin:/bin:/local/bin:/common/bin"
 expected_path+=":/alpha/bin:/bravo/bin:$HOME/.local/bin"
@@ -635,49 +635,74 @@ EOF
 }
 
 test_pnpm_global_commands_work_without_setup() {
-  local fixture selection pnpm_home
+  local fixture selection layout fixture_home pnpm_home command_dir
   fixture=$(scenario_tmpdir pnpm-global-commands)
+  cp "$REPOSITORY_ROOT/bin/dot" "$FIXTURE/bin/dot"
 
   scenario_write_file "$fixture/probe.zsh" <<'EOF'
 [[ $PNPM_HOME == "$EXPECTED_PNPM_HOME" ]] || exit 1
 [[ $(pnpm-global-fixture) == global-command ]] || exit 1
 [[ $(pnpm-legacy-fixture) == legacy-command ]] || exit 1
+[[ $(command -v dot) == "$STARTUP_FIXTURE_ROOT/bin/dot" ]] || {
+  print -u2 -r -- "pnpm global shadows managed dot: $(command -v dot)"
+  exit 1
+}
+dot --help || exit 1
 first_path=$PATH
 source "$HOME/.zshrc" || exit 1
 [[ $PATH == "$first_path" ]] || exit 1
 [[ $(pnpm-global-fixture) == global-command ]] || exit 1
+[[ $(pnpm-legacy-fixture) == legacy-command ]] || exit 1
+[[ $(command -v dot) == "$STARTUP_FIXTURE_ROOT/bin/dot" ]] || exit 1
+dot --help || exit 1
 EOF
 
   for selection in default custom; do
-    mkdir -p "$fixture/$selection/home"
-    ln -s "$FIXTURE/zsh/zshrc.symlink" "$fixture/$selection/home/.zshrc"
-    pnpm_home="$fixture/$selection/home/Library/pnpm"
-    local -a startup=("${STARTUP_ENV[@]}")
-    if [ "$selection" = custom ]; then
-      pnpm_home="$fixture/custom pnpm home"
-      startup+=("PNPM_HOME=$pnpm_home")
-    fi
-    scenario_write_executable "$pnpm_home/bin/pnpm-global-fixture" <<'EOF'
+    for layout in current legacy; do
+      fixture_home="$fixture/$selection/$layout/home"
+      mkdir -p "$fixture_home"
+      ln -s "$FIXTURE/zsh/zshrc.symlink" "$fixture_home/.zshrc"
+      pnpm_home="$fixture_home/Library/pnpm"
+      local -a startup=("${STARTUP_ENV[@]}")
+      if [ "$selection" = custom ]; then
+        pnpm_home="$fixture/$selection/$layout/custom pnpm home"
+        startup+=("PNPM_HOME=$pnpm_home")
+      fi
+      scenario_write_executable "$pnpm_home/bin/pnpm-global-fixture" <<'EOF'
 #!/bin/sh
 printf '%s\n' global-command
 EOF
-    scenario_write_executable "$pnpm_home/pnpm-legacy-fixture" <<'EOF'
+      scenario_write_executable "$pnpm_home/pnpm-legacy-fixture" <<'EOF'
 #!/bin/sh
 printf '%s\n' legacy-command
 EOF
-    # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
-    scenario_capture "$fixture/$selection" "${startup[@]}" \
-      HOME="$fixture/$selection/home" \
-      ZDOTDIR="$fixture/$selection/home" \
-      PATH="$STARTUP_PATH" \
-      EXPECTED_PNPM_HOME="$pnpm_home" \
-      STARTUP_FIXTURE_ROOT="$FIXTURE" \
-      DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
-      FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
-      "$ZSH_BIN" -d -ilc 'source "$1"' zsh "$fixture/probe.zsh"
-    assert_empty "$fixture/$selection/stderr.log"
-    assert_equal "$FIXTURE/zsh/zshrc.symlink" \
-      "$(readlink "$fixture/$selection/home/.zshrc")" 'startup link after pnpm configuration'
+      command_dir="$pnpm_home"
+      if [ "$layout" = current ]; then
+        command_dir="$pnpm_home/bin"
+      fi
+      scenario_write_executable "$command_dir/dot" <<'EOF'
+#!/bin/sh
+printf '%s\n' 'pnpm global must not shadow managed dot' >&2
+exit 1
+EOF
+      # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
+      if ! scenario_capture "$fixture/$selection/$layout" "${startup[@]}" \
+        HOME="$fixture_home" \
+        ZDOTDIR="$fixture_home" \
+        PATH="$STARTUP_PATH" \
+        EXPECTED_PNPM_HOME="$pnpm_home" \
+        STARTUP_FIXTURE_ROOT="$FIXTURE" \
+        DOTFILES_HOMEBREW_ROOT="$TEST_ROOT/platform" \
+        FAKE_HOMEBREW_PREFIX="$BREW_PREFIX" \
+        "$ZSH_BIN" -d -ilc 'source "$1"' zsh "$fixture/probe.zsh"; then
+        command cat "$fixture/$selection/$layout/stderr.log" >&2
+        scenario_fail "pnpm startup assertions failed ($selection home, $layout global)"
+      fi
+      assert_contains "$fixture/$selection/$layout/stdout.log" 'dot -- dotfiles management'
+      assert_empty "$fixture/$selection/$layout/stderr.log"
+      assert_equal "$FIXTURE/zsh/zshrc.symlink" \
+        "$(readlink "$fixture_home/.zshrc")" 'startup link after pnpm configuration'
+    done
   done
 }
 
@@ -695,6 +720,6 @@ scenario_run 'startup acts on the checkout containing it' \
   test_startup_acts_on_the_checkout_containing_it
 scenario_run 'relinking a replaced zshrc restores login startup and the managed dot' \
   test_relinking_a_replaced_zshrc_restores_startup_and_dot
-scenario_run 'pnpm global commands work without setup, including a custom home and reload' \
+scenario_run 'pnpm globals remain available behind managed commands with a custom home and reload' \
   test_pnpm_global_commands_work_without_setup
 scenario_finish

@@ -642,9 +642,11 @@ de-duplicated.
 
 `pnpm/path.zsh` supplies `PNPM_HOME` (defaulting to `~/Library/pnpm`) and adds
 both `$PNPM_HOME/bin`, where pnpm 11 and newer link global executables, and
-`$PNPM_HOME`, which can hold standalone pnpm and older global commands. A
-custom `PNPM_HOME` is preserved. `pnpm setup` is unnecessary: the tracked topic
-already supplies the environment without rewriting `~/.zshrc`.
+`$PNPM_HOME`, which can hold standalone pnpm and older global commands. Both
+follow the active checkout's `bin` on `PATH`, so a global package cannot shadow
+managed commands such as `dot`. A custom `PNPM_HOME` is preserved. `pnpm setup`
+is unnecessary: the tracked topic already supplies the environment without
+rewriting `~/.zshrc`.
 
 If a tool replaces `~/.zshrc` with a regular file, startup can report
 `no such file or directory: /Users/zsh/_startup.zsh`. Without startup, `dot`
