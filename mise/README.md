@@ -144,4 +144,6 @@ configuration, CI environment, and staged regeneration without using personal
 configuration or installing software into the real home. It also checks that
 managed and CI installation accept tracked `.tool-versions` files without
 warnings, pruning preserves their project versions, and project and home
-`.tool-versions` files cannot override the selected declarations.
+`.tool-versions` files cannot override the selected declarations. Startup checks
+keep managed commands ahead of colliding runtime and pnpm commands across
+prompts, directory changes, and reload while project runtimes still switch.

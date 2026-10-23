@@ -356,7 +356,8 @@ classifier lists every installer and decides none of this order.
   before querying it. Failed preparation leaves the previous environment intact.
 - Startup owns final managed-command precedence. Topics add their own paths
   without repeating the checkout's `bin` prefix; startup restores it to the
-  front after topic configuration and activation.
+  front after topic configuration and activation, and registers hooks after
+  runtime hooks to preserve that order before prompts and after directory changes.
 - Keep `path`, `fpath`, hooks, aliases, and cached implementation state
   de-duplicated after repeated `source ~/.zshrc` calls.
 - Use Zsh arrays and conditionals where they make startup intent clearer.

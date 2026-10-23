@@ -52,7 +52,15 @@ elif args[:1] in (["activate"], ["completion"]):
           else "typeset -g _fake_mise_completion=1")
     if args[0] == "activate" and os.environ.get("FAKE_MISE_ACTIVATION_PATH"):
         print('export PATH="$FAKE_MISE_ACTIVATION_PATH:$PATH"')
+        # Refreshing a real Mise environment can prepend runtime paths again.
+        print('''autoload -Uz add-zsh-hook
+_mise_hook_precmd() { eval "$(command mise hook-env -s zsh)"; }
+_mise_hook_chpwd() { eval "$(command mise hook-env -s zsh)"; }
+add-zsh-hook precmd _mise_hook_precmd
+add-zsh-hook chpwd _mise_hook_chpwd''')
     sys.exit(int(os.environ.get(f"FAIL_MISE_{args[0].upper()}", "0")))
+elif args[:1] == ["hook-env"]:
+    print('export PATH="$FAKE_MISE_ACTIVATION_PATH:$PATH"')
 elif args[:1] in (["exec"], ["install"], ["prune"], ["outdated"], ["ls"], ["lock"]):
     config = Path(config_path)
     tools = tomllib.loads(config.read_text()).get("tools", {})

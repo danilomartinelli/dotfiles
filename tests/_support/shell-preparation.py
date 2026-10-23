@@ -51,7 +51,7 @@ class ShellPreparationTest(unittest.TestCase):
             ["/bin/zsh", "-f", "-c", 'setopt extended_glob; source "$HOME/.zshrc"; ' + program],
             env={**self.env, **overrides}, text=True, capture_output=True,
         )
-        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(0, result.returncode, result.stderr + result.stdout)
         return result
 
     def events(self):
@@ -80,7 +80,7 @@ class ShellPreparationTest(unittest.TestCase):
         self.assertIn("activation failed", result.stderr)
         self.assertEqual([["activate", "zsh"]], [event["args"] for event in self.events()])
 
-    def test_managed_commands_keep_precedence_after_activation_and_reload(self):
+    def test_managed_commands_keep_precedence_at_prompts_directory_changes_and_reload(self):
         tools = self.fixture / "runtime tools"
         tools.mkdir()
         for directory, word in ((tools, "foreign"), (self.checkout / "bin", "managed")):
@@ -88,12 +88,22 @@ class ShellPreparationTest(unittest.TestCase):
             command.write_text(f"#!/bin/sh\nprintf '%s\\n' {word}\n")
             command.chmod(0o755)
         result = self.shell(
-            'dot; first_path=$PATH; source "$HOME/.zshrc"; dot; '
-            '[[ $PATH == "$first_path" ]] || exit 1',
+            'dot; first_path=$PATH; '
+            'for hook in $precmd_functions; do "$hook"; done; dot; '
+            'for hook in $precmd_functions; do "$hook"; done; dot; '
+            'cd "$HOME"; dot; source "$HOME/.zshrc"; dot; '
+            'for hook in $precmd_functions; do "$hook"; done; dot; '
+            'cd "$HOME/.."; dot; [[ $PATH == "$first_path" ]] || exit 1; '
+            'typeset -a handlers; '
+            'handlers=("${(M)precmd_functions:#_dotfiles_prioritize_managed_commands}"); '
+            '(( $#handlers == 1 )) || exit 1; '
+            'handlers=("${(M)chpwd_functions:#_dotfiles_prioritize_managed_commands}"); '
+            '(( $#handlers == 1 )) || exit 1',
             FAKE_MISE_ACTIVATION_PATH=str(tools),
         )
-        self.assertEqual(["managed", "managed"], result.stdout.splitlines())
+        self.assertEqual(["managed"] * 7, result.stdout.splitlines())
         self.assertEqual("", result.stderr)
+        self.assertEqual(5, sum(event["args"][:1] == ["hook-env"] for event in self.events()))
 
     def test_java_preserves_the_personal_selector_and_workspace(self):
         personal = str(self.fixture / "personal/config.toml")
