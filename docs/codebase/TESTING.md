@@ -62,6 +62,11 @@ passes a temporary `HOME`, `XDG_STATE_HOME`, and a controlled
 environment overrides and captures stdout, stderr, and `SCENARIO_EVENT_LOG`.
 Individual suites also construct specialized repositories and command stubs.
 
+`tests/_support/shell-preparation.py` crosses real Zsh startup with Android,
+pnpm and Mise topic files and the shared fake Mise. It covers normalized and
+personal selectors, preparation/activation failure, managed-command precedence
+and reload without reading the real home or installing software.
+
 This is shell/process substitution at real integration boundaries, rather than
 mocking an application's in-memory functions. Assertions check effects such as
 link sources, backup files, permissions, execution order and command exit codes.

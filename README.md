@@ -632,13 +632,20 @@ the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
 
 1. Loads optional `~/.localrc`, followed by tracked `.commonrc`.
 1. Initializes Homebrew, unique `PATH`/`MANPATH`, functions, and topic paths.
-1. Sources sorted `path.zsh` files, then other visible topic `*.zsh` files.
+1. Sources sorted `path.zsh` files, then prepares Mise when its topic is present.
+1. Sources other visible topic `*.zsh` files in catalog order.
 1. Loads `zsh/prompt.zsh` as the sole prompt implementation.
 1. Runs `compinit` once and loads sorted completion files.
 1. Loads optional syntax highlighting last.
 
-Reloading is idempotent: paths, hooks, and implementation state remain
-de-duplicated.
+Startup owns tool preparation order: Android selects Java after successful Mise
+activation and preserves the previous Java environment when preparation fails.
+Mise still discovers the current project's configuration and preserves personal
+overrides. See the [startup decision](docs/adr/0009-prepare-tool-context-before-topic-configuration.md).
+
+After topic configuration and activation, startup restores the checkout's `bin`
+to the front of `PATH`. Reloading is idempotent: paths, hooks, and implementation
+state remain de-duplicated.
 
 `pnpm/path.zsh` supplies `PNPM_HOME` (defaulting to `~/Library/pnpm`) and adds
 both `$PNPM_HOME/bin`, where pnpm 11 and newer link global executables, and

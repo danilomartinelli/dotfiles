@@ -50,6 +50,8 @@ elif args[:1] == ["where"]:
 elif args[:1] in (["activate"], ["completion"]):
     print("export FAKE_MISE_ACTIVATED=1" if args[0] == "activate"
           else "typeset -g _fake_mise_completion=1")
+    if args[0] == "activate" and os.environ.get("FAKE_MISE_ACTIVATION_PATH"):
+        print('export PATH="$FAKE_MISE_ACTIVATION_PATH:$PATH"')
     sys.exit(int(os.environ.get(f"FAIL_MISE_{args[0].upper()}", "0")))
 elif args[:1] in (["exec"], ["install"], ["prune"], ["outdated"], ["ls"], ["lock"]):
     config = Path(config_path)

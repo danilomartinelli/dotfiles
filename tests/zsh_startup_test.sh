@@ -722,4 +722,6 @@ scenario_run 'relinking a replaced zshrc restores login startup and the managed 
   test_relinking_a_replaced_zshrc_restores_startup_and_dot
 scenario_run 'pnpm globals remain available behind managed commands with a custom home and reload' \
   test_pnpm_global_commands_work_without_setup
+scenario_run 'tool preparation precedes topic configuration in real shell startup' \
+  python3 -B "$TEST_DIR/_support/shell-preparation.py"
 scenario_finish

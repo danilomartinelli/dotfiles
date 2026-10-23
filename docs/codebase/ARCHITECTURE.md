@@ -60,7 +60,7 @@ Shell startup is a separate flow:
 zshenv.symlink -> person's shell or tool shell, and its locale
 zshrc.symlink -> physical checkout -> .localrc -> .commonrc
   -> Homebrew and unique paths -> topic catalog -> autoload functions
-  -> topic paths -> topic main files -> sole prompt -> compinit
+  -> topic paths -> Mise preparation -> other topic main files -> sole prompt -> compinit
   -> completions -> optional autosuggestions -> optional syntax highlighting
 ```
 
@@ -69,6 +69,12 @@ cleans its private loader variables after each pass. The classifier starts one
 `find` and one `sort` whatever the topic count, which `tests/topic_catalog_test.sh`
 enforces. `tests/zsh_startup_test.sh` covers nested additions and removals
 reaching the next shell.
+
+Startup owns Mise's prerequisite position and final managed-command precedence;
+the classifier still owns only file classification. Android queries Java only
+after successful preparation. Topics extend their own paths without repeating
+the checkout's `bin` prefix. These responsibilities are recorded in
+[ADR-0009](../adr/0009-prepare-tool-context-before-topic-configuration.md).
 
 ## 3) Layer/Module Responsibilities
 

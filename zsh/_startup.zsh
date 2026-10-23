@@ -118,7 +118,16 @@ for _dotfiles_file in "${_dotfiles_path_files[@]}"; do
   source "$_dotfiles_file"
 done
 
+# Mise prepares the context consumed by topics such as Android. Startup owns
+# this prerequisite, rather than depending on the topics' alphabetical names.
+# Only load a file the classifier discovered, and exclude it from the main pass.
+_dotfiles_mise_file=$DOTFILES_ROOT/mise/mise.zsh
+if (( ${_dotfiles_main_files[(Ie)$_dotfiles_mise_file]} )); then
+  source "$_dotfiles_mise_file"
+fi
+
 for _dotfiles_file in "${_dotfiles_main_files[@]}"; do
+  [[ $_dotfiles_file == "$_dotfiles_mise_file" ]] && continue
   source "$_dotfiles_file"
 done
 
@@ -157,9 +166,10 @@ if [[ -r $_dotfiles_syntax_highlighting ]]; then
   ZSH_HIGHLIGHT_STYLES[path_prefix]=
 fi
 
-# Keep pipx and similar user-level tools portable and at their current trailing
-# precedence. The unique path array also makes reloading ~/.zshrc idempotent.
-path+=("$HOME/.local/bin")
+# Topics and runtime activation may prepend paths. Startup owns the final
+# precedence: managed commands first, user-local tools at their trailing place.
+# The unique array also makes reloading ~/.zshrc idempotent.
+path=("$DOTFILES_ROOT/bin" "${path[@]}" "$HOME/.local/bin")
 
 # Do not leak loader implementation details into the interactive shell.
 unset ${(k)parameters[(I)_dotfiles_*]}

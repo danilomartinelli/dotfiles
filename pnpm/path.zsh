@@ -11,5 +11,5 @@
 # the PATH entries below depend on PNPM_HOME already being exported.
 export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
 
-# Startup makes path unique; keep managed commands ahead of pnpm globals.
-path=("$DOTFILES_ROOT/bin" "$PNPM_HOME/bin" "$PNPM_HOME" "${path[@]}")
+# Startup owns global command precedence and makes path unique.
+path=("$PNPM_HOME/bin" "$PNPM_HOME" "${path[@]}")
