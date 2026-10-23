@@ -166,10 +166,18 @@ if [[ -r $_dotfiles_syntax_highlighting ]]; then
   ZSH_HIGHLIGHT_STYLES[path_prefix]=
 fi
 
-# Topics and runtime activation may prepend paths. Startup owns the final
-# precedence: managed commands first, user-local tools at their trailing place.
-# The unique array also makes reloading ~/.zshrc idempotent.
-path=("$DOTFILES_ROOT/bin" "${path[@]}" "$HOME/.local/bin")
+# Runtime hooks can prepend paths after activation, before the first prompt or
+# on a directory change. Run after them as well as at the end of startup.
+_dotfiles_prioritize_managed_commands() {
+  path=("$DOTFILES_ROOT/bin" "${path[@]}")
+}
+autoload -Uz add-zsh-hook
+for _dotfiles_hook in precmd chpwd; do
+  add-zsh-hook -d "$_dotfiles_hook" _dotfiles_prioritize_managed_commands
+  add-zsh-hook "$_dotfiles_hook" _dotfiles_prioritize_managed_commands
+done
+path+=("$HOME/.local/bin")
+_dotfiles_prioritize_managed_commands
 
 # Do not leak loader implementation details into the interactive shell.
 unset ${(k)parameters[(I)_dotfiles_*]}

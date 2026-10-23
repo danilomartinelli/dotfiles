@@ -19,11 +19,15 @@ personal overrides as required by
 
 Startup also restores the checkout's `bin` to the front of `PATH` after topic
 configuration and activation. Topics declare their own directories without
-knowing this global precedence rule. Repeated startup remains idempotent.
-This governs the completed startup pass; it does not replace Mise's hooks for
-subsequent project changes.
+knowing this global precedence rule. Mise's prompt and directory-change hooks
+can prepend runtime paths again, including before the first prompt. Startup
+registers its own `precmd` and `chpwd` hooks after them to restore managed-command
+precedence while preserving project runtime selection. Repeated startup moves
+these hooks to the end without duplicating them.
 
 Tests cross real startup and topic files with the shared fake Mise in an isolated
-home. They cover configuration context, preparation failure, colliding commands
-and reload. They do not characterize an installed Mise or apply the environment
-to the owner's Mac.
+home. They cover configuration context, preparation failure, colliding commands,
+prompt and directory-change refreshes, and reload. The opt-in real-Mise
+characterization also checks collisions across prompts, project runtime switches,
+and reload. All run in temporary homes without applying the environment to the
+owner's Mac.

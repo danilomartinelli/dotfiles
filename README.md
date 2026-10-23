@@ -644,8 +644,10 @@ Mise still discovers the current project's configuration and preserves personal
 overrides. See the [startup decision](docs/adr/0009-prepare-tool-context-before-topic-configuration.md).
 
 After topic configuration and activation, startup restores the checkout's `bin`
-to the front of `PATH`. Reloading is idempotent: paths, hooks, and implementation
-state remain de-duplicated.
+to the front of `PATH`. Its hooks restore that priority after runtime hooks,
+before each prompt and after directory changes. Mise still switches project
+runtimes. Reloading is idempotent: paths, hooks, and implementation state remain
+de-duplicated.
 
 `pnpm/path.zsh` supplies `PNPM_HOME` (defaulting to `~/Library/pnpm`) and adds
 both `$PNPM_HOME/bin`, where pnpm 11 and newer link global executables, and

@@ -16,6 +16,71 @@ ROOT = Path(__file__).resolve().parents[2]
 binary = Path(sys.argv[1]).resolve(strict=True)
 
 
+def characterize_startup(root, checkout, env, project):
+    for name in ("zsh", "pnpm", "functions", "homebrew", "bin"):
+        (checkout / name).mkdir()
+    for name in ("zsh/zshrc.symlink", "zsh/_startup.zsh", "mise/mise.zsh", "pnpm/path.zsh"):
+        shutil.copy2(ROOT / name, checkout / name)
+    shutil.copy2(ROOT / "_scripts/topic-catalog", checkout / "_scripts/topic-catalog")
+    (checkout / "zsh/prompt.zsh").write_text(":\n")
+    (checkout / "functions/compinit").write_text(":\n")
+    availability = checkout / "homebrew/_availability.sh"
+    availability.write_text('#!/bin/sh\nprintf "%s\\n" "$FIXTURE_PREFIX"\n')
+    availability.chmod(0o755)
+    (root / "home/.zshrc").symlink_to(checkout / "zsh/zshrc.symlink")
+    pnpm = root / "home/Library/pnpm/bin"
+    pnpm.mkdir(parents=True)
+    for directory in (pnpm, *(root / f"data/installs/asdf-fixture/{version}/bin"
+                              for version in ("1.0.0", "0.9.0")), checkout / "bin"):
+        command = directory / "dot"
+        word = "managed" if directory == checkout / "bin" else "foreign"
+        command.write_text(f"#!/bin/sh\nprintf '%s\\n' {word}\n")
+        command.chmod(0o755)
+
+    program = '''setopt extended_glob
+source "$HOME/.zshrc"
+set -e
+assert_context() {
+  [[ $(dot) == managed && $(fixture) == "$1" && $path[1] == "$DOTFILES_ROOT/bin" ]] || {
+    print -u2 -r -- "expected managed dot and runtime $1; got $(command -v dot), $(fixture)"
+    return 1
+  }
+}
+assert_context 1.0.0
+for cycle in 1 2; do
+  for hook in $precmd_functions; do "$hook"; done
+  assert_context 1.0.0
+done
+cd "$1"
+assert_context 0.9.0
+for hook in $precmd_functions; do "$hook"; done
+assert_context 0.9.0
+source "$HOME/.zshrc"
+assert_context 0.9.0
+for hook in $precmd_functions; do "$hook"; done
+assert_context 0.9.0
+cd "$2"
+assert_context 1.0.0
+for hook in $precmd_functions; do "$hook"; done
+assert_context 1.0.0
+typeset -a handlers
+handlers=("${(M)precmd_functions:#_dotfiles_prioritize_managed_commands}")
+(( $#handlers == 1 ))
+handlers=("${(M)chpwd_functions:#_dotfiles_prioritize_managed_commands}")
+(( $#handlers == 1 ))
+'''
+    result = subprocess.run(
+        ["/bin/zsh", "-f", "-c", program, "zsh", str(project), str(root / "outside")],
+        cwd=root / "outside", env={**env, "FIXTURE_PREFIX": str(root),
+                                   "MISE_CONFIG_DIR": str(root / "home/.config/mise"),
+                                   "MISE_AUTO_INSTALL": "false"},
+        text=True, capture_output=True,
+    )
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    assert result.stderr == "", result.stderr
+    print("PASS: managed commands keep precedence at prompts, project changes and reload; runtimes still switch")
+
+
 def characterize(root):
     checkout = root / "checkout"
     for name in ("checkout/mise", "checkout/_scripts", "home/.config/mise",
@@ -115,6 +180,9 @@ chmod +x "$ASDF_INSTALL_PATH/bin/fixture"''',
     assert versions.read_text() == "asdf:fixture 0.9.0\n"
     assert lock.read_bytes() == original_lock
     print("PASS: managed and CI installation parse tracked .tool-versions; prune keeps project versions")
+
+    characterize_startup(root, checkout, env, project)
+    assert lock.read_bytes() == original_lock
 
     for extra in (checkout / ".tool-versions", root / "home/.tool-versions"):
         extra.write_text("asdf:fixture 99.0.0\n")
