@@ -76,6 +76,12 @@ after successful preparation. Topics extend their own paths without repeating
 the checkout's `bin` prefix. These responsibilities are recorded in
 [ADR-0009](../adr/0009-prepare-tool-context-before-topic-configuration.md).
 
+Controlled upgrades compose production managers and external adapters in
+`_scripts/upgrade-software`'s `main`. The `upgrade` function accepts the existing
+Homebrew, App Store and Mise roles and owns discovery, confirmation, requery,
+and application order. Managers retain package interpretation and source
+protection; in-memory managers exercise the same orchestration interface.
+
 ## 3) Layer/Module Responsibilities
 
 | Layer or module                | Owns                                                                                 | Must not own                                   | Evidence                                                                 |

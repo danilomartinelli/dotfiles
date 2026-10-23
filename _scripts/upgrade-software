@@ -442,18 +442,10 @@ def choose(candidates, env, interaction):
     )
 
 
-def upgrade(root, brew, environment, *, commands, advisories, interaction):
-    # Every subprocess inherits these, not only brew: a manager that applies
-    # earlier and reaches brew indirectly must not refresh Homebrew's catalog
-    # between the requery and the confirmed Homebrew upgrades.
-    env = {
-        **environment,
-        "HOMEBREW_NO_AUTO_UPDATE": "1",
-        "HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK": "1",
-    }
-    homebrew = Homebrew(root, brew, env, commands)
-    app_store = AppStore(root, env, commands)
-    mise = Mise(root, env, commands, advisories)
+def upgrade(homebrew, app_store, mise, env, *, interaction):
+    # The existing manager roles are the seam for selection and application
+    # policy. Production composition belongs to main; package interpretation
+    # and source protection remain inside the managers.
     managers = (homebrew, app_store, mise)
     found = {}
     for manager in managers:
@@ -515,9 +507,18 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parent.parent
     commands = SubprocessCommands()
+    # Every subprocess inherits these, not only brew: a manager that applies
+    # earlier and reaches brew indirectly must not refresh Homebrew's catalog
+    # between the requery and the confirmed Homebrew upgrades.
+    env = {
+        **os.environ,
+        "HOMEBREW_NO_AUTO_UPDATE": "1",
+        "HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK": "1",
+    }
     return upgrade(
-        root, args.brew, os.environ, commands=commands,
-        advisories=OsvAdvisories(), interaction=TerminalInteraction(commands),
+        Homebrew(root, args.brew, env, commands), AppStore(root, env, commands),
+        Mise(root, env, commands, OsvAdvisories()), env,
+        interaction=TerminalInteraction(commands),
     )
 
 

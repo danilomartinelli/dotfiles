@@ -67,6 +67,12 @@ pnpm and Mise topic files and the shared fake Mise. It covers normalized and
 personal selectors, preparation/activation failure, managed-command precedence
 and reload without reading the real home or installing software.
 
+Controlled-upgrade policy tests use in-memory managers for selection, requery,
+application order and failure propagation. Manager contract tests retain recorded
+command responses, source fixtures and advisory responses. The isolated CLI smoke
+retains production composition, shared environment flags, Mise policy and source
+publication coverage without repeating those protocols in every policy test.
+
 This is shell/process substitution at real integration boundaries, rather than
 mocking an application's in-memory functions. Assertions check effects such as
 link sources, backup files, permissions, execution order and command exit codes.
