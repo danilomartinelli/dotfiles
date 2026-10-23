@@ -349,8 +349,14 @@ classifier lists every installer and decides none of this order.
 ## Zsh configuration
 
 - Treat interactive Zsh as a reloadable module graph, not a one-shot script.
-- Preserve the `_scripts/topic-catalog` loading order: `path.zsh`, other visible
+- Keep classification in `_scripts/topic-catalog` and prerequisite ordering in
+  startup: sorted `path.zsh`, discovered `mise/mise.zsh` once, other visible
   topic files, the authoritative prompt, completions, then syntax highlighting.
+- A topic consuming Mise's prepared context checks `_dotfiles_mise_ready`
+  before querying it. Failed preparation leaves the previous environment intact.
+- Startup owns final managed-command precedence. Topics add their own paths
+  without repeating the checkout's `bin` prefix; startup restores it to the
+  front after topic configuration and activation.
 - Keep `path`, `fpath`, hooks, aliases, and cached implementation state
   de-duplicated after repeated `source ~/.zshrc` calls.
 - Use Zsh arrays and conditionals where they make startup intent clearer.

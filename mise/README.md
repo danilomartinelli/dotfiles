@@ -108,7 +108,12 @@ The remaining operations emit configuration without installing tools:
 
 Shell preparation preserves personal configuration overrides and normal project
 discovery. It removes the legacy default `MISE_GLOBAL_CONFIG_FILE` selector
-that bypassed `conf.d`. Failed preparation or activation discards the generated
+that bypassed `conf.d`. Startup loads `mise.zsh` once after topic paths and before
+other topic configuration, so consumers such as Android query the prepared
+context. They skip their queries after failed preparation or activation rather
+than replacing the previous environment from an incomplete context.
+
+Failed preparation or activation discards the generated
 payload, reports a diagnostic, and leaves the shell usable with its previous
 environment. Completion is skipped after failed activation.
 
