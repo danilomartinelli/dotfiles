@@ -1,5 +1,9 @@
 {
+  "env": {
+    "DISABLE_UPDATES": "1"
+  },
   "model": "opus[1m]",
+  "disableClaudeAiConnectors": true,
   "deniedMcpServers": [
     {
       "serverName": "aws-mcp"
@@ -89,5 +93,7 @@
   "theme": "dark",
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "disableClaudeAiConnectors": true
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true
+  }
 }

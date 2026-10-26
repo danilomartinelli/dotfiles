@@ -516,6 +516,45 @@ test_critical_failures_stop() {
   assert_not_contains "$fixture/events.log" topic-zulu
 }
 
+# With git/gitconfig.symlink's pull.rebase and rebase.autoStash, `git pull`
+# exits 0 when the stash cannot be reapplied over the update, and leaves
+# conflict markers in a file every new shell sources. Real Git, because only
+# it shows that exit status.
+test_a_conflicted_checkout_stops_the_update() {
+  local fixture
+  local upstream
+
+  fixture=$(make_fixture)
+  upstream=$(scenario_tmpdir upstream)
+  rm "$fixture/fake-bin/git"
+  git -C "$fixture" init -q -b main
+  git -C "$fixture" config user.name Fixture
+  git -C "$fixture" config user.email fixture@example.invalid
+  git -C "$fixture" config pull.rebase true
+  git -C "$fixture" config rebase.autoStash true
+  printf 'export SAMPLE=base\n' >"$fixture/sample/path.zsh"
+  git -C "$fixture" add sample/path.zsh
+  git -C "$fixture" commit -q -m base
+  git clone -q "$fixture" "$upstream/checkout"
+  printf 'export SAMPLE=upstream\n' >"$upstream/checkout/sample/path.zsh"
+  git -C "$upstream/checkout" commit -q -a -m upstream \
+    --author 'Fixture <fixture@example.invalid>'
+  git -C "$fixture" remote add origin "$upstream/checkout"
+  git -C "$fixture" fetch -q origin
+  git -C "$fixture" branch -q --set-upstream-to=origin/main main
+  printf 'export SAMPLE=local\n' >"$fixture/sample/path.zsh"
+
+  assert_fails_with_status 1 invoke "$fixture" \
+    GIT_COMMITTER_NAME=Fixture GIT_COMMITTER_EMAIL=fixture@example.invalid \
+    "$fixture/_scripts/setup" update
+  assert_contains "$fixture/sample/path.zsh" '<<<<<<<'
+  assert_contains "$fixture/stderr.log" 'sample/path.zsh'
+  assert_contains "$fixture/stderr.log" 'checkout without conflicts'
+  assert_not_contains "$fixture/events.log" link-dotfiles
+  assert_not_contains "$fixture/events.log" topic-alpha
+  assert_not_contains "$fixture/stdout.log" 'setup update complete'
+}
+
 # Bootstrap writes the Git identity before it reads the topic catalog, so the
 # identity it just wrote is among the links. This is the case that keeps the
 # real classifier and linker: the sources leave setup and must arrive.
@@ -597,6 +636,8 @@ scenario_run 'app installers never launch apps implicitly' \
   test_app_installers_never_launch_apps_implicitly
 scenario_run 'advisory failures warn and continue' test_advisory_failures_continue
 scenario_run 'critical failures stop the run' test_critical_failures_stop
+scenario_run 'a conflicted checkout stops the update' \
+  test_a_conflicted_checkout_stops_the_update
 scenario_run 'bootstrap links the Git identity it wrote' \
   test_bootstrap_links_the_git_identity_it_wrote
 scenario_run 'platform skips and fresh Homebrew discovery work' test_platform_and_fresh_homebrew

@@ -100,6 +100,15 @@ test_credential_files_beside_a_linked_one_are_left_alone() {
   assert_contains "$fixture/home/.kimi-code/config.toml" 'machine-local'
 }
 
+# Mise installs Claude Code with npm, so Claude Code records an npm global
+# install and its own updater runs `npm install -g` with whichever Node is
+# first on PATH: a copy outside the Mise declaration that shadows it.
+# DISABLE_UPDATES also refuses `claude update` and `claude install`.
+test_claude_code_leaves_its_version_to_mise() {
+  jq -e '.env.DISABLE_UPDATES == "1"' "$REPOSITORY_ROOT/claude/settings.json" >/dev/null \
+    || scenario_fail 'claude/settings.json must set env.DISABLE_UPDATES to "1"'
+}
+
 scenario_run 'every agent reads the shared instructions' \
   test_every_agent_reads_the_shared_instructions
 scenario_run 'existing instructions are backed up once' \
@@ -110,5 +119,7 @@ scenario_run 'each agent topic links its settings' \
   test_each_agent_topic_links_its_settings
 scenario_run 'credential files beside a linked one are left alone' \
   test_credential_files_beside_a_linked_one_are_left_alone
+scenario_run 'Claude Code leaves its version to Mise' \
+  test_claude_code_leaves_its_version_to_mise
 
 scenario_finish

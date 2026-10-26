@@ -262,6 +262,28 @@ update_checkout() {
   git -C "$DOTFILES_ROOT" pull
 }
 
+# With git/gitconfig.symlink's rebase.autoStash, `git pull` exits 0 when it
+# cannot reapply local changes over the update: they stay in the stash, and
+# conflict markers stay in files installers and every new shell read. A
+# conflict left by an earlier pull only makes the next pull fail, which the
+# refresh tolerates. Either way, nothing may run on that checkout.
+require_resolved_checkout() {
+  local unmerged
+
+  if ! git -C "$DOTFILES_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    return 0
+  fi
+  unmerged=$(git -C "$DOTFILES_ROOT" diff --name-only --diff-filter=U) || return 1
+  if [ -z "$unmerged" ]; then
+    return 0
+  fi
+
+  warn "unresolved conflicts in $DOTFILES_ROOT:"
+  printf '%s\n' "$unmerged" | sed 's/^/    /' >&2
+  warn 'resolve them, then drop the autostash that git stash list still holds'
+  return 1
+}
+
 ensure_homebrew() {
   local brew_prefix
 
@@ -344,6 +366,7 @@ run_bootstrap() {
 
 run_update() {
   run_advisory 'checkout refresh' update_checkout
+  run_critical 'checkout without conflicts' require_resolved_checkout
   run_critical 'local environment' setup_local_environment
   run_critical 'topic catalog' plan_run
   run_critical 'dotfile links' install_dotfile_links --batch skip

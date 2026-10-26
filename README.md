@@ -134,7 +134,10 @@ template, conservatively recreates missing dotfile links, updates Homebrew,
 reconciles `Brewfile` without blanket upgrades, and reruns topic installers. It
 then reports available upgrades for declared software and opens an interactive
 picker. Checkout refresh, Homebrew refresh, and optional upgrade failures warn
-and continue; declared dependency and installer failures stop the run.
+and continue; declared dependency and installer failures stop the run. So does
+a checkout left with unresolved conflicts: `git pull` reapplies local changes
+from an autostash and exits 0 even when they conflict with the update. Resolve
+the listed files, then drop the stash entry that still holds those changes.
 
 Use Tab or Space to select packages, Ctrl-A to select all, and Enter to review
 the selection. The final `Apply selected upgrades? [y/N]` confirmation defaults
@@ -714,6 +717,9 @@ precedence.
   includes Claude Code on the desktop. `claude/settings.json` is linked, so a
   change made through `/model` or `/config` shows up as a diff to keep or
   discard. `~/.claude.json` and the rest of `~/.claude` stay machine-local.
+  Its `env` sets `DISABLE_UPDATES`, because Claude Code's own updater runs
+  `npm install -g` with the first Node on `PATH` and leaves a copy outside the
+  Mise declaration that shadows it; upgrade through `dot`'s software picker.
 - **Codex** runs from Mise. Its `config.toml` records project trust, plugin
   state and desktop preferences, so it is not versioned; `codex/completion.zsh`
   caches the shell completion Codex generates. Upgrade the managed CLI through
