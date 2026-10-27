@@ -51,6 +51,8 @@ test_trust_then_bundle() {
 
   fixture=$(make_fixture)
   invoke_bundle "$fixture" -- --brew "$fixture/fake-bin/brew" --file "$fixture/Brewfile"
+  assert_before "$fixture/events.log" 'brew tap coollabsio/coolify-cli' 'brew trust --tap coollabsio/coolify-cli'
+  assert_before "$fixture/events.log" 'brew trust --tap coollabsio/coolify-cli' "brew bundle --file $fixture/Brewfile"
   assert_before "$fixture/events.log" 'brew tap vultr/vultr-cli' 'brew trust --tap vultr/vultr-cli'
   assert_before "$fixture/events.log" 'brew tap psviderski/tap' 'brew trust --tap psviderski/tap'
   assert_before "$fixture/events.log" 'brew trust --tap psviderski/tap' "brew bundle --file $fixture/Brewfile"

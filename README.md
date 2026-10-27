@@ -237,78 +237,83 @@ options, and Mise declarations that span lines or list several versions. See the
 
 <!-- generated: homebrew-formulae -->
 
-| Formula                   | Purpose                                                           |
-| ------------------------- | ----------------------------------------------------------------- |
-| `age`                     | Encryption backend used by SOPS identities                        |
-| `ansible`                 | Automation and configuration management                           |
-| `atuin`                   | SQLite-backed shell history with optional sync                    |
-| `aws-vault`               | Keychain-backed AWS credentials and SSO sessions                  |
-| `awscli`                  | AWS command-line interface                                        |
-| `bat`                     | Syntax-highlighting `cat` replacement                             |
-| `bitwarden-cli`           | Bitwarden command-line client                                     |
-| `btop`                    | Process and resource monitor                                      |
-| `cloudflared`             | Cloudflare Tunnel client for exposing local services              |
-| `cocoapods`               | Cocoa dependency manager for iOS/macOS projects (React Native)    |
-| `coreutils`               | GNU core utilities, including `gls` and `gdate`                   |
-| `defaultbrowser`          | Inspect or change the macOS default browser                       |
-| `direnv`                  | Directory-specific environment loading                            |
-| `dockutil`                | Programmatic Dock configuration                                   |
-| `duti`                    | Default application associations                                  |
-| `eza`                     | Modern `ls` replacement                                           |
-| `fastlane`                | iOS and Android deployment automation                             |
-| `fd`                      | Modern `find` replacement                                         |
-| `fzf`                     | Command-line fuzzy finder                                         |
-| `gawk`                    | GNU awk                                                           |
-| `gh`                      | GitHub CLI                                                        |
-| `git`                     | Version control                                                   |
-| `git-delta`               | Syntax-highlighting Git pager                                     |
-| `git-lfs`                 | Git Large File Storage                                            |
-| `gitleaks`                | Secret scanner                                                    |
-| `go-task`                 | Project task runner                                               |
-| `glab`                    | GitLab CLI                                                        |
-| `gnu-sed`                 | GNU sed as `gsed`                                                 |
-| `grc`                     | Colorized output for common commands                              |
-| `helm`                    | Kubernetes package manager                                        |
-| `helmfile`                | Declarative Helm release management                               |
-| `hermes-agent`            | Hermes Agent CLI                                                  |
-| `imagemagick`             | Image conversion and manipulation                                 |
-| `jq`                      | JSON processor                                                    |
-| `k9s`                     | Kubernetes terminal UI                                            |
-| `ksops`                   | SOPS integration for Kustomize                                    |
-| `kubectx`                 | Kubernetes context and namespace switchers (`kubectx`, `kubens`)  |
-| `kubernetes-cli`          | `kubectl`                                                         |
-| `kustomize`               | Kubernetes manifest customization                                 |
-| `vultr-cli`               | Vultr and VKE command-line client                                 |
-| `lazygit`                 | Git terminal UI                                                   |
-| `mas`                     | Mac App Store CLI                                                 |
-| `mise`                    | Runtime and tool version manager (successor to asdf)              |
-| `mkcert`                  | Locally trusted development certificates                          |
-| `neovim`                  | Terminal editor                                                   |
-| `nixfmt`                  | Nix formatter                                                     |
-| `pandoc`                  | Document converter                                                |
-| `python@3.12`             | Python 3.12 runtime required by Aider (`aider-chat` needs < 3.13) |
-| `ripgrep`                 | Fast recursive text search                                        |
-| `sops`                    | Secrets encryption with age, KMS, or PGP                          |
-| `spaceman-diff`           | Visual image diffs                                                |
-| `stern`                   | Multi-pod Kubernetes log tailing                                  |
-| `tmux`                    | Terminal multiplexer                                              |
-| `psviderski/tap/uncloud`  | Uncloud deployment CLI (`uc`)                                     |
-| `usage`                   | Usage-spec support for CLI completions                            |
-| `watch`                   | Periodically rerun a command                                      |
-| `watchexec`               | Rerun commands on file changes                                    |
-| `watchman`                | Filesystem watcher                                                |
-| `wget`                    | File downloader                                                   |
-| `xh`                      | Friendly terminal HTTP client                                     |
-| `yq`                      | YAML, TOML, and XML processor                                     |
-| `zoxide`                  | Smarter directory navigation                                      |
-| `zsh-autosuggestions`     | Fish-like Zsh suggestions                                         |
-| `zsh-syntax-highlighting` | Zsh command-line highlighting                                     |
+| Formula                              | Purpose                                                           |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `age`                                | Encryption backend used by SOPS identities                        |
+| `ansible`                            | Automation and configuration management                           |
+| `atuin`                              | SQLite-backed shell history with optional sync                    |
+| `aws-vault`                          | Keychain-backed AWS credentials and SSO sessions                  |
+| `awscli`                             | AWS command-line interface                                        |
+| `bat`                                | Syntax-highlighting `cat` replacement                             |
+| `bitwarden-cli`                      | Bitwarden command-line client                                     |
+| `btop`                               | Process and resource monitor                                      |
+| `cloudflared`                        | Cloudflare Tunnel client for exposing local services              |
+| `cocoapods`                          | Cocoa dependency manager for iOS/macOS projects (React Native)    |
+| `coollabsio/coolify-cli/coolify-cli` | Coolify API command-line client (`coolify`)                       |
+| `coreutils`                          | GNU core utilities, including `gls` and `gdate`                   |
+| `defaultbrowser`                     | Inspect or change the macOS default browser                       |
+| `direnv`                             | Directory-specific environment loading                            |
+| `dockutil`                           | Programmatic Dock configuration                                   |
+| `duti`                               | Default application associations                                  |
+| `eza`                                | Modern `ls` replacement                                           |
+| `fastlane`                           | iOS and Android deployment automation                             |
+| `fd`                                 | Modern `find` replacement                                         |
+| `fzf`                                | Command-line fuzzy finder                                         |
+| `gawk`                               | GNU awk                                                           |
+| `gh`                                 | GitHub CLI                                                        |
+| `git`                                | Version control                                                   |
+| `git-delta`                          | Syntax-highlighting Git pager                                     |
+| `git-lfs`                            | Git Large File Storage                                            |
+| `gitleaks`                           | Secret scanner                                                    |
+| `go-task`                            | Project task runner                                               |
+| `glab`                               | GitLab CLI                                                        |
+| `gnu-sed`                            | GNU sed as `gsed`                                                 |
+| `grc`                                | Colorized output for common commands                              |
+| `helm`                               | Kubernetes package manager                                        |
+| `helmfile`                           | Declarative Helm release management                               |
+| `hermes-agent`                       | Hermes Agent CLI                                                  |
+| `imagemagick`                        | Image conversion and manipulation                                 |
+| `jq`                                 | JSON processor                                                    |
+| `k9s`                                | Kubernetes terminal UI                                            |
+| `ksops`                              | SOPS integration for Kustomize                                    |
+| `kubectx`                            | Kubernetes context and namespace switchers (`kubectx`, `kubens`)  |
+| `kubernetes-cli`                     | `kubectl`                                                         |
+| `kustomize`                          | Kubernetes manifest customization                                 |
+| `vultr-cli`                          | Vultr and VKE command-line client                                 |
+| `lazygit`                            | Git terminal UI                                                   |
+| `mas`                                | Mac App Store CLI                                                 |
+| `mise`                               | Runtime and tool version manager (successor to asdf)              |
+| `mkcert`                             | Locally trusted development certificates                          |
+| `neovim`                             | Terminal editor                                                   |
+| `nixfmt`                             | Nix formatter                                                     |
+| `pandoc`                             | Document converter                                                |
+| `python@3.12`                        | Python 3.12 runtime required by Aider (`aider-chat` needs < 3.13) |
+| `ripgrep`                            | Fast recursive text search                                        |
+| `sops`                               | Secrets encryption with age, KMS, or PGP                          |
+| `spaceman-diff`                      | Visual image diffs                                                |
+| `stern`                              | Multi-pod Kubernetes log tailing                                  |
+| `tmux`                               | Terminal multiplexer                                              |
+| `psviderski/tap/uncloud`             | Uncloud deployment CLI (`uc`)                                     |
+| `usage`                              | Usage-spec support for CLI completions                            |
+| `watch`                              | Periodically rerun a command                                      |
+| `watchexec`                          | Rerun commands on file changes                                    |
+| `watchman`                           | Filesystem watcher                                                |
+| `wget`                               | File downloader                                                   |
+| `xh`                                 | Friendly terminal HTTP client                                     |
+| `yq`                                 | YAML, TOML, and XML processor                                     |
+| `zoxide`                             | Smarter directory navigation                                      |
+| `zsh-autosuggestions`                | Fish-like Zsh suggestions                                         |
+| `zsh-syntax-highlighting`            | Zsh command-line highlighting                                     |
 
 <!-- generated-end -->
 
 Third-party taps are declared in `Brewfile`. `homebrew/_bundle.sh` maintains a
-narrow trust list for `psviderski/tap` and `vultr/vultr-cli` before running
-`brew bundle`.
+narrow trust list for `coollabsio/coolify-cli`, `psviderski/tap`, and
+`vultr/vultr-cli` before running `brew bundle`.
+
+[Coolify CLI](https://coolify.io/docs/cli/installation) installs the `coolify`
+command from its official tap. `coolify/completion.zsh` loads Zsh completion
+from the installed CLI after `compinit`, when the command is available.
 
 ### Applications and fonts
 
