@@ -66,6 +66,10 @@
       "serverName": "plugin:finance:slack"
     }
   ],
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "postman@claude-plugins-official": true
+  },
   "extraKnownMarketplaces": {
     "pm-skills": {
       "source": {
@@ -92,8 +96,5 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "enabledPlugins": {
-    "typescript-lsp@claude-plugins-official": true
-  }
+  "agentPushNotifEnabled": true
 }
