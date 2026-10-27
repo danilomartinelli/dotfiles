@@ -11,6 +11,7 @@
 cask_args appdir: '/Applications'
 
 # Third-party taps trusted by homebrew/_bundle.sh
+tap 'coollabsio/coolify-cli'        # Official Coolify CLI formula tap
 tap 'psviderski/tap'                # Uncloud CLI
 tap 'vultr/vultr-cli'               # Official Vultr CLI formula tap
 
@@ -25,6 +26,7 @@ brew 'bitwarden-cli'                # Bitwarden command-line client
 brew 'btop'                         # Process and resource monitor
 brew 'cloudflared'                  # Cloudflare Tunnel client for exposing local services
 brew 'cocoapods'                    # Cocoa dependency manager for iOS/macOS projects (React Native)
+brew 'coollabsio/coolify-cli/coolify-cli' # Coolify API command-line client (`coolify`)
 brew 'coreutils'                    # GNU core utilities, including `gls` and `gdate`
 brew 'defaultbrowser'               # Inspect or change the macOS default browser
 brew 'direnv'                       # Directory-specific environment loading

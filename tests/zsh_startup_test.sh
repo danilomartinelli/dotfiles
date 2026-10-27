@@ -146,6 +146,7 @@ test_conductor_git_child_uses_captured_locale() {
 mkdir -p \
   "$FIXTURE/alpha/_private" \
   "$FIXTURE/bravo" \
+  "$FIXTURE/coolify" \
   "$FIXTURE/functions" \
   "$FIXTURE/git" \
   "$FIXTURE/homebrew" \
@@ -173,6 +174,7 @@ cp "$REPOSITORY_ROOT/system/grc.zsh" "$FIXTURE/system/grc.zsh"
 cp "$REPOSITORY_ROOT/system/aliases.zsh" "$FIXTURE/system/aliases.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
+cp "$REPOSITORY_ROOT/coolify/completion.zsh" "$FIXTURE/coolify/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 cp "$REPOSITORY_ROOT/pnpm/path.zsh" "$FIXTURE/pnpm/path.zsh"
@@ -191,6 +193,12 @@ EOF
 scenario_write_executable "$BREW_PREFIX/bin/grc" <<'EOF'
 #!/bin/sh
 exit 0
+EOF
+
+scenario_write_executable "$BREW_PREFIX/bin/coolify" <<'EOF'
+#!/bin/sh
+[ "$*" = 'completion zsh' ] || exit 2
+printf '%s\n' '_coolify() { :; }' 'compdef _coolify coolify'
 EOF
 
 for replacement in eza bat; do
@@ -222,6 +230,8 @@ compdef() {
   if [[ $1 == _git && $2 == git ]]; then
     print -r -- git-completion >> "$SCENARIO_EVENT_LOG"
     typeset -g FAKE_GIT_COMPLETION_LOADED=1
+  elif [[ $1 == _coolify && $2 == coolify ]]; then
+    print -r -- coolify-completion >> "$SCENARIO_EVENT_LOG"
   fi
 }
 EOF
@@ -441,11 +451,13 @@ test_startup_order_and_reload() {
   assert_before "$events" prompt compinit
   assert_before "$events" compinit completion-alpha
   assert_before "$events" completion-alpha completion-bravo
-  assert_before "$events" completion-bravo git-completion
+  assert_before "$events" completion-bravo coolify-completion
+  assert_before "$events" coolify-completion git-completion
   assert_before "$events" git-completion syntax-highlighting
   assert_before "$events" syntax-highlighting reload
   assert_count "$events" brew-prefix 2
   assert_count "$events" compinit 2
+  assert_count "$events" coolify-completion 2
   assert_count "$events" syntax-highlighting 2
   assert_not_contains "$events" ignored-file
   assert_not_contains "$events" ignored-directory
