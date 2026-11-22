@@ -522,6 +522,7 @@ it reads it from there rather than restating it.
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
 | Provider keys and project secrets                               | `tests/provider_keys_test.sh`, `tests/direnv_install_test.sh`                                                             |
 | Key backup and restore                                          | `tests/key_vault_test.sh`                                                                                                 |
+| Raycast script commands                                         | `tests/raycast_test.sh`                                                                                                   |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                                          |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |

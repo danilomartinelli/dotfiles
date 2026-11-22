@@ -510,6 +510,22 @@ opens an app, or boots an emulator.
 > `git nuke` changes local and remote state. `git credit`, `git amend`, and
 > `git undo` rewrite local history. Inspect the target before using them.
 
+### Raycast script commands
+
+`raycast/scripts` holds the script commands; add that folder once in Raycast →
+Settings → Extensions → Script Commands. A script command takes typed
+arguments and cannot offer a list, so the project commands open the best match
+for a few typed characters among the `<owner>/<repository>` directories under
+`$PROJECTS`: a repository named exactly as typed, then one whose name starts
+with it, then one that contains it.
+
+| Command                  | Purpose                                                    |
+| ------------------------ | ---------------------------------------------------------- |
+| Open Dotfiles            | Open the checkout holding the script in Zed                |
+| Open Project             | Open the best-matching project in Zed                      |
+| Open Project in Terminal | Open a Ghostty window in the best-matching project         |
+| Update Dotfiles          | Run `dot` in a Ghostty window that stays open when it ends |
+
 ## Zsh functions and aliases
 
 `functions/` is added to Zsh `fpath`. Files without a leading underscore are

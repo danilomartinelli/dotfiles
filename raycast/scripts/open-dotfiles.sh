@@ -6,7 +6,7 @@
 # @raycast.mode silent
 # @raycast.packageName Dotfiles
 # @raycast.icon 📂
-# @raycast.description Open the active dotfiles checkout in $EDITOR
+# @raycast.description Open the active dotfiles checkout in Zed
 
 set -euo pipefail
 

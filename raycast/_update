@@ -1,0 +1,7 @@
+#!/bin/zsh -il
+#
+# Run `dot` the way a person's terminal would: an interactive login shell, so
+# Homebrew, Mise and the checkout's own commands are on PATH. Ghostty starts
+# this for the Update Dotfiles script command.
+
+exec "${0:A:h:h}/bin/dot"
