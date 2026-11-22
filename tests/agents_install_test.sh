@@ -41,7 +41,6 @@ test_every_agent_reads_the_shared_instructions() {
 
   assert_links_to "$fixture/home/.claude/CLAUDE.md" "$instructions"
   assert_links_to "$fixture/home/.codex/AGENTS.md" "$instructions"
-  assert_links_to "$fixture/home/.agents/AGENTS.md" "$instructions"
   assert_links_to "$fixture/home/.config/opencode/AGENTS.md" "$instructions"
   assert_links_to "$fixture/home/.gemini/AGENTS.md" "$instructions"
 }
@@ -64,21 +63,20 @@ test_a_second_run_reports_every_link_current() {
   invoke_topic "$fixture" agents
   invoke_topic "$fixture" agents
 
-  assert_count "$fixture/stdout.log" 'instructions already linked' 5
+  assert_count "$fixture/stdout.log" 'instructions already linked' 4
 }
 
 test_each_agent_topic_links_its_settings() {
   local fixture
   fixture=$(installer_fixture)
   invoke_topic "$fixture" claude
-  invoke_topic "$fixture" kimi
   invoke_topic "$fixture" herdr
   invoke_topic "$fixture" opencode
 
   assert_links_to "$fixture/home/.claude/settings.json" \
     "$REPOSITORY_ROOT/claude/settings.json"
-  assert_links_to "$fixture/home/.kimi-code/tui.toml" \
-    "$REPOSITORY_ROOT/kimi/tui.toml"
+  assert_links_to "$fixture/home/.claude/impeccable-hook.sh" \
+    "$REPOSITORY_ROOT/claude/impeccable-hook.sh"
   assert_links_to "$fixture/home/.config/herdr-app/settings.json" \
     "$REPOSITORY_ROOT/herdr/settings.json"
   assert_links_to "$fixture/home/.config/herdr-app/programs.json" \
@@ -93,18 +91,26 @@ test_each_agent_topic_links_its_settings() {
     "$REPOSITORY_ROOT/opencode/tui.jsonc"
 }
 
-# Kimi Code keeps provider credentials beside the file its topic links, and
-# rewrites it on every login.
-test_credential_files_beside_a_linked_one_are_left_alone() {
+# Kimi Code read the shared instructions from ~/.agents until it was removed.
+test_the_retired_kimi_instructions_link_is_removed() {
   local fixture
   fixture=$(installer_fixture)
-  mkdir -p "$fixture/home/.kimi-code"
-  printf 'api_key = "machine-local"\n' >"$fixture/home/.kimi-code/config.toml"
-  invoke_topic "$fixture" kimi
+  mkdir -p "$fixture/home/.agents"
+  ln -s "$REPOSITORY_ROOT/agents/instructions.md" "$fixture/home/.agents/AGENTS.md"
+  invoke_topic "$fixture" agents
 
-  [ ! -L "$fixture/home/.kimi-code/config.toml" ] \
-    || scenario_fail 'config.toml was replaced by a link'
-  assert_contains "$fixture/home/.kimi-code/config.toml" 'machine-local'
+  [ ! -L "$fixture/home/.agents/AGENTS.md" ] \
+    || scenario_fail 'the retired Kimi Code link is still present'
+}
+
+test_foreign_instructions_at_the_retired_path_are_kept() {
+  local fixture
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/home/.agents"
+  printf 'hand-written\n' >"$fixture/home/.agents/AGENTS.md"
+  invoke_topic "$fixture" agents
+
+  assert_contains "$fixture/home/.agents/AGENTS.md" 'hand-written'
 }
 
 # Mise installs Claude Code with npm, so Claude Code records an npm global
@@ -114,6 +120,58 @@ test_credential_files_beside_a_linked_one_are_left_alone() {
 test_claude_code_leaves_its_version_to_mise() {
   jq -e '.env.DISABLE_UPDATES == "1"' "$REPOSITORY_ROOT/claude/settings.json" >/dev/null \
     || scenario_fail 'claude/settings.json must set env.DISABLE_UPDATES to "1"'
+}
+
+# The hooks name the gate through $HOME: a checkout path or a user name in the
+# tracked file would point nowhere on another machine.
+test_claude_code_hooks_reach_impeccable_only_through_the_gate() {
+  jq -e '[.hooks[][].hooks[].command] | length > 0
+    and all(. == "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"")' \
+    "$REPOSITORY_ROOT/claude/settings.json" >/dev/null \
+    || scenario_fail 'every Claude Code hook must run the linked Impeccable gate'
+}
+
+# Usage: run_impeccable_gate <fixture> <project>
+run_impeccable_gate() {
+  local fixture=$1
+  local project=$2
+  local impeccable=$fixture/home/.claude/skills/impeccable/scripts/impeccable
+
+  mkdir -p "$project"
+  scenario_write_executable "$impeccable" <<'EOF'
+#!/bin/sh
+printf 'ran %s: ' "$1"
+cat
+EOF
+  printf 'hook input' | fixture_run "$fixture" CLAUDE_PROJECT_DIR="$project" \
+    -- "$REPOSITORY_ROOT/claude/impeccable-hook.sh"
+}
+
+test_the_impeccable_gate_stays_silent_without_a_design_file() {
+  local fixture
+  fixture=$(installer_fixture)
+  run_impeccable_gate "$fixture" "$fixture/project"
+
+  assert_empty "$fixture/stdout.log"
+}
+
+test_the_impeccable_gate_passes_the_hook_input_to_an_opted_in_project() {
+  local fixture
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/project"
+  : >"$fixture/project/DESIGN.md"
+  run_impeccable_gate "$fixture" "$fixture/project"
+
+  assert_contains "$fixture/stdout.log" 'ran hook: hook input'
+}
+
+test_the_impeccable_gate_tolerates_a_missing_impeccable() {
+  local fixture
+  fixture=$(installer_fixture)
+  mkdir -p "$fixture/project"
+  : >"$fixture/project/DESIGN.md"
+  fixture_run "$fixture" CLAUDE_PROJECT_DIR="$fixture/project" \
+    -- "$REPOSITORY_ROOT/claude/impeccable-hook.sh" </dev/null
 }
 
 # Homebrew installs Grok Build, and Grok's own updater would put a second copy
@@ -139,10 +197,20 @@ scenario_run 'a second run reports every link current' \
   test_a_second_run_reports_every_link_current
 scenario_run 'each agent topic links its settings' \
   test_each_agent_topic_links_its_settings
-scenario_run 'credential files beside a linked one are left alone' \
-  test_credential_files_beside_a_linked_one_are_left_alone
+scenario_run 'the retired Kimi Code instructions link is removed' \
+  test_the_retired_kimi_instructions_link_is_removed
+scenario_run 'foreign instructions at the retired path are kept' \
+  test_foreign_instructions_at_the_retired_path_are_kept
 scenario_run 'Claude Code leaves its version to Mise' \
   test_claude_code_leaves_its_version_to_mise
+scenario_run 'Claude Code hooks reach Impeccable only through the gate' \
+  test_claude_code_hooks_reach_impeccable_only_through_the_gate
+scenario_run 'the Impeccable gate stays silent without a design file' \
+  test_the_impeccable_gate_stays_silent_without_a_design_file
+scenario_run 'the Impeccable gate passes the hook input to an opted-in project' \
+  test_the_impeccable_gate_passes_the_hook_input_to_an_opted_in_project
+scenario_run 'the Impeccable gate tolerates a missing Impeccable' \
+  test_the_impeccable_gate_tolerates_a_missing_impeccable
 scenario_run 'Grok Build leaves its version to Homebrew' \
   test_grok_build_leaves_its_version_to_homebrew
 scenario_run 'Herdr starts Cursor by its own name and reports nothing' \

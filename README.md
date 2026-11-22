@@ -272,10 +272,8 @@ options, and Mise declarations that span lines or list several versions. See the
 | `grc`                                | Colorized output for common commands                             |
 | `helm`                               | Kubernetes package manager                                       |
 | `helmfile`                           | Declarative Helm release management                              |
-| `hermes-agent`                       | Hermes Agent CLI                                                 |
 | `imagemagick`                        | Image conversion and manipulation                                |
 | `jq`                                 | JSON processor                                                   |
-| `k9s`                                | Kubernetes terminal UI                                           |
 | `ksops`                              | SOPS integration for Kustomize                                   |
 | `kubectx`                            | Kubernetes context and namespace switchers (`kubectx`, `kubens`) |
 | `kubernetes-cli`                     | `kubectl`                                                        |
@@ -299,7 +297,6 @@ options, and Mise declarations that span lines or list several versions. See the
 | `watchexec`                          | Rerun commands on file changes                                   |
 | `watchman`                           | Filesystem watcher                                               |
 | `wget`                               | File downloader                                                  |
-| `xh`                                 | Friendly terminal HTTP client                                    |
 | `yq`                                 | YAML, TOML, and XML processor                                    |
 | `zoxide`                             | Smarter directory navigation                                     |
 | `zsh-autosuggestions`                | Fish-like Zsh suggestions                                        |
@@ -342,9 +339,9 @@ from the installed CLI after `compinit`, when the command is available.
 <!-- generated-end -->
 
 Topic installers configure Ghostty, Zed, Neovim, OrbStack, Bartender, KeyClu,
-Raycast script commands, Tailscale, OpenCode, Claude Code, Codex, Kimi Code,
-Herdr, direnv, Hermes, SOPS directories, SSH, Workspace, Mise, iOS Simulator
-and Android Emulator readiness, Archiver associations, and the Dock.
+Raycast script commands, Tailscale, OpenCode, Claude Code, Codex, Herdr,
+direnv, SOPS directories, SSH, Workspace, Mise, iOS Simulator and Android
+Emulator readiness, Archiver associations, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
 applied once so later manual changes survive: a Dock you rearranged and a
@@ -403,8 +400,6 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 | `npm:@anthropic-ai/claude-code`             | `2.1.306`        | Claude Code CLI                                 |
 | `npm:@agentclientprotocol/claude-agent-acp` | `0.94.0`         | Claude ACP agent                                |
 | `npm:@agentclientprotocol/codex-acp`        | `2.2.2`          | Codex ACP agent                                 |
-| `npm:@earendil-works/pi-coding-agent`       | `1.3.0`          | Pi coding agent                                 |
-| `npm:@moonshot-ai/kimi-code`                | `2.3.0`          | Kimi Code CLI                                   |
 | `npm:@colbymchenry/codegraph`               | `1.6.2`          | Repository code graph CLI                       |
 | `npm:@swmansion/argent`                     | `0.30.0`         | Device and simulator control MCP                |
 | `npm:@openai/codex`                         | `0.163.0`        | Codex CLI                                       |
@@ -521,7 +516,6 @@ implementations.
 | `c`       | `c [project]`: enter `$PROJECTS/project`                           |
 | `extract` | Extract common archive formats or mount a `.dmg` on macOS          |
 | `gf`      | `gf remote-branch`: switch locally or track `origin/remote-branch` |
-| `pi`      | `pi [args...]`: invoke the Pi coding agent                         |
 | `pubkey`  | Copy the default SSH public key, preferring Ed25519                |
 
 Arguments provided after an alias are passed to the expanded command. The Files
@@ -536,7 +530,6 @@ shell, keeps the standard `ls` and `cat` (see
 | Editor                    | `v`, `vi`, `vim`, `vimrc`                                                                                                            |
 | Homebrew                  | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc`                                                                                  |
 | Mise                      | `m`, `mi`, `mu`, `ml`, `mc`                                                                                                          |
-| Hermes                    | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update`                                                                     |
 | Docker                    | `d`, `dc`, `dps`, `dpsa`, `dimg`, `dex`, `dlog`, `dlogf`, `dctx`, `dcu`, `dcd`, `dcl`                                                |
 | tmux                      | `ta`, `tls`, `tn`, `tk`, `t`                                                                                                         |
 | Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`, `fl`                                                 |
@@ -629,7 +622,7 @@ may forward the captured `LANG` to clean `zsh -f` shells, which skip startup
 files and do not inherit `LC_MESSAGES`, and then parse a Git diagnostic it
 expects in English. `~/.zshenv` must be that link: a copy keeps the policy it
 was copied from. A shell that skipped `~/.zshenv` is treated as a person's
-shell. Kimi Code runs its commands in Bash, outside this policy.
+shell.
 
 `zsh/zshrc.symlink` follows the `~/.zshrc` link to the checkout containing it,
 the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
@@ -693,10 +686,8 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 | OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
 | Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
 | Herdr settings         | `~/.config/herdr-app`          | Settings, programs and two themes linked; the rest is Herdr's own          |
-| Kimi Code TUI settings | `~/.kimi-code/tui.toml`        | Tracked; `config.toml` holds credentials and stays machine-local           |
 | Codex configuration    | `~/.codex/config.toml`         | Machine-local: Codex records project trust and plugin state in it          |
 | direnv config          | `~/.config/direnv/direnv.toml` | Rendered locally from the trusted roots and gitignored                     |
-| Hermes state           | `~/.hermes`                    | Machine-local runtime state                                                |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth
@@ -710,8 +701,8 @@ account-specific state outside this repository.
 
 One instruction file, `agents/instructions.md`, is every coding agent's global
 `AGENTS.md`: the `agents` installer links it as `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md`, `~/.agents/AGENTS.md` for Kimi Code,
-`~/.config/opencode/AGENTS.md`, and `~/.gemini/AGENTS.md` for Antigravity. A
+`~/.codex/AGENTS.md`, `~/.config/opencode/AGENTS.md`, and
+`~/.gemini/AGENTS.md` for Antigravity. A
 project's own instructions still take precedence.
 
 - **Claude Code** runs from Mise; the `claude` cask is the desktop app, which
@@ -721,13 +712,14 @@ project's own instructions still take precedence.
   Its `env` sets `DISABLE_UPDATES`, because Claude Code's own updater runs
   `npm install -g` with the first Node on `PATH` and leaves a copy outside the
   Mise declaration that shadows it; upgrade through `dot`'s software picker.
+  Its hooks run Impeccable through `claude/impeccable-hook.sh`, linked into
+  `~/.claude`, which does nothing unless the project has a root `DESIGN.md`:
+  Claude Code cannot limit a user-level hook to certain projects.
 - **Codex** runs from Mise. Its `config.toml` records project trust, plugin
   state and desktop preferences, so it is not versioned; `codex/completion.zsh`
   caches the shell completion Codex generates. Upgrade the managed CLI through
   `dot`'s software picker; its package-manager self-update installs a separate
   copy outside the Mise declaration and lock.
-- **Kimi Code** runs from Mise. Only `tui.toml` is linked, because
-  `config.toml` holds provider credentials and every login rewrites it.
 - **OpenCode** runs from Mise. `opencode.jsonc` declares the models, the
   CodeGraph, Context7, Exa, grep.app and Argent MCP servers, and three plugins;
   `tui.jsonc` holds the terminal defaults. OpenCode has no Anthropic

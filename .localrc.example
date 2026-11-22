@@ -62,7 +62,7 @@
 # export KIMI_API_KEY="<CHANGE_ME>"
 # export ZHIPU_API_KEY="<CHANGE_ME>"
 #
-# Optional extras used by other agents/tools (Hermes, skills CLI, …)
+# Optional extras used by other agents/tools (skills CLI, …)
 # export ANTHROPIC_API_KEY="<CHANGE_ME>"
 # export OPENAI_API_KEY="<CHANGE_ME>"
 # export GEMINI_API_KEY="<CHANGE_ME>"
@@ -79,10 +79,6 @@
 # export BRAVE_API_KEY="<CHANGE_ME>"
 # export CONTEXT7_API_KEY="<CHANGE_ME>"
 # export GITHUB_PERSONAL_ACCESS_TOKEN="<CHANGE_ME>"
-#
-# Hermes Agent (brew install hermes-agent; topic: hermes/)
-# Prefer `hermes model` / `hermes setup` for provider config; keys above are shared.
-# export HERMES_HOME="$HOME/.hermes"
 
 # ========================================
 # NOTE: Best Practices for Managing Secrets

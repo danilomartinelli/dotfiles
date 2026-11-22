@@ -17,8 +17,11 @@ link_instructions() {
 
 link_instructions "Claude Code" "$HOME/.claude/CLAUDE.md"
 link_instructions Codex "$HOME/.codex/AGENTS.md"
-link_instructions "Kimi Code" "$HOME/.agents/AGENTS.md"
 link_instructions OpenCode "$(installer_config_dir opencode)/AGENTS.md"
 link_instructions Antigravity "$HOME/.gemini/AGENTS.md"
+
+# Kimi Code read the instructions from here before it was removed.
+installer_link_config --remove-owned --label "Kimi Code instructions" \
+  "$TOPIC_DIR/instructions.md" "$HOME/.agents/AGENTS.md"
 
 installer_success "Global agent instructions configured"

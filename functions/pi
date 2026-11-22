@@ -1,8 +1,0 @@
-#!/bin/zsh
-#
-# Zsh autoload wrapper that forwards all arguments to the Pi executable.
-# `command` bypasses this function so invoking Pi does not recurse.
-
-emulate -L zsh
-
-command pi "$@"

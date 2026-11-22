@@ -48,10 +48,8 @@ brew 'gnu-sed'                      # GNU sed as `gsed`
 brew 'grc'                          # Colorized output for common commands
 brew 'helm'                         # Kubernetes package manager
 brew 'helmfile'                     # Declarative Helm release management
-brew 'hermes-agent'                 # Hermes Agent CLI
 brew 'imagemagick'                  # Image conversion and manipulation
 brew 'jq'                           # JSON processor
-brew 'k9s'                          # Kubernetes terminal UI
 brew 'ksops'                        # SOPS integration for Kustomize
 brew 'kubectx'                      # Kubernetes context and namespace switchers (`kubectx`, `kubens`)
 brew 'kubernetes-cli'               # `kubectl`
@@ -75,7 +73,6 @@ brew 'watch'                        # Periodically rerun a command
 brew 'watchexec'                    # Rerun commands on file changes
 brew 'watchman'                     # Filesystem watcher
 brew 'wget'                         # File downloader
-brew 'xh'                           # Friendly terminal HTTP client
 brew 'yq'                           # YAML, TOML, and XML processor
 brew 'zoxide'                       # Smarter directory navigation
 brew 'zsh-autosuggestions'          # Fish-like Zsh suggestions

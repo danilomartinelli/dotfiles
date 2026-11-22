@@ -16,54 +16,6 @@
     },
     {
       "serverName": "supabase"
-    },
-    {
-      "serverName": "plugin:aws-agents-for-devsecops:aws-devops-agent"
-    },
-    {
-      "serverName": "plugin:aws-agents:awsknowledge"
-    },
-    {
-      "serverName": "plugin:aws-core:aws-mcp"
-    },
-    {
-      "serverName": "plugin:aws-data-analytics:aws-mcp"
-    },
-    {
-      "serverName": "plugin:engineering:atlassian"
-    },
-    {
-      "serverName": "plugin:engineering:datadog"
-    },
-    {
-      "serverName": "plugin:engineering:gmail"
-    },
-    {
-      "serverName": "plugin:engineering:google calendar"
-    },
-    {
-      "serverName": "plugin:engineering:linear"
-    },
-    {
-      "serverName": "plugin:engineering:notion"
-    },
-    {
-      "serverName": "plugin:engineering:slack"
-    },
-    {
-      "serverName": "plugin:finance:databricks"
-    },
-    {
-      "serverName": "plugin:finance:gmail"
-    },
-    {
-      "serverName": "plugin:finance:google calendar"
-    },
-    {
-      "serverName": "plugin:finance:snowflake"
-    },
-    {
-      "serverName": "plugin:finance:slack"
     }
   ],
   "hooks": {
@@ -72,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "command": "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"",
             "timeout": 5,
             "statusMessage": "Preparing build session"
           }
@@ -85,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "command": "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"",
             "timeout": 5,
             "statusMessage": "Checking UI changes"
           }
@@ -97,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "command": "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"",
             "timeout": 30,
             "statusMessage": "Design deep pass"
           }
@@ -145,7 +97,7 @@
     }
   },
   "modelSettings": {
-    "claude-fable-5-1": {
+    "claude-fable-5-2": {
       "effortLevel": "high"
     },
     "claude-opus-5-5": {
@@ -156,6 +108,5 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "description": "Impeccable design detector: immediate-tier checks after Edit/Write on UI files, full-rule deep pass on Stop."
+  "agentPushNotifEnabled": true
 }

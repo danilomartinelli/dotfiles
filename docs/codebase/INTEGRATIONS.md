@@ -21,7 +21,6 @@ failure policy, not an invented service-level agreement.
 | direnv                                | Shell/environment integration            | Load project environments beneath trusted roots     | Explicit local trust declaration                                                            | Whitelist rendered during topic installation                                       | `_scripts/trusted-roots`, `direnv/install.sh`, `mise/mise.zsh`        |
 | SSH, age and SOPS                     | Local credential/encryption tooling      | SSH access and encrypted secret workflows           | Private keys generated only by explicit commands; local SSH hosts preserved                 | Credential creation separate from installation                                     | `ssh/install.sh`, `ssh/create-key`, `sops/create-key`                 |
 | AWS, Kubernetes, Tailscale and Docker | User-invoked infrastructure CLIs         | Shell aliases, completions and environment defaults | CLI-owned credentials/contexts; no credentials established here                             | Selected command only                                                              | `aws/`, `kubectl/`, `tailscale/`, `docker/`, `.commonrc`              |
-| Hermes                                | Agent CLI                                | Agent defaults                                      | Provider configuration is local                                                             | Individual installer behavior                                                      | `hermes/install.sh`, `hermes/env.zsh`                                 |
 | Herdr                                 | Desktop agent workspace                  | Runs the coding agents side by side in worktrees    | No credential in the linked settings; telemetry disabled                                    | Optional app; its core is installed from inside the app                            | `herdr/install.sh`, `herdr/settings.json`                             |
 | Antigravity, Cursor and Grok CLIs     | Vendor agent runtimes                    | Terminal coding agents                              | Each signs in interactively; state stays machine-local                                      | Optional to dotfiles setup                                                         | `Brewfile`, `grok/env.zsh`, `agents/install.sh`                       |
 | Determinate Nix installer             | Explicit remote installation script      | Optional Nix and nixd installation                  | Interactive local privilege confirmation described by command                               | Never called automatically by setup                                                | `bin/nix-install`                                                     |
@@ -60,8 +59,8 @@ infrastructure clients operate on separately configured systems.
   `_scripts/key-provisioning.sh` refuses overwrites, sets private directory
   permissions and leaves generation to explicit commands.
 - Git identity, kubeconfigs, account state and provider auth stores remain
-  machine-private. Kimi's `config.toml` and Codex's `config.toml` are not tracked
-  payloads (`AGENTS.md`).
+  machine-private. Codex's `config.toml` is not a tracked payload
+  (`AGENTS.md`).
 - Reviewed configuration references placeholders or external state; this was not
   a repository-history secret scan. No live secret values were used for this map.
 - Automated credential rotation is absent from the key-creation contract.

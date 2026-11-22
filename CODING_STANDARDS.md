@@ -573,8 +573,7 @@ warnings introduced by the change.
   kubeconfigs, auth stores, or account identifiers.
 - SSH and SOPS installers may repair directories, links, and permissions; only
   the explicit `ssh-key-create` and `sops-key-create` commands create keys.
-- Tracked Zed, OpenCode, Claude Code, Herdr and Kimi Code configuration
-  must not contain plaintext credentials or fake interpolation for settings that
+- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain plaintext credentials or fake interpolation for settings that
   treat `$VARIABLE` literally.
 - Resolve exact targets before deletion, replacement, package mutation, or
   remote-changing commands.

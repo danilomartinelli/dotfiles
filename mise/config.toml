@@ -17,8 +17,6 @@ node = "lts"                                                    # Node.js LTS
 "npm:@anthropic-ai/claude-code" = { version = "2.1.306", npm_args = "--ignore-scripts=false" } # Claude Code CLI
 "npm:@agentclientprotocol/claude-agent-acp" = "0.94.0"          # Claude ACP agent
 "npm:@agentclientprotocol/codex-acp" = "2.2.2"                  # Codex ACP agent
-"npm:@earendil-works/pi-coding-agent" = "1.3.0"                # Pi coding agent
-"npm:@moonshot-ai/kimi-code" = "2.3.0"                          # Kimi Code CLI
 "npm:@colbymchenry/codegraph" = "1.6.2"                         # Repository code graph CLI
 "npm:@swmansion/argent" = "0.30.0"                              # Device and simulator control MCP
 "npm:@openai/codex" = "0.163.0"                                 # Codex CLI

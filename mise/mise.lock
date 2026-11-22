@@ -388,14 +388,6 @@ npm_args = "--ignore-scripts=false"
 version = "1.6.2"
 backend = "npm:@colbymchenry/codegraph"
 
-[[tools."npm:@earendil-works/pi-coding-agent"]]
-version = "1.3.0"
-backend = "npm:@earendil-works/pi-coding-agent"
-
-[[tools."npm:@moonshot-ai/kimi-code"]]
-version = "2.3.0"
-backend = "npm:@moonshot-ai/kimi-code"
-
 [[tools."npm:@openai/codex"]]
 version = "0.163.0"
 backend = "npm:@openai/codex"

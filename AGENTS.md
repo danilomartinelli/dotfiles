@@ -158,16 +158,16 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 
 ### Coding agents
 
-Claude Code, Codex, Kimi Code and OpenCode run from Mise; the Antigravity,
+Claude Code, Codex and OpenCode run from Mise; the Antigravity,
 Cursor and Grok CLIs, the Claude desktop app and Herdr are casks. An agent
 topic links only credential-free files:
 
-- `claude/settings.json`, `herdr/settings.json` and `kimi/tui.toml` are
-  linked files their apps also write, as Zed's settings are. A diff in one may
+- `claude/settings.json` and `herdr/settings.json` are linked files their
+  apps also write, as Zed's settings are. A diff in one may
   be the app's; keep or discard it deliberately rather than reverting it as
   noise.
-- Codex's and Kimi Code's `config.toml` stay machine-local: they record project
-  trust, plugin state and provider credentials.
+- Codex's `config.toml` stays machine-local: it records project trust and
+  plugin state.
 - `agents/install.sh` links `agents/instructions.md` into every agent's own
   directory. Change the shared instructions there, once.
 
@@ -251,8 +251,7 @@ the same change as the public surface.
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
   `_scripts/key-provisioning.sh`.
-- Tracked Zed, OpenCode, Claude Code, Herdr and Kimi Code configuration
-  must not contain plaintext credentials or pretend that settings interpolate
+- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain plaintext credentials or pretend that settings interpolate
   `$VARIABLE` when they do not.
 - Resolve the exact target and confirm user authorization before destructive or
   remote-changing operations.

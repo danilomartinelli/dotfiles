@@ -29,5 +29,4 @@ OpenCode's integrated terminal inherits `OPENCODE`, and Codex does not set
 A person's subshells without a terminal, such as command substitutions and
 launchd jobs, get the tool locale. A shell that skipped `~/.zshenv` is treated
 as a person's shell. `~/.localrc` does not set the locale, because a shell an
-app captures runs it after the classification. Kimi Code runs its tool
-shells in Bash, outside this policy.
+app captures runs it after the classification.

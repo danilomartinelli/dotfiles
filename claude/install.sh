@@ -14,4 +14,9 @@ installer_banner "setting up Claude Code configuration"
 installer_link_config --label "Claude Code settings" \
   "$TOPIC_DIR/settings.json" "$HOME/.claude/settings.json"
 
+# settings.json names this path in its hooks: a hook command is one string
+# Claude Code hands to sh, with no way to ask where the checkout is.
+installer_link_config --label "Impeccable hook gate" \
+  "$TOPIC_DIR/impeccable-hook.sh" "$HOME/.claude/impeccable-hook.sh"
+
 installer_success "Claude Code configured"
