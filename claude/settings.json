@@ -2,7 +2,7 @@
   "env": {
     "DISABLE_UPDATES": "1"
   },
-  "model": "opus[1m]",
+  "model": "claude-fable-5-2",
   "disableClaudeAiConnectors": true,
   "deniedMcpServers": [
     {
@@ -66,9 +66,51 @@
       "serverName": "plugin:finance:slack"
     }
   ],
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "timeout": 5,
+            "statusMessage": "Preparing build session"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' ] || '/Users/danilomartinelli/.claude/skills/impeccable/scripts/impeccable' hook",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true,
-    "postman@claude-plugins-official": true
+    "postman@claude-plugins-official": true,
+    "posthog@posthog": true,
+    "frontend-slides@frontend-slides": true,
+    "mattpocock-skills@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "pm-skills": {
@@ -81,6 +123,18 @@
       "source": {
         "source": "github",
         "repo": "nrwl/nx-ai-agents-config"
+      }
+    },
+    "posthog": {
+      "source": {
+        "source": "github",
+        "repo": "PostHog/ai-plugin"
+      }
+    },
+    "frontend-slides": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/zarazhangrui/frontend-slides.git"
       }
     }
   },
@@ -96,5 +150,6 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write on UI files, full-rule deep pass on Stop."
 }

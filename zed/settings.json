@@ -22,6 +22,10 @@
 
       "enabled": true,
       "remote": false
+    },
+    "posthog": {
+      "enabled": true,
+      "url": "https://mcp.posthog.com/mcp"
     }
   },
   "edit_predictions": {
