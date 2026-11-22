@@ -62,7 +62,8 @@
 #    then gives the keys to that one command; `opencode` already starts that
 #    way.
 #
-# README.md, "Secrets", describes both.
+# README.md, "Secrets", describes both, and `key-backup`, which keeps the age
+# identity that encrypts them somewhere safe.
 #
 # Git name and email for commits belong in git/gitconfig.local.symlink
 # (created by bootstrap). The GIT_* exports above are optional extras.

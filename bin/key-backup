@@ -1,0 +1,104 @@
+#!/bin/sh
+# shellcheck disable=SC2154 # _scripts/key-vault.sh assigns the key_vault_* names.
+#
+# Store this Mac's SSH and age identities in Bitwarden.
+#
+# The identities exist only on this Mac, and losing the age one loses every
+# secret encrypted to it. This writes each to a secure note that key-restore
+# reads on another Mac. It creates no key and changes none here.
+#
+# Explicit and interactive by nature: it needs an unlocked vault, and no
+# installer runs it. It never prints key material.
+#
+# USAGE:
+#
+#   $ export BW_SESSION=$(bw unlock --raw)
+#   $ key-backup               # every key that exists
+#   $ key-backup age-default   # one key
+
+set -eu
+
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
+# shellcheck source=_scripts/key-provisioning.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/key-provisioning.sh"
+# shellcheck source=_scripts/key-vault.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/key-vault.sh"
+
+program_name=key-backup
+
+usage() {
+  cat <<EOF
+Usage: key-backup [key...]
+
+Store each key that exists on this Mac, or the named keys, in Bitwarden as the
+secure note $key_vault_prefix<key>. A note already there is replaced.
+
+Keys: $key_vault_names
+
+Requires an unlocked vault:
+  export BW_SESSION=\$(bw unlock --raw)
+EOF
+}
+
+key_handle_help "$program_name" usage "$@"
+key_vault_check_names "$program_name" usage "$@"
+
+explicit=true
+if [ "$#" -eq 0 ]; then
+  explicit=false
+  # shellcheck disable=SC2086 # One key name per word.
+  set -- $key_vault_names
+fi
+
+key_vault_open "$program_name"
+items=$(bw list items --search "$key_vault_prefix") || {
+  echo "$program_name: could not list the vault" >&2
+  exit 1
+}
+template=$(bw get template item) || {
+  echo "$program_name: could not read the item template" >&2
+  exit 1
+}
+
+echo "› storing keys in Bitwarden under $key_vault_prefix"
+stored=0
+for name in "$@"; do
+  key_vault_paths "$name"
+  if [ ! -f "$key_vault_private" ]; then
+    if [ "$explicit" = true ]; then
+      echo "$program_name: $name does not exist at $key_vault_private" >&2
+      exit 1
+    fi
+    continue
+  fi
+
+  public=
+  [ ! -f "$key_vault_public" ] || public=$(cat "$key_vault_public")
+
+  # The private key reaches jq as a file and bw on stdin, never as an
+  # argument, where another process could read it.
+  note=$key_vault_prefix$name
+  item_id=$(printf '%s\n' "$items" | jq -r --arg name "$note" \
+    'first(.[] | select(.name == $name)).id // ""')
+  item=$(printf '%s\n' "$template" | jq --arg name "$note" --arg public "$public" \
+    --rawfile private "$key_vault_private" '
+      .type = 2 | .secureNote = {type: 0} | .login = null
+      | .name = $name | .notes = $private
+      | .fields = [{name: "public", value: $public, type: 0}]')
+
+  if [ -n "$item_id" ]; then
+    printf '%s\n' "$item" | bw encode | bw edit item "$item_id" >/dev/null
+    echo "  ✓ $name replaced"
+  else
+    printf '%s\n' "$item" | bw encode | bw create item >/dev/null
+    echo "  ✓ $name stored"
+  fi
+  stored=$((stored + 1))
+done
+
+if [ "$stored" -eq 0 ]; then
+  echo "$program_name: no key exists on this Mac to store" >&2
+  exit 1
+fi

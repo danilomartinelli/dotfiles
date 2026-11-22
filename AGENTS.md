@@ -259,6 +259,11 @@ the same change as the public surface.
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
   `_scripts/key-provisioning.sh`.
+- `key-backup` copies those keys to Bitwarden and `key-restore` writes back one
+  this Mac lacks. Neither creates a key, `key-restore` never overwrites one,
+  and no installer runs either. They are the only other code that reads or
+  writes private key material, and they never pass it as an argument or print
+  it.
 - Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain
   plaintext credentials or pretend that settings interpolate `$VARIABLE` when
   they do not.

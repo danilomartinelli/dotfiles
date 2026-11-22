@@ -18,6 +18,7 @@ credential	-	ssh-key-create default	Ed25519 SSH key; git/install.sh enables comm
 credential	-	ssh-key-create personal	personal SSH key
 credential	-	ssh-key-create work	work SSH key
 credential	-	sops-key-create default	age encryption key; SOPS_AGE_KEY_FILE points at it
+credential	-	key-backup	store the SSH and age identities in Bitwarden; on a new Mac run key-restore before creating any
 credential	-	gh auth login	GitHub CLI
 credential	-	gh ssh-key add ~/.ssh/id_ed25519.pub --type signing	register the signing key so GitHub shows commits as verified
 credential	-	cursor-agent login	Cursor subscription

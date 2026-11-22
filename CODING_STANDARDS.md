@@ -521,6 +521,7 @@ it reads it from there rather than restating it.
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                                            |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
 | Provider keys and project secrets                               | `tests/provider_keys_test.sh`, `tests/direnv_install_test.sh`                                                             |
+| Key backup and restore                                          | `tests/key_vault_test.sh`                                                                                                 |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                                          |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
@@ -594,6 +595,10 @@ warnings introduced by the change.
   kubeconfigs, auth stores, or account identifiers.
 - SSH and SOPS installers may repair directories, links, and permissions; only
   the explicit `ssh-key-create` and `sops-key-create` commands create keys.
+- Only `key-backup` and `key-restore` read or write existing private key
+  material, against Bitwarden. `key-restore` writes a key this Mac lacks and
+  refuses one that exists. Key material travels through files and stdin, never
+  as a command argument.
 - Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain
   plaintext credentials or fake interpolation for settings that treat
   `$VARIABLE` literally.

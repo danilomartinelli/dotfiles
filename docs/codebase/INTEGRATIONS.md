@@ -58,6 +58,8 @@ infrastructure clients operate on separately configured systems.
 - Provider keys come from Bitwarden through `provider-keys-sync` into
   SOPS-encrypted stores, and reach one command through `with-provider-keys`.
   Project secrets stay in each project's `secrets.sops.env`, loaded by direnv.
+- `key-backup` and `key-restore` copy the SSH and age identities to and from
+  Bitwarden secure notes; they are explicit commands, not installer steps.
 - SSH and SOPS installers repair safe paths/permissions and report missing keys.
   `_scripts/key-provisioning.sh` refuses overwrites, sets private directory
   permissions and leaves generation to explicit commands.

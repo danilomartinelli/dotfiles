@@ -439,6 +439,8 @@ subcommand form.
 | `dot`                | Run normal dotfiles maintenance                                                                  |
 | `e`                  | `e [path]`: open a path or the current directory in `$EDITOR`                                    |
 | `headers`            | `headers URL`: print HTTP response headers                                                       |
+| `key-backup`         | `key-backup [key...]`: store the SSH and age identities in Bitwarden                             |
+| `key-restore`        | `key-restore [key...]`: put back backed-up identities this Mac lacks                             |
 | `keyclu-import`      | Open the tracked KeyClu shortcut collection for import                                           |
 | `mobile-setup`       | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators                        |
 | `nix-install`        | Explicitly install Nix; never runs during bootstrap or `dot`                                     |
@@ -758,6 +760,17 @@ OpenCode this way, and Zed starts its OpenCode agent through the same command.
 
 `sops/install.sh` derives a missing `recipient.txt` from the default identity,
 which is what `SOPS_AGE_RECIPIENTS` is read from.
+
+The SSH and age identities exist only on this Mac, and losing the age identity
+loses every secret encrypted to it. `key-backup` stores each identity that
+`ssh-key-create` and `sops-key-create` can create (`ssh-default`,
+`ssh-personal`, `ssh-work`, `age-default`, `age-personal`, `age-work`) in
+Bitwarden as the secure note `dotfiles/keys/<key>`, replacing a note already
+there. On a new Mac, `key-restore` writes back each backed-up key that Mac
+lacks, before any key is created there. It never overwrites a key: naming one
+that exists is refused, and without names an existing key is left alone. Both
+need the unlocked vault, print no key material, and are never run by an
+installer.
 
 ### Commit signing and secret scanning
 

@@ -1,0 +1,113 @@
+#!/bin/sh
+# shellcheck disable=SC2154 # _scripts/key-vault.sh assigns the key_vault_* names.
+#
+# Put back SSH and age identities from the backup key-backup made.
+#
+# For a new Mac: it writes each key that Bitwarden holds and this Mac lacks.
+# It never creates a key and never overwrites one. Only ssh-key-create and
+# sops-key-create create keys; this restores what they created.
+#
+# Explicit and interactive by nature: it needs an unlocked vault, and no
+# installer runs it. It never prints key material.
+#
+# USAGE:
+#
+#   $ export BW_SESSION=$(bw unlock --raw)
+#   $ key-restore               # every backed-up key this Mac lacks
+#   $ key-restore age-default   # one key
+
+set -eu
+
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
+# shellcheck source=_scripts/key-provisioning.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/key-provisioning.sh"
+# shellcheck source=_scripts/key-vault.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/key-vault.sh"
+
+program_name=key-restore
+
+usage() {
+  cat <<EOF
+Usage: key-restore [key...]
+
+Write each key Bitwarden holds as the secure note $key_vault_prefix<key> and
+this Mac lacks, or the named keys. A key that already exists is never
+overwritten: naming one is refused, and without names it is left alone.
+
+Keys: $key_vault_names
+
+Requires an unlocked vault:
+  export BW_SESSION=\$(bw unlock --raw)
+EOF
+}
+
+key_handle_help "$program_name" usage "$@"
+key_vault_check_names "$program_name" usage "$@"
+
+explicit=true
+if [ "$#" -eq 0 ]; then
+  explicit=false
+  # shellcheck disable=SC2086 # One key name per word.
+  set -- $key_vault_names
+fi
+
+# A named key that exists stops the run before the vault is opened or anything
+# is written.
+if [ "$explicit" = true ]; then
+  for name in "$@"; do
+    key_vault_paths "$name"
+    key_refuse_existing "$program_name" 'key material' "$key_vault_private"
+  done
+fi
+
+key_vault_open "$program_name"
+items=$(bw list items --search "$key_vault_prefix") || {
+  echo "$program_name: could not list the vault" >&2
+  exit 1
+}
+
+# Print one field of a key's note; nothing when the note or field is absent.
+# Usage: note_field <name> <jq expression over the item>
+note_field() {
+  printf '%s\n' "$items" | jq -r --arg name "$key_vault_prefix$1" \
+    "first(.[] | select(.name == \$name)) | $2 // \"\""
+}
+
+echo "› restoring keys from Bitwarden under $key_vault_prefix"
+restored=0
+for name in "$@"; do
+  key_vault_paths "$name"
+  if [ -e "$key_vault_private" ] || [ -L "$key_vault_private" ]; then
+    echo "  → $name already exists; left alone"
+    continue
+  fi
+
+  private=$(note_field "$name" .notes)
+  if [ -z "$private" ]; then
+    if [ "$explicit" = true ]; then
+      echo "$program_name: Bitwarden has no note named $key_vault_prefix$name" >&2
+      exit 1
+    fi
+    continue
+  fi
+
+  # The key file ends with exactly one newline, whatever the vault kept: a
+  # private SSH key without it is rejected.
+  key_prepare_dir "$(dirname -- "$key_vault_private")"
+  printf '%s\n' "$private" >"$key_vault_private"
+  chmod 600 "$key_vault_private"
+
+  public=$(note_field "$name" '(.fields // [] | map(select(.name == "public")) | first | .value)')
+  if [ -n "$public" ] && [ ! -e "$key_vault_public" ]; then
+    printf '%s\n' "$public" >"$key_vault_public"
+    chmod 644 "$key_vault_public"
+  fi
+
+  echo "  ✓ $name restored to $key_vault_private"
+  restored=$((restored + 1))
+done
+unset private
+
+[ "$restored" -gt 0 ] || echo "  → nothing to restore"
