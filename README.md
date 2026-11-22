@@ -7,6 +7,7 @@ infrastructure work.
 
 [![CI](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml?query=branch%3Amain+event%3Apush)
 
+[Page](https://dotfiles.witek.workers.dev) ·
 [Install](#install-on-a-new-mac) · [Update](#keep-the-machine-current) ·
 [Software](#software-catalog) · [Commands](#public-commands) ·
 [Architecture](#how-the-repository-works) · [Validation](#validation)
@@ -955,12 +956,22 @@ runners, the bootstrap and update lifecycle as an instruction sheet, and links
 to the suites and the decision records. Open `_site/index.html` in a browser to
 read it; it needs no server and no build step.
 
-`.github/workflows/pages.yml` publishes `_site/` to this repository's GitHub
-Pages site. It runs after CI has passed for a push to `main` and deploys the
-commit CI checked, so a page that is stale or breaks its own contract is not
-published. Running the workflow by hand republishes `main` as it stands. The
-address the site answers on is set in GitHub, not here: a project site follows
-the custom domain of the account's own Pages site unless it is given one.
+The page is published at <https://dotfiles.witek.workers.dev> as Cloudflare
+static assets, with no Worker code. `wrangler.jsonc` names the directory and
+nothing else: it holds no account identifier, so Wrangler deploys to the
+account its active profile is signed in to. Publish from the repository root,
+from a clean checkout of `main`, after the suites pass:
+
+```bash
+_scripts/test
+wrangler deploy
+```
+
+No workflow publishes the page, so those suites are the only check between a
+change and a visitor. Wrangler prints the profile it is about to use; when the
+home directory is bound to another account, bind this checkout to the right
+one once with `wrangler auth activate <profile>`. That binding is machine-local
+and is not tracked.
 
 The page is HTML and CSS only. It runs no script and loads its stylesheet, its
 icon and its two typefaces from `_site/` itself, so a visit sends no request to

@@ -1,0 +1,13 @@
+// Publishes the public page in _site/ to Cloudflare as static assets, with no
+// Worker code. It names no account: Wrangler deploys to the account it is
+// signed in to, and that account's identifier stays out of the repository.
+// Version preview URLs are off, so the page has one public address.
+{
+  "name": "dotfiles",
+  "compatibility_date": "2026-11-22",
+  "assets": {
+    "directory": "./_site"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}

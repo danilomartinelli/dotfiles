@@ -439,9 +439,11 @@ classifier lists every installer and decides none of this order.
 - `_site/` is served as tracked. Keep it static HTML and CSS with no build
   step, no script, and no resource from another origin; fonts are self-hosted
   with their license files beside them.
-- `.github/workflows/pages.yml` deploys it only after CI has passed for a push
-  to `main`, from the commit CI checked. Its actions use full commit SHAs like
-  those in `ci.yml`.
+- `wrangler.jsonc` publishes it to Cloudflare as static assets. The file names
+  the directory, carries no account identifier and no Worker entry point, and
+  keeps version preview URLs off so the page has one address.
+- Nothing publishes the page automatically. Run `_scripts/test` before
+  `wrangler deploy`; those suites are the only check before a visitor.
 - Hand-author everything outside the generated regions. A region marker is a
   whole unindented line, in HTML as in Markdown.
 - A part shows a declaration's name, description and line. It never shows a

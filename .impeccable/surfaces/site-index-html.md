@@ -7,8 +7,8 @@ related_targets: []
 
 # Surface brief: the dotfiles page
 
-Scope: one static page, `_site/index.html`, published to GitHub Pages. Visitor
-mode: Persuade.
+Scope: one static page, `_site/index.html`, published to Cloudflare as static
+assets. Visitor mode: Persuade.
 
 ## Audience, job, and action
 
@@ -74,5 +74,6 @@ provenance
 
 ## Publishing
 
-`.github/workflows/pages.yml` deploys `_site/` to GitHub Pages after CI passes
-for a push to `main`. The owner authorized the workflow and enabling Pages.
+`wrangler deploy` publishes `_site/` to Cloudflare at
+`dotfiles.witek.workers.dev`. The owner chose Cloudflare over GitHub Pages and
+the account it deploys to.

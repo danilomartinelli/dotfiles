@@ -50,7 +50,7 @@ dotfiles/
 ├── bin/                  # Public executables added to PATH
 ├── functions/            # Public Zsh autoload functions
 ├── tests/                # Isolated behavioral and contract tests
-├── .github/              # CI and Pages workflows, issue forms, PR template
+├── .github/              # CI workflow, issue forms, PR template
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
 ├── _site/                # Static public page and its fonts
@@ -96,6 +96,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Public page runners in `_site/index.html`       | rendered from declarations      |
 | Public page audience and commitments            | `PRODUCT.md`                    |
 | Public page visual system                       | `DESIGN.md`                     |
+| Public page publishing target                   | `wrangler.jsonc`                |
 | Reading Brewfile and Mise declarations          | `_scripts/declared_software.py` |
 | Runtimes and language-package CLIs              | `mise/config.toml`              |
 | Mise versions and checksums                     | `mise/mise.lock` (generated)    |
@@ -176,9 +177,12 @@ visitor.
 - Follow `PRODUCT.md` for what the page may claim and `DESIGN.md` for how it
   looks. State no number about the repository that is not generated or
   checked.
-- `.github/workflows/pages.yml` publishes `_site/` after CI passes for a push
-  to `main`. Keep that gate: do not publish from a pull request, and do not
-  add a second deployment path.
+- `wrangler deploy` publishes `_site/` to Cloudflare as static assets, at
+  `dotfiles.witek.workers.dev`. Publishing changes a live site and picks a
+  Cloudflare account: run it only on the owner's explicit request, after
+  `_scripts/test` passes, and after checking the profile Wrangler names.
+- Keep `wrangler.jsonc` free of account identifiers and Worker code, and do
+  not add a second deployment path.
 
 ### Coding agents
 

@@ -11,10 +11,8 @@ web
 Static HTML/CSS with no build step, kept in an underscore-prefixed directory so
 topic discovery ignores it.
 
-`.github/workflows/pages.yml` publishes the page to GitHub Pages after CI
-passes for a push to `main`. The intended address is
-`danilomartinelli.github.io/dotfiles`; the account's Pages custom domain
-decides whether that address answers directly.
+`wrangler deploy` publishes the page to Cloudflare as static assets, at
+`dotfiles.witek.workers.dev`. GitHub Pages is not used.
 
 ## Users
 
