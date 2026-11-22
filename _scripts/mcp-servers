@@ -1,0 +1,328 @@
+#!/usr/bin/env bash
+#
+# Give every coding agent the MCP servers agents/_mcp-servers.tsv declares.
+#
+# The servers were declared three times, in three formats and three states, in
+# Zed, OpenCode and Claude Code. The catalog is now the one declaration, and
+# this is its one consumer, with two ways of delivering a row:
+#
+#   render  writes the tracked Zed and OpenCode files. The catalog is
+#           exhaustive there: a server it does not declare is removed, which a
+#           tracked file shows as a diff.
+#   apply   gives Claude Code and Codex their rows through their own CLIs,
+#           because their configuration is machine-local and holds account
+#           state this repository must not track. It adds a missing server and
+#           replaces one whose target changed. It never removes a server it
+#           does not declare: one added by hand would vanish without a trace.
+#           Those are listed instead.
+#
+# Usage: _scripts/mcp-servers render [--check]
+#        _scripts/mcp-servers apply
+
+set -euo pipefail
+
+DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+CATALOG=${DOTFILES_MCP_CATALOG:-$DOTFILES_ROOT/agents/_mcp-servers.tsv}
+ZED_SETTINGS=$DOTFILES_ROOT/zed/settings.json
+OPENCODE_CONFIG=$DOTFILES_ROOT/opencode/opencode.jsonc
+
+# shellcheck source=_scripts/catalog.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/catalog.sh"
+# shellcheck source=agents/_mcp-servers-rules.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/agents/_mcp-servers-rules.sh"
+# shellcheck source=_scripts/installer-output.sh
+# shellcheck disable=SC1091
+. "$DOTFILES_ROOT/_scripts/installer-output.sh"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: mcp-servers render [--check]
+       mcp-servers apply
+
+  render   Write the tracked Zed and OpenCode MCP declarations
+  --check  Report a stale file and exit 1 instead of rewriting it
+  apply    Add or update the servers in Claude Code and Codex
+EOF
+}
+
+fail() {
+  printf 'mcp-servers: %s\n' "$1" >&2
+  exit 1
+}
+
+names=()
+transports=()
+targets=()
+environments=()
+agent_lists=()
+
+collect_row() {
+  names+=("$1")
+  transports+=("$2")
+  targets+=("$3")
+  environments+=("$4")
+  agent_lists+=("$5")
+}
+
+# Usage: row_serves <row> <agent>
+row_serves() {
+  case ",${agent_lists[$1]}," in
+    *",$2,"*) return 0 ;;
+  esac
+  return 1
+}
+
+# Print the arguments as a JSON array of strings. They travel on stdin: a
+# word such as --mcp given to jq as an argument is read as one of its options.
+json_array() {
+  [ "$#" -gt 0 ] || {
+    printf '[]\n'
+    return 0
+  }
+  printf '%s\n' "$@" | jq -R . | jq -cs .
+}
+
+# Print a row's command line as a JSON array of its words.
+command_json() {
+  local -a words
+
+  read -r -a words <<<"${targets[$1]}"
+  json_array "${words[@]}"
+}
+
+# Print a row's environment as a JSON object.
+environment_json() {
+  local environment=${environments[$1]}
+  local -a pairs=()
+
+  [ "$environment" = - ] || read -r -a pairs <<<"$environment"
+  json_array ${pairs[@]+"${pairs[@]}"} \
+    | jq -c 'map(capture("^(?<key>[^=]+)=(?<value>.*)$")) | from_entries'
+}
+
+# Zed starts a server outside any shell, where Mise has activated nothing, so a
+# local command goes through `mise exec`. OpenCode runs from a shell that has.
+zed_server() {
+  if [ "${transports[$1]}" = remote ]; then
+    jq -cn --arg url "${targets[$1]}" '{enabled: true, url: $url}'
+    return 0
+  fi
+  jq -cn --argjson environment "$(environment_json "$1")" \
+    --argjson words "$(command_json "$1")" \
+    '{enabled: true, command: "mise", args: (["exec", "--"] + $words)}
+      + (if $environment == {} then {} else {env: $environment} end)'
+}
+
+opencode_server() {
+  if [ "${transports[$1]}" = remote ]; then
+    jq -cn --arg url "${targets[$1]}" '{type: "remote", url: $url}'
+    return 0
+  fi
+  jq -cn --argjson environment "$(environment_json "$1")" \
+    --argjson words "$(command_json "$1")" \
+    '{type: "local", command: $words}
+      + (if $environment == {} then {} else {environment: $environment} end)'
+}
+
+# Print the JSON object of every server an agent is given, in catalog order.
+# Usage: servers_for <agent>
+servers_for() {
+  local agent=$1
+  local row servers='{}'
+
+  for row in "${!names[@]}"; do
+    row_serves "$row" "$agent" || continue
+    servers=$(jq -cn --argjson servers "$servers" --arg name "${names[$row]}" \
+      --argjson server "$("${agent}_server" "$row")" '$servers + {($name): $server}')
+  done
+  printf '%s\n' "$servers"
+}
+
+# Replace one member of a tracked file with an agent's servers.
+# Usage: render_file <agent> <file> <member path> <check_only>
+render_file() {
+  local agent=$1 file=$2 member=$3 check_only=$4
+  local staging
+
+  staging=$(mktemp "${TMPDIR:-/tmp}/mcp-servers.XXXXXX")
+  if ! servers_for "$agent" \
+    | "$DOTFILES_ROOT/_scripts/jsonc_splice.py" "$file" "$member" >"$staging"; then
+    rm -f -- "$staging"
+    fail "could not render $file"
+  fi
+
+  if cmp -s "$staging" "$file"; then
+    rm -f -- "$staging"
+    return 0
+  fi
+  if [ "$check_only" = true ]; then
+    diff -u "$file" "$staging" >&2 || true
+    rm -f -- "$staging"
+    printf 'mcp-servers: %s is stale; run _scripts/mcp-servers render\n' "$file" >&2
+    return 1
+  fi
+  # Written in place: the file is the source of a link, and a rename would
+  # leave an editor that has it open holding the old one.
+  cat "$staging" >"$file"
+  rm -f -- "$staging"
+  installer_item "rendered ${file#"$DOTFILES_ROOT"/}"
+}
+
+render() {
+  local check_only=$1
+  local status=0
+
+  render_file zed "$ZED_SETTINGS" context_servers "$check_only" || status=1
+  render_file opencode "$OPENCODE_CONFIG" mcp.servers "$check_only" || status=1
+  return "$status"
+}
+
+# An agent's own description of a server. A row counts as applied when the
+# description contains its URL or its command line.
+claude_describes() {
+  # Claude Code prints the command and its arguments on two lines.
+  claude mcp get "$1" 2>/dev/null \
+    | sed -n 's/^  URL: //p; s/^  Command: //p; s/^  Args: //p' | tr '\n' ' '
+}
+
+codex_describes() {
+  codex mcp get "$1" --json 2>/dev/null | jq -r '[.. | strings] | join(" ")'
+}
+
+claude_add() {
+  local row=$1
+  local -a words=() pairs=() options=()
+  local pair
+
+  if [ "${transports[$row]}" = remote ]; then
+    claude mcp add --scope user --transport http "${names[$row]}" "${targets[$row]}" >/dev/null
+    return 0
+  fi
+  read -r -a words <<<"${targets[$row]}"
+  [ "${environments[$row]}" = - ] || read -r -a pairs <<<"${environments[$row]}"
+  for pair in ${pairs[@]+"${pairs[@]}"}; do
+    options+=(-e "$pair")
+  done
+  claude mcp add --scope user "${names[$row]}" ${options[@]+"${options[@]}"} \
+    -- "${words[@]}" >/dev/null
+}
+
+claude_remove() {
+  claude mcp remove --scope user "$1" >/dev/null
+}
+
+codex_add() {
+  local row=$1
+  local -a words=() pairs=() options=()
+  local pair
+
+  if [ "${transports[$row]}" = remote ]; then
+    codex mcp add "${names[$row]}" --url "${targets[$row]}" >/dev/null
+    return 0
+  fi
+  read -r -a words <<<"${targets[$row]}"
+  [ "${environments[$row]}" = - ] || read -r -a pairs <<<"${environments[$row]}"
+  for pair in ${pairs[@]+"${pairs[@]}"}; do
+    options+=(--env "$pair")
+  done
+  codex mcp add "${names[$row]}" ${options[@]+"${options[@]}"} -- "${words[@]}" >/dev/null
+}
+
+codex_remove() {
+  codex mcp remove "$1" >/dev/null
+}
+
+# Print the names of the servers an agent holds that a person or this module
+# added. A plugin's or connector's servers carry a prefix and are the agent's.
+claude_names() {
+  claude mcp list 2>/dev/null | sed -n 's/^\([A-Za-z0-9_-]*\): .*/\1/p'
+}
+
+codex_names() {
+  codex mcp list --json 2>/dev/null | jq -r '.[].name'
+}
+
+# Usage: apply_to <agent> <label>
+apply_to() {
+  local agent=$1 label=$2
+  local row name described declared=' '
+
+  if ! command -v "$agent" >/dev/null 2>&1; then
+    installer_warn "$agent is not installed; its MCP servers were not applied"
+    return 0
+  fi
+
+  for row in "${!names[@]}"; do
+    row_serves "$row" "$agent" || continue
+    name=${names[$row]}
+    declared="$declared$name "
+
+    if described=$("${agent}_describes" "$name") && [ -n "$described" ]; then
+      case $described in
+        *"${targets[$row]}"*)
+          installer_item "$label already has $name"
+          continue
+          ;;
+      esac
+      "${agent}_remove" "$name"
+    fi
+    if "${agent}_add" "$row"; then
+      installer_item "$label given $name"
+    else
+      installer_warn "$label refused $name"
+    fi
+  done
+
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    case $declared in
+      *" $name "*) ;;
+      *) installer_note "$label also has $name, which the catalog does not declare" ;;
+    esac
+  done < <("${agent}_names")
+}
+
+[ "$#" -ge 1 ] || {
+  usage
+  exit 2
+}
+operation=$1
+shift
+check_only=false
+case $operation in
+  render)
+    if [ "${1-}" = --check ]; then
+      check_only=true
+      shift
+    fi
+    ;;
+  apply) ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+[ "$#" -eq 0 ] || {
+  usage
+  exit 2
+}
+
+catalog_check "$CATALOG" mcp_servers_check_row \
+  || fail 'the MCP server catalog is invalid; nothing was changed'
+catalog_each_row "$CATALOG" collect_row
+
+case $operation in
+  render) render "$check_only" ;;
+  apply)
+    # No agent CLI may wait for a person: setup runs this unattended.
+    exec </dev/null
+    apply_to claude 'Claude Code'
+    apply_to codex Codex
+    ;;
+esac

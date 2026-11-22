@@ -109,10 +109,12 @@ for the languages a project contains. Server availability still depends on the
 language and its project dependencies. See the
 [native LSP guide](https://opencode.ai/docs/lsp/).
 
-CodeGraph is declared through Mise. The MCP configuration runs
-`codegraph serve --mcp`, matching `codegraph install --print-config opencode`,
-with telemetry disabled; the declaration replaces running the interactive
-installer against managed configuration. An index belongs to one checkout and
+CodeGraph is declared through Mise. `mcp.servers` is rendered from
+`agents/_mcp-servers.tsv` by `_scripts/mcp-servers render` and is not edited
+here. Its CodeGraph row runs `codegraph serve --mcp`, matching
+`codegraph install --print-config opencode`, with telemetry disabled; the
+declaration replaces running the interactive installer against managed
+configuration. An index belongs to one checkout and
 nothing builds it automatically: the shared agent instructions tell an agent to
 run `codegraph init` when `.codegraph/` is missing. `.codegraph/` is ignored
 globally by `git/gitignore.symlink`.

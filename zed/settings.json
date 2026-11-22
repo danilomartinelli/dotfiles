@@ -1,27 +1,16 @@
 {
   "context_servers": {
-    "browser-tools-context-server": {
+    "codegraph": {
       "enabled": true,
-      "remote": false,
-      "settings": {}
+      "command": "mise",
+      "args": ["exec", "--", "codegraph", "serve", "--mcp"],
+      "env": {
+        "CODEGRAPH_TELEMETRY": "0"
+      }
     },
-    "mcp-server-brave-search": {
-      "settings": {},
-
+    "context7": {
       "enabled": true,
-      "remote": false
-    },
-    "mcp-server-context7": {
-      "settings": {},
-
-      "enabled": true,
-      "remote": false
-    },
-    "mcp-server-github": {
-      "settings": {},
-
-      "enabled": true,
-      "remote": false
+      "url": "https://mcp.context7.com/mcp"
     },
     "posthog": {
       "enabled": true,

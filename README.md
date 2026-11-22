@@ -793,7 +793,8 @@ project's own instructions still take precedence.
   `dot`'s software picker; its package-manager self-update installs a separate
   copy outside the Mise declaration and lock.
 - **OpenCode** runs from Mise. `opencode.jsonc` declares the models, the
-  CodeGraph, Context7, Exa, grep.app and Argent MCP servers, and three plugins;
+  Argent MCP server, three plugins, and the MCP servers rendered from the
+  catalog below;
   `tui.jsonc` holds the terminal defaults. OpenCode has no Anthropic
   subscription login of its own, so that file pins the Anthropic auth plugin on
   the release line matching the installed OpenCode; see the
@@ -833,6 +834,27 @@ CodeGraph indexes are per checkout and nothing builds them automatically: the
 shared instructions tell an agent to run `codegraph init` when `.codegraph/` is
 missing, and to list `.codegraph/**` among the files a repository copies into
 new worktrees.
+
+### MCP servers
+
+`agents/_mcp-servers.tsv` declares the MCP servers once, one row per server
+with the agents that use it: CodeGraph and Context7 for every agent, and
+PostHog where no plugin or sign-in already covers it. `_scripts/mcp-servers`
+is its one consumer
+([ADR-0008](docs/adr/0008-declare-mcp-servers-once.md)):
+
+| Command                               | Purpose                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `_scripts/mcp-servers render`         | Rewrite the server lists in the tracked Zed and OpenCode files |
+| `_scripts/mcp-servers render --check` | Fail when one of those files no longer matches the catalog     |
+| `_scripts/mcp-servers apply`          | Add or update the servers in Claude Code and Codex             |
+
+Edit the catalog, run `render`, and commit both. The tracked files hold
+exactly what the catalog declares, so do not edit their server lists by hand.
+`agents/install.sh` runs `apply` during `dot`: Claude Code and Codex keep MCP
+servers in machine-local files, so they receive them through `claude mcp` and
+`codex mcp`. A server one of them holds that the catalog does not declare is
+listed and left alone.
 
 ### Trusted roots
 

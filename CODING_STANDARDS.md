@@ -43,6 +43,7 @@ catalogs, validation lists, or subsystem runbooks between files.
 | Topic discovery and load classes               | `_scripts/topic-catalog`          |
 | Setup orchestration                            | `_scripts/setup`                  |
 | Global coding-agent instructions               | `agents/instructions.md`          |
+| MCP servers for every coding agent             | `agents/_mcp-servers.tsv`         |
 | Trusted roots for direnv and Mise              | `_scripts/trusted-roots`          |
 | Mise configuration, trust, and lock policy     | `_scripts/mise-policy`            |
 | Public commands and lifecycle                  | `README.md`                       |
@@ -523,6 +524,7 @@ it reads it from there rather than restating it.
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
 | Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                                            |
+| MCP server catalog, rendering and application                   | `tests/mcp_servers_test.sh`, `tests/catalog_rules_test.sh`                                                                |
 | Neovim configuration and the default editor                     | `tests/neovim_test.sh`                                                                                                    |
 | Tool themes and multiplexer roles                               | `tests/themes_test.sh`                                                                                                    |
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                              |

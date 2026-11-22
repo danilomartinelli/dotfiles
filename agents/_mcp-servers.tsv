@@ -1,0 +1,22 @@
+# MCP servers, one row per server, consumed by _scripts/mcp-servers and checked
+# by agents/_mcp-servers-rules.sh. This is the one declaration: the tracked Zed
+# and OpenCode files are rendered from it and hold nothing else, and Claude
+# Code and Codex, whose configuration is machine-local, receive it through
+# their own CLIs (docs/adr/0008-declare-mcp-servers-once.md).
+# Columns: name, transport, target, environment, agents
+#
+# transport is "remote" (target is an https URL) or "local" (target is the
+# command line that starts a stdio server). environment is "-" or
+# space-separated KEY=value pairs for a local server; no value here is ever a
+# credential. agents is a comma-separated subset of claude, codex, opencode
+# and zed.
+#
+# Claude Code is absent from the PostHog row because its PostHog plugin brings
+# the same server. Codex is absent from it because `codex mcp add` opens a
+# browser sign-in for that server and waits, which an installer cannot do; the
+# checklist names the command to run by hand. Argent is absent altogether: OpenCode 1 honours its timeout
+# only in a deprecated form this catalog does not render (opencode/README.md).
+
+codegraph	local	codegraph serve --mcp	CODEGRAPH_TELEMETRY=0	claude,codex,opencode,zed
+context7	remote	https://mcp.context7.com/mcp	-	claude,codex,opencode,zed
+posthog	remote	https://mcp.posthog.com/mcp	-	opencode,zed

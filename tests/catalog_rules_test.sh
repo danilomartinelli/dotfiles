@@ -22,6 +22,7 @@ READER=$REPOSITORY_ROOT/_scripts/catalog.sh
 CATALOG_RULES=(
   '_macos/defaults.tsv _macos/defaults-rules.sh defaults_check_row'
   '_scripts/_checklist.tsv _scripts/checklist-rules.sh checklist_check_row'
+  'agents/_mcp-servers.tsv agents/_mcp-servers-rules.sh mcp_servers_check_row'
   'archiver/_associations.tsv _scripts/file-associations-rules.sh associations_check_row'
   'dock/_layout.tsv dock/_layout-rules.sh dock_layout_check_row'
   'skim/_associations.tsv _scripts/file-associations-rules.sh associations_check_row'

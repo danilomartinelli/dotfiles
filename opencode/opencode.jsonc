@@ -41,25 +41,13 @@
       "codegraph": {
         "type": "local",
         "command": ["codegraph", "serve", "--mcp"],
-        "environment": { "CODEGRAPH_TELEMETRY": "0" },
-        "disabled": true
+        "environment": {
+          "CODEGRAPH_TELEMETRY": "0"
+        }
       },
       "context7": {
         "type": "remote",
-        "url": "https://mcp.context7.com/mcp",
-        "disabled": true,
-        // Unset sends an empty header, which Context7 serves at the anonymous quota.
-        "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" }
-      },
-      "exa": {
-        "type": "remote",
-        "url": "https://mcp.exa.ai/mcp",
-        "disabled": true
-      },
-      "gh_grep": {
-        "type": "remote",
-        "url": "https://mcp.grep.app",
-        "disabled": true
+        "url": "https://mcp.context7.com/mcp"
       },
       "posthog": {
         "type": "remote",

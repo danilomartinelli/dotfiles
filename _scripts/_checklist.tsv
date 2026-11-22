@@ -24,6 +24,7 @@ credential	-	cursor-agent login	Cursor subscription
 credential	-	grok login	xAI account for Grok Build
 credential	-	agy	Antigravity CLI; the first start opens the browser sign-in
 credential	-	aws configure	AWS credentials
+credential	-	codex mcp add posthog --url https://mcp.posthog.com/mcp	PostHog MCP for Codex; signs in through the browser
 app	/Applications/Herdr.app	Herdr	accept the herdr-core install it offers; its settings come from $DOTFILES_ROOT/herdr
 app	/Applications/Google Drive.app	Google Drive	sign in and choose folders to sync
 app	/Applications/Bitwarden.app	Bitwarden	log in to unlock the vault

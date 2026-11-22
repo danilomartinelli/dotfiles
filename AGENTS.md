@@ -101,6 +101,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | Topic discovery and load classes                | `_scripts/topic-catalog`        |
 | Setup orchestration                             | `_scripts/setup`                |
 | Global coding-agent instructions                | `agents/instructions.md`        |
+| MCP servers for every coding agent              | `agents/_mcp-servers.tsv`       |
 | Trusted roots for direnv and Mise               | `_scripts/trusted-roots`        |
 | Mise configuration, trust, and lock policy      | `_scripts/mise-policy`          |
 | Public lifecycle and commands                   | `README.md`                     |
@@ -170,6 +171,9 @@ topic links only credential-free files:
   plugin state.
 - `agents/install.sh` links `agents/instructions.md` into every agent's own
   directory. Change the shared instructions there, once.
+- `agents/_mcp-servers.tsv` declares the MCP servers once. Edit it and run
+  `_scripts/mcp-servers render`; never edit `context_servers` in
+  `zed/settings.json` or `mcp.servers` in `opencode/opencode.jsonc` by hand.
 
 `opencode/opencode.jsonc` is read by OpenCode 1 (`npm:opencode-ai`). It uses
 the current `agents` and `mcp.servers` keys and keeps two deprecated forms on

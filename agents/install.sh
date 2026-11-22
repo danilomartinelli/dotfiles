@@ -24,4 +24,8 @@ link_instructions Antigravity "$HOME/.gemini/AGENTS.md"
 installer_link_config --remove-owned --label "Kimi Code instructions" \
   "$TOPIC_DIR/instructions.md" "$HOME/.agents/AGENTS.md"
 
+# The MCP servers of the agents whose configuration is machine-local. The
+# tracked Zed and OpenCode files are rendered from the same catalog.
+"$DOTFILES_ROOT/_scripts/mcp-servers" apply
+
 installer_success "Global agent instructions configured"
