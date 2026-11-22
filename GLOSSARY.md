@@ -94,6 +94,19 @@ Configuration applied only on a machine's first apply, because reapplying it
 would overwrite arrangements the owner made by hand. A reset re-arms it.
 _Avoid_: First-run only, one-shot
 
+### Secrets
+
+**Project secret**:
+A credential that belongs to one project and is in effect only inside that
+project's directory.
+_Avoid_: Local secret, env secret
+
+**Provider key**:
+A credential for an account-level service that a tool needs wherever it runs,
+such as a model provider's API key. It reaches only the command that needs it,
+never a shell's environment.
+_Avoid_: Global secret, API key export
+
 ### Linking
 
 **Destination**:
