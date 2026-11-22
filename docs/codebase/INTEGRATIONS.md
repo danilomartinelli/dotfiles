@@ -97,7 +97,7 @@ CodeGraph and Argent telemetry. OrbStack caps JSON log files at `10m` with
 
 Failures or state inside vendor tools are not measured by the safe fixture
 suite. Live package installation, sign-in, devices and external endpoints remain
-outside the validation reported in `TESTING.md`.
+outside the validation that `CODING_STANDARDS.md` prescribes.
 
 ## 6) Evidence
 

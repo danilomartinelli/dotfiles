@@ -249,7 +249,7 @@ return `1`, report the declaration error on stderr, and leave stdout empty.
 Empty input, empty replacement values, and an input with no pairs are valid.
 Expansion prints the result followed by a newline, and both helpers clear their
 temporary variables on success and failure.
-[ADR-0008](docs/adr/0008-expand-catalog-placeholders-as-literal-values.md) records
+[ADR-0005](docs/adr/0005-validate-catalogs-before-any-effect.md#placeholders) records
 why replacement values are literal and recognition is shared.
 
 A value substituted into JSON source text rather than into a decoded string is

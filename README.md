@@ -187,7 +187,7 @@ restoration. An incomplete restoration retains them in the reported recovery
 directory: inspect those copies and the current checkout to recover, then remove
 the recovery directory when finished. Publication is not atomic across files
 and does not provide recovery after a crash; see the
-[publication decision](docs/adr/0007-isolate-upgrade-effects-and-source-publication.md).
+[publication decision](docs/adr/0001-controlled-software-upgrades.md#source-publication).
 
 After publishing, the normal Mise installer repairs links, extras, and agent
 binaries. A failure there retains the published sources and stops later
@@ -645,7 +645,7 @@ the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
 Startup owns tool preparation order: Android selects Java after successful Mise
 activation and preserves the previous Java environment when preparation fails.
 Mise still discovers the current project's configuration and preserves personal
-overrides. See the [startup decision](docs/adr/0009-prepare-tool-context-before-topic-configuration.md).
+overrides. See the [startup decision](docs/adr/0007-prepare-tool-context-before-topic-configuration.md).
 
 After topic configuration and activation, startup restores the checkout's `bin`
 to the front of `PATH`. Its hooks restore that priority after runtime hooks,

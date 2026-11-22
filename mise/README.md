@@ -31,7 +31,7 @@ Mise invocation policy, and `_extras.py` retains formatter-pin interpretation
 and refresh verification. The controlled upgrade continues to invoke the full
 installer after publishing sources; subsequent installer failures do not roll
 back that publication, as specified by
-[ADR-0007](../docs/adr/0007-isolate-upgrade-effects-and-source-publication.md).
+[ADR-0001](../docs/adr/0001-controlled-software-upgrades.md#source-publication).
 
 The extraction preserves current outcomes, including their asymmetry:
 

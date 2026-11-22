@@ -21,9 +21,8 @@ Markers set by the app or agent that opened a shell, such as
 `__CFBundleIdentifier`, `CLAUDECODE`, `CODEX_SHELL` and `OPENCODE`, name who
 opened it, not who reads it. An app's integrated terminal carries the same
 bundle identifier as the shell that app runs to capture its environment,
-OpenCode's integrated terminal inherits `OPENCODE`, and Codex never set
-`CODEX_SHELL`, so its tool shells received the replacements that marker was
-meant to withhold.
+OpenCode's integrated terminal inherits `OPENCODE`, and Codex does not set
+`CODEX_SHELL` in its tool shells.
 
 ## Consequences
 

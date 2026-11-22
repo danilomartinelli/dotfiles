@@ -74,7 +74,7 @@ Startup owns Mise's prerequisite position and final managed-command precedence;
 the classifier still owns only file classification. Android queries Java only
 after successful preparation. Topics extend their own paths without repeating
 the checkout's `bin` prefix. These responsibilities are recorded in
-[ADR-0009](../adr/0009-prepare-tool-context-before-topic-configuration.md).
+[ADR-0007](../adr/0007-prepare-tool-context-before-topic-configuration.md).
 
 Controlled upgrades compose production managers and external adapters in
 `_scripts/upgrade-software`'s `main`. The `upgrade` function accepts the existing
