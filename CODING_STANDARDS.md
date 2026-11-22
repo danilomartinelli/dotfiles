@@ -515,6 +515,7 @@ it reads it from there rather than restating it.
 | Declared software reading and catalog rows                      | `tests/declared_software_test.sh`                                                                                         |
 | Git helpers                                                     | `tests/git_branch_state_test.sh`                                                                                          |
 | Tracked Git configuration                                       | `tests/git_config_test.sh`                                                                                                |
+| Commit signing, Git hooks and the secret scan                   | `tests/git_install_test.sh`                                                                                               |
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh`              |
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                                            |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
@@ -561,6 +562,7 @@ done < <(
   git ls-files -z --cached --others --exclude-standard -- '*.md' ':!.agents/'
 )
 git diff --check
+gitleaks git --redact --no-banner .
 ```
 
 `zsh -n` reads one script and treats any further path as that script's

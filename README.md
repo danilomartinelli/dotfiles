@@ -714,6 +714,30 @@ Zed's [documented JSONC parser workaround](https://zed.dev/docs/languages/json#j
 to prevent trailing commas. Keep keys, kubeconfigs, auth receipts, and
 account-specific state outside this repository.
 
+### Commit signing and secret scanning
+
+`git/install.sh` signs commits and tags with the default SSH key once
+`ssh-key-create default` has created it: it adds `user.signingkey`,
+`commit.gpgsign` and `tag.gpgsign` to `~/.gitconfig.local`, and leaves a value
+already there alone, so `gpgsign = false` in that file keeps signing off.
+GitHub shows a commit as verified only after the key is registered as a
+signing key, which the checklist names:
+`gh ssh-key add ~/.ssh/id_ed25519.pub --type signing`.
+
+The tracked gitconfig sets `core.hooksPath` to `~/.config/git/hooks`, a link
+to `git/hooks`. Git then reads no repository's own hooks directory, so every
+hook there is a link to `_dispatch`, which runs `gitleaks` over the staged
+changes before a commit and then the repository's own hook of the same name,
+with the same arguments and input. A finding stops the commit; `--no-verify`
+overrides a wrong one. A repository that sets `core.hooksPath` itself, as
+husky does, never reaches the dispatcher: add `gitleaks` to that project's own
+pre-commit hook if it should be scanned.
+
+CI scans this repository's whole history with the same tool.
+`.gitleaksignore` lists the findings reviewed as placeholders. Dependabot
+proposes updates for the SHA-pinned GitHub Actions only; Homebrew and Mise
+software moves through the controlled upgrade.
+
 ### Editors
 
 Neovim is the editor every shell opens: `EDITOR`, `VISUAL` and Git's

@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# Every hook in this directory is a link to this file.
+#
+# core.hooksPath points here for every repository, and git then stops looking
+# in a repository's own hooks directory altogether, for every hook and not only
+# the one wanted here. So this runs the one check this machine adds, a secret
+# scan of what is staged, and then hands over to the repository's own hook of
+# the same name with the same arguments and stdin.
+#
+# A repository that sets core.hooksPath itself, as husky does, never reaches
+# this file: its value wins over the global one.
+
+set -eu
+
+hook=$(basename -- "$0")
+
+# An app that starts git outside a shell has no Homebrew on PATH.
+PATH=$PATH:/opt/homebrew/bin:/usr/local/bin
+
+if [ "$hook" = pre-commit ] && command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks git --pre-commit --staged --redact --no-banner --log-level error; then
+    printf '%s\n' \
+      'pre-commit: gitleaks found a secret in the staged changes.' \
+      'Remove it, or commit with --no-verify when the finding is wrong.' >&2
+    exit 1
+  fi
+fi
+
+repository_hook=$(git rev-parse --git-common-dir)/hooks/$hook
+if [ -x "$repository_hook" ]; then
+  exec "$repository_hook" "$@"
+fi

@@ -1,0 +1,9 @@
+# Actions are pinned by commit SHA, so nothing moves them unless something
+# proposes the move. Homebrew and Mise software is deliberately absent: the
+# controlled upgrade owns those (docs/adr/0001-controlled-software-upgrades.md).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

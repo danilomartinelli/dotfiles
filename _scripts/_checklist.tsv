@@ -19,6 +19,7 @@ credential	-	ssh-key-create personal	personal SSH key
 credential	-	ssh-key-create work	work SSH key
 credential	-	sops-key-create default	age encryption key; SOPS_AGE_KEY_FILE points at it
 credential	-	gh auth login	GitHub CLI
+credential	-	gh ssh-key add ~/.ssh/id_ed25519.pub --type signing	register the signing key so GitHub shows commits as verified
 credential	-	cursor-agent login	Cursor subscription
 credential	-	grok login	xAI account for Grok Build
 credential	-	agy	Antigravity CLI; the first start opens the browser sign-in

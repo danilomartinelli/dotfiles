@@ -1,0 +1,5 @@
+# Findings in history that are placeholders, not credentials: an example
+# webhook URL in the secret-free template, and a curl header inside a
+# documentation generator's own template.
+b3007f3f895bb1177e28dfee54103a7745a46a83:localrc.example:slack-webhook-url:136
+3dacc80e54a63f90caab8d1d608893b50b03ff2c:claude/commands/tools/doc-generate.md:curl-auth-header:847

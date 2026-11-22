@@ -10,6 +10,9 @@
         editor = nvim
         fsmonitor = true
         untrackedCache = true
+        # Every repository's hooks run through git/hooks/_dispatch, which scans
+        # staged changes for secrets and then runs the repository's own hook.
+        hooksPath = ~/.config/git/hooks
         pager = delta
 [interactive]
         diffFilter = delta --color-only
@@ -53,8 +56,8 @@
 	sort = -version:refname
 [commit]
 	verbose = true
-# SSH signing infrastructure. Harmless without a key: signing itself is
-# enabled per machine via commit.gpgsign in ~/.gitconfig.local.
+# SSH signing infrastructure. Harmless without a key: git/install.sh enables
+# signing in ~/.gitconfig.local once the default key exists.
 [gpg]
 	format = ssh
 [gpg "ssh"]
