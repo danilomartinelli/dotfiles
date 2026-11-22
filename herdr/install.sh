@@ -16,8 +16,11 @@ installer_banner "setting up Herdr configuration"
 installer_link_tool_config herdr-app "Herdr settings" settings.json
 installer_link_tool_config herdr-app "Herdr programs" programs.json
 
-# The palettes Ghostty and OpenCode use, which Herdr does not ship.
-installer_link_tool_config herdr-app "Herdr dark theme" themes/catppuccin-macchiato.json
-installer_link_tool_config herdr-app "Herdr light theme" themes/catppuccin-latte.json
+# The palette every other tool here uses, which Herdr does not ship.
+# settings.json names it for both appearances.
+installer_link_tool_config herdr-app "Herdr theme" themes/catppuccin-macchiato.json
+installer_link_config --remove-owned --label "Herdr light theme" \
+  "$TOPIC_DIR/themes/catppuccin-latte.json" \
+  "$(installer_config_dir herdr-app)/themes/catppuccin-latte.json"
 
 installer_success "Herdr configured"

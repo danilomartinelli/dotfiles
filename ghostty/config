@@ -4,9 +4,9 @@
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
 
-# Follow the system appearance; Zed does the same (One Light ↔ Catppuccin
-# would clash, so both terminals of the pair stay in the Catppuccin family).
-theme = dark:Catppuccin Macchiato,light:Catppuccin Latte
+# One theme whatever the system appearance: every tool on this machine is
+# fixed on Catppuccin Macchiato, so none of them can disagree with another.
+theme = Catppuccin Macchiato
 
 macos-option-as-alt = true
 macos-titlebar-style = transparent

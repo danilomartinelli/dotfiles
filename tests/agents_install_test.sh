@@ -83,8 +83,6 @@ test_each_agent_topic_links_its_settings() {
     "$REPOSITORY_ROOT/herdr/programs.json"
   assert_links_to "$fixture/home/.config/herdr-app/themes/catppuccin-macchiato.json" \
     "$REPOSITORY_ROOT/herdr/themes/catppuccin-macchiato.json"
-  assert_links_to "$fixture/home/.config/herdr-app/themes/catppuccin-latte.json" \
-    "$REPOSITORY_ROOT/herdr/themes/catppuccin-latte.json"
   assert_links_to "$fixture/home/.config/opencode/opencode.jsonc" \
     "$REPOSITORY_ROOT/opencode/opencode.jsonc"
   assert_links_to "$fixture/home/.config/opencode/tui.jsonc" \

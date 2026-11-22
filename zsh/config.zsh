@@ -76,7 +76,12 @@ WORDCHARS='*?_-.[]~&;!#$%^(){}<>'
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
-export FZF_DEFAULT_OPTS='--height 60% --layout=reverse --border --info=inline'
+# The colours are Catppuccin Macchiato, from https://github.com/catppuccin/fzf.
+export FZF_DEFAULT_OPTS='--height 60% --layout=reverse --border --info=inline
+  --color=bg+:#363A4F,bg:#24273A,spinner:#F4DBD6,hl:#ED8796
+  --color=fg:#CAD3F5,header:#ED8796,info:#C6A0F6,pointer:#F4DBD6
+  --color=marker:#B7BDF8,fg+:#CAD3F5,prompt:#C6A0F6,hl+:#ED8796
+  --color=selected-bg:#494D64,border:#6E738D,label:#CAD3F5'
 export FZF_CTRL_T_OPTS="--preview 'bat -n --color=always --line-range :200 {}'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {}'"
 

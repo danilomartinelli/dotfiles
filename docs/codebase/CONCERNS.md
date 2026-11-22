@@ -50,7 +50,7 @@ Shell-startup and complete setup latency are not benchmarked.
 | Linked files their apps also write               | Both repository edits and application writes can affect it | Preserve unrelated app writes and run config checks    |
 
 The last row covers `zed/settings.json`, `claude/settings.json`,
-`herdr/settings.json` and `neovim/nvim-pack-lock.json`.
+`herdr/settings.json`, `neovim/nvim-pack-lock.json` and `btop/btop.conf`.
 
 ## 6) Evidence
 

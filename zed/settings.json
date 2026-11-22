@@ -111,16 +111,8 @@
       }
     }
   },
-  "theme": {
-    "mode": "system",
-    "light": "Catppuccin Latte",
-    "dark": "Catppuccin Macchiato"
-  },
-  "icon_theme": {
-    "mode": "system",
-    "light": "Catppuccin Latte",
-    "dark": "Catppuccin Macchiato"
-  },
+  "theme": "Catppuccin Macchiato",
+  "icon_theme": "Catppuccin Macchiato",
   // Homebrew owns updates (cask); self-updating would drift from the Brewfile.
   "auto_update": false,
   "base_keymap": "VSCode",

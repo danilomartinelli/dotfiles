@@ -162,9 +162,9 @@ Claude Code, Codex and OpenCode run from Mise; the Antigravity,
 Cursor and Grok CLIs, the Claude desktop app and Herdr are casks. An agent
 topic links only credential-free files:
 
-- `claude/settings.json`, `herdr/settings.json` and
-  `neovim/nvim-pack-lock.json` are linked files their apps also write, as
-  Zed's settings are. A diff in one may be the app's; keep or discard it
+- `claude/settings.json`, `herdr/settings.json`,
+  `neovim/nvim-pack-lock.json` and `btop/btop.conf` are linked files their
+  apps also write, as Zed's settings are. A diff in one may be the app's; keep or discard it
   deliberately rather than reverting it as noise.
 - Codex's `config.toml` stays machine-local: it records project trust and
   plugin state.

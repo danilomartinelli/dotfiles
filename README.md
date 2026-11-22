@@ -341,7 +341,8 @@ from the installed CLI after `compinit`, when the command is available.
 Topic installers configure Ghostty, Zed, Neovim, OrbStack, Bartender, KeyClu,
 Raycast script commands, Tailscale, OpenCode, Claude Code, Codex, Herdr,
 direnv, SOPS directories, SSH, Workspace, Mise, iOS Simulator and Android
-Emulator readiness, Archiver associations, and the Dock.
+Emulator readiness, Archiver associations, the btop, lazygit, eza and Atuin
+themes, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
 applied once so later manual changes survive: a Dock you rearranged and a
@@ -699,7 +700,9 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 | Neovim configuration   | `~/.config/nvim`               | `init.lua` and the plugin lock linked; Neovim's own writes land as a diff  |
 | OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
 | Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
-| Herdr settings         | `~/.config/herdr-app`          | Settings, programs and two themes linked; the rest is Herdr's own          |
+| Herdr settings         | `~/.config/herdr-app`          | Settings, programs and one theme linked; the rest is Herdr's own           |
+| btop settings          | `~/.config/btop`               | `btop.conf` and the theme linked; btop's own writes land as a diff         |
+| Tool themes            | `~/.config`, `~/.atuin/themes` | lazygit, eza and Atuin theme files linked from their topics                |
 | Codex configuration    | `~/.codex/config.toml`         | Machine-local: Codex records project trust and plugin state in it          |
 | direnv config          | `~/.config/direnv/direnv.toml` | Rendered locally from the trusted roots and gitignored                     |
 
@@ -724,6 +727,24 @@ the plugin with `:lua vim.pack.update()` and keep the lock's diff.
 
 Zed is the project editor, opened on purpose with `zed <path>`. Override
 `EDITOR` in `~/.localrc` to change the default.
+
+### Terminals and themes
+
+Three tools can split a screen or hold a session, and each has one job here:
+
+- **Ghostty** owns layout: tabs, splits and the quick terminal.
+- **Herdr** owns the coding agents' sessions and their worktrees.
+- **tmux** owns persistence only: a session that has to outlive its terminal,
+  on this Mac or a remote host. `t` attaches to one or creates it. tmux never
+  starts by itself, and `tmux.conf` binds no pane navigation or resizing.
+
+Every themable tool is fixed on Catppuccin Macchiato, whatever the system
+appearance: Ghostty, Zed, Herdr, Neovim, tmux, delta, bat, fzf, btop, lazygit,
+eza and Atuin. bat and delta bundle the theme; Neovim installs it as its one
+plugin; the `btop`, `lazygit`, `eza` and `atuin` topics link the official
+theme files, vendored unchanged with their upstream revision in the first
+line; the fzf colours are set in `zsh/config.zsh`. Lens and Postman take their
+theme from their own preferences.
 
 ### Coding agents
 
@@ -771,10 +792,10 @@ project's own instructions still take precedence.
   has no user-level settings or instruction file to link; it reads a project's
   `AGENTS.md`. Sign in with `cursor-agent login`.
 - **Herdr** is the `herdr-app` cask, a desktop workspace that runs these agents
-  side by side. `herdr/install.sh` links four files into `~/.config/herdr-app`
+  side by side. `herdr/install.sh` links three files into `~/.config/herdr-app`
   and leaves the rest of that directory, which Herdr rewrites on every start,
   to the app. `settings.json` uses the terminal font and the Catppuccin
-  Macchiato and Latte palettes Ghostty uses, and turns telemetry off; the
+  Macchiato palette for both appearances, and turns telemetry off; the
   Settings window writes that file, so its changes land as a diff.
   `programs.json` starts Cursor as `cursor-agent`, because Herdr's default
   `agent` is the name Grok Build also installs. Herdr needs `herdr-core`, which

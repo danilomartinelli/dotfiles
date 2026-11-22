@@ -4,6 +4,6 @@
   "telemetry": false,
   "theme": {
     "dark": "catppuccin-macchiato",
-    "light": "catppuccin-latte"
+    "light": "catppuccin-macchiato"
   }
 }

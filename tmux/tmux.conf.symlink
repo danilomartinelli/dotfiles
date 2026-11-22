@@ -1,3 +1,8 @@
+# tmux keeps a session alive after its terminal closes, here or on a remote
+# host, and that is its whole job on this machine. Ghostty arranges tabs and
+# splits, and Herdr runs the coding agents, so this file binds no pane
+# navigation or resizing of its own.
+
 # True color support (Ghostty, plus SSH/editor sessions reporting 256color)
 set -g default-terminal "tmux-256color"
 set -as terminal-features ",xterm-ghostty:RGB"
@@ -36,16 +41,6 @@ set -g focus-events on
 bind '"' split-window -v -c "#{pane_current_path}"
 bind % split-window -h -c "#{pane_current_path}"
 bind c new-window -c "#{pane_current_path}"
-
-# Vi-style pane navigation and resizing (mode-keys vi is already set)
-bind h select-pane -L
-bind j select-pane -D
-bind k select-pane -U
-bind l select-pane -R
-bind -r H resize-pane -L 5
-bind -r J resize-pane -D 5
-bind -r K resize-pane -U 5
-bind -r L resize-pane -R 5
 
 # Killing the last window of a session moves to another session instead of
 # detaching from tmux entirely
