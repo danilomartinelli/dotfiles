@@ -9,7 +9,7 @@ installer_require_darwin
 installer_banner "configuring Bartender"
 
 installer_optional_app Bartender bartender \
-  "/Applications/Bartender 6.app" "/Applications/Bartender.app"
+  "/Applications/Bartender 7.app" "/Applications/Bartender 6.app" "/Applications/Bartender.app"
 
 # No `defaults write` here: modern Bartender manages launch-at-login via
 # SMAppService and persists its own preferences on quit, so scripted writes

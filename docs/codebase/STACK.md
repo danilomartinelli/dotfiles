@@ -16,10 +16,10 @@ application to a Mac. `README.md` remains the public operating guide and
 | Module/build system | Shell sourcing and executable adapters; no application compilation or root package-manager workspace                  | `_scripts/setup`, `_scripts/installer-preamble.sh`, tracked root inventory          |
 | Target platform     | macOS with Git and Xcode Command Line Tools; some individual helpers also handle non-Darwin hosts                     | `README.md`, `homebrew/install.sh`, `_scripts/installer-preamble.sh`                |
 
-Mise's checked-in lock resolves Node to `24.21.0`, Bun to `1.3.9`, and Python to
-`3.14.7`. These are provisioned development tools. The upgrade coordinator and formatter
+Mise's checked-in lock resolves Node to `24.22.1`, Bun to `1.4.3`, and Python to
+`3.15.1`. These are provisioned development tools. The upgrade coordinator and formatter
 plugin reconciliation also use the declared Python interpreter. The Android system image and OpenCode native-binary repair name
-`arm64`; Aider's Python path names `/opt/homebrew`. See
+`arm64`. See
 `_scripts/mobile-setup-android.sh`, `mise/install.sh`, and `mise/config.toml`.
 
 ## 2) Production Frameworks and Dependencies

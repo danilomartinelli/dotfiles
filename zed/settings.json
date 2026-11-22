@@ -132,15 +132,9 @@
   "when_closing_with_no_tabs": "keep_window_open",
   "confirm_quit": false,
   "use_smartcase_search": true,
-  // Panels for features this setup does not use. Hiding the buttons is the
-  // whole change: the features stay available from the command palette.
+  // A panel for a feature this setup does not use. Hiding the button is the
+  // whole change: the feature stays available from the command palette.
   "collaboration_panel": {
-    "button": false
-  },
-  "chat_panel": {
-    "button": "never"
-  },
-  "notification_panel": {
     "button": false
   },
   "minimap": {
@@ -219,9 +213,17 @@
   // restating them here would put a second owner on something that works. The
   // `_*.tsv` catalogs are plain rows rather than a language, so they keep the
   // default. `.prettierrc.json` is strict JSON on purpose and is not listed:
-  // `jq` reads it in tests/zed_settings_test.sh.
+  // `jq` reads it in tests/zed_settings_test.sh. Only the Zsh startup links are
+  // shell: a blanket `*.symlink` also ran ShellCheck over the Git, Vim and
+  // tmux configuration this repository links.
   "file_types": {
-    "Shell Script": ["*.symlink", ".localrc", ".localrc.example", ".commonrc"],
+    "Shell Script": [
+      "zshrc.symlink",
+      "zshenv.symlink",
+      ".localrc",
+      ".localrc.example",
+      ".commonrc"
+    ],
     "Ruby": ["Brewfile"],
     "JSONC": ["*.keyclu"]
   },

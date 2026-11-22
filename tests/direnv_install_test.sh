@@ -42,12 +42,12 @@ rendered() {
 test_whitelist_names_every_trusted_root() {
   local fixture
   fixture=$(make_fixture)
-  mkdir -p "$fixture/home/conductor"
+  mkdir -p "$fixture/home/.herdr/worktrees"
   invoke_direnv "$fixture"
 
   assert_contains "$(rendered "$fixture")" "  \"$fixture/checkout\","
   assert_contains "$(rendered "$fixture")" "  \"$fixture/workspace\","
-  assert_contains "$(rendered "$fixture")" "  \"$fixture/home/conductor\","
+  assert_contains "$(rendered "$fixture")" "  \"$fixture/home/.herdr/worktrees\","
   assert_count "$(rendered "$fixture")" '  "' 3
 }
 

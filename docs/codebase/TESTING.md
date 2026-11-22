@@ -97,7 +97,7 @@ Host PATH/environment leakage can invalidate isolation; see the safeguards in
 - [TODO] Historical flakiness and remote CI results were not inspected. A local
   result does not establish remote CI status.
 
-GitHub Actions runs on `macos-15` for PRs, pushes to `main` and manual
+GitHub Actions runs on `macos-26` for PRs, pushes to `main` and manual
 invocation, with a 20-minute job timeout. It runs ShellCheck, shfmt, Zsh syntax,
 Markdown formatting and `_scripts/test`. CI obtains its check tools through
 `mise install --locked` against the repository config and lock. Formatter extras

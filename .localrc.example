@@ -23,7 +23,7 @@
 # =======================================
 
 # Do not set LANG or LC_* here: ~/.zshenv sets the locale for a person's shell
-# or a tool shell, and the shell Conductor captures runs this file after it.
+# or a tool shell, and a shell an app captures runs this file after it.
 
 # Override the shared workspace / projects directories if needed
 # export WORKSPACE="$HOME/Workspace"
@@ -62,12 +62,11 @@
 # export KIMI_API_KEY="<CHANGE_ME>"
 # export ZHIPU_API_KEY="<CHANGE_ME>"
 #
-# Optional extras used by other agents/tools (Aider, Hermes, skills CLI, …)
+# Optional extras used by other agents/tools (Hermes, skills CLI, …)
 # export ANTHROPIC_API_KEY="<CHANGE_ME>"
 # export OPENAI_API_KEY="<CHANGE_ME>"
 # export GEMINI_API_KEY="<CHANGE_ME>"
 # export OPENROUTER_API_KEY="<CHANGE_ME>"
-# Aider also reads provider keys from the environment / a repo `.env`
 #
 # Zed process-backed LSP and stdio MCP credentials may be exported here when the
 # underlying process natively reads the variable. Zed passes its inherited

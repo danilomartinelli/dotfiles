@@ -20,31 +20,29 @@ credential	-	ssh-key-create work	work SSH key
 credential	-	sops-key-create default	age encryption key; SOPS_AGE_KEY_FILE points at it
 credential	-	gh auth login	GitHub CLI
 credential	-	cursor-agent login	Cursor subscription
+credential	-	grok login	xAI account for Grok Build
+credential	-	agy	Antigravity CLI; the first start opens the browser sign-in
 credential	-	aws configure	AWS credentials
+app	/Applications/Herdr.app	Herdr	accept the herdr-core install it offers; its settings come from $DOTFILES_ROOT/herdr
 app	/Applications/Google Drive.app	Google Drive	sign in and choose folders to sync
 app	/Applications/Bitwarden.app	Bitwarden	log in to unlock the vault
-app	/Applications/Bartender 6.app|/Applications/Bartender.app	Bartender	grant Screen Recording permission
+app	/Applications/Bartender 7.app|/Applications/Bartender 6.app|/Applications/Bartender.app	Bartender	grant Screen Recording permission
 app	/Applications/Caffeine.app	Caffeine	click the coffee cup in the menu bar to activate
-app	/Applications/ChatGPT.app	ChatGPT	sign in; set Option+Space global shortcut
 app	/Applications/Claude.app	Claude	sign in; Claude Code on the desktop is its Code tab
 app	/Applications/CleanShot X.app	CleanShot X	grant Screen Recording + Accessibility permissions
-app	/Applications/Conductor.app	Conductor	sign in with GitHub; its settings come from $DOTFILES_ROOT/conductor/settings.toml
 app	/Applications/Dia.app	Dia	set as default browser: defaultbrowser dia
-app	/Applications/Discord.app	Discord	sign in to your account
-app	/Applications/OpenCode.app	OpenCode	sign in; it reads ~/.config/opencode and ~/.local/share/opencode like the CLI
 app	/Applications/Paste.app	Paste	grant Accessibility + Full Disk Access permissions
 app	/Applications/KeyClu.app	KeyClu	grant Accessibility permission
 app	/Applications/Raycast.app	Raycast	complete the onboarding; script commands: $DOTFILES_ROOT/raycast/scripts
 app	/Applications/Skim.app	Skim	open once to verify PDF associations
 app	/Applications/Slack.app	Slack	sign in to your workspace(s) manually
-app	/Applications/Spark.app	Spark	sign in to your email accounts
+app	/Applications/Spark Desktop.app|/Applications/Spark.app	Spark	sign in to your email accounts
 app	/Applications/Tailscale.app	Tailscale	sign in and connect to your network
 app	-	Bitwarden	System Settings → Passwords → Password Options → enable Bitwarden
-app	-	Raycast	install extensions: ChatGPT, Google Drive, Google Workspace
+app	-	Raycast	install extensions: Google Drive, Google Workspace
 app	-	Archiver	open once to register as default for archive types
 app	-	Figma	sign in to your account
 app	-	Ghostty	open once to verify font and shell
-app	-	Obsidian	open or create your vault (Google Drive for sync)
 app	-	OrbStack	open once and complete the onboarding wizard
 app	-	Postman	sign in for workspace sync
 app	-	Spotify	sign in to your account

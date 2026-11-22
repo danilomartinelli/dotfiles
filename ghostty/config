@@ -27,11 +27,11 @@ shell-integration = zsh
 # terminfo (colors, clear, and keys would otherwise break over SSH).
 shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
 
-# Truecolor / rich TUI apps (aider, opencode, etc.)
+# Truecolor / rich TUI apps (opencode, etc.)
 term = xterm-ghostty
 window-inherit-working-directory = true
 
-# Audible completion cues from TUIs that ring the bell (optional for aider --notifications)
+# Audible completion cues from TUIs that ring the bell
 bell-features = attention
 
 # Homebrew owns updates (cask); self-updating would drift from the Brewfile.

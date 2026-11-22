@@ -1,0 +1,9 @@
+{
+  "font": "JetBrainsMono Nerd Font",
+  "option_as_alt": "on",
+  "telemetry": false,
+  "theme": {
+    "dark": "catppuccin-macchiato",
+    "light": "catppuccin-latte"
+  }
+}

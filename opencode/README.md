@@ -1,8 +1,7 @@
 # OpenCode
 
-The OpenCode CLI (`npm:opencode-ai` in `mise/config.toml`) and the desktop app
-(`opencode-desktop` in `Brewfile`) are upstream. This topic owns two files in
-`~/.config/opencode`; OpenCode owns everything else there, including the
+The OpenCode CLI (`npm:opencode-ai` in `mise/config.toml`) is upstream. This
+topic owns two files in `~/.config/opencode`; OpenCode owns everything else there, including the
 `package.json`, `bun.lock` and `node_modules` it writes while installing
 plugins. The global agent instructions it reads as `AGENTS.md` come from the
 `agents` topic, shared with every other coding agent.
@@ -27,23 +26,37 @@ accelerated scrolling, a blinking block cursor and silent notifications.
 
 ## Models
 
-`opencode.jsonc` states `model`, `small_model`, and the `plan` and `build`
-agents with their `variant`. The desktop app, opened from the Dock, inherits no
-environment and reads only this file, so without these keys it would start with
-no model at all.
+`opencode.jsonc` states `model` and, under `agents`, the `plan` and `build`
+agents with their variant, so a session does not start on whichever model the
+last one picked. The `title` and `summary` agents name the small model, which
+the deprecated `small_model` key used to select.
 
-Each agent names its model beside its variant. Variants are model-specific, and
-OpenCode v2, which Conductor runs against this same file, drops a variant that
-arrives without a model. Validate a model ID and its variants against the live
-catalog before changing them:
+Each agent names its model and variant together, as `provider/model#variant`.
+Variants are model-specific. Validate a model ID and its variants against the
+live catalog before changing them:
 
 ```bash
 opencode models <provider> --verbose
 ```
 
-`variant` is the only reasoning knob an agent accepts. `reasoningEffort` and
+The variant is the only reasoning knob an agent accepts. `reasoningEffort` and
 `textVerbosity` are provider option names that OpenCode discards without a
 word.
+
+### Deprecated keys kept on purpose
+
+The published schema marks `agent`, `small_model`, `plugin` and server entries
+directly under `mcp` as deprecated. OpenCode 1 reads the replacements for the
+first two, and for `mcp.servers` except its timeout, so the file uses them. Two
+deprecated forms remain because their replacements do nothing in OpenCode 1,
+checked with `opencode debug config` on 1.19:
+
+- `plugin`: entries under `plugins` are parsed and never loaded.
+- Argent's entry directly under `mcp`: a `timeout` object under `mcp.servers`
+  is dropped, and the numeric `timeout` of the old form is the only one
+  honored.
+
+Rename both only together with the move to OpenCode v2.
 
 ### Staying on OpenCode v1
 
@@ -53,8 +66,6 @@ carries v1. This topic stays on v1 until these hold:
 - `@franlol/opencode-md-table-formatter` has a v2 release. Its only hook has no
   v2 equivalent.
 - v2 runs language servers. It accepts `lsp: true` and does nothing with it.
-- The desktop app ships v2. Until then it reads this same file, which therefore
-  has to stay in v1 syntax.
 
 v2 also reads its terminal settings from `cli.json` rather than `tui.jsonc`, so
 moving means rewriting that file, and the Anthropic plugin moves to its `2.x`

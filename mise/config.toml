@@ -27,9 +27,8 @@ node = "lts"                                                    # Node.js LTS
 "npm:opencode-ai" = { version = "1", npm_args = "--ignore-scripts=false" } # OpenCode CLI
 "npm:skills" = "1.7.4"                                          # Agent skills CLI
 "npm:wrangler" = "4.151.3"                                      # Cloudflare Workers CLI
-"pipx:aider-chat" = { version = "0.86.2", uvx_args = "--python /opt/homebrew/bin/python3.12" } # Aider coding assistant
 # Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
-"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.1.2" } # Markdown formatter with GFM/frontmatter plugins
+"pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.2.0" } # Markdown formatter with GFM/frontmatter plugins
 pnpm = "12.15.0"                                                 # JavaScript package manager
 python = "3.15.1"                                               # Python runtime
 ruby = "4.0"                                                    # Ruby runtime

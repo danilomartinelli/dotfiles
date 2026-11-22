@@ -3,7 +3,7 @@ set -g default-terminal "tmux-256color"
 set -as terminal-features ",xterm-ghostty:RGB"
 set -as terminal-features ",xterm-256color:RGB"
 
-# Let inner programs (spaceman-diff, opencode, aider) pass escape sequences
+# Let inner programs (spaceman-diff, opencode) pass escape sequences
 # such as image protocols through to the outer terminal
 set -g allow-passthrough on
 

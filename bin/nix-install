@@ -5,9 +5,8 @@
 # which is why it never runs automatically from bootstrap or `dot` — invoke
 # it deliberately, like ssh-key-create and sops-key-create.
 #
-# The local CLI is optional for the homelab: scripts/deploy.sh runs nix on
-# the server over SSH. Install it when you want `nix flake check` locally
-# before deploying.
+# The local CLI is optional: install it when you want `nix flake check` or the
+# Nix language server on this Mac.
 
 set -eu
 
@@ -37,6 +36,4 @@ printf '  The installer will ask for confirmation and sudo.\n\n'
 curl -fsSL https://install.determinate.systems/nix | sh -s -- install
 
 printf '\n✓ Nix installed. Open a NEW shell, then run this command again to\n'
-printf '  provision nixd (the current shell has no nix on PATH yet).\n\n'
-printf '  Afterwards, validate the homelab flake with:\n'
-printf '    nix flake check ~/Workspace/github.com/danilomartinelli/homelab\n'
+printf '  provision nixd (the current shell has no nix on PATH yet).\n'

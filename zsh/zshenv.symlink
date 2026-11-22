@@ -1,6 +1,6 @@
 # Classify this shell by who reads its output: a terminal means a person, and
-# anything else means a program, such as Conductor capturing its environment or
-# a coding agent replaying startup for its command shells. This is the one
+# anything else means a program, such as an app capturing its environment or a
+# coding agent replaying startup for its command shells. This is the one
 # startup file those shells all read. Later files read the answer, and it is
 # never exported, so no shell inherits another shell's classification. See
 # docs/adr/0003-classify-shells-by-who-reads-their-output.md.
@@ -14,8 +14,8 @@ if [[ -t 1 ]]; then
   unset LC_MESSAGES
 else
   typeset -g _dotfiles_shell=tool
-  # Conductor forwards LANG, but not LC_MESSAGES, to its clean zsh -f Git
-  # shells, so LANG itself must select English.
+  # A tool may forward LANG, but not LC_MESSAGES, to the clean zsh -f shells
+  # it runs Git in, so LANG itself must select English.
   export LANG=en_US.UTF-8
   export LC_MESSAGES=C
 fi

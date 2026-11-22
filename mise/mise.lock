@@ -427,19 +427,12 @@ backend = "npm:skills"
 version = "4.151.3"
 backend = "npm:wrangler"
 
-[[tools."pipx:aider-chat"]]
-version = "0.86.2"
-backend = "pipx:aider-chat"
-
-[tools."pipx:aider-chat".options]
-uvx_args = "--python /opt/homebrew/bin/python3.12"
-
 [[tools."pipx:mdformat"]]
 version = "1.0.0"
 backend = "pipx:mdformat"
 
 [tools."pipx:mdformat".options]
-uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.1.2"
+uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.2.0"
 
 [[tools.pnpm]]
 version = "12.15.0"

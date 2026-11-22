@@ -1,22 +1,24 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  // The OpenCode desktop app, opened from the Dock, inherits no environment and
-  // reads only this file, so the models are stated here rather than left to
-  // whichever one a session picked last.
+  // The models are stated here rather than left to whichever one a session
+  // picked last.
   "model": "openai/gpt-6-astra",
-  "small_model": "openai/gpt-5.6-luna",
   "lsp": true,
-  // Each agent names its model beside the variant: variants are model-specific,
-  // and OpenCode v2, which Conductor runs against this same file, drops a
-  // variant that arrives without one.
-  "agent": {
+  // An agent names its model and variant together, as `provider/model#variant`:
+  // variants are model-specific. `title` and `summary` are the small-model
+  // tasks, which the deprecated `small_model` key used to select.
+  "agents": {
     "plan": {
-      "model": "openai/gpt-6-astra",
-      "variant": "xhigh"
+      "model": "openai/gpt-6-astra#xhigh"
     },
     "build": {
-      "model": "openai/gpt-6-astra",
-      "variant": "xhigh"
+      "model": "openai/gpt-6-astra#xhigh"
+    },
+    "title": {
+      "model": "openai/gpt-5.6-luna"
+    },
+    "summary": {
+      "model": "openai/gpt-5.6-luna"
     }
   },
   "mcp": {
@@ -24,6 +26,10 @@
     // bounds it itself; OpenCode's own 60s request timeout cut every one of
     // them off at 60.0s and left the tool-server booting a device the caller
     // had already given up on. Cover Argent's own 15-minute ceiling instead.
+    //
+    // This entry stays in the deprecated top-level form on purpose: OpenCode 1
+    // reads `servers` below but drops the timeout object declared there, and
+    // the number here is the only timeout it honors.
     "argent": {
       "type": "local",
       "command": ["argent", "mcp"],
@@ -31,34 +37,39 @@
       "timeout": 900000,
       "enabled": false
     },
-    "codegraph": {
-      "type": "local",
-      "command": ["codegraph", "serve", "--mcp"],
-      "environment": { "CODEGRAPH_TELEMETRY": "0" },
-      "enabled": false
-    },
-    "context7": {
-      "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
-      "enabled": false,
-      // Unset sends an empty header, which Context7 serves at the anonymous quota.
-      "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" }
-    },
-    "exa": {
-      "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
-      "enabled": false
-    },
-    "gh_grep": {
-      "type": "remote",
-      "url": "https://mcp.grep.app",
-      "enabled": false
-    },
-    "posthog": {
-      "type": "remote",
-      "url": "https://mcp.posthog.com/mcp"
+    "servers": {
+      "codegraph": {
+        "type": "local",
+        "command": ["codegraph", "serve", "--mcp"],
+        "environment": { "CODEGRAPH_TELEMETRY": "0" },
+        "disabled": true
+      },
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "disabled": true,
+        // Unset sends an empty header, which Context7 serves at the anonymous quota.
+        "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" }
+      },
+      "exa": {
+        "type": "remote",
+        "url": "https://mcp.exa.ai/mcp",
+        "disabled": true
+      },
+      "gh_grep": {
+        "type": "remote",
+        "url": "https://mcp.grep.app",
+        "disabled": true
+      },
+      "posthog": {
+        "type": "remote",
+        "url": "https://mcp.posthog.com/mcp"
+      }
     }
   },
+  // `plugin` is deprecated in favor of `plugins`, which OpenCode 1 parses and
+  // then ignores: nothing declared there is loaded. Rename it only together
+  // with the move to OpenCode v2.
   "plugin": [
     // OpenCode ships no Anthropic subscription login of its own: without this
     // plugin the stored Anthropic OAuth credential is listed by
@@ -70,7 +81,7 @@
     // the OpenCode v2 one, which OpenCode 1.x refuses with "must default export
     // an object with server()". Move this pin only with npm:opencode-ai.
     "@ex-machina/opencode-anthropic-auth@1.8.6",
-    "@tarquinen/opencode-dcp@3.2.0",
+    "@tarquinen/opencode-dcp@3.2.1",
     "@franlol/opencode-md-table-formatter@0.0.6"
   ]
 }

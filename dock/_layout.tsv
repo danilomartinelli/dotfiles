@@ -5,12 +5,10 @@
 # one closest to the trash. Paths expand $HOME and $WORKSPACE, nothing else.
 
 apps	/Applications/Ghostty.app	-	-
-apps	/Applications/Conductor.app	-	-
+apps	/Applications/Herdr.app	-	-
 apps	/Applications/Claude.app	-	-
-apps	/Applications/ChatGPT.app	-	-
 apps	/Applications/Dia.app	-	-
 apps	/Applications/Zed.app	-	-
-apps	/Applications/Obsidian.app	-	-
 apps	/Applications/TablePlus.app	-	-
 apps	/Applications/Lens.app	-	-
 apps	/Applications/Postman.app	-	-

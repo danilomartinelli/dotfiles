@@ -27,8 +27,5 @@ These apply in every repository. Where a project's own `AGENTS.md` or
   server may have started without a default project.
 - In a linked worktree (`git rev-parse --git-dir` differs from
   `git rev-parse --git-common-dir`), make sure the repository copies the index
-  into new worktrees by listing `.codegraph/**` where it already declares files
-  to copy: `.worktreeinclude` when it exists, otherwise `file_include_globs` in
-  `.conductor/settings.toml` or `.conductor/settings.local.toml`. When neither
-  exists, create `.worktreeinclude` with `.codegraph/**` and `.env*`, because
-  any list replaces Conductor's default `.env*` pattern.
+  into new worktrees by listing `.codegraph/**` in its `.worktreeinclude`. When
+  that file does not exist, create it with `.codegraph/**` and `.env*`.

@@ -33,7 +33,7 @@ EOF
 # shell and however much of startup it runs.
 test_tool_shells_export_english_messages() {
   local bundle mode
-  for bundle in '' com.conductor.app; do
+  for bundle in '' com.example.app; do
     for mode in -c -ilc; do
       # shellcheck disable=SC2016 # The command is evaluated by the child Zsh process.
       scenario_capture "$TEST_ROOT/locale-tool" env -i \
@@ -49,12 +49,12 @@ test_tool_shells_export_english_messages() {
   done
 }
 
-# A terminal means a person reads the output, in Conductor's integrated
+# A terminal means a person reads the output, in an app's integrated
 # terminal too. A message override inherited from a tool shell, such as an
 # editor that captured its environment without a terminal, does not survive.
 test_person_shells_export_portuguese_messages() {
   local bundle messages mode output
-  for bundle in '' com.conductor.app; do
+  for bundle in '' com.example.app; do
     for messages in unset C; do
       for mode in -c -ilc; do
         local -a startup=(env -i
@@ -73,7 +73,7 @@ test_person_shells_export_portuguese_messages() {
   done
 }
 
-# Conductor captures its environment with `$SHELL -ilc env`, which runs the
+# An app captures its environment with `$SHELL -ilc env`, which runs the
 # shared defaults after ~/.zshenv, so they must not replace either locale.
 test_shared_defaults_keep_the_shell_locale() {
   local output
@@ -81,7 +81,7 @@ test_shared_defaults_keep_the_shell_locale() {
   local probe='source "$1/.commonrc"; printf "%s\n" "${LC_MESSAGES-unset}|$LANG"'
   local -a startup=(env -i
     HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin TERM=dumb
-    __CFBundleIdentifier=com.conductor.app)
+    __CFBundleIdentifier=com.example.app)
 
   scenario_capture "$TEST_ROOT/locale-shared" "${startup[@]}" LANG=pt_BR.UTF-8 \
     "$ZSH_BIN" -d -ilc "$probe" zsh "$REPOSITORY_ROOT"
@@ -114,10 +114,10 @@ EOF
   assert_contains "$TEST_ROOT/locale-git/stderr.log" "no upstream configured for branch 'locale-test'"
 }
 
-test_conductor_git_child_uses_captured_locale() {
+test_clean_git_child_uses_captured_locale() {
   local git_bin captured_lang repository
   git_bin=$(command -v git)
-  repository="$TEST_ROOT/conductor-git-child"
+  repository="$TEST_ROOT/clean-git-child"
   env -i HOME="$LOCALE_HOME" PATH=/usr/bin:/bin \
     GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null \
     "$git_bin" init -q -b locale-test "$repository"
@@ -126,11 +126,11 @@ test_conductor_git_child_uses_captured_locale() {
     "$git_bin" -C "$repository" -c user.name=Fixture -c user.email=fixture@example.invalid \
     -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m Fixture
 
-  # Conductor forwards LANG to clean zsh -f children, but not LC_MESSAGES.
+  # A tool may forward LANG to clean zsh -f children, but not LC_MESSAGES.
   # shellcheck disable=SC2016 # The child Zsh evaluates its captured locale.
   captured_lang=$(env -i \
     HOME="$LOCALE_HOME" ZDOTDIR="$LOCALE_HOME" PATH=/usr/bin:/bin \
-    LANG=pt_BR.UTF-8 __CFBundleIdentifier=com.conductor.app \
+    LANG=pt_BR.UTF-8 __CFBundleIdentifier=com.example.app \
     "$ZSH_BIN" -d -c 'printf "%s" "$LANG"')
   # shellcheck disable=SC2016 # Arguments are expanded by the child Zsh.
   assert_fails_with_status 128 scenario_capture "$TEST_ROOT/locale-git-child" env -i \
@@ -149,7 +149,6 @@ mkdir -p \
   "$FIXTURE/coolify" \
   "$FIXTURE/functions" \
   "$FIXTURE/git" \
-  "$FIXTURE/grok" \
   "$FIXTURE/homebrew" \
   "$FIXTURE/pnpm" \
   "$FIXTURE/system" \
@@ -176,7 +175,6 @@ cp "$REPOSITORY_ROOT/system/aliases.zsh" "$FIXTURE/system/aliases.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/coolify/completion.zsh" "$FIXTURE/coolify/completion.zsh"
-cp "$REPOSITORY_ROOT/grok/completion.zsh" "$FIXTURE/grok/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 cp "$REPOSITORY_ROOT/pnpm/path.zsh" "$FIXTURE/pnpm/path.zsh"
@@ -201,12 +199,6 @@ scenario_write_executable "$BREW_PREFIX/bin/coolify" <<'EOF'
 #!/bin/sh
 [ "$*" = 'completion zsh' ] || exit 2
 printf '%s\n' '_coolify() { :; }' 'compdef _coolify coolify'
-EOF
-
-# Grok ships its completion as a file below its own home, not a subcommand.
-scenario_write_file "$TEST_HOME/.grok/completions/zsh/_grok" <<'EOF'
-#compdef grok
-_grok() { :; }
 EOF
 
 for replacement in eza bat; do
@@ -240,8 +232,6 @@ compdef() {
     typeset -g FAKE_GIT_COMPLETION_LOADED=1
   elif [[ $1 == _coolify && $2 == coolify ]]; then
     print -r -- coolify-completion >> "$SCENARIO_EVENT_LOG"
-  elif [[ $1 == _grok && $2 == grok ]]; then
-    print -r -- grok-completion >> "$SCENARIO_EVENT_LOG"
   fi
 }
 EOF
@@ -468,8 +458,6 @@ test_startup_order_and_reload() {
   assert_count "$events" brew-prefix 2
   assert_count "$events" compinit 2
   assert_count "$events" coolify-completion 2
-  assert_before "$events" coolify-completion grok-completion
-  assert_count "$events" grok-completion 2
   assert_count "$events" syntax-highlighting 2
   assert_not_contains "$events" ignored-file
   assert_not_contains "$events" ignored-directory
@@ -735,7 +723,7 @@ scenario_run 'tool shells export English messages whichever app started them' te
 scenario_run "a person's shell exports Portuguese messages on a terminal" test_person_shells_export_portuguese_messages
 scenario_run 'shared defaults keep the locale of each kind of shell' test_shared_defaults_keep_the_shell_locale
 scenario_run 'Git in a tool shell reports a missing upstream in English' test_tool_shell_git_reports_missing_upstream_in_english
-scenario_run 'Conductor Git children use the captured locale without startup files' test_conductor_git_child_uses_captured_locale
+scenario_run 'clean Git children use the captured locale without startup files' test_clean_git_child_uses_captured_locale
 scenario_run 'optional Homebrew integration may be absent' test_optional_homebrew_integration
 scenario_run "only a person's shell replaces ls and cat" test_only_a_persons_shell_replaces_file_commands
 scenario_run 'nested topic additions and removals reach the next shell' \

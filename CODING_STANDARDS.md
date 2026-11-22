@@ -508,7 +508,6 @@ it reads it from there rather than restating it.
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh`              |
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                                            |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
-| Aider                                                           | `tests/aider_install_test.sh`                                                                                             |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                                          |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
@@ -574,7 +573,7 @@ warnings introduced by the change.
   kubeconfigs, auth stores, or account identifiers.
 - SSH and SOPS installers may repair directories, links, and permissions; only
   the explicit `ssh-key-create` and `sops-key-create` commands create keys.
-- Tracked Zed, OpenCode, Claude Code, Conductor and Kimi Code configuration
+- Tracked Zed, OpenCode, Claude Code, Herdr and Kimi Code configuration
   must not contain plaintext credentials or fake interpolation for settings that
   treat `$VARIABLE` literally.
 - Resolve exact targets before deletion, replacement, package mutation, or

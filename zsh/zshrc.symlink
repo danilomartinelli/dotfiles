@@ -1,6 +1,12 @@
 # Resolve the checkout containing this startup file, including linked worktrees.
 # ~/.zshrc is a link into the checkout, so the path is resolved before climbing.
+#
+# This file is Zsh, which ShellCheck cannot parse; an editor that lints it as a
+# shell script anyway reports the Zsh expansion below and the Zsh file it
+# sources. The directives silence exactly those findings.
+# shellcheck disable=SC2296,SC2298
 DOTFILES_ROOT=${${(%):-%N}:A:h:h}
 export DOTFILES_ROOT
 
+# shellcheck source=/dev/null
 source "$DOTFILES_ROOT/zsh/_startup.zsh"

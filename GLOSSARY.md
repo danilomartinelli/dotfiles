@@ -63,7 +63,7 @@ _Avoid_: Interactive shell, terminal shell
 **Tool shell**:
 A shell whose output a program reads, such as a coding agent's command shell
 or an app's internal shell.
-_Avoid_: Agent shell, non-interactive shell, Conductor shell
+_Avoid_: Agent shell, non-interactive shell
 
 ### Configuration
 

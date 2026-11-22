@@ -64,7 +64,6 @@ brew 'mkcert'                       # Locally trusted development certificates
 brew 'neovim'                       # Terminal editor
 brew 'nixfmt'                       # Nix formatter
 brew 'pandoc'                       # Document converter
-brew 'python@3.12'                  # Python 3.12 runtime required by Aider (`aider-chat` needs < 3.13)
 brew 'ripgrep'                      # Fast recursive text search
 brew 'sops'                         # Secrets encryption with age, KMS, or PGP
 brew 'spaceman-diff'                # Visual image diffs
@@ -84,11 +83,12 @@ brew 'zsh-syntax-highlighting'      # Zsh command-line highlighting
 
 # Development
 cask 'android-studio'               # Android development IDE
-cask 'chatgpt'                      # OpenAI desktop app (Option+Space companion chat)
+cask 'antigravity-cli'              # Google Antigravity terminal agent (`agy`)
 cask 'claude'                       # Anthropic desktop app, including Claude Code on the desktop
-cask 'conductor'                    # Parallel Claude Code agent workspaces
+cask 'cursor-cli'                   # Cursor terminal agent (`cursor-agent`)
+cask 'grok-build'                   # xAI Grok Build terminal agent (`grok`)
+cask 'herdr-app'                    # Desktop workspace for terminals and coding agents
 cask 'lens'                         # Kubernetes IDE
-cask 'opencode-desktop'             # OpenCode desktop client for local and remote agent sessions
 cask 'postman'                      # API development and testing tool
 cask 'tableplus'                    # Database management tool
 cask 'zed'                          # High-performance collaborative code editor
@@ -106,7 +106,6 @@ cask 'archiver-app'                 # Archive manager (open, compress, split fil
 cask 'caffeine'                     # Prevents the Mac from going to sleep
 cask 'thebrowsercompany-dia'        # Dia browser
 cask 'google-drive'                 # Google Drive with Finder (File Provider) integration
-cask 'obsidian'                     # Markdown knowledge base and notes app
 cask 'paste'                        # Clipboard history manager
 cask 'raycast'                      # Spotlight alternative with extensions
 cask 'skim'                         # Free PDF reader with annotation support
@@ -117,7 +116,6 @@ cask 'figma'                        # Design tool
 cask 'spotify'                      # Music streaming service
 
 # Communication
-cask 'discord'                      # Voice and text chat
 cask 'readdle-spark'                # Email client with smart features
 cask 'slack'                        # Team communication and collaboration
 cask 'whatsapp'                     # Messaging application

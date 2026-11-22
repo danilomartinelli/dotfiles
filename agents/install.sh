@@ -19,5 +19,6 @@ link_instructions "Claude Code" "$HOME/.claude/CLAUDE.md"
 link_instructions Codex "$HOME/.codex/AGENTS.md"
 link_instructions "Kimi Code" "$HOME/.agents/AGENTS.md"
 link_instructions OpenCode "$(installer_config_dir opencode)/AGENTS.md"
+link_instructions Antigravity "$HOME/.gemini/AGENTS.md"
 
 installer_success "Global agent instructions configured"

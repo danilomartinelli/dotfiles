@@ -238,73 +238,72 @@ options, and Mise declarations that span lines or list several versions. See the
 
 <!-- generated: homebrew-formulae -->
 
-| Formula                              | Purpose                                                           |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `age`                                | Encryption backend used by SOPS identities                        |
-| `ansible`                            | Automation and configuration management                           |
-| `atuin`                              | SQLite-backed shell history with optional sync                    |
-| `aws-vault`                          | Keychain-backed AWS credentials and SSO sessions                  |
-| `awscli`                             | AWS command-line interface                                        |
-| `bat`                                | Syntax-highlighting `cat` replacement                             |
-| `bitwarden-cli`                      | Bitwarden command-line client                                     |
-| `btop`                               | Process and resource monitor                                      |
-| `cloudflared`                        | Cloudflare Tunnel client for exposing local services              |
-| `cocoapods`                          | Cocoa dependency manager for iOS/macOS projects (React Native)    |
-| `coollabsio/coolify-cli/coolify-cli` | Coolify API command-line client (`coolify`)                       |
-| `coreutils`                          | GNU core utilities, including `gls` and `gdate`                   |
-| `defaultbrowser`                     | Inspect or change the macOS default browser                       |
-| `direnv`                             | Directory-specific environment loading                            |
-| `dockutil`                           | Programmatic Dock configuration                                   |
-| `duti`                               | Default application associations                                  |
-| `eza`                                | Modern `ls` replacement                                           |
-| `fastlane`                           | iOS and Android deployment automation                             |
-| `fd`                                 | Modern `find` replacement                                         |
-| `fzf`                                | Command-line fuzzy finder                                         |
-| `gawk`                               | GNU awk                                                           |
-| `gh`                                 | GitHub CLI                                                        |
-| `git`                                | Version control                                                   |
-| `git-delta`                          | Syntax-highlighting Git pager                                     |
-| `git-lfs`                            | Git Large File Storage                                            |
-| `gitleaks`                           | Secret scanner                                                    |
-| `go-task`                            | Project task runner                                               |
-| `glab`                               | GitLab CLI                                                        |
-| `gnu-sed`                            | GNU sed as `gsed`                                                 |
-| `grc`                                | Colorized output for common commands                              |
-| `helm`                               | Kubernetes package manager                                        |
-| `helmfile`                           | Declarative Helm release management                               |
-| `hermes-agent`                       | Hermes Agent CLI                                                  |
-| `imagemagick`                        | Image conversion and manipulation                                 |
-| `jq`                                 | JSON processor                                                    |
-| `k9s`                                | Kubernetes terminal UI                                            |
-| `ksops`                              | SOPS integration for Kustomize                                    |
-| `kubectx`                            | Kubernetes context and namespace switchers (`kubectx`, `kubens`)  |
-| `kubernetes-cli`                     | `kubectl`                                                         |
-| `kustomize`                          | Kubernetes manifest customization                                 |
-| `vultr-cli`                          | Vultr and VKE command-line client                                 |
-| `lazygit`                            | Git terminal UI                                                   |
-| `mas`                                | Mac App Store CLI                                                 |
-| `mise`                               | Runtime and tool version manager (successor to asdf)              |
-| `mkcert`                             | Locally trusted development certificates                          |
-| `neovim`                             | Terminal editor                                                   |
-| `nixfmt`                             | Nix formatter                                                     |
-| `pandoc`                             | Document converter                                                |
-| `python@3.12`                        | Python 3.12 runtime required by Aider (`aider-chat` needs < 3.13) |
-| `ripgrep`                            | Fast recursive text search                                        |
-| `sops`                               | Secrets encryption with age, KMS, or PGP                          |
-| `spaceman-diff`                      | Visual image diffs                                                |
-| `stern`                              | Multi-pod Kubernetes log tailing                                  |
-| `tmux`                               | Terminal multiplexer                                              |
-| `psviderski/tap/uncloud`             | Uncloud deployment CLI (`uc`)                                     |
-| `usage`                              | Usage-spec support for CLI completions                            |
-| `watch`                              | Periodically rerun a command                                      |
-| `watchexec`                          | Rerun commands on file changes                                    |
-| `watchman`                           | Filesystem watcher                                                |
-| `wget`                               | File downloader                                                   |
-| `xh`                                 | Friendly terminal HTTP client                                     |
-| `yq`                                 | YAML, TOML, and XML processor                                     |
-| `zoxide`                             | Smarter directory navigation                                      |
-| `zsh-autosuggestions`                | Fish-like Zsh suggestions                                         |
-| `zsh-syntax-highlighting`            | Zsh command-line highlighting                                     |
+| Formula                              | Purpose                                                          |
+| ------------------------------------ | ---------------------------------------------------------------- |
+| `age`                                | Encryption backend used by SOPS identities                       |
+| `ansible`                            | Automation and configuration management                          |
+| `atuin`                              | SQLite-backed shell history with optional sync                   |
+| `aws-vault`                          | Keychain-backed AWS credentials and SSO sessions                 |
+| `awscli`                             | AWS command-line interface                                       |
+| `bat`                                | Syntax-highlighting `cat` replacement                            |
+| `bitwarden-cli`                      | Bitwarden command-line client                                    |
+| `btop`                               | Process and resource monitor                                     |
+| `cloudflared`                        | Cloudflare Tunnel client for exposing local services             |
+| `cocoapods`                          | Cocoa dependency manager for iOS/macOS projects (React Native)   |
+| `coollabsio/coolify-cli/coolify-cli` | Coolify API command-line client (`coolify`)                      |
+| `coreutils`                          | GNU core utilities, including `gls` and `gdate`                  |
+| `defaultbrowser`                     | Inspect or change the macOS default browser                      |
+| `direnv`                             | Directory-specific environment loading                           |
+| `dockutil`                           | Programmatic Dock configuration                                  |
+| `duti`                               | Default application associations                                 |
+| `eza`                                | Modern `ls` replacement                                          |
+| `fastlane`                           | iOS and Android deployment automation                            |
+| `fd`                                 | Modern `find` replacement                                        |
+| `fzf`                                | Command-line fuzzy finder                                        |
+| `gawk`                               | GNU awk                                                          |
+| `gh`                                 | GitHub CLI                                                       |
+| `git`                                | Version control                                                  |
+| `git-delta`                          | Syntax-highlighting Git pager                                    |
+| `git-lfs`                            | Git Large File Storage                                           |
+| `gitleaks`                           | Secret scanner                                                   |
+| `go-task`                            | Project task runner                                              |
+| `glab`                               | GitLab CLI                                                       |
+| `gnu-sed`                            | GNU sed as `gsed`                                                |
+| `grc`                                | Colorized output for common commands                             |
+| `helm`                               | Kubernetes package manager                                       |
+| `helmfile`                           | Declarative Helm release management                              |
+| `hermes-agent`                       | Hermes Agent CLI                                                 |
+| `imagemagick`                        | Image conversion and manipulation                                |
+| `jq`                                 | JSON processor                                                   |
+| `k9s`                                | Kubernetes terminal UI                                           |
+| `ksops`                              | SOPS integration for Kustomize                                   |
+| `kubectx`                            | Kubernetes context and namespace switchers (`kubectx`, `kubens`) |
+| `kubernetes-cli`                     | `kubectl`                                                        |
+| `kustomize`                          | Kubernetes manifest customization                                |
+| `vultr-cli`                          | Vultr and VKE command-line client                                |
+| `lazygit`                            | Git terminal UI                                                  |
+| `mas`                                | Mac App Store CLI                                                |
+| `mise`                               | Runtime and tool version manager (successor to asdf)             |
+| `mkcert`                             | Locally trusted development certificates                         |
+| `neovim`                             | Terminal editor                                                  |
+| `nixfmt`                             | Nix formatter                                                    |
+| `pandoc`                             | Document converter                                               |
+| `ripgrep`                            | Fast recursive text search                                       |
+| `sops`                               | Secrets encryption with age, KMS, or PGP                         |
+| `spaceman-diff`                      | Visual image diffs                                               |
+| `stern`                              | Multi-pod Kubernetes log tailing                                 |
+| `tmux`                               | Terminal multiplexer                                             |
+| `psviderski/tap/uncloud`             | Uncloud deployment CLI (`uc`)                                    |
+| `usage`                              | Usage-spec support for CLI completions                           |
+| `watch`                              | Periodically rerun a command                                     |
+| `watchexec`                          | Rerun commands on file changes                                   |
+| `watchman`                           | Filesystem watcher                                               |
+| `wget`                               | File downloader                                                  |
+| `xh`                                 | Friendly terminal HTTP client                                    |
+| `yq`                                 | YAML, TOML, and XML processor                                    |
+| `zoxide`                             | Smarter directory navigation                                     |
+| `zsh-autosuggestions`                | Fish-like Zsh suggestions                                        |
+| `zsh-syntax-highlighting`            | Zsh command-line highlighting                                    |
 
 <!-- generated-end -->
 
@@ -320,17 +319,17 @@ from the installed CLI after `compinit`, when the command is available.
 
 <!-- generated: homebrew-casks -->
 
-| Group                     | Homebrew casks                                                                                                |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Development               | `android-studio`, `chatgpt`, `claude`, `conductor`, `lens`, `opencode-desktop`, `postman`, `tableplus`, `zed` |
-| Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                           |
-| Window and menu bar       | `bartender`, `keyclu`                                                                                         |
-| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `obsidian`, `paste`, `raycast`, `skim`   |
-| Design and media          | `cleanshot`, `figma`, `spotify`                                                                               |
-| Communication             | `discord`, `readdle-spark`, `slack`, `whatsapp`                                                               |
-| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                          |
-| Runtime and containers    | `orbstack`                                                                                                    |
-| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                               |
+| Group                     | Homebrew casks                                                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Development               | `android-studio`, `antigravity-cli`, `claude`, `cursor-cli`, `grok-build`, `herdr-app`, `lens`, `postman`, `tableplus`, `zed` |
+| Terminal and AWS          | `ghostty`, `session-manager-plugin`                                                                                           |
+| Window and menu bar       | `bartender`, `keyclu`                                                                                                         |
+| Browsers and productivity | `archiver-app`, `caffeine`, `thebrowsercompany-dia`, `google-drive`, `paste`, `raycast`, `skim`                               |
+| Design and media          | `cleanshot`, `figma`, `spotify`                                                                                               |
+| Communication             | `readdle-spark`, `slack`, `whatsapp`                                                                                          |
+| Network and security      | `bitwarden`, `tailscale-app`, `yubico-authenticator`                                                                          |
+| Runtime and containers    | `orbstack`                                                                                                                    |
+| Fonts                     | `font-jetbrains-mono-nerd-font`                                                                                               |
 
 <!-- generated-end -->
 
@@ -344,7 +343,7 @@ from the installed CLI after `compinit`, when the command is available.
 
 Topic installers configure Ghostty, Zed, Neovim, OrbStack, Bartender, KeyClu,
 Raycast script commands, Tailscale, OpenCode, Claude Code, Codex, Kimi Code,
-Conductor, direnv, Hermes, SOPS directories, SSH, Workspace, Mise, iOS Simulator
+Herdr, direnv, Hermes, SOPS directories, SSH, Workspace, Mise, iOS Simulator
 and Android Emulator readiness, Archiver associations, and the Dock.
 The Dock layout is declared in `dock/_layout.tsv`, one row per entry, and the
 file types each app claims are declared in `<topic>/_associations.tsv`. Both are
@@ -414,7 +413,6 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 | `npm:opencode-ai`                           | `1`              | OpenCode CLI                                    |
 | `npm:skills`                                | `1.7.4`          | Agent skills CLI                                |
 | `npm:wrangler`                              | `4.151.3`        | Cloudflare Workers CLI                          |
-| `pipx:aider-chat`                           | `0.86.2`         | Aider coding assistant                          |
 | `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
 | `pnpm`                                      | `12.15.0`        | JavaScript package manager                      |
 | `python`                                    | `3.15.1`         | Python runtime                                  |
@@ -538,10 +536,7 @@ shell, keeps the standard `ls` and `cat` (see
 | Editor                    | `v`, `vi`, `vim`, `vimrc`                                                                                                            |
 | Homebrew                  | `bi`, `bu`, `bug`, `bs`, `binfo`, `brews`, `brewsc`                                                                                  |
 | Mise                      | `m`, `mi`, `mu`, `ml`, `mc`                                                                                                          |
-| Aider                     | `aider-architect`, `aider-ro`                                                                                                        |
-| Obsidian                  | `obs`                                                                                                                                |
 | Hermes                    | `hermes-model`, `hermes-setup`, `hermes-doctor`, `hermes-update`                                                                     |
-| Homelab                   | `hl`, `hlup`, `hldoctor`, `hllog`, `hlbootstrap`                                                                                     |
 | Docker                    | `d`, `dc`, `dps`, `dpsa`, `dimg`, `dex`, `dlog`, `dlogf`, `dctx`, `dcu`, `dcd`, `dcl`                                                |
 | tmux                      | `ta`, `tls`, `tn`, `tk`, `t`                                                                                                         |
 | Mobile                    | `android`, `android_devices`, `ios`, `ios_devices`, `rn`, `rni`, `rna`, `pods`, `fl`                                                 |
@@ -620,21 +615,21 @@ output
 ([ADR-0003](docs/adr/0003-classify-shells-by-who-reads-their-output.md)):
 
 - A shell whose standard output is a terminal is a person's shell, in any app,
-  Conductor's integrated terminal included. It gets `LANG=pt_BR.UTF-8` and
-  drops an inherited `LC_MESSAGES`, and startup adds the Files aliases.
-- Any other shell is a tool shell: Conductor capturing its environment with
+  an integrated terminal included. It gets `LANG=pt_BR.UTF-8` and drops an
+  inherited `LC_MESSAGES`, and startup adds the Files aliases.
+- Any other shell is a tool shell: an app capturing its environment with
   `$SHELL -ilc env`, or Claude Code, Codex and OpenCode replaying startup for
   their command shells. It gets `LANG=en_US.UTF-8` and `LC_MESSAGES=C`, and
   keeps the standard `ls` and `cat`.
 
 Other locale categories, such as `LC_TIME`, pass through unchanged, and neither
-`.commonrc` nor `~/.localrc` sets the locale: both run after `~/.zshenv` in the
-shell Conductor captures. English must arrive through `LANG` itself because
-Conductor's Git runner forwards the captured `LANG` to clean `zsh -f` shells,
-which skip startup files and do not inherit `LC_MESSAGES`; a translated
-missing-upstream error leaves the Changes panel on "Loading git status..."
-until the branch has an upstream. A shell that skipped `~/.zshenv` is treated
-as a person's shell. Kimi Code runs its commands in Bash, outside this policy.
+`.commonrc` nor `~/.localrc` sets the locale: both run after `~/.zshenv` in a
+shell an app captures. English must arrive through `LANG` itself because a tool
+may forward the captured `LANG` to clean `zsh -f` shells, which skip startup
+files and do not inherit `LC_MESSAGES`, and then parse a Git diagnostic it
+expects in English. `~/.zshenv` must be that link: a copy keeps the policy it
+was copied from. A shell that skipped `~/.zshenv` is treated as a person's
+shell. Kimi Code runs its commands in Bash, outside this policy.
 
 `zsh/zshrc.symlink` follows the `~/.zshrc` link to the checkout containing it,
 the active checkout, and loads `zsh/_startup.zsh` once. Startup then:
@@ -697,7 +692,7 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 | Zed settings           | `~/.config/zed/settings.json`  | Tracked JSONC-compatible config, no plaintext credentials                  |
 | OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
 | Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
-| Conductor settings     | `~/.conductor/settings.toml`   | Tracked; the Settings window's writes land as a diff                       |
+| Herdr settings         | `~/.config/herdr-app`          | Settings, programs and two themes linked; the rest is Herdr's own          |
 | Kimi Code TUI settings | `~/.kimi-code/tui.toml`        | Tracked; `config.toml` holds credentials and stays machine-local           |
 | Codex configuration    | `~/.codex/config.toml`         | Machine-local: Codex records project trust and plugin state in it          |
 | direnv config          | `~/.config/direnv/direnv.toml` | Rendered locally from the trusted roots and gitignored                     |
@@ -715,9 +710,9 @@ account-specific state outside this repository.
 
 One instruction file, `agents/instructions.md`, is every coding agent's global
 `AGENTS.md`: the `agents` installer links it as `~/.claude/CLAUDE.md`,
-`~/.codex/AGENTS.md`, `~/.agents/AGENTS.md` for Kimi Code, and
-`~/.config/opencode/AGENTS.md`. A project's own instructions still take
-precedence.
+`~/.codex/AGENTS.md`, `~/.agents/AGENTS.md` for Kimi Code,
+`~/.config/opencode/AGENTS.md`, and `~/.gemini/AGENTS.md` for Antigravity. A
+project's own instructions still take precedence.
 
 - **Claude Code** runs from Mise; the `claude` cask is the desktop app, which
   includes Claude Code on the desktop. `claude/settings.json` is linked, so a
@@ -733,32 +728,42 @@ precedence.
   copy outside the Mise declaration and lock.
 - **Kimi Code** runs from Mise. Only `tui.toml` is linked, because
   `config.toml` holds provider credentials and every login rewrites it.
-- **Conductor** links `~/.conductor/settings.toml`, the user layer its Settings
-  window writes. This repository's own `.conductor/settings.toml` adds a run
-  script for `_scripts/test`; Conductor reads it from the default branch on the
-  remote, so a change to it applies once merged. Its English Git messages come
-  from the tool-shell locale in `zsh/zshenv.symlink` (see
-  [Zsh loading order](#zsh-loading-order)). `~/.zshenv` must be that link: a
-  copy keeps the policy it was copied from. When replacing an existing local
-  `~/.zshenv`, use the linker's backup option and preserve any unrelated
-  settings. Fully quit and reopen Conductor after a change to `~/.zshenv` to
-  refresh its
-  [captured shell environment](https://www.conductor.build/docs/reference/shells).
-- **OpenCode** runs from Mise, and the desktop app comes from the
-  `opencode-desktop` cask. `opencode.jsonc` declares the models, the CodeGraph,
-  Context7, Exa, grep.app and Argent MCP servers, and three plugins;
+- **OpenCode** runs from Mise. `opencode.jsonc` declares the models, the
+  CodeGraph, Context7, Exa, grep.app and Argent MCP servers, and three plugins;
   `tui.jsonc` holds the terminal defaults. OpenCode has no Anthropic
   subscription login of its own, so that file pins the Anthropic auth plugin on
   the release line matching the installed OpenCode; see the
   [Anthropic provider notes](opencode/README.md#anthropic-provider). The topic
   stays on OpenCode v1 for the reasons in
-  [`opencode/README.md`](opencode/README.md#staying-on-opencode-v1).
-- **Grok** and **Antigravity** are not declared here: each comes from its own
-  installer, which puts `grok` and `agy` in `~/.local/bin`, already on `PATH`
-  through shell startup. Both installers also append `PATH` lines to
-  `~/.zshrc`, which is a link into this checkout; discard that diff instead of
-  committing it. `grok/completion.zsh` registers the completion file Grok
-  ships below `~/.grok`, when it is present.
+  [`opencode/README.md`](opencode/README.md#staying-on-opencode-v1), which also
+  explains the two deprecated keys the file keeps.
+- **Grok Build** is the `grok-build` cask, which installs `grok` and its shell
+  completion. `grok/env.zsh` sets `GROK_DISABLE_AUTOUPDATER`, because its own
+  updater would install a second copy below `~/.grok` outside Homebrew.
+  `~/.grok/config.toml` records the installer, plugins and marketplace state,
+  so it stays machine-local. Grok reads the shared instructions through
+  `~/.claude/CLAUDE.md`. Sign in with `grok login`.
+- **Antigravity CLI** is the `antigravity-cli` cask, whose `agy` wrapper
+  disables the built-in updater so Homebrew owns the version. Its
+  `settings.json` holds the workspace trust list and is rewritten on every
+  start, so it stays machine-local; the shared instructions are linked as
+  `~/.gemini/AGENTS.md`. The first `agy` opens the browser sign-in.
+- **Cursor CLI** is the `cursor-cli` cask, which installs `cursor-agent`. It
+  has no user-level settings or instruction file to link; it reads a project's
+  `AGENTS.md`. Sign in with `cursor-agent login`.
+- **Herdr** is the `herdr-app` cask, a desktop workspace that runs these agents
+  side by side. `herdr/install.sh` links four files into `~/.config/herdr-app`
+  and leaves the rest of that directory, which Herdr rewrites on every start,
+  to the app. `settings.json` uses the terminal font and the Catppuccin
+  Macchiato and Latte palettes Ghostty uses, and turns telemetry off; the
+  Settings window writes that file, so its changes land as a diff.
+  `programs.json` starts Cursor as `cursor-agent`, because Herdr's default
+  `agent` is the name Grok Build also installs. Herdr needs `herdr-core`, which
+  Homebrew does not package: accept the install Herdr offers on first launch.
+
+The installers of Grok, Antigravity and Cursor outside Homebrew append `PATH`
+lines to `~/.zshrc`, which is a link into this checkout. Discard that diff
+instead of committing it; `tests/zsh_startup_test.sh` fails while it is there.
 
 CodeGraph indexes are per checkout and nothing builds them automatically: the
 shared instructions tell an agent to run `codegraph init` when `.codegraph/` is
@@ -769,7 +774,8 @@ new worktrees.
 
 A project's `.envrc`, `.env` and Mise configuration take effect without a
 per-project `direnv allow` or `mise trust` when the project lives beneath a
-trusted root: this checkout, `$WORKSPACE`, or `~/conductor`. Everywhere else,
+trusted root: this checkout, `$WORKSPACE`, or `~/.herdr/worktrees`, where Herdr
+creates agent worktrees. Everywhere else,
 direnv and Mise still ask. `_scripts/trusted-roots` is the one declaration of
 that list. `direnv/install.sh` renders it into the whitelist of
 `~/.config/direnv/direnv.toml`, which also loads `.env` files, and

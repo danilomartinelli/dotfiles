@@ -19,6 +19,6 @@ installer_success "Script commands live in $SCRIPTS_DIR"
 installer_note "Add that folder in Raycast → Settings → Extensions → Script Commands"
 
 # Raycast extensions install through its in-app store only (not scriptable).
-installer_note "Recommended extensions (install in-app): ChatGPT, Google Drive, Google Workspace"
+installer_note "Recommended extensions (install in-app): Google Drive, Google Workspace"
 
 installer_success "Raycast configured"

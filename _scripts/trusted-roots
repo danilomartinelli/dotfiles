@@ -18,7 +18,7 @@ dotfiles_root=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
 
 # WORKSPACE falls back the way .commonrc defaults it, for a caller that runs
 # before the shell has exported it.
-for root in "$dotfiles_root" "${WORKSPACE:-$HOME/Workspace}" "$HOME/conductor"; do
+for root in "$dotfiles_root" "${WORKSPACE:-$HOME/Workspace}" "$HOME/.herdr/worktrees"; do
   if resolved=$(CDPATH='' cd -P -- "$root" 2>/dev/null && pwd); then
     root=$resolved
   fi

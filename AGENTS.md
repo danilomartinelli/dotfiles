@@ -158,11 +158,11 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
 
 ### Coding agents
 
-Claude Code, Codex, Kimi Code and OpenCode run from Mise; Conductor, the Claude
-desktop app and the OpenCode desktop app are casks. An agent topic links only
-credential-free files:
+Claude Code, Codex, Kimi Code and OpenCode run from Mise; the Antigravity,
+Cursor and Grok CLIs, the Claude desktop app and Herdr are casks. An agent
+topic links only credential-free files:
 
-- `claude/settings.json`, `conductor/settings.toml` and `kimi/tui.toml` are
+- `claude/settings.json`, `herdr/settings.json` and `kimi/tui.toml` are
   linked files their apps also write, as Zed's settings are. A diff in one may
   be the app's; keep or discard it deliberately rather than reverting it as
   noise.
@@ -171,14 +171,16 @@ credential-free files:
 - `agents/install.sh` links `agents/instructions.md` into every agent's own
   directory. Change the shared instructions there, once.
 
-`opencode/opencode.jsonc` stays in OpenCode v1 syntax: the desktop app runs v1,
-and Conductor's bundled OpenCode v2 reads the same file. Move the
+`opencode/opencode.jsonc` is read by OpenCode 1 (`npm:opencode-ai`). It uses
+the current `agents` and `mcp.servers` keys and keeps two deprecated forms on
+purpose, because OpenCode 1 ignores their replacements: the `plugin` list and
+Argent's top-level `mcp` entry with its numeric `timeout`. Move the
 `@ex-machina/opencode-anthropic-auth` pin only with `npm:opencode-ai`; its two
 release lines serve the two OpenCode majors. Validate a model ID and its
 variants against the live `opencode models <provider> --verbose` catalog.
-Variants are model-specific, and `variant` is the only reasoning knob an agent
-accepts: `reasoningEffort` and `textVerbosity` are provider option names that
-OpenCode discards without a word.
+Variants are model-specific and written as `provider/model#variant`, the only
+reasoning knob an agent accepts: `reasoningEffort` and `textVerbosity` are
+provider option names that OpenCode discards without a word.
 
 `_scripts/trusted-roots` is the one declaration of the trusted roots. direnv's
 whitelist is rendered from it by `direnv/install.sh` and Mise receives it
@@ -249,7 +251,7 @@ the same change as the public surface.
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
   `_scripts/key-provisioning.sh`.
-- Tracked Zed, OpenCode, Claude Code, Conductor and Kimi Code configuration
+- Tracked Zed, OpenCode, Claude Code, Herdr and Kimi Code configuration
   must not contain plaintext credentials or pretend that settings interpolate
   `$VARIABLE` when they do not.
 - Resolve the exact target and confirm user authorization before destructive or

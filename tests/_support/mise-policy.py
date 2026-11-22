@@ -64,7 +64,7 @@ class MisePolicyTest(unittest.TestCase):
         self.assertTrue(call["locked"])
         self.assertEqual(call["selectors"], {})
         self.assertEqual(call["trust"].split(":"), [str(self.checkout),
-                         str(self.fixture / "workspace"), str(self.fixture / "home/conductor")])
+                         str(self.fixture / "workspace"), str(self.fixture / "home/.herdr/worktrees")])
         self.assertEqual(self.lock.read_bytes(), before)
 
     def test_only_selected_regeneration_can_write_and_stage_trust_does_not_escape(self):
