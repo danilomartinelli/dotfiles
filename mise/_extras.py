@@ -1,4 +1,4 @@
-"""Reconcile pinned mdformat extras when Mise reuses an existing tool version."""
+"""Reconcile mdformat's environment when Mise reuses an existing tool version."""
 
 import json
 from pathlib import Path
@@ -33,6 +33,11 @@ for package in json.loads(sys.argv[1]):
 print(json.dumps(versions))
 """
     interpreter = (directory / "bin/mdformat").resolve().parent / "python"
+    # The environment links to the Python runtime it was built with. Once that
+    # runtime is upgraded and pruned the link dangles, and only a refresh
+    # rebuilds it, so an absent interpreter reads as no installed extras.
+    if not interpreter.exists():
+        return None
     result = subprocess.run(
         [str(interpreter), "-c", program, json.dumps(packages)],
         capture_output=True,
@@ -45,10 +50,14 @@ print(json.dumps(versions))
 
 def reconcile(checkout, directory):
     desired = desired_extras(checkout / "mise/config.toml")
-    if installed_extras(directory, list(desired)) == desired:
+    installed = installed_extras(directory, list(desired))
+    if installed == desired:
         print("Mise formatter extras match their declared pins")
         return
-    print("Refreshing mdformat to apply its declared plugin versions")
+    if installed is None:
+        print("Refreshing mdformat to rebuild its missing Python environment")
+    else:
+        print("Refreshing mdformat to apply its declared plugin versions")
     subprocess.run(
         [str(checkout / "_scripts/mise-policy"), str(checkout),
          "run", "install", "--force", "pipx:mdformat"], check=True

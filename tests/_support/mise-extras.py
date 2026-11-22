@@ -74,6 +74,35 @@ class FormatterExtrasTest(unittest.TestCase):
         extras.reconcile(self.root, self.root)
         self.assertFalse(marker.exists())
 
+    def test_a_missing_interpreter_refreshes_the_environment(self):
+        self.versions.write_text(json.dumps(self.desired))
+        interpreter = self.root / "mdformat/bin/python"
+        program = interpreter.read_text()
+        interpreter.unlink()
+        interpreter.symlink_to(self.root / "pruned-runtime/bin/python")
+        marker = self.root / "install-args.json"
+        with self.assertRaisesRegex(RuntimeError, "still differ"):
+            extras.reconcile(self.root, self.root)
+        self.assertEqual(
+            ["mise", "install", "--force", "pipx:mdformat"],
+            json.loads(marker.read_text()),
+        )
+        marker.unlink()
+        run = extras.subprocess.run
+
+        def rebuilding_install(command, **options):
+            result = run(command, **options)
+            if "install" in command:
+                interpreter.unlink()
+                interpreter.write_text(program)
+                interpreter.chmod(0o755)
+            return result
+
+        with patch.object(extras.subprocess, "run", side_effect=rebuilding_install):
+            extras.reconcile(self.root, self.root)
+        self.assertTrue(marker.exists())
+        extras.reconcile(self.root, self.root)
+
     def test_an_unpinned_plugin_fails_before_anything_is_installed(self):
         self.config.write_text(self.config.read_text().replace("==1.0.0", ""))
         with self.assertRaisesRegex(ValueError, "exact == version"):

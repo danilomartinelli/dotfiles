@@ -9,8 +9,13 @@ DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
 . "$DOTFILES_ROOT/_scripts/installer-output.sh"
 mise_policy=$DOTFILES_ROOT/_scripts/mise-policy
 
+# Pruning shares the same locked policy as installation and lookups. It runs
+# first because it can remove the Python runtime the formatter environment
+# links to; the reconciliation below must see that and rebuild in this run.
+"$mise_policy" "$DOTFILES_ROOT" run prune --yes >/dev/null 2>&1 || true
+
 # Mise's installation identity is the main package version, so changed extras
-# can otherwise remain stale even though the generated lock has new options.
+# or a removed interpreter can otherwise remain stale behind an unchanged lock.
 mdformat_install_dir=$("$mise_policy" "$DOTFILES_ROOT" run where pipx:mdformat 2>/dev/null) || mdformat_install_dir=''
 if [ -n "$mdformat_install_dir" ]; then
   installer_banner "Reconciling Mise formatter plugins"
@@ -20,9 +25,6 @@ if [ -n "$mdformat_install_dir" ]; then
     exit 1
   fi
 fi
-
-# Pruning shares the same locked policy as installation and lookups.
-"$mise_policy" "$DOTFILES_ROOT" run prune --yes >/dev/null 2>&1 || true
 
 # Run the claude-code postinstall to place the native arm64 binary.
 # npm install -g does not run postinstall scripts automatically when mise

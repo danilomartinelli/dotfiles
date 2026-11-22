@@ -140,8 +140,8 @@ print((Path(__file__).resolve().parents[2] / "versions.json").read_text())
         result = self.invoke()
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual([
-            ["mise", "where", "pipx:mdformat"],
             ["mise", "prune", "--yes"],
+            ["mise", "where", "pipx:mdformat"],
             ["mise", "where", "npm:@anthropic-ai/claude-code"],
             ["mise", "where", "npm:opencode-ai"],
         ], self.commands())
@@ -154,7 +154,7 @@ print((Path(__file__).resolve().parents[2] / "versions.json").read_text())
             self.assertEqual(str(self.checkout / "mise/config.toml"), call["config"])
             self.assertEqual(str(self.checkout), call["cwd"])
 
-    def test_formatter_refresh_precedes_prune_and_agent_repairs(self):
+    def test_prune_precedes_formatter_refresh_and_agent_repairs(self):
         self.formatter_package({"mdformat-gfm": "0.4.1"})
         script = self.claude_package()
         stub, native = self.opencode_package()
@@ -162,9 +162,9 @@ print((Path(__file__).resolve().parents[2] / "versions.json").read_text())
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual({"mdformat-gfm": "1.0.0"}, json.loads(self.versions.read_text()))
         commands = self.commands()
-        self.assertLess(commands.index(["mise", "install", "--force", "pipx:mdformat"]),
-                        commands.index(["mise", "prune", "--yes"]))
         self.assertLess(commands.index(["mise", "prune", "--yes"]),
+                        commands.index(["mise", "install", "--force", "pipx:mdformat"]))
+        self.assertLess(commands.index(["mise", "install", "--force", "pipx:mdformat"]),
                         commands.index(["node", str(script)]))
         self.assertLess(commands.index(["node", str(script)]),
                         commands.index(["ln", "-f", str(native), str(stub)]))
@@ -179,7 +179,19 @@ print((Path(__file__).resolve().parents[2] / "versions.json").read_text())
         self.assertIn("extras match their declared pins", result.stdout)
         self.assertFalse(any(call[:2] == ["mise", "install"] for call in self.commands()))
 
-    def test_formatter_failures_stop_before_prune_and_native_repairs(self):
+    def test_missing_formatter_interpreter_requests_a_refresh(self):
+        self.formatter_package({"mdformat-gfm": "1.0.0"})
+        interpreter = self.root / "formatter package/venv/bin/python"
+        interpreter.unlink()
+        interpreter.symlink_to(self.root / "pruned runtime/bin/python")
+        result = self.invoke()
+        self.assertIn(["mise", "install", "--force", "pipx:mdformat"], self.commands())
+        self.assertIn("rebuild its missing Python environment", result.stdout)
+        # The fake installer rebuilds nothing, so the refresh is not believed.
+        self.assertEqual(1, result.returncode)
+        self.assertIn("still differ", result.stderr)
+
+    def test_formatter_failures_stop_before_native_repairs(self):
         self.formatter_package({"mdformat-gfm": "0.4.1"})
         self.claude_package()
         stub, _ = self.opencode_package()
@@ -194,7 +206,6 @@ print((Path(__file__).resolve().parents[2] / "versions.json").read_text())
                 self.assertEqual(1, result.returncode)
                 self.assertIn(diagnostic, result.stderr)
                 self.assertIn("Failed to reconcile Mise formatter plugins", result.stderr)
-                self.assertNotIn(["mise", "prune", "--yes"], self.commands())
                 self.assertFalse(any(call[0] == "node" for call in self.commands()))
                 self.assertEqual("stub payload\n", stub.read_text())
 

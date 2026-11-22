@@ -160,7 +160,8 @@ and refreshes the README catalog. Review and commit that diff separately:
 Erlang `29` and OpenCode `1` are retained; exact pins can advance across major
 versions, which the picker highlights.
 The Mise installer also checks the installed formatter plugins against their
-pins and refreshes only mdformat when those versions differ.
+pins and refreshes only mdformat when those versions differ, or when a pruned
+Python runtime has left its environment without an interpreter.
 
 Vulnerability checks only advise in this CLI flow; they are not a CI gate.
 `brew vulns` checks declared installed formulae and their dependencies, reporting
@@ -752,6 +753,12 @@ precedence.
   [Anthropic provider notes](opencode/README.md#anthropic-provider). The topic
   stays on OpenCode v1 for the reasons in
   [`opencode/README.md`](opencode/README.md#staying-on-opencode-v1).
+- **Grok** and **Antigravity** are not declared here: each comes from its own
+  installer, which puts `grok` and `agy` in `~/.local/bin`, already on `PATH`
+  through shell startup. Both installers also append `PATH` lines to
+  `~/.zshrc`, which is a link into this checkout; discard that diff instead of
+  committing it. `grok/completion.zsh` registers the completion file Grok
+  ships below `~/.grok`, when it is present.
 
 CodeGraph indexes are per checkout and nothing builds them automatically: the
 shared instructions tell an agent to run `codegraph init` when `.codegraph/` is

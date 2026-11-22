@@ -99,7 +99,7 @@ scenario_run 'pruning leaves the lock alone' test_pruning_leaves_the_lock_alone
 scenario_run 'an absent agent CLI does not stop the run' \
   test_an_absent_agent_cli_does_not_stop_the_run
 
-test_formatter_reconciliation_failure_stops_before_pruning() {
+test_formatter_reconciliation_failure_stops_before_agent_repairs() {
   local fixture status=0
   fixture=$(new_fixture)
   invoke_mise "$fixture" FAKE_MISE_MDFORMAT_HOME="$fixture/formatter" \
@@ -107,11 +107,11 @@ test_formatter_reconciliation_failure_stops_before_pruning() {
   assert_equal 1 "$status" 'formatter mismatch status'
   assert_contains "$fixture/events.log" 'mise exec python -- python3'
   assert_contains "$fixture/stderr.log" 'Failed to reconcile Mise formatter plugins'
-  assert_not_contains "$fixture/events.log" 'mise prune'
+  assert_not_contains "$fixture/events.log" 'mise where npm:'
 }
 
-scenario_run 'formatter reconciliation failure stops before pruning' \
-  test_formatter_reconciliation_failure_stops_before_pruning
+scenario_run 'formatter reconciliation failure stops before agent repairs' \
+  test_formatter_reconciliation_failure_stops_before_agent_repairs
 
 test_owned_legacy_links_are_retired_without_the_old_sources() {
   local fixture

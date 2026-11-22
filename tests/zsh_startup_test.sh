@@ -149,6 +149,7 @@ mkdir -p \
   "$FIXTURE/coolify" \
   "$FIXTURE/functions" \
   "$FIXTURE/git" \
+  "$FIXTURE/grok" \
   "$FIXTURE/homebrew" \
   "$FIXTURE/pnpm" \
   "$FIXTURE/system" \
@@ -175,6 +176,7 @@ cp "$REPOSITORY_ROOT/system/aliases.zsh" "$FIXTURE/system/aliases.zsh"
 cp "$REPOSITORY_ROOT/git/_branch-state.sh" "$FIXTURE/git/_branch-state.sh"
 cp "$REPOSITORY_ROOT/git/completion.zsh" "$FIXTURE/git/completion.zsh"
 cp "$REPOSITORY_ROOT/coolify/completion.zsh" "$FIXTURE/coolify/completion.zsh"
+cp "$REPOSITORY_ROOT/grok/completion.zsh" "$FIXTURE/grok/completion.zsh"
 cp "$REPOSITORY_ROOT/_scripts/topic-catalog" "$FIXTURE/_scripts/topic-catalog"
 cp "$REPOSITORY_ROOT/homebrew/_availability.sh" "$FIXTURE/homebrew/_availability.sh"
 cp "$REPOSITORY_ROOT/pnpm/path.zsh" "$FIXTURE/pnpm/path.zsh"
@@ -199,6 +201,12 @@ scenario_write_executable "$BREW_PREFIX/bin/coolify" <<'EOF'
 #!/bin/sh
 [ "$*" = 'completion zsh' ] || exit 2
 printf '%s\n' '_coolify() { :; }' 'compdef _coolify coolify'
+EOF
+
+# Grok ships its completion as a file below its own home, not a subcommand.
+scenario_write_file "$TEST_HOME/.grok/completions/zsh/_grok" <<'EOF'
+#compdef grok
+_grok() { :; }
 EOF
 
 for replacement in eza bat; do
@@ -232,6 +240,8 @@ compdef() {
     typeset -g FAKE_GIT_COMPLETION_LOADED=1
   elif [[ $1 == _coolify && $2 == coolify ]]; then
     print -r -- coolify-completion >> "$SCENARIO_EVENT_LOG"
+  elif [[ $1 == _grok && $2 == grok ]]; then
+    print -r -- grok-completion >> "$SCENARIO_EVENT_LOG"
   fi
 }
 EOF
@@ -458,6 +468,8 @@ test_startup_order_and_reload() {
   assert_count "$events" brew-prefix 2
   assert_count "$events" compinit 2
   assert_count "$events" coolify-completion 2
+  assert_before "$events" coolify-completion grok-completion
+  assert_count "$events" grok-completion 2
   assert_count "$events" syntax-highlighting 2
   assert_not_contains "$events" ignored-file
   assert_not_contains "$events" ignored-directory

@@ -14,9 +14,11 @@ preserved.
 
 After a successful locked installation, `install.sh` calls
 `sh "$TOPIC_DIR/_post-install.sh"`. This private executable takes no arguments
-and resolves its own checkout. It reconciles formatter plugins, prunes unused
-tool versions, runs the Claude Code package postinstall, and repairs the
-OpenCode native executable, in that order.
+and resolves its own checkout. It prunes unused tool versions, reconciles the
+formatter environment, runs the Claude Code package postinstall, and repairs
+the OpenCode native executable, in that order. Pruning comes first because it
+can remove the Python runtime the formatter environment links to; reconciling
+afterwards rebuilds that environment in the same run.
 
 `_post-install.sh` owns package discovery, repair choices, ordering, and failure
 propagation. The caller observes its exit status and normal installer output;
@@ -33,17 +35,18 @@ back that publication, as specified by
 
 The extraction preserves current outcomes, including their asymmetry:
 
-| Condition                                                                           | Outcome                              |
-| ----------------------------------------------------------------------------------- | ------------------------------------ |
-| Package lookup fails or returns no directory                                        | Skip that package's step silently    |
-| Formatter reconciliation fails                                                      | Stop before pruning or agent repairs |
-| Pruning fails                                                                       | Discard its output and continue      |
-| Claude's package installer is missing                                               | Skip the Claude step                 |
-| Claude's package installer fails                                                    | Warn and continue to OpenCode        |
-| Either OpenCode file is missing, or the destination is already identified as Mach-O | Skip the repair                      |
-| OpenCode hard link fails                                                            | Try copying the native binary        |
-| Both OpenCode hard link and copy fail                                               | Warn and continue                    |
-| Making the repaired OpenCode executable fails                                       | Stop with a nonzero status           |
+| Condition                                                                           | Outcome                           |
+| ----------------------------------------------------------------------------------- | --------------------------------- |
+| Package lookup fails or returns no directory                                        | Skip that package's step silently |
+| Pruning fails                                                                       | Discard its output and continue   |
+| Formatter interpreter is missing                                                    | Refresh mdformat, then verify     |
+| Formatter reconciliation fails                                                      | Stop before agent repairs         |
+| Claude's package installer is missing                                               | Skip the Claude step              |
+| Claude's package installer fails                                                    | Warn and continue to OpenCode     |
+| Either OpenCode file is missing, or the destination is already identified as Mach-O | Skip the repair                   |
+| OpenCode hard link fails                                                            | Try copying the native binary     |
+| Both OpenCode hard link and copy fail                                               | Warn and continue                 |
+| Making the repaired OpenCode executable fails                                       | Stop with a nonzero status        |
 
 Each run invokes Claude's package installer when present; its own script owns
 the repeated-run behavior. OpenCode accepts an existing Mach-O destination

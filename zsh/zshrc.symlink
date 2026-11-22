@@ -4,13 +4,3 @@ DOTFILES_ROOT=${${(%):-%N}:A:h:h}
 export DOTFILES_ROOT
 
 source "$DOTFILES_ROOT/zsh/_startup.zsh"
-
-# >>> grok installer >>>
-export PATH="$HOME/.grok/bin:$PATH"
-fpath=(~/.grok/completions/zsh $fpath)
-autoload -Uz compinit && compinit -C
-# <<< grok installer <<<
-
-
-# Added by Antigravity CLI installer
-export PATH="/Users/danilomartinelli/.local/bin:$PATH"
