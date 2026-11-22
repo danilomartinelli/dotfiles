@@ -136,6 +136,12 @@
         "source": "git",
         "url": "https://github.com/zarazhangrui/frontend-slides.git"
       }
+    },
+    "impeccable": {
+      "source": {
+        "source": "github",
+        "repo": "pbakaus/impeccable"
+      }
     }
   },
   "modelSettings": {
