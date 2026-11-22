@@ -9,11 +9,12 @@
 # Locale belongs to ~/.zshenv, which sets it for a person's shell or a tool
 # shell before this file runs; setting it here would undo that choice.
 
-# Default editor (override if needed). --wait keeps synchronous consumers
-# (crontab -e, visudo, sops, kubectl edit) blocked until the buffer closes.
+# Default editor (override if needed). Neovim runs in the terminal that asked
+# for it, so it works the same locally, in tmux and over SSH, which an editor
+# that opens a window cannot.
 # Git resolves its editor via core.editor in gitconfig; no GIT_EDITOR here.
-export EDITOR="zed --wait"
-export VISUAL="zed --wait"
+export EDITOR="nvim"
+export VISUAL="nvim"
 
 # Workspace + projects root used by `c` / completion (override in .localrc)
 export WORKSPACE="${WORKSPACE:-$HOME/Workspace}"

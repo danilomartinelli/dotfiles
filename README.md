@@ -696,6 +696,7 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 | Private SSH hosts      | `~/.ssh/config_local`          | Preserved by the tracked SSH config                                        |
 | SOPS age identities    | `~/.config/sops/age/`          | Machine-private, mode `600`                                                |
 | Zed settings           | `~/.config/zed/settings.json`  | Tracked JSONC-compatible config, no plaintext credentials                  |
+| Neovim configuration   | `~/.config/nvim`               | `init.lua` and the plugin lock linked; Neovim's own writes land as a diff  |
 | OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
 | Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
 | Herdr settings         | `~/.config/herdr-app`          | Settings, programs and two themes linked; the rest is Herdr's own          |
@@ -709,6 +710,20 @@ JSON and JSONC on save with its managed Prettier; `.prettierrc.json` applies
 Zed's [documented JSONC parser workaround](https://zed.dev/docs/languages/json#jsonc-prettier-formatting)
 to prevent trailing commas. Keep keys, kubeconfigs, auth receipts, and
 account-specific state outside this repository.
+
+### Editors
+
+Neovim is the editor every shell opens: `EDITOR`, `VISUAL` and Git's
+`core.editor` all name `nvim`, so a commit message, `sops edit` or
+`kubectl edit` opens in the terminal that asked for it, locally, inside tmux
+and over SSH. `neovim/init.lua` configures it for that job and nothing more. It
+holds one plugin, the Catppuccin colorscheme, installed by Neovim's built-in
+`vim.pack` at the revision `neovim/nvim-pack-lock.json` records; when the
+plugin cannot be fetched Neovim still starts, on a bundled colorscheme. Update
+the plugin with `:lua vim.pack.update()` and keep the lock's diff.
+
+Zed is the project editor, opened on purpose with `zed <path>`. Override
+`EDITOR` in `~/.localrc` to change the default.
 
 ### Coding agents
 

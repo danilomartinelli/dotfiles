@@ -7,7 +7,7 @@
 [core]
         excludesfile = ~/.gitignore
         attributesfile = ~/.gitattributes
-        editor = zed --wait
+        editor = nvim
         fsmonitor = true
         untrackedCache = true
         pager = delta

@@ -12,7 +12,7 @@
 #   3. Sets proper permissions (600)
 #
 # Manual editing after bootstrap:
-#   zed "$DOTFILES_ROOT/.localrc"  # or zed ~/.localrc (both work with symlink)
+#   nvim "$DOTFILES_ROOT/.localrc"  # or nvim ~/.localrc (both work with symlink)
 #
 # After editing, reload your shell:
 #   source ~/.zshrc

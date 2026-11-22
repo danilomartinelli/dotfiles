@@ -38,7 +38,7 @@ done
 DOTFILES_ROOT=$(CDPATH='' cd -P -- "$(dirname -- "$0")/.." && pwd)
 
 if [ "$operation" = edit ]; then
-  # $EDITOR may carry flags (e.g. "zed --wait"); word-splitting is deliberate.
+  # $EDITOR may carry flags (e.g. "code --wait"); word-splitting is deliberate.
   # shellcheck disable=SC2086
   exec ${EDITOR:-vi} "$DOTFILES_ROOT"
 fi

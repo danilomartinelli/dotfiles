@@ -199,10 +199,7 @@
     "tree_view": true
   },
   "terminal": {
-    "font_family": "JetBrainsMono Nerd Font",
-    "env": {
-      "EDITOR": "zed --wait"
-    }
+    "font_family": "JetBrainsMono Nerd Font"
   },
   "telemetry": {
     "diagnostics": false,

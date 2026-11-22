@@ -60,7 +60,7 @@ bindkey '^[[5C' end-of-line
 bindkey '^[[3~' delete-char
 bindkey '^?' backward-delete-char
 
-# Edit the current command line in $EDITOR (requires a --wait editor).
+# Edit the current command line in $EDITOR.
 autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey '^X^E' edit-command-line

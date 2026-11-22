@@ -18,6 +18,6 @@ if [ -z "${EDITOR:-}" ]; then
   exit 1
 fi
 
-# $EDITOR may carry flags (e.g. "zed --wait"); word-splitting is deliberate.
+# $EDITOR may carry flags (e.g. "code --wait"); word-splitting is deliberate.
 # shellcheck disable=SC2086
 exec $EDITOR "${1:-.}"

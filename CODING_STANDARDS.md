@@ -522,6 +522,7 @@ it reads it from there rather than restating it.
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
 | Coding-agent instructions and settings links                    | `tests/agents_install_test.sh`                                                                                            |
+| Neovim configuration and the default editor                     | `tests/neovim_test.sh`                                                                                                    |
 | Mise runtimes and lock                                          | `tests/mise_install_test.sh`                                                                                              |
 | Mise post-install reconciliation                                | `tests/mise_post_install_test.sh`, `tests/mise_install_test.sh`, `tests/mise_extras_test.sh`                              |
 | Mise invocation policy, shell integration, and CI environment   | `tests/mise_policy_test.sh`, `tests/mise_install_test.sh`, `tests/software_upgrades_test.sh`, `tests/zsh_startup_test.sh` |
