@@ -7,6 +7,9 @@
 
 [tools]
 "aqua:koalaman/shellcheck" = "latest"                           # Shell linting
+# The yarn shorthand resolves to a vfox plugin, which locks no URL and so
+# cannot be installed in locked mode.
+"aqua:yarnpkg/berry" = "4.19.0"                                 # Yarn JavaScript package manager
 bun = "1.4.3"                                                   # JavaScript runtime and toolkit
 elixir = "1.20"                                                 # Elixir runtime
 erlang = "29"                                                   # BEAM runtime
@@ -33,7 +36,6 @@ ruby = "4.0"                                                    # Ruby runtime
 rust = "1.99.1"                                                 # Rust toolchain
 terraform = "1.17.0"                                            # Infrastructure as code CLI
 uv = "latest"                                                   # Python package and environment manager
-yarn = "4.18.1"                                                 # JavaScript package manager
 
 [settings]
 idiomatic_version_file_enable_tools = ["node", "bun"]

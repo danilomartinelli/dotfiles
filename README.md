@@ -391,6 +391,7 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 | Tool                                        | Declared version | Role                                            |
 | ------------------------------------------- | ---------------- | ----------------------------------------------- |
 | `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
+| `aqua:yarnpkg/berry`                        | `4.19.0`         | Yarn JavaScript package manager                 |
 | `bun`                                       | `1.4.3`          | JavaScript runtime and toolkit                  |
 | `elixir`                                    | `1.20`           | Elixir runtime                                  |
 | `erlang`                                    | `29`             | BEAM runtime                                    |
@@ -416,7 +417,6 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 | `rust`                                      | `1.99.1`         | Rust toolchain                                  |
 | `terraform`                                 | `1.17.0`         | Infrastructure as code CLI                      |
 | `uv`                                        | `latest`         | Python package and environment manager          |
-| `yarn`                                      | `4.18.1`         | JavaScript package manager                      |
 
 <!-- generated-end -->
 

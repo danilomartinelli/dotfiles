@@ -59,6 +59,43 @@ checksum = "sha256:8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e7
 url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip"
 url_api = "https://api.github.com/repos/koalaman/shellcheck/releases/assets/279056944"
 
+[[tools."aqua:yarnpkg/berry"]]
+version = "4.19.0"
+backend = "aqua:yarnpkg/berry"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-arm64"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-arm64-musl"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-x64"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-x64-baseline"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-x64-musl"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.linux-x64-musl-baseline"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.macos-arm64"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.macos-x64"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.macos-x64-baseline"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.windows-x64"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
+[tools."aqua:yarnpkg/berry"."platforms.windows-x64-baseline"]
+url = "https://repo.yarnpkg.com/4.19.0/packages/yarnpkg-cli/bin/yarn.js"
+
 [[tools.bun]]
 version = "1.4.3"
 backend = "core:bun"
