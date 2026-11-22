@@ -37,6 +37,7 @@ catalogs, validation lists, or subsystem runbooks between files.
 | Homebrew software and its catalog descriptions | `Brewfile`                        |
 | Runtime and language-package tools             | `mise/config.toml`                |
 | README software catalog tables                 | rendered from the two files above |
+| Public page runners in `_site/index.html`      | rendered from the two files above |
 | Resolved Mise versions and checksums           | `mise/mise.lock`                  |
 | macOS preferences                              | `_macos/defaults.tsv`             |
 | Dock layout                                    | `dock/_layout.tsv`                |
@@ -275,7 +276,8 @@ not. A composed name that silently resolves to nothing is worse than the
 enumeration it replaced, because a half-added row then does nothing at all
 instead of failing.
 
-A generated region inside a hand-authored Markdown file is read through
+A generated region inside a hand-authored file, whether a README table or a
+runner on the public page, is read through
 `_scripts/generated-region.sh`, which `_scripts/render-software-catalog`
 sources directly. Call `generated_regions_render <source-file> <handler>` and
 write a handler that prints one region's body for a name, or returns non-zero
@@ -410,7 +412,9 @@ classifier lists every installer and decides none of this order.
   cells from named fields, with one description rule for all declarations;
   shell consumers never address declaration columns by position. Casks also
   require a group. `_scripts/render-software-catalog` formats those cells into
-  `README.md` tables.
+  `README.md` tables. With `--page` it renders the public page's runners
+  instead, through `_scripts/site_parts.py`, which imports the same reader and
+  adds the line each declaration is written on.
 - Put runtimes and language-package CLIs in Mise; put system binaries,
   applications, fonts, MAS apps, and taps in Homebrew.
 - A third-party Homebrew formula requires both its tap declaration and a narrow
@@ -429,6 +433,23 @@ classifier lists every installer and decides none of this order.
   or `mise upgrade` in the maintenance flow.
 - Keep other comments limited to ownership, compatibility, or non-obvious safety
   rationale, on their own line so they are not read as a catalog description.
+
+## Public page
+
+- `_site/` is served as tracked. Keep it static HTML and CSS with no build
+  step, no script, and no resource from another origin; fonts are self-hosted
+  with their license files beside them.
+- `.github/workflows/pages.yml` deploys it only after CI has passed for a push
+  to `main`, from the commit CI checked. Its actions use full commit SHAs like
+  those in `ci.yml`.
+- Hand-author everything outside the generated regions. A region marker is a
+  whole unindented line, in HTML as in Markdown.
+- A part shows a declaration's name, description and line. It never shows a
+  version, so a controlled upgrade leaves the page current.
+- Meet WCAG 2.2 AA: text contrast, a visible focus state on every link and
+  control, and `prefers-reduced-motion` respected.
+- Take colors, type and component rules from `DESIGN.md` rather than adding
+  new ones beside it.
 
 ## Markdown and documentation
 
@@ -511,6 +532,7 @@ it reads it from there rather than restating it.
 | Generated Markdown tables                                       | `tests/markdown_table_test.sh`                                                                                            |
 | Generated regions in hand-authored files                        | `tests/generated_region_test.sh`, `tests/generated_renderer_test.sh`                                                      |
 | Software catalog rendering and staleness                        | `tests/generated_renderer_test.sh`                                                                                        |
+| Public page files, runners and decision-record links            | `tests/site_test.sh`, `tests/generated_renderer_test.sh`, `tests/documentation_test.sh`                                   |
 | Catalog reading and checking                                    | `tests/catalog_test.sh`                                                                                                   |
 | Tracked catalog content and rules                               | `tests/catalog_rules_test.sh`                                                                                             |
 | Declared software reading and catalog rows                      | `tests/declared_software_test.sh`                                                                                         |

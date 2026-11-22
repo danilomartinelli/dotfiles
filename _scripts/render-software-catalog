@@ -10,6 +10,12 @@
 # descriptions now come from Brewfile and mise/config.toml, where a trailing
 # comment is the entry's catalog description. Prose outside the generated
 # regions is never touched.
+#
+# The public page shows the same declarations as numbered parts on its
+# runners. --page renders those regions of _site/index.html instead, through
+# the same staging and the same staleness check. The two targets stay separate
+# runs because an upgrade stages and publishes the README alone: the page holds
+# no version, so an upgrade cannot make it stale.
 
 set -euo pipefail
 
@@ -17,21 +23,26 @@ SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
   cat >&2 <<'EOF'
-Usage: render-software-catalog [--check] [repository-root]
+Usage: render-software-catalog [--check] [--page] [repository-root]
 
   --check  Report a stale catalog and exit 1 instead of rewriting it
+  --page   Render the runners of _site/index.html instead of the README tables
 
 The repository root defaults to the checkout holding this script.
 EOF
 }
 
 check_only=false
+render_page=false
 repository_root=$SCRIPT_DIR/..
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --check)
       check_only=true
+      ;;
+    --page)
+      render_page=true
       ;;
     -h | --help)
       usage
@@ -67,9 +78,21 @@ repository_root=$(CDPATH='' cd -P -- "$repository_root" 2>/dev/null && pwd) \
 
 brewfile=$repository_root/Brewfile
 mise_config=$repository_root/mise/config.toml
-readme=$repository_root/README.md
 
-for required in "$brewfile" "$mise_config" "$readme"; do
+if [ "$render_page" = true ]; then
+  target_name=_site/index.html
+  catalog_name='page software catalog'
+  render_command='_scripts/render-software-catalog --page'
+  region_handler=render_page_region
+else
+  target_name=README.md
+  catalog_name='README software catalog'
+  render_command=_scripts/render-software-catalog
+  region_handler=render_region
+fi
+target=$repository_root/$target_name
+
+for required in "$brewfile" "$mise_config" "$target"; do
   [ -r "$required" ] || fail "required source not readable: $required"
 done
 
@@ -100,26 +123,32 @@ render_region() {
     | markdown_table "$header"
 }
 
+# The content handler for the page's generated regions. The page generator
+# owns which runners exist and refuses a name it does not know.
+render_page_region() {
+  python3 "$SCRIPT_DIR/site_parts.py" "$1" "$repository_root"
+}
+
 work_dir=$(mktemp -d "${TMPDIR:-/tmp}/render-software-catalog.XXXXXX")
 trap 'rm -rf -- "$work_dir"' EXIT
 
-rendered=$work_dir/README.md
+rendered=$work_dir/rendered
 
-generated_regions_render "$readme" render_region >"$rendered" \
-  || fail "cannot render $readme"
+generated_regions_render "$target" "$region_handler" >"$rendered" \
+  || fail "cannot render $target"
 
-if cmp -s "$rendered" "$readme"; then
+if cmp -s "$rendered" "$target"; then
   if [ "$check_only" = true ]; then
-    printf 'README software catalog is up to date.\n'
+    printf '%s is up to date.\n' "$catalog_name"
   fi
   exit 0
 fi
 
 if [ "$check_only" = true ]; then
-  printf 'stale: README.md\n' >&2
-  diff -u "$readme" "$rendered" >&2 || true
-  fail 'README software catalog is out of date; run _scripts/render-software-catalog'
+  printf 'stale: %s\n' "$target_name" >&2
+  diff -u "$target" "$rendered" >&2 || true
+  fail "$catalog_name is out of date; run $render_command"
 fi
 
-cp -- "$rendered" "$readme"
-printf '  → rendered README.md\n'
+cp -- "$rendered" "$target"
+printf '  → rendered %s\n' "$target_name"

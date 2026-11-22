@@ -1,0 +1,447 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T22:16:17Z",
+  "title": "Design System: dotfiles",
+  "extensions": {
+    "colorMeta": {
+      "mat": {
+        "role": "primary",
+        "displayName": "Cutting Mat Green",
+        "canonical": "#1e6a4c",
+        "tonalRamp": [
+          "oklch(15% 0.040 163)",
+          "oklch(26% 0.054 163)",
+          "oklch(38% 0.068 163)",
+          "oklch(50% 0.082 163)",
+          "oklch(62% 0.080 163)",
+          "oklch(74% 0.066 163)",
+          "oklch(85% 0.052 163)",
+          "oklch(95% 0.040 163)"
+        ]
+      },
+      "mat-mark": {
+        "role": "primary",
+        "displayName": "Moulded Green",
+        "canonical": "#1c6548",
+        "tonalRamp": [
+          "oklch(15% 0.039 163)",
+          "oklch(26% 0.052 163)",
+          "oklch(38% 0.066 163)",
+          "oklch(50% 0.080 163)",
+          "oklch(62% 0.078 163)",
+          "oklch(74% 0.064 163)",
+          "oklch(85% 0.051 163)",
+          "oklch(95% 0.039 163)"
+        ]
+      },
+      "mat-shade": {
+        "role": "primary",
+        "displayName": "Mat Shade",
+        "canonical": "#0c3524",
+        "tonalRamp": [
+          "oklch(15% 0.025 162)",
+          "oklch(26% 0.033 162)",
+          "oklch(38% 0.042 162)",
+          "oklch(50% 0.051 162)",
+          "oklch(62% 0.050 162)",
+          "oklch(74% 0.041 162)",
+          "oklch(85% 0.033 162)",
+          "oklch(95% 0.025 162)"
+        ]
+      },
+      "plastic": {
+        "role": "secondary",
+        "displayName": "Unpainted Plastic",
+        "canonical": "#cdd5d8",
+        "tonalRamp": [
+          "oklch(15% 0.004 222)",
+          "oklch(26% 0.006 222)",
+          "oklch(38% 0.007 222)",
+          "oklch(50% 0.009 222)",
+          "oklch(62% 0.009 222)",
+          "oklch(74% 0.007 222)",
+          "oklch(85% 0.006 222)",
+          "oklch(95% 0.004 222)"
+        ]
+      },
+      "plastic-shade": {
+        "role": "secondary",
+        "displayName": "Plastic Shade",
+        "canonical": "#a4afb4",
+        "tonalRamp": [
+          "oklch(15% 0.007 227)",
+          "oklch(26% 0.009 227)",
+          "oklch(38% 0.011 227)",
+          "oklch(50% 0.013 227)",
+          "oklch(62% 0.013 227)",
+          "oklch(74% 0.011 227)",
+          "oklch(85% 0.008 227)",
+          "oklch(95% 0.007 227)"
+        ]
+      },
+      "caution": {
+        "role": "tertiary",
+        "displayName": "Caution Red",
+        "canonical": "#e0483a",
+        "tonalRamp": [
+          "oklch(15% 0.087 29)",
+          "oklch(26% 0.115 29)",
+          "oklch(38% 0.147 29)",
+          "oklch(50% 0.178 29)",
+          "oklch(62% 0.173 29)",
+          "oklch(74% 0.141 29)",
+          "oklch(85% 0.113 29)",
+          "oklch(95% 0.087 29)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Sheet Paper",
+        "canonical": "#f7f8f5",
+        "tonalRamp": [
+          "oklch(15% 0.002 122)",
+          "oklch(26% 0.002 122)",
+          "oklch(38% 0.003 122)",
+          "oklch(50% 0.004 122)",
+          "oklch(62% 0.004 122)",
+          "oklch(74% 0.003 122)",
+          "oklch(85% 0.002 122)",
+          "oklch(95% 0.002 122)"
+        ]
+      },
+      "on-mat": {
+        "role": "neutral",
+        "displayName": "On Mat",
+        "canonical": "#f7f8f5",
+        "tonalRamp": [
+          "oklch(15% 0.002 122)",
+          "oklch(26% 0.002 122)",
+          "oklch(38% 0.003 122)",
+          "oklch(50% 0.004 122)",
+          "oklch(62% 0.004 122)",
+          "oklch(74% 0.003 122)",
+          "oklch(85% 0.002 122)",
+          "oklch(95% 0.002 122)"
+        ]
+      },
+      "on-mat-soft": {
+        "role": "neutral",
+        "displayName": "On Mat Soft",
+        "canonical": "#d3e8dd",
+        "tonalRamp": [
+          "oklch(15% 0.012 163)",
+          "oklch(26% 0.016 163)",
+          "oklch(38% 0.021 163)",
+          "oklch(50% 0.025 163)",
+          "oklch(62% 0.024 163)",
+          "oklch(74% 0.020 163)",
+          "oklch(85% 0.016 163)",
+          "oklch(95% 0.012 163)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Kit Ink",
+        "canonical": "#14201b",
+        "tonalRamp": [
+          "oklch(15% 0.009 167)",
+          "oklch(26% 0.012 167)",
+          "oklch(38% 0.015 167)",
+          "oklch(50% 0.018 167)",
+          "oklch(62% 0.018 167)",
+          "oklch(74% 0.014 167)",
+          "oklch(85% 0.012 167)",
+          "oklch(95% 0.009 167)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#3c4a45",
+        "tonalRamp": [
+          "oklch(15% 0.009 172)",
+          "oklch(26% 0.012 172)",
+          "oklch(38% 0.015 172)",
+          "oklch(50% 0.018 172)",
+          "oklch(62% 0.018 172)",
+          "oklch(74% 0.015 172)",
+          "oklch(85% 0.012 172)",
+          "oklch(95% 0.009 172)"
+        ]
+      },
+      "on-ink-soft": {
+        "role": "neutral",
+        "displayName": "On Ink Soft",
+        "canonical": "#c5d1cb",
+        "tonalRamp": [
+          "oklch(15% 0.007 165)",
+          "oklch(26% 0.009 165)",
+          "oklch(38% 0.012 165)",
+          "oklch(50% 0.014 165)",
+          "oklch(62% 0.014 165)",
+          "oklch(74% 0.011 165)",
+          "oklch(85% 0.009 165)",
+          "oklch(95% 0.007 165)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "moulded-letter": {
+        "displayName": "Moulded Letter",
+        "purpose": "The runner's letter on its name tab, in Moulded Green."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "The page headline on the lead name tab, sized against the tab's own width."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings on the instruction sheet and on the mat."
+      },
+      "headline-tab": {
+        "displayName": "Tab Headline",
+        "purpose": "The headline on a name tab that heads a later runner."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Step headings and the records slip heading; box-side headings use 1.5rem."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "The action label."
+      },
+      "part-name": {
+        "displayName": "Part Name",
+        "purpose": "A part's name; 1rem at 78% width below 40rem."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading text, capped at 36ch, 46ch, 62ch or 70ch by context."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Engraved text: part numbers, counts, group labels, marks, slip heading and footer. Uppercase, 0.8125rem to 1rem."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Step numbers, balloon letters and the count figure."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "File names under a figure; inline code uses the same stack at 0.9em."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 0.125rem 0.25rem rgb(6 30 21 / 0.45)",
+        "purpose": "A part or a name tab at rest."
+      },
+      {
+        "name": "frame",
+        "value": "0 0.1875rem 0.375rem rgb(6 30 21 / 0.45), inset 0 0.1875rem 0.375rem rgb(6 30 21 / 0.45)",
+        "purpose": "The runner frame, cast outward and inward onto the mat."
+      },
+      {
+        "name": "bar-cast",
+        "value": "linear-gradient(rgb(6 30 21 / 0.4), transparent) 0 100% / 100% 0.25rem no-repeat",
+        "purpose": "The shadow under each horizontal runner bar (a background layer, not a box-shadow)."
+      },
+      {
+        "name": "paper",
+        "value": "0 0.25rem 0.75rem rgb(6 30 21 / 0.45)",
+        "purpose": "The instruction sheet and the slips."
+      },
+      {
+        "name": "callout",
+        "value": "0 0.375rem 0.75rem rgb(6 30 21 / 0.5)",
+        "purpose": "The paper callout under a snapped part."
+      },
+      {
+        "name": "snapped",
+        "value": "0 0.875rem 1.125rem -0.25rem rgb(6 30 21 / 0.6)",
+        "purpose": "A part lifted off its gates."
+      }
+    ],
+    "motion": [
+      {
+        "name": "snap",
+        "value": "140ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The only timing: the snap, the gates, the switch, the callout's opacity, hover color changes."
+      },
+      {
+        "name": "snap-transform",
+        "value": "translate(-0.1875rem, -0.625rem) rotate(-4deg)",
+        "purpose": "A snapped part; even-numbered parts mirror it. Removed under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow-phone",
+        "value": "22.5rem"
+      },
+      {
+        "name": "phone",
+        "value": "40rem"
+      },
+      {
+        "name": "wide",
+        "value": "60rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Action",
+      "kind": "button",
+      "refersTo": "action",
+      "description": "The one moulded button, dark on plastic. Used for the primary action on a name tab.",
+      "html": "<div class=\"ds-action-ground\"><a class=\"ds-action\" href=\"#\">Read the source</a></div>",
+      "css": ".ds-action-ground { padding: 1.5rem; border-radius: 0.625rem; background: var(--plastic, #cdd5d8); } .ds-action { display: inline-block; padding: 1rem 1.625rem; border: 1px solid transparent; border-radius: 0.5rem; background: var(--ink, #14201b); color: var(--paper, #f7f8f5); font: 700 1.25rem/1.2 var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); text-decoration: none; transition: background-color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)), translate var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-action:hover { background: var(--mat-mark, #1c6548); } .ds-action:active { translate: 0 0.0625rem; } .ds-action:focus-visible { outline: 0.1875rem solid var(--ink, #14201b); outline-offset: 0.1875rem; border-radius: 0.125rem; }"
+    },
+    {
+      "name": "Action on the box side",
+      "kind": "button",
+      "refersTo": "action-on-box",
+      "description": "The same button in its plastic form, used on the dark box-side panel.",
+      "html": "<div class=\"ds-action-box-ground\"><a class=\"ds-action-box\" href=\"#\">Read the source</a></div>",
+      "css": ".ds-action-box-ground { padding: 1.5rem; background: var(--ink, #14201b); } .ds-action-box { display: inline-block; padding: 1rem 1.625rem; border: 1px solid transparent; border-radius: 0.5rem; background: var(--plastic, #cdd5d8); color: var(--ink, #14201b); font: 700 1.25rem/1.2 var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); text-decoration: none; transition: background-color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)), translate var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-action-box:hover { background: var(--paper, #f7f8f5); } .ds-action-box:active { translate: 0 0.0625rem; } .ds-action-box:focus-visible { outline: 0.1875rem solid var(--on-mat, #f7f8f5); outline-offset: 0.1875rem; border-radius: 0.125rem; }"
+    },
+    {
+      "name": "Masthead navigation",
+      "kind": "nav",
+      "description": "The wordmark and section links, set directly on the mat.",
+      "html": "<header class=\"ds-masthead\"><a class=\"ds-wordmark\" href=\"#\">dotfiles</a><nav class=\"ds-nav\"><a href=\"#\">Parts</a><a href=\"#\">Assembly</a><a href=\"#\">Inspection</a></nav></header>",
+      "css": ".ds-masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 2.25rem; padding: 1.5rem; color: var(--on-mat, #f7f8f5); font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-wordmark { margin-right: auto; color: inherit; font-size: 1.125rem; font-weight: 800; text-decoration: none; } .ds-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 2.25rem; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0.02em; } .ds-nav a { padding-block: 0.25rem; color: inherit; text-decoration: none; } .ds-nav a:hover { text-decoration: underline; } .ds-masthead a:focus-visible { outline: 0.1875rem solid var(--on-mat, #f7f8f5); outline-offset: 0.1875rem; border-radius: 0.125rem; }"
+    },
+    {
+      "name": "Name tab",
+      "kind": "card",
+      "refersTo": "name-tab",
+      "description": "The plastic plate that names a runner: moulded letter, headline, a short paragraph.",
+      "html": "<div class=\"ds-tab-ground\"><div class=\"ds-tab\"><span class=\"ds-tab-letter\" aria-hidden=\"true\">B</span><h2>Name of the runner</h2><p>One or two sentences about what hangs from this runner.</p></div></div>",
+      "css": ".ds-tab-ground { padding: 1.5rem; background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-tab { container-type: inline-size; display: flex; flex-direction: column; align-items: flex-start; max-width: 26rem; padding: clamp(1.25rem, 4vw, 2.25rem); border-radius: 0.625rem; background: linear-gradient(var(--plastic, #cdd5d8) calc(100% - 0.375rem), var(--plastic-shade, #a4afb4) 0); box-shadow: var(--lift, 0 0.125rem 0.25rem rgb(6 30 21 / 0.45)); color: var(--ink, #14201b); font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); } .ds-tab-letter { color: var(--mat-mark, #1c6548); font-size: clamp(4.5rem, 30cqi, 9.5rem); font-weight: 800; line-height: 0.76; } .ds-tab h2 { margin: 1.75rem 0 0; font-size: clamp(1.875rem, 9.4cqi, 3rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.02; text-wrap: balance; } .ds-tab p { max-width: 36ch; margin: 1.25rem 0 0; font-size: clamp(1.0625rem, 4.3cqi, 1.3125rem); line-height: 1.4; }"
+    },
+    {
+      "name": "Part on the runner",
+      "kind": "custom",
+      "refersTo": "part",
+      "description": "A numbered part held to its runner bar by two gates. Hover or focus snaps it off and shows the paper callout.",
+      "html": "<ul class=\"ds-parts\"><li><a class=\"ds-part\" href=\"#\"><span class=\"ds-part-no\">A1</span><span class=\"ds-part-name\">part-name</span></a><span class=\"ds-part-use\">What the part is for</span></li><li><a class=\"ds-part\" href=\"#\"><span class=\"ds-part-no\">A2</span><span class=\"ds-part-name\">another</span></a><span class=\"ds-part-use\">What the part is for</span></li><li><a class=\"ds-part\" href=\"#\"><span class=\"ds-part-no\">A3</span><span class=\"ds-part-name\">third</span></a><span class=\"ds-part-use\">What the part is for</span></li></ul>",
+      "css": ".ds-parts { display: flex; flex-wrap: wrap; margin: 0; padding: 2.5rem 1.5rem 3rem; list-style: none; font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-parts li { position: relative; display: flex; flex: 1 1 auto; margin-bottom: -0.25rem; padding: 0 0.4375rem 1.375rem; background: linear-gradient(var(--plastic, #cdd5d8), var(--plastic, #cdd5d8)) 0 calc(100% - 0.25rem) / 100% 0.5rem no-repeat, linear-gradient(rgb(6 30 21 / 0.4), transparent) 0 100% / 100% 0.25rem no-repeat; } .ds-part { position: relative; display: flex; flex: 1 1 auto; flex-direction: column; justify-content: center; min-height: 4.125rem; padding: 0.5rem 0.9375rem 0.75rem; border: 1px solid transparent; border-radius: 0.375rem; background: linear-gradient(var(--plastic, #cdd5d8) calc(100% - 0.3125rem), var(--plastic-shade, #a4afb4) 0); box-shadow: var(--lift, 0 0.125rem 0.25rem rgb(6 30 21 / 0.45)); color: var(--ink, #14201b); text-decoration: none; transition: transform var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)), box-shadow var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-parts li:nth-child(3n + 1) .ds-part { border-radius: 0.375rem 0.375rem 0.375rem 1.125rem; } .ds-part::before, .ds-part::after { content: ''; position: absolute; top: 100%; width: 0.3125rem; height: 0.625rem; background: var(--plastic, #cdd5d8); transform-origin: top; transition: scale var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-part::before { left: 22%; } .ds-part::after { right: 22%; } .ds-part-no { color: var(--ink-soft, #3c4a45); font: 500 0.8125rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; } .ds-part-name { font-size: 1.0625rem; font-weight: 700; line-height: 1.25; } .ds-part:focus-visible { outline: 0.1875rem solid var(--on-mat, #f7f8f5); outline-offset: 0.1875rem; } .ds-parts li:is(:hover, :focus-within) .ds-part { z-index: 2; box-shadow: 0 0.875rem 1.125rem -0.25rem rgb(6 30 21 / 0.6); transform: translate(-0.1875rem, -0.625rem) rotate(-4deg); } .ds-parts li:nth-child(even):is(:hover, :focus-within) .ds-part { transform: translate(0.1875rem, -0.625rem) rotate(4deg); } .ds-parts li:is(:hover, :focus-within) .ds-part::before, .ds-parts li:is(:hover, :focus-within) .ds-part::after { scale: 1 0; } .ds-part-use { position: absolute; top: calc(100% - 1.25rem); left: 0.4375rem; z-index: 1; width: max-content; padding: 0.25rem 0.625rem; border: 0.09375rem solid var(--ink, #14201b); background: var(--paper, #f7f8f5); box-shadow: 0 0.375rem 0.75rem rgb(6 30 21 / 0.5); color: var(--ink, #14201b); font-size: 0.875rem; line-height: 1.35; opacity: 0; pointer-events: none; transition: opacity var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-parts li:is(:hover, :focus-within) .ds-part-use { opacity: 1; } @media (prefers-reduced-motion: reduce) { .ds-parts * { transition-duration: 0s !important; } .ds-parts li .ds-part { transform: none !important; } }"
+    },
+    {
+      "name": "Part in the list",
+      "kind": "custom",
+      "refersTo": "part-listed",
+      "description": "The same part with the Descriptions switch on: a plastic card on a vertical spine, description visible.",
+      "html": "<div class=\"ds-list-ground\"><ul class=\"ds-list\"><li><a class=\"ds-list-part\" href=\"#\"><span class=\"ds-list-no\">A1</span><span class=\"ds-list-name\">part-name</span></a><span class=\"ds-list-use\">What the part is for</span></li><li><a class=\"ds-list-part\" href=\"#\"><span class=\"ds-list-no\">A2</span><span class=\"ds-list-name\">another</span></a><span class=\"ds-list-use\">What the part is for</span></li></ul></div>",
+      "css": ".ds-list-ground { padding: 1.5rem; font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-list { max-width: 22rem; margin: 0; padding: 0 0 0 0.875rem; border-left: 0.5rem solid var(--plastic, #cdd5d8); list-style: none; } .ds-list li { position: relative; margin-bottom: 0.5rem; padding: 0.625rem 0.875rem 0.75rem; border-radius: 0.375rem; background: var(--plastic, #cdd5d8); box-shadow: var(--lift, 0 0.125rem 0.25rem rgb(6 30 21 / 0.45)); color: var(--ink, #14201b); } .ds-list li::before { content: ''; position: absolute; top: 1.0625rem; left: -0.875rem; width: 0.875rem; height: 0.3125rem; background: var(--plastic, #cdd5d8); } .ds-list-part { display: grid; grid-template-columns: 2.75rem 1fr; align-items: baseline; border: 1px solid transparent; color: inherit; text-decoration: none; } .ds-list-part:hover .ds-list-name { text-decoration: underline; } .ds-list-part:focus-visible { outline: 0.1875rem solid var(--ink, #14201b); outline-offset: 0.125rem; border-radius: 0.125rem; } .ds-list-no { color: var(--ink-soft, #3c4a45); font: 500 0.8125rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; } .ds-list-name { font-size: 1.0625rem; font-weight: 700; line-height: 1.25; } .ds-list-use { display: block; margin-left: 2.75rem; color: var(--ink-soft, #3c4a45); font-size: 0.9375rem; line-height: 1.35; }"
+    },
+    {
+      "name": "Descriptions switch",
+      "kind": "input",
+      "description": "The checkbox on each runner that lays its parts out as a list with descriptions.",
+      "html": "<div class=\"ds-switch-ground\"><label class=\"ds-switch\"><input type=\"checkbox\"> Descriptions</label></div>",
+      "css": ".ds-switch-ground { padding: 1.5rem; background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-switch { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--on-mat, #f7f8f5); font: 500 0.875rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; } .ds-switch input { position: relative; width: 2.5rem; height: 1.375rem; margin: 0; border: 0.09375rem solid var(--plastic, #cdd5d8); border-radius: 999px; background: rgb(12 53 36 / 0.7); appearance: none; cursor: pointer; transition: background-color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-switch input::before { content: ''; position: absolute; top: 0.125rem; left: 0.125rem; width: 0.9375rem; height: 0.9375rem; border-radius: 50%; background: var(--plastic, #cdd5d8); transition: translate var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)), background-color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-switch input:checked { background: var(--plastic, #cdd5d8); } .ds-switch input:checked::before { background: var(--mat-mark, #1c6548); translate: 1.125rem 0; } .ds-switch input:focus-visible { outline: 0.1875rem solid var(--on-mat, #f7f8f5); outline-offset: 0.1875rem; }"
+    },
+    {
+      "name": "Step frame",
+      "kind": "card",
+      "refersTo": "step-number",
+      "description": "One cell of the instruction sheet: ink step number, outline figure with mono caption, title, text, and a mark.",
+      "html": "<div class=\"ds-step\"><span class=\"ds-step-no\" aria-hidden=\"true\">1</span><div class=\"ds-figure\" aria-hidden=\"true\"><span class=\"ds-fig\"><svg viewBox=\"0 0 44 52\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 3h22l12 12v34H5z\"/><path d=\"M27 3v12h12\"/><path d=\"M12 25h20M12 32h20M12 39h12\"/></g></svg><span>source</span></span><svg class=\"ds-arrow\" viewBox=\"0 0 56 16\"><path d=\"M1 8h50M44 2l8 6-8 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><a class=\"ds-balloon\" href=\"#\">A</a></div><h3>Title of the step</h3><p>What the step does, in one or two sentences.</p><p class=\"ds-mark ds-mark-repeat\">Repeats</p></div>",
+      "css": ".ds-step { display: flex; flex-direction: column; align-items: flex-start; max-width: 22rem; padding: 1.5rem 1.25rem 1.375rem; border: 0.09375rem solid var(--ink, #14201b); background: var(--paper, #f7f8f5); color: var(--ink, #14201b); font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); } .ds-step-no { display: grid; place-items: center; width: 3rem; height: 3rem; margin: -1.5rem 0 1.25rem -1.25rem; background: var(--ink, #14201b); color: var(--paper, #f7f8f5); font: 500 1.75rem/1 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); } .ds-figure { display: flex; align-items: center; gap: 0.5rem; min-height: 4.75rem; margin-bottom: 1.125rem; } .ds-fig { display: grid; justify-items: center; gap: 0.3125rem; font: 0.75rem/1.2 var(--mono, ui-monospace, \"SF Mono\", Menlo, Consolas, monospace); text-align: center; } .ds-fig svg { width: 3.5rem; height: 3rem; } .ds-arrow { flex: none; width: 2.25rem; height: 1rem; } .ds-balloon { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border: 0.09375rem solid var(--ink, #14201b); border-radius: 50%; color: inherit; font: 500 1.375rem/1 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); text-decoration: none; transition: background-color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)), color var(--snap, 140ms cubic-bezier(0.16, 1, 0.3, 1)); } .ds-balloon:hover { background: var(--ink, #14201b); color: var(--paper, #f7f8f5); } .ds-balloon:focus-visible { outline: 0.1875rem solid var(--ink, #14201b); outline-offset: 0.1875rem; } .ds-step h3 { margin: 0; font-size: 1.375rem; font-weight: 700; line-height: 1.15; } .ds-step p { margin: 0.625rem 0 1.5rem; font-size: 1rem; line-height: 1.5; } .ds-step .ds-mark { margin: auto 0 0; padding: 0.25rem 0.75rem 0.1875rem; border: 0.09375rem solid var(--ink, #14201b); border-radius: 999px; font: 500 0.8125rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; } .ds-step .ds-mark-repeat { background: var(--ink, #14201b); color: var(--paper, #f7f8f5); }"
+    },
+    {
+      "name": "Checklist slip",
+      "kind": "card",
+      "refersTo": "slip",
+      "description": "A square paper slip on the mat: engraved heading and footer, numbered items, dashed rule.",
+      "html": "<div class=\"ds-slip-ground\"><div class=\"ds-slip\"><h3>Heading of the slip</h3><ol><li>First check</li><li>Second check</li><li>Third check</li></ol><p>Footer note</p></div></div>",
+      "css": ".ds-slip-ground { padding: 2rem; background-color: var(--mat, #1e6a4c); background-image: linear-gradient(to right, rgb(124 190 160 / 0.2) 1px, transparent 1px), linear-gradient(to bottom, rgb(124 190 160 / 0.2) 1px, transparent 1px); background-size: 1.5rem 1.5rem; } .ds-slip { max-width: 18rem; padding: 1.5rem 1.375rem 1rem; background: var(--paper, #f7f8f5); box-shadow: 0 0.25rem 0.75rem rgb(6 30 21 / 0.45); color: var(--ink, #14201b); font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); rotate: -1.5deg; } .ds-slip h3, .ds-slip p { margin: 0; font: 500 0.9375rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; } .ds-slip ol { margin: 1.125rem 0 1.25rem; padding: 0; list-style: none; counter-reset: ds-check; font-weight: 600; } .ds-slip li { display: flex; align-items: baseline; gap: 0.75rem; padding-block: 0.3125rem; counter-increment: ds-check; } .ds-slip li::before { content: counter(ds-check); flex: none; width: 1rem; color: var(--ink-soft, #3c4a45); font: 500 0.875rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); } .ds-slip p { padding-top: 0.875rem; border-top: 0.09375rem dashed var(--ink-soft, #3c4a45); color: var(--ink-soft, #3c4a45); }"
+    },
+    {
+      "name": "Box side",
+      "kind": "custom",
+      "refersTo": "box-side",
+      "description": "The dark panel that closes the page, with the only red on it: the caution mark.",
+      "html": "<div class=\"ds-box\"><svg class=\"ds-caution\" viewBox=\"0 0 48 44\" aria-hidden=\"true\"><path d=\"M24 4l20 36H4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3.5\" stroke-linejoin=\"round\"/><path d=\"M24 17v11\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3.5\" stroke-linecap=\"round\"/><circle cx=\"24\" cy=\"33.5\" r=\"2.25\" fill=\"currentColor\"/></svg><h2>Heading on the box</h2><p>Body text on the box side, with <a href=\"#\">a link</a>.</p><p class=\"ds-box-spec\"><span>Spec one</span> <span>Spec two</span></p></div>",
+      "css": ".ds-box { padding: 2.5rem 2rem; background: var(--ink, #14201b); color: var(--paper, #f7f8f5); font-family: var(--sans, \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); } .ds-caution { display: block; width: 3rem; height: 2.75rem; margin-bottom: 1.25rem; color: var(--caution, #e0483a); } .ds-box h2 { margin: 0; font-size: 1.5rem; font-weight: 700; line-height: 1.15; } .ds-box p { max-width: 46ch; margin: 0.75rem 0 0; color: var(--on-ink-soft, #c5d1cb); font-size: 1.0625rem; line-height: 1.55; } .ds-box a { color: var(--paper, #f7f8f5); text-decoration-thickness: 0.09em; text-underline-offset: 0.2em; } .ds-box a:hover { text-decoration-thickness: 0.16em; } .ds-box a:focus-visible { outline: 0.1875rem solid var(--on-mat, #f7f8f5); outline-offset: 0.1875rem; border-radius: 0.125rem; } .ds-box .ds-box-spec { display: flex; flex-wrap: wrap; gap: 0.5rem 2.5rem; max-width: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgb(247 248 245 / 0.25); color: var(--paper, #f7f8f5); font: 500 1rem/1.2 var(--engraved, \"M PLUS Rounded 1c\", \"Archivo\", \"Helvetica Neue\", Arial, sans-serif); letter-spacing: 0.06em; text-transform: uppercase; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Unbuilt Kit",
+    "overview": "The public page is an unbuilt model kit laid out on a cutting mat. Every declared tool is a numbered part still attached to its runner, the bootstrap is the instruction sheet, and the page closes on the dark side of the box. The system is physical and literal: a thing on the page is the mat, a piece of plastic, or a piece of paper, and it is drawn the way that material behaves.\n\nDensity is high and even. Parts are small tiles packed into justified rows, the instruction sheet is a ruled grid of step frames, and prose is short and kept to narrow measures. Nothing is ornamental: the grid on the mat, the gates under a part, and the shaded lower edge of the plastic are the decoration, and each one is also structure.\n\nThe page is static HTML and CSS with self-hosted fonts. Motion is one short snap, and it is removed under reduced motion.",
+    "keyCharacteristics": [
+      "Three materials carry everything: a green gridded mat, one unpainted grey plastic, and white paper in black line. Dark ink is the fourth surface, used for the box side alone.",
+      "One typeface family for reading (Archivo) and one rounded single-stroke face for everything engraved or stamped (M PLUS Rounded 1c).",
+      "Depth is cast shadow on the mat in a single dark green tint, plus a shaded lower edge that gives plastic its thickness.",
+      "Plastic is rounded, paper is square.",
+      "Red appears once, on the caution mark.",
+      "The signature interaction is the snap: a part lets go of its gates, lifts, and turns slightly over its shadow."
+    ],
+    "rules": [
+      {
+        "name": "The Three Materials Rule",
+        "body": "Every surface is the mat, the plastic, or the paper. A new element is assigned to one of them and takes that material's color, corner, and shadow; it does not get a color of its own.",
+        "section": "colors"
+      },
+      {
+        "name": "The Caution-Only Red Rule",
+        "body": "Red belongs to the caution mark alone. It is not a link color, an error color, or an accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Soft Pair Rule",
+        "body": "Each ground has exactly one quieter text color: `on-mat-soft` on the mat, `ink-soft` on plastic and paper, `on-ink-soft` on ink. Secondary text uses the pair for its ground and never opacity.",
+        "section": "colors"
+      },
+      {
+        "name": "The Engraved Rule",
+        "body": "Anything stamped into the kit is M PLUS Rounded 1c at weight 500, uppercase, letterspaced 0.06em. Anything read as prose or as a name is Archivo.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Light Weight Rule",
+        "body": "Archivo runs from 400 for reading to 800 for headlines; names, titles, and actions are 700. Nothing is set lighter than 400.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tab-Relative Rule",
+        "body": "Type on a name tab is sized in container units of the tab, so the headline keeps its proportion to the plastic it is moulded into at every width.",
+        "section": "typography"
+      },
+      {
+        "name": "The Cast Shadow Rule",
+        "body": "A shadow means an object is lying on the mat. It is always the dark green tint, always falls straight down, and grows only when the object is lifted.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Thickness Rule",
+        "body": "Plastic gets its depth from a hard band of Plastic Shade along its lower edge. The band has no blur.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do assign every new element to the mat, the plastic, or the paper, and give it that material's color, corner, and shadow.",
+      "Do set stamped text (numbers, counts, labels) in M PLUS Rounded 1c 500, uppercase, 0.06em, and everything read as prose or a name in Archivo.",
+      "Do tint every shadow rgb(6 30 21) and let it fall straight down.",
+      "Do give plastic its thickness with a hard Plastic Shade band on the lower edge (0.3125rem on a part, 0.375rem on a name tab).",
+      "Do keep paper square and ruled in 0.09375rem ink, and draw figures in outline on a 1.75 stroke.",
+      "Do pair each ground with its own soft text color: `on-mat-soft`, `ink-soft`, `on-ink-soft`.",
+      "Do switch the focus ring to Kit Ink on plastic and paper and keep it On Mat on the mat.",
+      "Do use the single 140ms snap for every state change, and keep every description reachable without motion and without hover.",
+      "Do keep the part lists generated; style the part, never retype it."
+    ],
+    "donts": [
+      "Don't use Caution Red anywhere but the caution mark.",
+      "Don't add a bounce, an overshoot, or a second timing to the snap.",
+      "Don't round the corners of paper, or square the corners of plastic.",
+      "Don't use a neutral black or grey shadow; shadows are the dark green tint.",
+      "Don't introduce a color that is not one of the three materials or the ink.",
+      "Don't set a headline in the engraved face or a part number in Archivo.",
+      "Don't load a font, script, or image from another origin; the two typefaces are self-hosted."
+    ]
+  }
+}

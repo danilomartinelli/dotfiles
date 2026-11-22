@@ -2,7 +2,8 @@
 #
 # The software catalog renderer at its own seam: what it publishes when
 # README.md's generated regions render, and what it leaves alone when they do
-# not.
+# not. The public page's runners render through the same command with --page,
+# so the same seam is held for _site/index.html.
 #
 # The region reader streams into the command's staging file, so a failure can
 # arrive after an earlier region has already been written there. These cases
@@ -31,6 +32,16 @@ renderer_fixture() {
   mkdir -p "$fixture/mise"
   cp "$REPOSITORY_ROOT/Brewfile" "$REPOSITORY_ROOT/README.md" "$fixture/"
   cp "$REPOSITORY_ROOT/mise/config.toml" "$fixture/mise/"
+  printf '%s\n' "$fixture"
+}
+
+# The same tree with a copy of the public page beside the declarations.
+page_fixture() {
+  local fixture
+  fixture=$(renderer_fixture "$1")
+
+  mkdir -p "$fixture/_site"
+  cp "$REPOSITORY_ROOT/_site/index.html" "$fixture/_site/"
   printf '%s\n' "$fixture"
 }
 
@@ -256,6 +267,122 @@ test_a_stale_region_is_reported_by_check_and_restored_by_a_write() {
   assert_equal '' "$(cat "$fixture/clean/stderr.log")" 'clean check stderr'
 }
 
+# A page runner states, per part, what the declaration says and where it is
+# written. Whatever a description holds arrives as text, never as markup, and a
+# Mise version stays off the page so an upgrade cannot make it stale.
+test_page_runners_carry_each_declaration_and_its_line() {
+  local fixture page
+  fixture=$(page_fixture runners)
+  page=$fixture/_site/index.html
+
+  printf '%s\n' \
+    "brew 'git'                 # Version control" \
+    "brew 'vendor/tap/tool'     # Reads <stdin> & \`tool --json\`" \
+    '' \
+    '# Editors' \
+    "cask 'zed'                 # Code editor" \
+    '' \
+    "mas 'Xcode', id: 497799835 # Apple IDE" >"$fixture/Brewfile"
+  printf '%s\n' \
+    '[tools]' \
+    '"npm:@scope/cli" = "1.2.3" # Scoped CLI' >"$fixture/mise/config.toml"
+  printf '%s\n' \
+    '<!-- generated: command-line-tools -->' '<!-- generated-end -->' \
+    '<!-- generated: applications-and-fonts -->' '<!-- generated-end -->' \
+    '<!-- generated: runtimes-and-clis -->' '<!-- generated-end -->' >"$page"
+  cp "$fixture/README.md" "$fixture/readme-before"
+
+  run_renderer "$fixture/result" "$fixture" --page
+
+  assert_equal 0 "$RENDER_STATUS" 'renderer status'
+  assert_contains "$fixture/result/stdout.log" 'rendered _site/index.html'
+  assert_count "$page" '<p class="runner-count"><b>2</b> parts</p>' 2
+  assert_contains "$page" \
+    'blob/main/Brewfile#L2"><span class="part-no">A2</span> <span class="part-name">vendor/<wbr>tap/<wbr>tool</span>'
+  assert_contains "$page" 'Reads &lt;stdin&gt; &amp; <code>tool --json</code>'
+  assert_contains "$page" '<h3 class="part-group">Editors</h3>'
+  assert_contains "$page" '<h3 class="part-group">Mac App Store</h3>'
+  assert_contains "$page" \
+    'blob/main/Brewfile#L7"><span class="part-no">B2</span> <span class="part-name">Xcode</span>'
+  assert_contains "$page" \
+    'blob/main/mise/config.toml#L2"><span class="part-no">C1</span> <span class="part-name">npm:<wbr>@scope/<wbr>cli</span>'
+  assert_not_contains "$page" '1.2.3'
+  cmp -s "$fixture/readme-before" "$fixture/README.md" \
+    || scenario_fail 'a page render rewrote README.md'
+}
+
+# The page generator refuses what it cannot state truthfully, after an earlier
+# runner has already been written to the staging file.
+test_a_page_generation_failure_leaves_the_page_intact() {
+  local fixture page
+  fixture=$(page_fixture page-generation)
+  page=$fixture/_site/index.html
+
+  printf '%s\n' \
+    '<!-- generated: runtimes-and-clis -->' '<li>stale</li>' \
+    '<!-- generated-end -->' \
+    '<!-- generated: retired-runner -->' '<!-- generated-end -->' >"$page"
+  cp "$page" "$fixture/before"
+
+  run_renderer "$fixture/unknown-name" "$fixture" --page
+
+  assert_left_intact "$fixture/unknown-name" "$page" "$fixture/before"
+  assert_contains "$fixture/unknown-name/stderr.log" 'retired-runner'
+
+  printf '%s\n' \
+    '<!-- generated: runtimes-and-clis -->' '<li>stale</li>' \
+    '<!-- generated-end -->' \
+    '<!-- generated: command-line-tools -->' '<!-- generated-end -->' >"$page"
+  cp "$page" "$fixture/before"
+  printf '%s\n' "brew 'half-quoted'  # Runs \`half" >>"$fixture/Brewfile"
+
+  run_renderer "$fixture/backtick" "$fixture" --page
+
+  assert_left_intact "$fixture/backtick" "$page" "$fixture/before"
+  assert_contains "$fixture/backtick/stderr.log" \
+    'half-quoted has an unclosed backtick in its description'
+}
+
+# The repository's own page is current, so the same round trip holds for it,
+# and a README render does not reach the page.
+test_a_stale_page_is_reported_by_check_and_restored_by_a_write() {
+  local fixture page tracked
+  fixture=$(page_fixture stale-page)
+  page=$fixture/_site/index.html
+  tracked=$REPOSITORY_ROOT/_site/index.html
+
+  make_first_region_stale "$page"
+  cp "$page" "$fixture/before"
+  ! cmp -s "$tracked" "$page" \
+    || scenario_fail 'the fixture runner did not go stale'
+
+  run_renderer "$fixture/readme" "$fixture"
+  assert_equal 0 "$RENDER_STATUS" 'README render status'
+  cmp -s "$fixture/before" "$page" \
+    || scenario_fail 'a README render rewrote the page'
+
+  run_renderer "$fixture/check" "$fixture" --check --page
+  assert_equal 1 "$RENDER_STATUS" 'check status for a stale runner'
+  assert_contains "$fixture/check/stderr.log" 'stale: _site/index.html'
+  assert_contains "$fixture/check/stderr.log" '-| stale |'
+  assert_contains "$fixture/check/stderr.log" \
+    'page software catalog is out of date; run _scripts/render-software-catalog --page'
+  assert_equal '' "$(cat "$fixture/check/stdout.log")" 'stale check stdout'
+  cmp -s "$fixture/before" "$page" \
+    || scenario_fail '--check wrote the stale page'
+
+  run_renderer "$fixture/write" "$fixture" --page
+  assert_equal 0 "$RENDER_STATUS" 'write status'
+  assert_contains "$fixture/write/stdout.log" 'rendered _site/index.html'
+  cmp -s "$tracked" "$page" \
+    || scenario_fail 'the write did not restore the tracked bytes'
+
+  run_renderer "$fixture/clean" "$fixture" --check --page
+  assert_equal 0 "$RENDER_STATUS" 'check status after the write'
+  assert_contains "$fixture/clean/stdout.log" 'page software catalog is up to date'
+  assert_equal '' "$(cat "$fixture/clean/stderr.log")" 'clean check stderr'
+}
+
 scenario_run 'a marker mention cannot pass for a region' \
   test_a_marker_mention_cannot_pass_for_a_region
 scenario_run 'a final manual line without a newline survives a write' \
@@ -270,4 +397,10 @@ scenario_run 'a rejected declaration leaves the stored file intact' \
   test_a_rejected_declaration_leaves_the_stored_file_intact
 scenario_run 'a stale region is reported by check and restored by a write' \
   test_a_stale_region_is_reported_by_check_and_restored_by_a_write
+scenario_run 'page runners carry each declaration and its line' \
+  test_page_runners_carry_each_declaration_and_its_line
+scenario_run 'a page generation failure leaves the page intact' \
+  test_a_page_generation_failure_leaves_the_page_intact
+scenario_run 'a stale page is reported by check and restored by a write' \
+  test_a_stale_page_is_reported_by_check_and_restored_by_a_write
 scenario_finish

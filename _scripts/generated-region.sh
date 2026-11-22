@@ -1,10 +1,10 @@
 # shellcheck shell=bash
 #
-# The one reader for generated regions inside hand-authored Markdown.
+# The one reader for generated regions inside hand-authored files.
 #
 # A generated region is a named stretch of a file a person also edits — a
-# README table — that a renderer regenerates from this repository's
-# declarations. It guards against two defects the earlier readers had
+# README table, a runner on the public page — that a renderer regenerates from
+# this repository's declarations. It guards against two defects the earlier readers had
 # learned: a marker merely mentioned in prose satisfied the substring search
 # that stood in for finding a region, so a render could report success having
 # replaced nothing, and a last line without a newline vanished.

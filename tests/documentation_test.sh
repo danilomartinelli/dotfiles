@@ -136,6 +136,22 @@ if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check >/dev/null; the
   failures=$((failures + 1))
 fi
 
+# The public page shows the same declarations as numbered parts, so it is held
+# to them the same way.
+if ! "$REPOSITORY_ROOT/_scripts/render-software-catalog" --check --page >/dev/null; then
+  failures=$((failures + 1))
+fi
+
+# The page links each decision record instead of restating it, so a record it
+# does not link is one a visitor cannot reach from it.
+while IFS= read -r record_path; do
+  record_name=$(basename -- "$record_path")
+  if ! grep -Fq -- "/docs/adr/$record_name\"" "$REPOSITORY_ROOT/_site/index.html"; then
+    printf '_site/index.html is missing decision record: %s\n' "$record_name" >&2
+    failures=$((failures + 1))
+  fi
+done < <(find "$REPOSITORY_ROOT/docs/adr" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print | sort)
+
 if ((failures > 0)); then
   exit 1
 fi

@@ -11,9 +11,10 @@ web
 Static HTML/CSS with no build step, kept in an underscore-prefixed directory so
 topic discovery ignores it.
 
-Decided, not yet built: a GitHub Actions workflow publishes the page to GitHub
-Pages at `danilomartinelli.github.io/dotfiles`. Neither the workflow nor the
-Pages site exists yet.
+`.github/workflows/pages.yml` publishes the page to GitHub Pages after CI
+passes for a push to `main`. The intended address is
+`danilomartinelli.github.io/dotfiles`; the account's Pages custom domain
+decides whether that address answers directly.
 
 ## Users
 

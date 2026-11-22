@@ -22,6 +22,21 @@ The owner's short explanation of a declaration, published beside it in the
 catalog of declared software.
 _Avoid_: Role, purpose
 
+**Public page**:
+The static page that introduces the environment to a visitor. It shows each
+declaration as a part and never the state of a particular Mac.
+_Avoid_: Website, landing page, docs site
+
+**Part**:
+One declaration as the public page shows it: a number, a name, its catalog
+description, and a link to the line that declares it.
+_Avoid_: Card, tile, item
+
+**Runner**:
+A lettered group of parts on the public page, one per kind of declared
+software.
+_Avoid_: Section, grid, sprue
+
 **Pin**:
 A declaration that selects one exact release. The owner may move it to any newer
 release, including a new major version.

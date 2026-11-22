@@ -24,7 +24,7 @@ if sys.version_info < (3, 11):
         "run it with the Mise-managed python3"
     )
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import re
@@ -46,6 +46,9 @@ class Declaration:
     version: str = ""
     options: tuple = ()
     extras: tuple = ()
+    # Where the declaration is written. It lets a reader point at the source;
+    # it does not make two declarations of the same software differ.
+    line: int = field(default=0, compare=False)
 
     @property
     def selection(self):
@@ -136,6 +139,7 @@ def parse_brewfile(text, source="Brewfile"):
                     _quoted(match),
                     _description(match),
                     group=group if kind == "cask" else "",
+                    line=number,
                 )
             )
             continue
@@ -144,7 +148,11 @@ def parse_brewfile(text, source="Brewfile"):
             pending = group = ""
             declarations.append(
                 Declaration(
-                    "mas", _quoted(match), _description(match), identifier=match["id"]
+                    "mas",
+                    _quoted(match),
+                    _description(match),
+                    identifier=match["id"],
+                    line=number,
                 )
             )
             continue
@@ -235,6 +243,7 @@ def parse_mise_config(text, source="mise/config.toml"):
                 version=version,
                 options=tuple(options.items()),
                 extras=_extras(source, number, name, options),
+                line=number,
             )
         )
     if values != document.get("tools"):

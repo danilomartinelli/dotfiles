@@ -50,9 +50,10 @@ dotfiles/
 ├── bin/                  # Public executables added to PATH
 ├── functions/            # Public Zsh autoload functions
 ├── tests/                # Isolated behavioral and contract tests
-├── .github/              # CI workflow, issue forms, PR template
+├── .github/              # CI and Pages workflows, issue forms, PR template
 ├── _scripts/             # Private setup, linking, and discovery machinery
 ├── _macos/               # macOS defaults catalog and adapters
+├── _site/                # Static public page and its fonts
 ├── <topic>/              # Tool-specific shell files and optional installer
 ├── Brewfile              # Homebrew declarations
 ├── mise/config.toml      # Runtime and language-package CLI declarations
@@ -92,6 +93,9 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
 | ----------------------------------------------- | ------------------------------- |
 | Homebrew taps, formulae, casks, fonts, MAS apps | `Brewfile`                      |
 | README software catalog tables                  | rendered from declarations      |
+| Public page runners in `_site/index.html`       | rendered from declarations      |
+| Public page audience and commitments            | `PRODUCT.md`                    |
+| Public page visual system                       | `DESIGN.md`                     |
 | Reading Brewfile and Mise declarations          | `_scripts/declared_software.py` |
 | Runtimes and language-package CLIs              | `mise/config.toml`              |
 | Mise versions and checksums                     | `mise/mise.lock` (generated)    |
@@ -153,9 +157,28 @@ A topic may contain `install.sh`, direct `*.symlink` entries, `path.zsh`,
   else (`docs/adr/0002-read-declarations-as-closed-literal-grammars.md`); read
   declarations through it instead of parsing either file.
 - Give every declaration a trailing comment; it is the catalog description
-  `_scripts/render-software-catalog` renders into the README catalog tables.
-  Run the renderer with the declaration change.
+  `_scripts/render-software-catalog` renders into the README catalog tables
+  and, with `--page`, into the runners of the public page. Run both with the
+  declaration change. The page links each part to its line, so any edit that
+  moves lines in `Brewfile` or `mise/config.toml` needs the `--page` run too.
 - Do not run broad package-manager repair commands such as `npm audit fix`.
+
+### Public page
+
+`_site/` is published as tracked, with no build step between the checkout and a
+visitor.
+
+- Keep it HTML and CSS only: no script, and no stylesheet, font, image or
+  embed from another origin. `tests/site_test.sh` enforces both.
+- Write everything outside the generated regions by hand, and never edit
+  inside one; `_scripts/site_parts.py` owns what a runner holds.
+- Keep Mise versions off the page, so an upgrade cannot make it stale.
+- Follow `PRODUCT.md` for what the page may claim and `DESIGN.md` for how it
+  looks. State no number about the repository that is not generated or
+  checked.
+- `.github/workflows/pages.yml` publishes `_site/` after CI passes for a push
+  to `main`. Keep that gate: do not publish from a pull request, and do not
+  add a second deployment path.
 
 ### Coding agents
 

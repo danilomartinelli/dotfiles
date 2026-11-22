@@ -50,6 +50,20 @@ class BrewfileTest(unittest.TestCase):
             result.declarations,
         )
 
+    def test_a_declaration_records_its_line_without_being_told_apart_by_it(self):
+        result = brewfile(
+            "# Header prose",
+            "brew 'git'",
+            "",
+            "mas 'Xcode', id: 497799835",
+        )
+        self.assertEqual([2, 4], [d.line for d in result.declarations])
+        self.assertEqual(
+            declared_software.Declaration("formula", "git"), result.declarations[0]
+        )
+        tools = mise_config("# Rationale", "[tools]", "", 'node = "lts"')
+        self.assertEqual([4], [d.line for d in tools])
+
     def test_the_comment_opening_a_cask_block_is_its_group(self):
         result = brewfile(
             "# Development",

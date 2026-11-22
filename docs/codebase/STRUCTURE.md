@@ -41,7 +41,9 @@ module.
 - Explicit operations: `bin/mobile-setup`, `bin/set-defaults`,
   `bin/ssh-key-create`, `bin/sops-key-create`, and `bin/nix-install`.
 - Graphical setup checklist: `_scripts/setup checklist --open-apps`.
-- Validation and rendering: `_scripts/test` and `_scripts/render-software-catalog`.
+- Validation and rendering: `_scripts/test` and `_scripts/render-software-catalog`,
+  which renders the README tables or, with `--page`, the public page's runners.
+- Public page: `_site/index.html`, static files with no build step.
 - `bin/git-*` commands are reached through Git's external-command mechanism;
   `functions/` entries are autoloaded through Zsh `fpath`.
 

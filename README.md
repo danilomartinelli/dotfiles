@@ -198,16 +198,17 @@ package upgrades against the same Mac.
 Unlike first bootstrap, an update does not prompt for Git identity or reapply
 macOS defaults.
 
-| Command                            | Purpose                                                           |
-| ---------------------------------- | ----------------------------------------------------------------- |
-| `dot`                              | Update the checkout, dependencies, links, and topic configuration |
-| `dot --edit`                       | Open the checkout containing `dot` in `$EDITOR`                   |
-| `dot --help`                       | Print supported lifecycle options                                 |
-| `_scripts/bootstrap`               | Run the complete first-machine installation                       |
-| `_scripts/setup bootstrap`         | Invoke the canonical bootstrap implementation                     |
-| `_scripts/setup update`            | Invoke the canonical daily-update implementation                  |
-| `set-defaults`                     | Explicitly reapply tracked macOS preferences                      |
-| `_scripts/render-software-catalog` | Rewrite the README software catalog from the declarations         |
+| Command                                   | Purpose                                                           |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| `dot`                                     | Update the checkout, dependencies, links, and topic configuration |
+| `dot --edit`                              | Open the checkout containing `dot` in `$EDITOR`                   |
+| `dot --help`                              | Print supported lifecycle options                                 |
+| `_scripts/bootstrap`                      | Run the complete first-machine installation                       |
+| `_scripts/setup bootstrap`                | Invoke the canonical bootstrap implementation                     |
+| `_scripts/setup update`                   | Invoke the canonical daily-update implementation                  |
+| `set-defaults`                            | Explicitly reapply tracked macOS preferences                      |
+| `_scripts/render-software-catalog`        | Rewrite the README software catalog from the declarations         |
+| `_scripts/render-software-catalog --page` | Rewrite the public page's runners from the declarations           |
 
 ## Software catalog
 
@@ -227,6 +228,10 @@ description is written once, where the software is declared. Each entry's
 trailing comment is its catalog description. Run the renderer after changing a
 declaration; `tests/documentation_test.sh` fails while the catalog is out of
 date.
+
+The [public page](#public-page) shows the same declarations as numbered parts.
+`_scripts/render-software-catalog --page` renders them into `_site/index.html`,
+and the documentation check fails while that page is out of date as well.
 
 Both files stay literal, one declaration per line: the catalog, the
 documentation check and controlled upgrades all read them through
@@ -942,6 +947,37 @@ that list. `direnv/install.sh` renders it into the whitelist of
 `_scripts/mise-policy` supplies it to Mise startup and managed commands. Moving `WORKSPACE`
 in `.localrc` therefore takes effect for direnv on the next `dot` run.
 
+### Public page
+
+`_site/` holds a single static page that introduces this repository to someone
+who found it on GitHub: every declared tool as a numbered part on one of three
+runners, the bootstrap and update lifecycle as an instruction sheet, and links
+to the suites and the decision records. Open `_site/index.html` in a browser to
+read it; it needs no server and no build step.
+
+`.github/workflows/pages.yml` publishes `_site/` to this repository's GitHub
+Pages site. It runs after CI has passed for a push to `main` and deploys the
+commit CI checked, so a page that is stale or breaks its own contract is not
+published. Running the workflow by hand republishes `main` as it stands. The
+address the site answers on is set in GitHub, not here: a project site follows
+the custom domain of the account's own Pages site unless it is given one.
+
+The page is HTML and CSS only. It runs no script and loads its stylesheet, its
+icon and its two typefaces from `_site/` itself, so a visit sends no request to
+another server. The typefaces are Archivo and M PLUS Rounded 1c, each under the
+SIL Open Font License kept beside it in `_site/fonts/`.
+
+Its three runners are generated regions.
+`_scripts/render-software-catalog --page` writes each part's number, name,
+description and the line of `Brewfile` or `mise/config.toml` that declares it. Versions are left off the
+page on purpose: an upgrade rewrites them, and the page would go stale with
+every upgrade. A part's line number does move when lines are added above it, so
+run the renderer after any edit to either file, not only after a new
+declaration. Everything outside the generated regions is written by hand.
+
+`PRODUCT.md` records who the page is for and what it must stay true to, and
+`DESIGN.md` records its visual system.
+
 ## Validation
 
 The test suites create isolated homes and fake external commands; they do not
@@ -954,8 +990,10 @@ _scripts/test
 
 `tests/documentation_test.sh` ensures that every public `bin/` command, Zsh
 function, alias, Homebrew declaration, Mise tool, and installer helper remains
-documented. `tests/zed_settings_test.sh` validates the JSON/JSONC formatter
-contract. Run the focused suite first, then the complete suite for
+documented, and that the public page still shows every declaration and links
+every decision record. `tests/site_test.sh` holds that page to running no
+script and loading nothing from another server. `tests/zed_settings_test.sh`
+validates the JSON/JSONC formatter contract. Run the focused suite first, then the complete suite for
 repository-wide work.
 
 Static checks used by this repository include:
@@ -1012,6 +1050,8 @@ Mise lock does not freeze all transitive language-package dependencies.
 - Run `_scripts/render-software-catalog` to update the catalog tables.
   Documentation coverage reports a stale table, including a declaration missing
   from it.
+- Run `_scripts/render-software-catalog --page` to update the public page.
+  Documentation coverage reports a stale page the same way.
 
 Implementation, testing, and delivery rules live in
 [`CODING_STANDARDS.md`](CODING_STANDARDS.md). Agent-specific instructions live

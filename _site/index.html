@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dotfiles: one Mac, declared part by part</title>
+<meta name="description" content="Danilo Martinelli's macOS setup. Every tool is declared on one line, assembled by a single bootstrap, and held to its word by fixture tests.">
+<meta name="theme-color" content="#1e6a4c">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#runner-a">Skip to the parts</a>
+
+<svg class="symbols" aria-hidden="true" focusable="false">
+<symbol id="arrow" viewBox="0 0 56 16"><path d="M1 8h50M44 2l8 6-8 6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="link-arrow" viewBox="0 0 56 16"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 8h44" stroke-dasharray="4 4"/><path d="M44 2l8 6-8 6"/></g></symbol>
+<symbol id="fig-file" viewBox="0 0 44 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h22l12 12v34H5z"/><path d="M27 3v12h12"/><path d="M12 25h20M12 32h20M12 39h12"/></g></symbol>
+<symbol id="fig-prompt" viewBox="0 0 72 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="66" height="42" rx="4"/><path d="M11 17l5 4-5 4M22 25h38M11 31l5 4-5 4M22 39h38"/></g></symbol>
+<symbol id="fig-folder" viewBox="0 0 56 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h17l5 6h26v30H4z"/></g></symbol>
+<symbol id="fig-table" viewBox="0 0 60 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="54" height="38"/><path d="M3 19.5h54M3 32.5h54M22 7v38"/></g></symbol>
+<symbol id="fig-switches" viewBox="0 0 52 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="8" width="42" height="14" rx="7"/><circle cx="39.5" cy="15" r="3.5" fill="currentColor"/><rect x="5" y="30" width="42" height="14" rx="7"/><circle cx="12.5" cy="37" r="3.5"/></g></symbol>
+<symbol id="fig-repeat" viewBox="0 0 52 52"><g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M41 18a17 17 0 1 0 2 10"/><path d="M42 7v11H31"/></g></symbol>
+<symbol id="caution" viewBox="0 0 48 44"><path d="M24 4l20 36H4z" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/><path d="M24 17v11" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="33.5" r="2.25" fill="currentColor"/></symbol>
+</svg>
+
+<header class="masthead">
+<a class="wordmark" href="#runner-a">dotfiles</a>
+<nav aria-label="Page sections">
+<a href="#runner-a">Parts</a>
+<a href="#assembly">Assembly</a>
+<a href="#inspection">Inspection</a>
+<a href="https://github.com/danilomartinelli/dotfiles">GitHub</a>
+</nav>
+</header>
+
+<main>
+
+<section class="runner" id="runner-a" aria-labelledby="headline">
+<div class="tab tab-lead">
+<span class="tab-letter" aria-hidden="true">A</span>
+<h1 id="headline">One Mac, declared part by part.</h1>
+<p>Applications, command-line tools and runtimes are written down first, one line each. A single bootstrap assembles a new Mac from them, and fixture tests hold the declarations to their word.</p>
+<a class="action" href="https://github.com/danilomartinelli/dotfiles">Read the source</a>
+</div>
+<div class="tree">
+<div class="tree-head">
+<h2>Command-line tools</h2>
+<label class="switch"><input type="checkbox"> Descriptions</label>
+<p class="tree-hint">Each part opens the line that declares it.</p>
+</div>
+<!-- generated: command-line-tools -->
+
+<p class="runner-count"><b>61</b> parts</p>
+<div class="part-sets">
+<div class="part-set">
+<ul class="parts">
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L19"><span class="part-no">A1</span> <span class="part-name">age</span></a> <span class="part-use">Encryption backend used by SOPS identities</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L20"><span class="part-no">A2</span> <span class="part-name">ansible</span></a> <span class="part-use">Automation and configuration management</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L21"><span class="part-no">A3</span> <span class="part-name">atuin</span></a> <span class="part-use">SQLite-backed shell history with optional sync</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L22"><span class="part-no">A4</span> <span class="part-name">aws-vault</span></a> <span class="part-use">Keychain-backed AWS credentials and SSO sessions</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L23"><span class="part-no">A5</span> <span class="part-name">awscli</span></a> <span class="part-use">AWS command-line interface</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L24"><span class="part-no">A6</span> <span class="part-name">bat</span></a> <span class="part-use">Syntax-highlighting <code>cat</code> replacement</span></li>
+<li style="--name: 13"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L25"><span class="part-no">A7</span> <span class="part-name">bitwarden-cli</span></a> <span class="part-use">Bitwarden command-line client</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L26"><span class="part-no">A8</span> <span class="part-name">btop</span></a> <span class="part-use">Process and resource monitor</span></li>
+<li style="--name: 11"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L27"><span class="part-no">A9</span> <span class="part-name">cloudflared</span></a> <span class="part-use">Cloudflare Tunnel client for exposing local services</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L28"><span class="part-no">A10</span> <span class="part-name">cocoapods</span></a> <span class="part-use">Cocoa dependency manager for iOS/macOS projects (React Native)</span></li>
+<li style="--name: 34"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L29"><span class="part-no">A11</span> <span class="part-name">coollabsio/<wbr>coolify-cli/<wbr>coolify-cli</span></a> <span class="part-use">Coolify API command-line client (<code>coolify</code>)</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L30"><span class="part-no">A12</span> <span class="part-name">coreutils</span></a> <span class="part-use">GNU core utilities, including <code>gls</code> and <code>gdate</code></span></li>
+<li style="--name: 14"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L31"><span class="part-no">A13</span> <span class="part-name">defaultbrowser</span></a> <span class="part-use">Inspect or change the macOS default browser</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L32"><span class="part-no">A14</span> <span class="part-name">direnv</span></a> <span class="part-use">Directory-specific environment loading</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L33"><span class="part-no">A15</span> <span class="part-name">dockutil</span></a> <span class="part-use">Programmatic Dock configuration</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L34"><span class="part-no">A16</span> <span class="part-name">duti</span></a> <span class="part-use">Default application associations</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L35"><span class="part-no">A17</span> <span class="part-name">eza</span></a> <span class="part-use">Modern <code>ls</code> replacement</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L36"><span class="part-no">A18</span> <span class="part-name">fastlane</span></a> <span class="part-use">iOS and Android deployment automation</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L37"><span class="part-no">A19</span> <span class="part-name">fd</span></a> <span class="part-use">Modern <code>find</code> replacement</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L38"><span class="part-no">A20</span> <span class="part-name">fzf</span></a> <span class="part-use">Command-line fuzzy finder</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L39"><span class="part-no">A21</span> <span class="part-name">gawk</span></a> <span class="part-use">GNU awk</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L40"><span class="part-no">A22</span> <span class="part-name">gh</span></a> <span class="part-use">GitHub CLI</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L41"><span class="part-no">A23</span> <span class="part-name">git</span></a> <span class="part-use">Version control</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L42"><span class="part-no">A24</span> <span class="part-name">git-delta</span></a> <span class="part-use">Syntax-highlighting Git pager</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L43"><span class="part-no">A25</span> <span class="part-name">git-lfs</span></a> <span class="part-use">Git Large File Storage</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L44"><span class="part-no">A26</span> <span class="part-name">gitleaks</span></a> <span class="part-use">Secret scanner</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L45"><span class="part-no">A27</span> <span class="part-name">go-task</span></a> <span class="part-use">Project task runner</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L46"><span class="part-no">A28</span> <span class="part-name">glab</span></a> <span class="part-use">GitLab CLI</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L47"><span class="part-no">A29</span> <span class="part-name">gnu-sed</span></a> <span class="part-use">GNU sed as <code>gsed</code></span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L48"><span class="part-no">A30</span> <span class="part-name">grc</span></a> <span class="part-use">Colorized output for common commands</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L49"><span class="part-no">A31</span> <span class="part-name">helm</span></a> <span class="part-use">Kubernetes package manager</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L50"><span class="part-no">A32</span> <span class="part-name">helmfile</span></a> <span class="part-use">Declarative Helm release management</span></li>
+<li style="--name: 11"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L51"><span class="part-no">A33</span> <span class="part-name">imagemagick</span></a> <span class="part-use">Image conversion and manipulation</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L52"><span class="part-no">A34</span> <span class="part-name">jq</span></a> <span class="part-use">JSON processor</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L53"><span class="part-no">A35</span> <span class="part-name">ksops</span></a> <span class="part-use">SOPS integration for Kustomize</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L54"><span class="part-no">A36</span> <span class="part-name">kubectx</span></a> <span class="part-use">Kubernetes context and namespace switchers (<code>kubectx</code>, <code>kubens</code>)</span></li>
+<li style="--name: 14"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L55"><span class="part-no">A37</span> <span class="part-name">kubernetes-cli</span></a> <span class="part-use"><code>kubectl</code></span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L56"><span class="part-no">A38</span> <span class="part-name">kustomize</span></a> <span class="part-use">Kubernetes manifest customization</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L57"><span class="part-no">A39</span> <span class="part-name">vultr-cli</span></a> <span class="part-use">Vultr and VKE command-line client</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L58"><span class="part-no">A40</span> <span class="part-name">lazygit</span></a> <span class="part-use">Git terminal UI</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L59"><span class="part-no">A41</span> <span class="part-name">mas</span></a> <span class="part-use">Mac App Store CLI</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L60"><span class="part-no">A42</span> <span class="part-name">mise</span></a> <span class="part-use">Runtime and tool version manager (successor to asdf)</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L61"><span class="part-no">A43</span> <span class="part-name">mkcert</span></a> <span class="part-use">Locally trusted development certificates</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L62"><span class="part-no">A44</span> <span class="part-name">neovim</span></a> <span class="part-use">Terminal editor</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L63"><span class="part-no">A45</span> <span class="part-name">nixfmt</span></a> <span class="part-use">Nix formatter</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L64"><span class="part-no">A46</span> <span class="part-name">pandoc</span></a> <span class="part-use">Document converter</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L65"><span class="part-no">A47</span> <span class="part-name">ripgrep</span></a> <span class="part-use">Fast recursive text search</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L66"><span class="part-no">A48</span> <span class="part-name">sops</span></a> <span class="part-use">Secrets encryption with age, KMS, or PGP</span></li>
+<li style="--name: 13"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L67"><span class="part-no">A49</span> <span class="part-name">spaceman-diff</span></a> <span class="part-use">Visual image diffs</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L68"><span class="part-no">A50</span> <span class="part-name">stern</span></a> <span class="part-use">Multi-pod Kubernetes log tailing</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L69"><span class="part-no">A51</span> <span class="part-name">tmux</span></a> <span class="part-use">Terminal multiplexer</span></li>
+<li style="--name: 22"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L70"><span class="part-no">A52</span> <span class="part-name">psviderski/<wbr>tap/<wbr>uncloud</span></a> <span class="part-use">Uncloud deployment CLI (<code>uc</code>)</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L71"><span class="part-no">A53</span> <span class="part-name">usage</span></a> <span class="part-use">Usage-spec support for CLI completions</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L72"><span class="part-no">A54</span> <span class="part-name">watch</span></a> <span class="part-use">Periodically rerun a command</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L73"><span class="part-no">A55</span> <span class="part-name">watchexec</span></a> <span class="part-use">Rerun commands on file changes</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L74"><span class="part-no">A56</span> <span class="part-name">watchman</span></a> <span class="part-use">Filesystem watcher</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L75"><span class="part-no">A57</span> <span class="part-name">wget</span></a> <span class="part-use">File downloader</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L76"><span class="part-no">A58</span> <span class="part-name">yq</span></a> <span class="part-use">YAML, TOML, and XML processor</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L77"><span class="part-no">A59</span> <span class="part-name">zoxide</span></a> <span class="part-use">Smarter directory navigation</span></li>
+<li style="--name: 19"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L78"><span class="part-no">A60</span> <span class="part-name">zsh-autosuggestions</span></a> <span class="part-use">Fish-like Zsh suggestions</span></li>
+<li style="--name: 23"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L79"><span class="part-no">A61</span> <span class="part-name">zsh-syntax-highlighting</span></a> <span class="part-use">Zsh command-line highlighting</span></li>
+</ul>
+</div>
+</div>
+
+<!-- generated-end -->
+</div>
+</section>
+
+<section class="sheet" id="assembly" aria-labelledby="assembly-title">
+<header class="sheet-head">
+<h2 id="assembly-title">Assembly</h2>
+<p><code>_scripts/bootstrap</code> runs these steps, in this order, on a new Mac. <code>dot</code> repeats the marked ones whenever the machine has to catch up with the declarations.</p>
+</header>
+<ol class="steps">
+<li class="step">
+<span class="step-no" aria-hidden="true">1</span>
+<div class="figure" aria-hidden="true"><span class="fig"><svg><use href="#fig-file"/></svg><span>.localrc<wbr>.example</span></span><svg class="arrow"><use href="#arrow"/></svg><span class="fig"><svg><use href="#fig-file"/></svg><span>.localrc 600</span></span></div>
+<h3>Create the private file</h3>
+<p>Copies <code>.localrc.example</code> to <code>.localrc</code> and restricts it to mode <code>600</code>. It holds values for this machine, never credentials.</p>
+<p class="mark mark-repeat">Repeats with dot</p>
+</li>
+<li class="step">
+<span class="step-no" aria-hidden="true">2</span>
+<div class="figure" aria-hidden="true"><span class="fig"><svg><use href="#fig-prompt"/></svg><span>name, email</span></span></div>
+<h3>Ask who is signing</h3>
+<p>Prompts for the Git author name and email, and only when this Mac has no private Git identity yet.</p>
+<p class="mark">Bootstrap only</p>
+</li>
+<li class="step">
+<span class="step-no" aria-hidden="true">3</span>
+<div class="figure" aria-hidden="true"><span class="fig"><svg><use href="#fig-file"/></svg><span>*.symlink</span></span><svg class="arrow"><use href="#link-arrow"/></svg><span class="fig"><svg><use href="#fig-folder"/></svg><span>~</span></span></div>
+<h3>Link the dotfiles</h3>
+<p>Links every <code>*.symlink</code> file and directory into the home directory. An existing destination is never replaced silently: you skip it, overwrite it, or back it up.</p>
+<p class="mark mark-repeat">Repeats with dot</p>
+</li>
+<li class="step">
+<span class="step-no" aria-hidden="true">4</span>
+<div class="figure" aria-hidden="true"><span class="fig"><svg><use href="#fig-table"/></svg><span>defaults.tsv</span></span><svg class="arrow"><use href="#arrow"/></svg><span class="fig"><svg><use href="#fig-switches"/></svg><span>macOS</span></span></div>
+<h3>Apply the macOS defaults</h3>
+<p>Writes the preferences tracked in <code>_macos/defaults.tsv</code>. Afterwards they change only when <code>set-defaults</code> is run on purpose.</p>
+<p class="mark">Bootstrap only</p>
+</li>
+<li class="step step-wide">
+<span class="step-no" aria-hidden="true">5</span>
+<h3>Fit what the Brewfile declares</h3>
+<p>Installs Homebrew, then reconciles every declaration in the <code>Brewfile</code>: the command-line tools on runner A, above, and the applications and fonts on runner B, further down. Nothing already installed is upgraded along the way.</p>
+<p class="fit"><span class="fig" aria-hidden="true"><svg><use href="#fig-file"/></svg><span>Brewfile</span></span><svg class="arrow" aria-hidden="true"><use href="#arrow"/></svg><a class="balloon" href="#runner-a"><span class="visually-hidden">Runner </span>A</a><a class="balloon" href="#runner-b"><span class="visually-hidden">Runner </span>B</a></p>
+<p class="mark mark-repeat">Repeats with dot</p>
+</li>
+<li class="step step-wide">
+<span class="step-no" aria-hidden="true">6</span>
+<h3>Run each topic installer</h3>
+<p>A topic directory may carry an <code>install.sh</code>. The installers run in a fixed order, never prompt, and are safe to run again. The Mise topic fits runner C, the last one on this page, at the versions <code>mise/mise.lock</code> records.</p>
+<p class="fit"><span class="fig" aria-hidden="true"><svg><use href="#fig-file"/></svg><span>mise/config.toml</span></span><svg class="arrow" aria-hidden="true"><use href="#arrow"/></svg><a class="balloon" href="#runner-c"><span class="visually-hidden">Runner </span>C</a></p>
+<p class="mark mark-repeat">Repeats with dot</p>
+</li>
+<li class="step step-current">
+<div class="figure" aria-hidden="true"><span class="fig"><svg><use href="#fig-repeat"/></svg><span>dot</span></span></div>
+<h3>Keep it current</h3>
+<p><code>dot</code> pulls the checkout, repeats the marked steps, then lists what could be upgraded. You pick the packages. Nothing is upgraded wholesale, and the final confirmation defaults to no.</p>
+</li>
+</ol>
+</section>
+
+<section class="inspection" id="inspection" aria-labelledby="inspection-title">
+<div class="inspection-lead">
+<h2 id="inspection-title">Inspection</h2>
+<p>A declaration nobody checks is only a wish. The fixture suites build isolated home directories and fake every external command, so they exercise the whole setup without touching a real Mac.</p>
+<p>GitHub Actions runs them, with the static checks, on macOS for every pull request and every push to <code>main</code>.</p>
+<p class="inspection-links"><a href="https://github.com/danilomartinelli/dotfiles/tree/main/tests">Read the suites</a> <a href="https://github.com/danilomartinelli/dotfiles/actions/workflows/ci.yml">See the latest runs</a></p>
+</div>
+<div class="slip">
+<h3>Run on every pull request and every push to main</h3>
+<ol class="checks">
+<li>ShellCheck</li>
+<li>shfmt</li>
+<li>Zsh syntax</li>
+<li>Markdown format</li>
+<li>Secret scan</li>
+<li>Fixture suites</li>
+</ol>
+<p class="slip-foot">macOS runner</p>
+</div>
+<div class="records">
+<h3>Decisions on record</h3>
+<p>Each contract in the repository has a written reason. These are the records behind them.</p>
+<ol>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0001-controlled-software-upgrades.md">Control software upgrades without maintaining a Homebrew distribution</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0002-read-declarations-as-closed-literal-grammars.md">Read declarations as closed literal grammars</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0003-classify-shells-by-who-reads-their-output.md">Classify shells by who reads their output</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0004-each-entry-point-resolves-its-own-checkout.md">Each entry point resolves the checkout that contains it</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0005-validate-catalogs-before-any-effect.md">Validate catalogs whole before any effect</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0006-own-mise-policy-without-changing-project-behavior.md">Own Mise policy without changing project behavior</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0007-prepare-tool-context-before-topic-configuration.md">Prepare tool context before dependent topic configuration</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0008-declare-mcp-servers-once.md">Declare MCP servers once</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/docs/adr/0009-deliver-secrets-to-the-project-or-command.md">Deliver a secret to the project or the command that needs it, never to a shell</a></li>
+</ol>
+</div>
+</section>
+
+<section class="runner" id="runner-b" aria-labelledby="runner-b-title">
+<div class="tab">
+<span class="tab-letter" aria-hidden="true">B</span>
+<h2 id="runner-b-title">Applications and fonts</h2>
+<p>Casks, the terminal font and one App Store app, in the groups the <code>Brewfile</code> gives them.</p>
+</div>
+<div class="tree">
+<div class="tree-head">
+<label class="switch"><input type="checkbox"> Descriptions</label>
+</div>
+<!-- generated: applications-and-fonts -->
+
+<p class="runner-count"><b>33</b> parts</p>
+<div class="part-sets">
+<div class="part-set">
+<h3 class="part-group">Development</h3>
+<ul class="parts">
+<li style="--name: 14"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L82"><span class="part-no">B1</span> <span class="part-name">android-studio</span></a> <span class="part-use">Android development IDE</span></li>
+<li style="--name: 15"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L83"><span class="part-no">B2</span> <span class="part-name">antigravity-cli</span></a> <span class="part-use">Google Antigravity terminal agent (<code>agy</code>)</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L84"><span class="part-no">B3</span> <span class="part-name">claude</span></a> <span class="part-use">Anthropic desktop app, including Claude Code on the desktop</span></li>
+<li style="--name: 10"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L85"><span class="part-no">B4</span> <span class="part-name">cursor-cli</span></a> <span class="part-use">Cursor terminal agent (<code>cursor-agent</code>)</span></li>
+<li style="--name: 10"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L86"><span class="part-no">B5</span> <span class="part-name">grok-build</span></a> <span class="part-use">xAI Grok Build terminal agent (<code>grok</code>)</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L87"><span class="part-no">B6</span> <span class="part-name">herdr-app</span></a> <span class="part-use">Desktop workspace for terminals and coding agents</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L88"><span class="part-no">B7</span> <span class="part-name">lens</span></a> <span class="part-use">Kubernetes IDE</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L89"><span class="part-no">B8</span> <span class="part-name">postman</span></a> <span class="part-use">API development and testing tool</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L90"><span class="part-no">B9</span> <span class="part-name">tableplus</span></a> <span class="part-use">Database management tool</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L91"><span class="part-no">B10</span> <span class="part-name">zed</span></a> <span class="part-use">High-performance collaborative code editor</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Terminal and AWS</h3>
+<ul class="parts">
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L94"><span class="part-no">B11</span> <span class="part-name">ghostty</span></a> <span class="part-use">Fast, native GPU-accelerated terminal emulator</span></li>
+<li style="--name: 22"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L95"><span class="part-no">B12</span> <span class="part-name">session-manager-plugin</span></a> <span class="part-use">AWS Systems Manager Session Manager plugin</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Window and menu bar</h3>
+<ul class="parts">
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L98"><span class="part-no">B13</span> <span class="part-name">bartender</span></a> <span class="part-use">Menu bar icon organiser</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L99"><span class="part-no">B14</span> <span class="part-name">keyclu</span></a> <span class="part-use">Discover and browse application shortcuts</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Browsers and productivity</h3>
+<ul class="parts">
+<li style="--name: 12"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L102"><span class="part-no">B15</span> <span class="part-name">archiver-app</span></a> <span class="part-use">Archive manager (open, compress, split files)</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L103"><span class="part-no">B16</span> <span class="part-name">caffeine</span></a> <span class="part-use">Prevents the Mac from going to sleep</span></li>
+<li style="--name: 21"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L104"><span class="part-no">B17</span> <span class="part-name">thebrowsercompany-dia</span></a> <span class="part-use">Dia browser</span></li>
+<li style="--name: 12"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L105"><span class="part-no">B18</span> <span class="part-name">google-drive</span></a> <span class="part-use">Google Drive with Finder (File Provider) integration</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L106"><span class="part-no">B19</span> <span class="part-name">paste</span></a> <span class="part-use">Clipboard history manager</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L107"><span class="part-no">B20</span> <span class="part-name">raycast</span></a> <span class="part-use">Spotlight alternative with extensions</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L108"><span class="part-no">B21</span> <span class="part-name">skim</span></a> <span class="part-use">Free PDF reader with annotation support</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Design and media</h3>
+<ul class="parts">
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L111"><span class="part-no">B22</span> <span class="part-name">cleanshot</span></a> <span class="part-use">Screenshot and screen recording tool</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L112"><span class="part-no">B23</span> <span class="part-name">figma</span></a> <span class="part-use">Design tool</span></li>
+<li style="--name: 7"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L113"><span class="part-no">B24</span> <span class="part-name">spotify</span></a> <span class="part-use">Music streaming service</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Communication</h3>
+<ul class="parts">
+<li style="--name: 13"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L116"><span class="part-no">B25</span> <span class="part-name">readdle-spark</span></a> <span class="part-use">Email client with smart features</span></li>
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L117"><span class="part-no">B26</span> <span class="part-name">slack</span></a> <span class="part-use">Team communication and collaboration</span></li>
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L118"><span class="part-no">B27</span> <span class="part-name">whatsapp</span></a> <span class="part-use">Messaging application</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Network and security</h3>
+<ul class="parts">
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L121"><span class="part-no">B28</span> <span class="part-name">bitwarden</span></a> <span class="part-use">Password manager</span></li>
+<li style="--name: 13"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L122"><span class="part-no">B29</span> <span class="part-name">tailscale-app</span></a> <span class="part-use">Mesh VPN based on WireGuard</span></li>
+<li style="--name: 20"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L123"><span class="part-no">B30</span> <span class="part-name">yubico-authenticator</span></a> <span class="part-use">Authenticator for YubiKey security keys</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Runtime and containers</h3>
+<ul class="parts">
+<li style="--name: 8"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L126"><span class="part-no">B31</span> <span class="part-name">orbstack</span></a> <span class="part-use">Docker Desktop alternative for macOS</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Fonts</h3>
+<ul class="parts">
+<li style="--name: 29"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L129"><span class="part-no">B32</span> <span class="part-name">font-jetbrains-mono-nerd-font</span></a> <span class="part-use">JetBrains Mono with Nerd Font glyphs (terminal font)</span></li>
+</ul>
+</div>
+<div class="part-set">
+<h3 class="part-group">Mac App Store</h3>
+<ul class="parts">
+<li style="--name: 5"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/Brewfile#L132"><span class="part-no">B33</span> <span class="part-name">Xcode</span></a> <span class="part-use">Apple&#x27;s integrated development environment</span></li>
+</ul>
+</div>
+</div>
+
+<!-- generated-end -->
+</div>
+</section>
+
+<section class="runner" id="runner-c" aria-labelledby="runner-c-title">
+<div class="tab">
+<span class="tab-letter" aria-hidden="true">C</span>
+<h2 id="runner-c-title">Runtimes and their CLIs</h2>
+<p>Mise installs the language runtimes, and the command-line tools that ship through language package managers, at the versions its lock records.</p>
+</div>
+<div class="tree">
+<div class="tree-head">
+<label class="switch"><input type="checkbox"> Descriptions</label>
+</div>
+<!-- generated: runtimes-and-clis -->
+
+<p class="runner-count"><b>27</b> parts</p>
+<div class="part-sets">
+<div class="part-set">
+<ul class="parts">
+<li style="--name: 24"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L9"><span class="part-no">C1</span> <span class="part-name">aqua:<wbr>koalaman/<wbr>shellcheck</span></a> <span class="part-use">Shell linting</span></li>
+<li style="--name: 18"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L12"><span class="part-no">C2</span> <span class="part-name">aqua:<wbr>yarnpkg/<wbr>berry</span></a> <span class="part-use">Yarn JavaScript package manager</span></li>
+<li style="--name: 3"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L13"><span class="part-no">C3</span> <span class="part-name">bun</span></a> <span class="part-use">JavaScript runtime and toolkit</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L14"><span class="part-no">C4</span> <span class="part-name">elixir</span></a> <span class="part-use">Elixir runtime</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L15"><span class="part-no">C5</span> <span class="part-name">erlang</span></a> <span class="part-use">BEAM runtime</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L16"><span class="part-no">C6</span> <span class="part-name">go</span></a> <span class="part-use">Go toolchain</span></li>
+<li style="--name: 27"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L17"><span class="part-no">C7</span> <span class="part-name">go:<wbr>mvdan.cc/<wbr>sh/<wbr>v3/<wbr>cmd/<wbr>shfmt</span></a> <span class="part-use">Shell formatting</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L18"><span class="part-no">C8</span> <span class="part-name">java</span></a> <span class="part-use">Java runtime</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L19"><span class="part-no">C9</span> <span class="part-name">node</span></a> <span class="part-use">Node.js LTS</span></li>
+<li style="--name: 29"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L20"><span class="part-no">C10</span> <span class="part-name">npm:<wbr>@anthropic-ai/<wbr>claude-code</span></a> <span class="part-use">Claude Code CLI</span></li>
+<li style="--name: 41"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L21"><span class="part-no">C11</span> <span class="part-name">npm:<wbr>@agentclientprotocol/<wbr>claude-agent-acp</span></a> <span class="part-use">Claude ACP agent</span></li>
+<li style="--name: 34"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L22"><span class="part-no">C12</span> <span class="part-name">npm:<wbr>@agentclientprotocol/<wbr>codex-acp</span></a> <span class="part-use">Codex ACP agent</span></li>
+<li style="--name: 27"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L23"><span class="part-no">C13</span> <span class="part-name">npm:<wbr>@colbymchenry/<wbr>codegraph</span></a> <span class="part-use">Repository code graph CLI</span></li>
+<li style="--name: 21"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L24"><span class="part-no">C14</span> <span class="part-name">npm:<wbr>@swmansion/<wbr>argent</span></a> <span class="part-use">Device and simulator control MCP</span></li>
+<li style="--name: 17"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L25"><span class="part-no">C15</span> <span class="part-name">npm:<wbr>@openai/<wbr>codex</span></a> <span class="part-use">Codex CLI</span></li>
+<li style="--name: 11"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L26"><span class="part-no">C16</span> <span class="part-name">npm:<wbr>eas-cli</span></a> <span class="part-use">Expo Application Services CLI</span></li>
+<li style="--name: 11"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L27"><span class="part-no">C17</span> <span class="part-name">npm:<wbr>neonctl</span></a> <span class="part-use">Neon CLI</span></li>
+<li style="--name: 15"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L28"><span class="part-no">C18</span> <span class="part-name">npm:<wbr>opencode-ai</span></a> <span class="part-use">OpenCode CLI</span></li>
+<li style="--name: 10"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L29"><span class="part-no">C19</span> <span class="part-name">npm:<wbr>skills</span></a> <span class="part-use">Agent skills CLI</span></li>
+<li style="--name: 12"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L30"><span class="part-no">C20</span> <span class="part-name">npm:<wbr>wrangler</span></a> <span class="part-use">Cloudflare Workers CLI</span></li>
+<li style="--name: 13"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L32"><span class="part-no">C21</span> <span class="part-name">pipx:<wbr>mdformat</span></a> <span class="part-use">Markdown formatter with GFM/frontmatter plugins</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L33"><span class="part-no">C22</span> <span class="part-name">pnpm</span></a> <span class="part-use">JavaScript package manager</span></li>
+<li style="--name: 6"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L34"><span class="part-no">C23</span> <span class="part-name">python</span></a> <span class="part-use">Python runtime</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L35"><span class="part-no">C24</span> <span class="part-name">ruby</span></a> <span class="part-use">Ruby runtime</span></li>
+<li style="--name: 4"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L36"><span class="part-no">C25</span> <span class="part-name">rust</span></a> <span class="part-use">Rust toolchain</span></li>
+<li style="--name: 9"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L37"><span class="part-no">C26</span> <span class="part-name">terraform</span></a> <span class="part-use">Infrastructure as code CLI</span></li>
+<li style="--name: 2"><a class="part" href="https://github.com/danilomartinelli/dotfiles/blob/main/mise/config.toml#L38"><span class="part-no">C27</span> <span class="part-name">uv</span></a> <span class="part-use">Python package and environment manager</span></li>
+</ul>
+</div>
+</div>
+
+<!-- generated-end -->
+</div>
+</section>
+
+</main>
+
+<footer class="box">
+<div class="box-caution">
+<svg class="caution-mark" aria-hidden="true"><use href="#caution"/></svg>
+<h2>Not a universal installer</h2>
+<p>These are one person's dotfiles. Review the repository before applying it: bootstrap installs software, changes macOS preferences, and links configuration into your home directory.</p>
+</div>
+<div class="box-maker">
+<h2>Assembled by Danilo Martinelli</h2>
+<p>Twelve years of writing software, the last four spent recording and refining this setup. It is the environment the work happens in, not a demonstration.</p>
+<p><a href="https://witek.com.br">witek.com.br</a></p>
+</div>
+<div class="box-contents">
+<h2>Also in the box</h2>
+<ul>
+<li><a href="https://github.com/danilomartinelli/dotfiles#readme">The full manual</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/tree/main/docs/adr">Decision records</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/GLOSSARY.md">Glossary</a></li>
+<li><a href="https://github.com/danilomartinelli/dotfiles/blob/main/CODING_STANDARDS.md">Coding standards</a></li>
+</ul>
+<a class="action" href="https://github.com/danilomartinelli/dotfiles">Read the source</a>
+</div>
+<p class="box-spec"><span>Scale 1:1</span> <span>Three runners</span> <span>One instruction sheet</span></p>
+<p class="colophon">Set in Archivo and M PLUS Rounded 1c, both under the SIL Open Font License. No scripts, no trackers, and no requests to anyone else's server.</p>
+</footer>
+</body>
+</html>
