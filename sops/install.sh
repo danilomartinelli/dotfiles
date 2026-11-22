@@ -26,6 +26,19 @@ for recipient_file in "$age_dir"/recipient*.txt; do
   chmod 644 "$recipient_file"
 done
 
+# The recipient is the identity's public half, so a missing one is derived
+# rather than left for a person to reconstruct. Nothing here creates a key.
+if [ -f "$default_key" ] && [ ! -f "$default_recipient" ] \
+  && command -v age-keygen >/dev/null 2>&1; then
+  if age-keygen -y "$default_key" >"$default_recipient" 2>/dev/null; then
+    chmod 644 "$default_recipient"
+    installer_item "derived the default recipient from the identity"
+  else
+    rm -f -- "$default_recipient"
+    installer_warn "could not derive a recipient from $default_key"
+  fi
+fi
+
 if [ -f "$default_key" ]; then
   installer_note "default age identity already present"
   installer_note "back up $default_key somewhere safe: losing it loses every secret encrypted to it"

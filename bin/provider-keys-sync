@@ -1,0 +1,151 @@
+#!/bin/sh
+#
+# Copy provider keys from Bitwarden into this machine's encrypted stores.
+#
+# Bitwarden is where a provider key is kept, edited and rotated: one secure
+# note per tool, named dotfiles/provider-keys/<tool>, holding KEY=value lines.
+# This writes each note to ~/.config/dotfiles/provider-keys/<tool>.env,
+# encrypted with SOPS to the default age identity, which is where
+# with-provider-keys reads it. Run it on a new Mac and after changing a note.
+#
+# Explicit and interactive by nature: it needs an unlocked vault, and no
+# installer runs it. It prints key names, never values.
+#
+# USAGE:
+#
+#   $ export BW_SESSION=$(bw unlock --raw)
+#   $ provider-keys-sync            # every tool with a note
+#   $ provider-keys-sync opencode   # one tool
+
+set -eu
+
+prefix=dotfiles/provider-keys/
+store_dir=$HOME/.config/dotfiles/provider-keys
+key_file=${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: provider-keys-sync [tool...]
+
+Write the provider keys Bitwarden holds for each tool, or for the named tools,
+to this machine's encrypted stores. Requires an unlocked vault:
+
+  export BW_SESSION=$(bw unlock --raw)
+EOF
+}
+
+fail() {
+  printf 'provider-keys-sync: %s\n' "$1" >&2
+  exit 1
+}
+
+case ${1-} in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    usage
+    exit 2
+    ;;
+esac
+
+for dependency in bw sops jq age-keygen; do
+  command -v "$dependency" >/dev/null 2>&1 \
+    || fail "$dependency is not installed; run dot to install the declared software"
+done
+
+[ -f "$key_file" ] || fail "no age identity at $key_file; create one with sops-key-create default"
+# An identity file may hold several identities; the stores are encrypted to
+# each of them, which is the comma-separated list sops takes.
+recipient=$(age-keygen -y "$key_file" | paste -sd, -)
+[ -n "$recipient" ] || fail "cannot read the age identity at $key_file"
+
+vault_status=$(bw status | jq -r .status) || fail 'cannot read the Bitwarden vault status'
+if [ "$vault_status" != unlocked ]; then
+  printf 'provider-keys-sync: the Bitwarden vault is %s\n' "$vault_status" >&2
+  # shellcheck disable=SC2016 # Printed for the person to run, not expanded here.
+  printf '  unlock it with: export BW_SESSION=$(bw unlock --raw)\n' >&2
+  exit 1
+fi
+
+bw sync >/dev/null || fail 'could not refresh the vault from the server'
+items=$(bw list items --search "$prefix") || fail 'could not list the vault'
+
+# Print the tools that have a note, one per line.
+noted_tools() {
+  printf '%s\n' "$items" | jq -r --arg prefix "$prefix" \
+    '.[] | select(.name | startswith($prefix)) | .name[($prefix | length):]'
+}
+
+# Usage: tool_notes <tool>
+tool_notes() {
+  printf '%s\n' "$items" | jq -r --arg name "$prefix$1" \
+    'first(.[] | select(.name == $name)).notes // ""'
+}
+
+# Report a note that is not KEY=value lines, naming the line and never its text.
+# Usage: check_notes <tool> <notes>
+check_notes() {
+  check_line=0
+  check_status=0
+  while IFS= read -r line; do
+    check_line=$((check_line + 1))
+    case $line in
+      '' | '#'*) continue ;;
+      [A-Z_]*=?*)
+        case ${line%%=*} in
+          *[!A-Z0-9_]*) ;;
+          *) continue ;;
+        esac
+        ;;
+    esac
+    printf 'provider-keys-sync: %s%s line %s is not KEY=value\n' \
+      "$prefix" "$1" "$check_line" >&2
+    check_status=1
+  done <<EOF
+$2
+EOF
+  return "$check_status"
+}
+
+# Usage: sync_tool <tool>
+sync_tool() {
+  case $1 in
+    '' | *[!a-z0-9-]*) fail "invalid tool name: $1" ;;
+  esac
+  notes=$(tool_notes "$1")
+  [ -n "$notes" ] || fail "Bitwarden has no secure note named $prefix$1, or it is empty"
+  check_notes "$1" "$notes" || fail "$prefix$1 was not written"
+
+  store=$store_dir/$1.env
+  if ! printf '%s\n' "$notes" | sops encrypt --age "$recipient" \
+    --filename-override "$1.env" --input-type dotenv --output-type dotenv \
+    /dev/stdin >"$store.tmp"; then
+    rm -f -- "$store.tmp"
+    fail "could not encrypt the keys of $1"
+  fi
+  chmod 600 "$store.tmp"
+  mv -f -- "$store.tmp" "$store"
+
+  names=$(printf '%s\n' "$notes" | sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' | tr '\n' ' ')
+  printf '  ✓ %s: %s\n' "$1" "${names% }"
+}
+
+umask 077
+mkdir -p "$store_dir"
+chmod 700 "$store_dir"
+
+if [ "$#" -eq 0 ]; then
+  tools=$(noted_tools)
+  if [ -z "$tools" ]; then
+    fail "Bitwarden has no secure note named $prefix<tool>; create one holding KEY=value lines"
+  fi
+  # shellcheck disable=SC2086 # One tool per word; names hold no spaces.
+  set -- $tools
+fi
+
+printf '› writing provider keys to %s\n' "$store_dir"
+for tool in "$@"; do
+  sync_tool "$tool"
+done

@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Run a command with one tool's provider keys in its environment.
+#
+# A provider key reaches the command that needs it and nothing else: no shell
+# exports it, so no other process, and no coding agent started from that shell,
+# inherits it. provider-keys-sync keeps each tool's keys in a SOPS-encrypted
+# store; this decrypts that store into the environment of the one command.
+#
+# USAGE:
+#
+#   $ with-provider-keys opencode -- opencode
+#   # => starts OpenCode with the keys of the `opencode` store
+
+set -eu
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: with-provider-keys <tool> -- <command> [argument...]
+
+Run the command with the provider keys of <tool> in its environment. Without a
+store for <tool> the command runs without them.
+EOF
+}
+
+if [ "$#" -lt 3 ] || [ "$2" != -- ]; then
+  usage
+  exit 2
+fi
+tool=$1
+shift 2
+case $tool in
+  '' | *[!a-z0-9-]*)
+    printf 'with-provider-keys: invalid tool name: %s\n' "$tool" >&2
+    exit 2
+    ;;
+esac
+
+store=$HOME/.config/dotfiles/provider-keys/$tool.env
+if [ ! -f "$store" ]; then
+  printf 'with-provider-keys: no provider keys for %s; running without them\n' "$tool" >&2
+  exec "$@"
+fi
+
+# An app that starts this outside a shell has neither Homebrew on PATH nor the
+# variable sops/env.zsh sets, and sops does not look in ~/.config on macOS.
+PATH=$PATH:/opt/homebrew/bin:/usr/local/bin
+SOPS_AGE_KEY_FILE=${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}
+export SOPS_AGE_KEY_FILE
+
+if ! keys=$(sops decrypt --input-type dotenv --output-type dotenv "$store"); then
+  printf 'with-provider-keys: could not decrypt %s\n' "$store" >&2
+  exit 1
+fi
+
+# Each line is exported as it stands. Nothing is evaluated, so a value cannot
+# run anything, and the command's own arguments are never re-quoted.
+while IFS= read -r line; do
+  case $line in
+    '' | '#'*) continue ;;
+  esac
+  export "${line%%=*}=${line#*=}"
+done <<EOF
+$keys
+EOF
+unset keys line
+
+exec "$@"

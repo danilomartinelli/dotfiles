@@ -432,19 +432,21 @@ subcommand form.
 
 ### General utilities
 
-| Command           | Usage and purpose                                                         |
-| ----------------- | ------------------------------------------------------------------------- |
-| `battery-status`  | Print the macOS battery indicator used by the prompt                      |
-| `dns-flush`       | Flush the macOS DNS cache with `sudo`                                     |
-| `dot`             | Run normal dotfiles maintenance                                           |
-| `e`               | `e [path]`: open a path or the current directory in `$EDITOR`             |
-| `headers`         | `headers URL`: print HTTP response headers                                |
-| `keyclu-import`   | Open the tracked KeyClu shortcut collection for import                    |
-| `mobile-setup`    | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators |
-| `nix-install`     | Explicitly install Nix; never runs during bootstrap or `dot`              |
-| `set-defaults`    | Apply tracked macOS preferences                                           |
-| `sops-key-create` | `sops-key-create <role>`: create a non-overwriting age identity           |
-| `ssh-key-create`  | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key         |
+| Command              | Usage and purpose                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `battery-status`     | Print the macOS battery indicator used by the prompt                                             |
+| `dns-flush`          | Flush the macOS DNS cache with `sudo`                                                            |
+| `dot`                | Run normal dotfiles maintenance                                                                  |
+| `e`                  | `e [path]`: open a path or the current directory in `$EDITOR`                                    |
+| `headers`            | `headers URL`: print HTTP response headers                                                       |
+| `keyclu-import`      | Open the tracked KeyClu shortcut collection for import                                           |
+| `mobile-setup`       | `mobile-setup [--check] [ios\|android\|all]`: provision mobile simulators                        |
+| `nix-install`        | Explicitly install Nix; never runs during bootstrap or `dot`                                     |
+| `provider-keys-sync` | `provider-keys-sync [tool...]`: copy provider keys from Bitwarden to this Mac's encrypted stores |
+| `set-defaults`       | Apply tracked macOS preferences                                                                  |
+| `sops-key-create`    | `sops-key-create <role>`: create a non-overwriting age identity                                  |
+| `with-provider-keys` | `with-provider-keys <tool> -- <command>`: run a command with one tool's provider keys            |
+| `ssh-key-create`     | `ssh-key-create <role> [--rsa]`: create a non-overwriting SSH key                                |
 
 ### Mobile simulator provisioning
 
@@ -688,23 +690,24 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 
 ### Configuration ownership
 
-| Configuration          | Installed location             | Ownership rule                                                             |
-| ---------------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| Private environment    | `~/.localrc`                   | Generated locally, mode `600`, never committed                             |
-| Shared shell defaults  | `.commonrc`                    | Tracked and secret-free                                                    |
-| Git identity           | `git/gitconfig.local.symlink`  | Generated locally and gitignored                                           |
-| Git worktree overrides | `~/.gitconfig.worktree`        | Tracked; applied only to linked worktrees, above the machine-local include |
-| Private SSH hosts      | `~/.ssh/config_local`          | Preserved by the tracked SSH config                                        |
-| SOPS age identities    | `~/.config/sops/age/`          | Machine-private, mode `600`                                                |
-| Zed settings           | `~/.config/zed/settings.json`  | Tracked JSONC-compatible config, no plaintext credentials                  |
-| Neovim configuration   | `~/.config/nvim`               | `init.lua` and the plugin lock linked; Neovim's own writes land as a diff  |
-| OpenCode config        | `~/.config/opencode`           | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own        |
-| Claude Code settings   | `~/.claude/settings.json`      | Tracked; Claude Code's own writes land as a diff                           |
-| Herdr settings         | `~/.config/herdr-app`          | Settings, programs and one theme linked; the rest is Herdr's own           |
-| btop settings          | `~/.config/btop`               | `btop.conf` and the theme linked; btop's own writes land as a diff         |
-| Tool themes            | `~/.config`, `~/.atuin/themes` | lazygit, eza and Atuin theme files linked from their topics                |
-| Codex configuration    | `~/.codex/config.toml`         | Machine-local: Codex records project trust and plugin state in it          |
-| direnv config          | `~/.config/direnv/direnv.toml` | Rendered locally from the trusted roots and gitignored                     |
+| Configuration          | Installed location                 | Ownership rule                                                                 |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| Private environment    | `~/.localrc`                       | Generated locally, mode `600`, never committed; machine values, no credentials |
+| Provider-key stores    | `~/.config/dotfiles/provider-keys` | Written by `provider-keys-sync`, SOPS-encrypted, mode `600`, never tracked     |
+| Shared shell defaults  | `.commonrc`                        | Tracked and secret-free                                                        |
+| Git identity           | `git/gitconfig.local.symlink`      | Generated locally and gitignored                                               |
+| Git worktree overrides | `~/.gitconfig.worktree`            | Tracked; applied only to linked worktrees, above the machine-local include     |
+| Private SSH hosts      | `~/.ssh/config_local`              | Preserved by the tracked SSH config                                            |
+| SOPS age identities    | `~/.config/sops/age/`              | Machine-private, mode `600`                                                    |
+| Zed settings           | `~/.config/zed/settings.json`      | Tracked JSONC-compatible config, no plaintext credentials                      |
+| Neovim configuration   | `~/.config/nvim`                   | `init.lua` and the plugin lock linked; Neovim's own writes land as a diff      |
+| OpenCode config        | `~/.config/opencode`               | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own            |
+| Claude Code settings   | `~/.claude/settings.json`          | Tracked; Claude Code's own writes land as a diff                               |
+| Herdr settings         | `~/.config/herdr-app`              | Settings, programs and one theme linked; the rest is Herdr's own               |
+| btop settings          | `~/.config/btop`                   | `btop.conf` and the theme linked; btop's own writes land as a diff             |
+| Tool themes            | `~/.config`, `~/.atuin/themes`     | lazygit, eza and Atuin theme files linked from their topics                    |
+| Codex configuration    | `~/.codex/config.toml`             | Machine-local: Codex records project trust and plugin state in it              |
+| direnv config          | `~/.config/direnv/direnv.toml`     | Rendered locally from the trusted roots and gitignored                         |
 
 Never place secrets in tracked configuration or simulate interpolation with
 `$VARIABLE`: Zed treats such values literally in settings fields. Prefer OAuth
@@ -713,6 +716,48 @@ JSON and JSONC on save with its managed Prettier; `.prettierrc.json` applies
 Zed's [documented JSONC parser workaround](https://zed.dev/docs/languages/json#jsonc-prettier-formatting)
 to prevent trailing commas. Keep keys, kubeconfigs, auth receipts, and
 account-specific state outside this repository.
+
+### Secrets
+
+No shell exports a credential: every shell's environment is inherited by every
+process started from it, coding agents included. There are two kinds of
+secret, and each is delivered only where it is needed
+([ADR-0009](docs/adr/0009-deliver-secrets-to-the-project-or-command.md)).
+
+A **project secret** belongs to one project. Keep it in that project as a
+SOPS-encrypted dotenv file and load it with direnv:
+
+```bash
+sops encrypt --age "$SOPS_AGE_RECIPIENTS" --input-type dotenv \
+  --output-type dotenv plain.env >secrets.sops.env
+printf 'use sops\n' >.envrc
+```
+
+`use sops [file]` comes from `direnv/lib/sops.sh`, which the `direnv`
+installer links into `~/.config/direnv/lib`. The variables exist only inside
+that directory and direnv reloads them when the file changes. Edit the file
+with `sops edit secrets.sops.env`.
+
+A **provider key** belongs to an account, and a tool needs it wherever it
+runs, such as OpenCode's model providers. Bitwarden is where it is kept and
+rotated: one secure note per tool, named `dotfiles/provider-keys/<tool>`,
+holding `KEY=value` lines.
+
+```bash
+export BW_SESSION=$(bw unlock --raw)
+provider-keys-sync
+```
+
+`provider-keys-sync` writes each note to
+`~/.config/dotfiles/provider-keys/<tool>.env`, encrypted to the default age
+identity, and prints key names, never values. Run it on a new Mac and after
+changing a note. `with-provider-keys <tool> -- <command>` then decrypts that
+store into the environment of that one command; without a store it runs the
+command without keys and says so. `opencode` is a shell function that starts
+OpenCode this way, and Zed starts its OpenCode agent through the same command.
+
+`sops/install.sh` derives a missing `recipient.txt` from the default identity,
+which is what `SOPS_AGE_RECIPIENTS` is read from.
 
 ### Commit signing and secret scanning
 

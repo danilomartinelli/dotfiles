@@ -25,6 +25,7 @@ make_fixture() {
   mkdir -p "$fixture/checkout/direnv" "$fixture/workspace"
   cp -R "$REPOSITORY_ROOT/_scripts" "$fixture/checkout/_scripts"
   cp "$REPOSITORY_ROOT/direnv/install.sh" "$fixture/checkout/direnv/install.sh"
+  cp -R "$REPOSITORY_ROOT/direnv/lib" "$fixture/checkout/direnv/lib"
   printf '%s\n' "$fixture"
 }
 

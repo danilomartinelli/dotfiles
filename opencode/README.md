@@ -88,8 +88,10 @@ rather than reporting a credential problem.
 ## Coding-plan providers
 
 Two subscription providers need no plugin: OpenCode ships both and
-authenticates each from the environment, so their keys belong in `.localrc`
-beside the others. `kimi-code-plan-global/*` reads `KIMI_API_KEY` and reaches
+authenticates each from the environment. Their keys are provider keys: they
+belong in the Bitwarden note `dotfiles/provider-keys/opencode`, and
+`opencode/provider-keys.zsh` starts OpenCode through `with-provider-keys` so
+they reach it and nothing else (see "Secrets" in the root README). `kimi-code-plan-global/*` reads `KIMI_API_KEY` and reaches
 `api.kimi.ai/coding/v1`; `zai-coding-plan/*` reads `ZHIPU_API_KEY` and reaches
 `api.z.ai/api/coding/paas/v4`. Both are subscription endpoints rather than
 metered ones, which is why `opencode models --verbose` reports zero cost for

@@ -3,8 +3,10 @@
 # The bootstrap script will automatically create a copy of this file
 # as .localrc and symlink it to ~/.localrc
 #
-# WARNING: Never commit .localrc with sensitive data to version control!
-# This file should contain sensitive information like API keys and passwords.
+# This file holds values that belong to this Mac alone. It is not where
+# credentials go: every shell sources it, so anything exported here reaches
+# every process started from a shell, coding agents included. See "Secrets" at
+# the end of this file.
 #
 # Setup (handled by bootstrap):
 #   1. Copies .localrc.example → .localrc
@@ -43,60 +45,24 @@
 # export GITLAB_USER="yourhandle"
 
 # =======================================
-# Secret Keys and Tokens
+# Secrets
 # =======================================
-
-# Example API Keys
-# export TWENTYFIRST_API_KEY="<CHANGE_ME>"
-# export MORPH_API_KEY="<CHANGE_ME>"
-# export TAVILY_API_KEY="<CHANGE_ME>"
-# Exa API/local MCP clients (the hosted remote MCP also works keyless)
-# export EXA_API_KEY="<CHANGE_ME>"
-
-# OpenCode providers (inherited from the shell environment)
-# export OPENCODE_API_KEY="<CHANGE_ME>"
-# The two coding-plan subscriptions, `kimi-code-plan-global` and
-# `zai-coding-plan`. ZHIPU_API_KEY also names three other providers, so issue it
-# from z.ai: `zai-coding-plan` reaches api.z.ai and rejects a key issued by
-# open.bigmodel.cn.
-# export KIMI_API_KEY="<CHANGE_ME>"
-# export ZHIPU_API_KEY="<CHANGE_ME>"
 #
-# Optional extras used by other agents/tools (skills CLI, …)
-# export ANTHROPIC_API_KEY="<CHANGE_ME>"
-# export OPENAI_API_KEY="<CHANGE_ME>"
-# export GEMINI_API_KEY="<CHANGE_ME>"
-# export OPENROUTER_API_KEY="<CHANGE_ME>"
+# Do not export a credential here. There are two kinds, and each has a place
+# that reaches only what needs it:
 #
-# Zed process-backed LSP and stdio MCP credentials may be exported here when the
-# underlying process natively reads the variable. Zed passes its inherited
-# process environment through; it does not interpolate variables in arbitrary
-# settings fields. Do not put $VARIABLE, ${VARIABLE}, or keychain references in
-# Zed settings.json. Literal-JSON-only extension/LSP/static-header auth has no
-# verified secret-safe tracked-settings mechanism in this installation; use
-# OAuth or a process-based integration that reads inherited environment, or do
-# not configure it. Never put plaintext credentials in Zed settings.
-# export BRAVE_API_KEY="<CHANGE_ME>"
-# export CONTEXT7_API_KEY="<CHANGE_ME>"
-# export GITHUB_PERSONAL_ACCESS_TOKEN="<CHANGE_ME>"
-
-# ========================================
-# NOTE: Best Practices for Managing Secrets
-# ========================================
+# 1. A project secret belongs to one project. Keep it in that project, in a
+#    SOPS-encrypted `secrets.sops.env`, and load it with an `.envrc` that says
+#    `use sops`. direnv puts it in the environment only inside that directory.
 #
-# 1. Remember to keep this file secure with proper permissions:
-#    chmod 600 ~/.localrc
+# 2. A provider key belongs to an account and a tool needs it wherever it
+#    runs, such as OpenCode's model providers. Keep it in Bitwarden, in a
+#    secure note named `dotfiles/provider-keys/<tool>` holding KEY=value lines,
+#    and run `provider-keys-sync`. `with-provider-keys <tool> -- <command>`
+#    then gives the keys to that one command; `opencode` already starts that
+#    way.
 #
-# 2. Never commit this file to version control
+# README.md, "Secrets", describes both.
 #
-# 3. Consider using a password manager (like Bitwarden) to store
-#    these secrets securely and generate strong passwords
-#
-# 4. Rotate your secrets regularly
-#
-# 5. Use different credentials for development and production
-#
-# 6. Some services provide scoped tokens - use the minimum required permissions
-#
-# 7. Git name/email for commits belong in git/gitconfig.local.symlink
-#    (created by bootstrap). The GIT_* exports above are optional extras.
+# Git name and email for commits belong in git/gitconfig.local.symlink
+# (created by bootstrap). The GIT_* exports above are optional extras.

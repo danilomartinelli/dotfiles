@@ -39,4 +39,9 @@ mv "$RENDERED.tmp" "$RENDERED"
 installer_link_config --label "direnv config" \
   "$RENDERED" "$(installer_config_dir direnv)/direnv.toml"
 
+# direnv's stdlib sources every file in this directory, which is how an .envrc
+# reaches `use sops`.
+installer_link_config --label "direnv sops function" \
+  "$TOPIC_DIR/lib/sops.sh" "$(installer_config_dir direnv)/lib/sops.sh"
+
 installer_success "direnv configured"

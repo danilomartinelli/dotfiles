@@ -31,8 +31,8 @@
         "mode": "build"
       },
       "type": "custom",
-      "command": "mise",
-      "args": ["exec", "--", "opencode", "acp"]
+      "command": "with-provider-keys",
+      "args": ["opencode", "--", "mise", "exec", "--", "opencode", "acp"]
     },
     "cursor": {
       "type": "registry"

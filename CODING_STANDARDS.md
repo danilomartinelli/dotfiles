@@ -520,6 +520,7 @@ it reads it from there rather than restating it.
 | Homebrew                                                        | `tests/homebrew_availability_test.sh`, `tests/homebrew_bundle_test.sh`, `tests/homebrew_maintenance_test.sh`              |
 | macOS defaults                                                  | `tests/macos_defaults_test.sh`                                                                                            |
 | SSH and SOPS                                                    | `tests/ssh_provisioning_test.sh`, `tests/sops_provisioning_test.sh`                                                       |
+| Provider keys and project secrets                               | `tests/provider_keys_test.sh`, `tests/direnv_install_test.sh`                                                             |
 | Archiver                                                        | `tests/archiver_install_test.sh`                                                                                          |
 | Dock layout                                                     | `tests/dock_install_test.sh`                                                                                              |
 | Trusted roots and direnv config                                 | `tests/direnv_install_test.sh`                                                                                            |
@@ -583,14 +584,19 @@ warnings introduced by the change.
 
 ## Security and destructive boundaries
 
-- Secrets belong in gitignored `.localrc` with mode `600` or an appropriate
-  system credential store.
+- No shell exports a credential. Project secrets belong in the project's
+  SOPS-encrypted `secrets.sops.env`; provider keys belong in Bitwarden and the
+  encrypted stores under `~/.config/dotfiles/provider-keys`. Gitignored
+  `.localrc`, mode `600`, holds machine values only.
+- A command that handles a credential prints its name and never its value,
+  including in an error about a malformed one.
 - Never log or commit Git identity, SSH private keys, SOPS identities,
   kubeconfigs, auth stores, or account identifiers.
 - SSH and SOPS installers may repair directories, links, and permissions; only
   the explicit `ssh-key-create` and `sops-key-create` commands create keys.
-- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain plaintext credentials or fake interpolation for settings that
-  treat `$VARIABLE` literally.
+- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain
+  plaintext credentials or fake interpolation for settings that treat
+  `$VARIABLE` literally.
 - Resolve exact targets before deletion, replacement, package mutation, or
   remote-changing commands.
 - Tests must not run `_scripts/bootstrap`, `dot`, `set-defaults`, Homebrew

@@ -83,7 +83,7 @@ topics; hidden and underscore-prefixed names are excluded from discovery.
    state. A source diff does not prove that configuration was applied.
 
 1. Read only secret-free examples such as `.localrc.example`. Never inspect or
-   print `.localrc`, auth stores, private keys, kubeconfigs, generated Git
+   print `.localrc`, the provider-key stores, a project's decrypted secrets, auth stores, private keys, kubeconfigs, generated Git
    identity, or account-specific state.
 
 ## Sources of truth
@@ -246,8 +246,12 @@ the same change as the public surface.
 
 ## Security boundaries
 
-- Secrets belong only in gitignored `.localrc` with mode `600` or an
-  appropriate system credential store.
+- No shell exports a credential. A project secret lives in that project's
+  SOPS-encrypted `secrets.sops.env` and is loaded by direnv; a provider key
+  lives in Bitwarden and in the encrypted stores `provider-keys-sync` writes,
+  and reaches a command only through `with-provider-keys`
+  (`docs/adr/0009-deliver-secrets-to-the-project-or-command.md`). Gitignored
+  `.localrc`, mode `600`, holds machine values, not credentials.
 - Generated Git identity, SSH private keys, SOPS identities, kubeconfigs, auth
   receipts, agent runtime state, and account identifiers are machine-private.
 - `ssh-key-create` and `sops-key-create` are the only key-creation paths in the
@@ -255,8 +259,9 @@ the same change as the public surface.
   permissions, and may report that a key is missing by naming the command that
   creates it; none runs a generator. They share the guards in
   `_scripts/key-provisioning.sh`.
-- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain plaintext credentials or pretend that settings interpolate
-  `$VARIABLE` when they do not.
+- Tracked Zed, OpenCode, Claude Code and Herdr configuration must not contain
+  plaintext credentials or pretend that settings interpolate `$VARIABLE` when
+  they do not.
 - Resolve the exact target and confirm user authorization before destructive or
   remote-changing operations.
 

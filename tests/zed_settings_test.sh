@@ -38,8 +38,8 @@ test_formatter_policy_and_sandbox_paths() {
   and .agent_servers.opencode == {
     "default_config_options": { "mode": "build" },
     "type": "custom",
-    "command": "mise",
-    "args": ["exec", "--", "opencode", "acp"]
+    "command": "with-provider-keys",
+    "args": ["opencode", "--", "mise", "exec", "--", "opencode", "acp"]
   }
   and all(
     .agent.sandbox_permissions.write_paths[];

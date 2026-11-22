@@ -94,6 +94,29 @@ test_installer_repairs_without_creating_keys() {
   assert_equal 'AGE-SECRET-KEY-1EXISTING' "$(cat "$age_dir/keys.txt")" 'key content preserved'
 }
 
+# The recipient is the public half of an identity that already exists, so the
+# installer may put it back; that is a repair, not a key creation.
+test_installer_derives_a_missing_recipient() {
+  local test_home age_dir
+
+  test_home=$(make_home)
+  age_dir=$test_home/.config/sops/age
+  mkdir -p "$age_dir" "$test_home/fake-bin"
+  printf '%s\n' 'AGE-SECRET-KEY-1EXISTING' >"$age_dir/keys.txt"
+  scenario_write_executable "$test_home/fake-bin/age-keygen" <<'EOF'
+#!/bin/sh
+[ "$1" = -y ] || exit 64
+printf '%s\n' age1derivedrecipient
+EOF
+
+  scenario_capture "$test_home" env HOME="$test_home" \
+    PATH="$test_home/fake-bin:/usr/bin:/bin" "$REPOSITORY_ROOT/sops/install.sh"
+
+  assert_equal age1derivedrecipient "$(cat "$age_dir/recipient.txt")" 'derived recipient'
+  assert_mode "$age_dir/recipient.txt" 644
+  assert_equal 'AGE-SECRET-KEY-1EXISTING' "$(cat "$age_dir/keys.txt")" 'key content preserved'
+}
+
 test_installer_hints_when_missing() {
   local test_home
 
@@ -200,6 +223,8 @@ test_usage_and_missing_dependency() {
 }
 
 scenario_run 'installer repairs permissions and never invents keys' test_installer_repairs_without_creating_keys
+scenario_run 'installer derives a missing recipient from the identity' \
+  test_installer_derives_a_missing_recipient
 scenario_run 'installer hints when the default identity is missing' test_installer_hints_when_missing
 scenario_run 'default age identity creation writes key and recipient' test_default_key_creation
 scenario_run 'role paths are isolated and refuse overwrites' test_role_paths_and_no_overwrite
