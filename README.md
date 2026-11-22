@@ -646,6 +646,19 @@ before each prompt and after directory changes. Mise still switches project
 runtimes. Reloading is idempotent: paths, hooks, and implementation state remain
 de-duplicated.
 
+The prompt is drawn from state rather than by running commands. Its battery
+and Git segments are computed in the background and arrive a moment after the
+prompt, so a large repository never holds up typing; in the same directory the
+previous answer stands in until the new one arrives. The right-hand side shows
+the context a command would act on: the current Kubernetes context, read from
+the kubeconfig without starting `kubectl`, and the AWS profile when
+`AWS_PROFILE` or an `aws-vault` session sets one. A name containing `prod` is
+shown in red.
+
+A topic whose CLI generates its own completion (`kubectl`, `docker`, `coolify`,
+`codex`) sources it from `~/.cache/dotfiles`, regenerated when the command
+resolves to another file or that file changes.
+
 `pnpm/path.zsh` supplies `PNPM_HOME` (defaulting to `~/Library/pnpm`) and adds
 both `$PNPM_HOME/bin`, where pnpm 11 and newer link global executables, and
 `$PNPM_HOME`, which can hold standalone pnpm and older global commands. Both
@@ -716,8 +729,7 @@ project's own instructions still take precedence.
   `~/.claude`, which does nothing unless the project has a root `DESIGN.md`:
   Claude Code cannot limit a user-level hook to certain projects.
 - **Codex** runs from Mise. Its `config.toml` records project trust, plugin
-  state and desktop preferences, so it is not versioned; `codex/completion.zsh`
-  caches the shell completion Codex generates. Upgrade the managed CLI through
+  state and desktop preferences, so it is not versioned. Upgrade the managed CLI through
   `dot`'s software picker; its package-manager self-update installs a separate
   copy outside the Mise declaration and lock.
 - **OpenCode** runs from Mise. `opencode.jsonc` declares the models, the

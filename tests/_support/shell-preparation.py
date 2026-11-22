@@ -22,7 +22,8 @@ class ShellPreparationTest(unittest.TestCase):
             (self.checkout / name).mkdir(parents=True)
         for name in (
             "_scripts/topic-catalog", "_scripts/mise-policy", "_scripts/trusted-roots",
-            "zsh/zshrc.symlink", "zsh/_startup.zsh", "mise/mise.zsh",
+            "zsh/zshrc.symlink", "zsh/_startup.zsh",
+            "zsh/_generated-completion.zsh", "mise/mise.zsh",
             "mise/completion.zsh", "android-studio/env.zsh", "pnpm/path.zsh",
         ):
             shutil.copy2(ROOT / name, self.checkout / name)

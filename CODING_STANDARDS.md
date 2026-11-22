@@ -363,6 +363,14 @@ classifier lists every installer and decides none of this order.
 - Use Zsh arrays and conditionals where they make startup intent clearer.
 - Keep prompt implementation in `zsh/prompt.zsh`; topics must not install a
   competing prompt.
+- Drawing the prompt starts no process. `PROMPT` and `RPROMPT` expand
+  parameters only; anything that costs a process is computed by the background
+  render and delivered to the line editor. Prompt state is not named
+  `_dotfiles_*`, because startup unsets every such parameter when it finishes.
+- A topic sources a completion its CLI generates through
+  `_dotfiles_generated_completion <command> [argument...]` from
+  `zsh/_generated-completion.zsh`, which caches it until the command changes.
+  Do not run a CLI in every shell to ask for its completion.
 - Validate every changed `.zsh` file with `zsh -n` and the startup fixture.
 
 ## JSON, JSONC, TOML, and declarative files
@@ -491,6 +499,8 @@ it reads it from there rather than restating it.
 | Public docs, commands, aliases, dependencies, installer helpers | `tests/documentation_test.sh`                                                                                             |
 | Setup phases                                                    | `tests/setup_test.sh`                                                                                                     |
 | Zsh startup or topic shell files                                | `tests/zsh_startup_test.sh` and `zsh -n`                                                                                  |
+| Prompt                                                          | `tests/prompt_test.sh`, `tests/git_branch_state_test.sh`                                                                  |
+| Generated completion cache                                      | `tests/generated_completion_test.sh`, `tests/zsh_startup_test.sh`                                                         |
 | Topic layout or discovery                                       | `tests/topic_catalog_test.sh`                                                                                             |
 | Checkout resolution and command adapters                        | `tests/checkout_test.sh`                                                                                                  |
 | Config and bootstrap links                                      | `tests/link_config_test.sh`, `tests/link_dotfiles_test.sh`                                                                |

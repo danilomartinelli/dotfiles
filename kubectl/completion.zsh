@@ -1,4 +1,4 @@
-# Kubectl completion from the installed CLI.
-if (( $+commands[kubectl] )); then
-  source <(kubectl completion zsh)
+# Kubectl completion from the installed CLI, cached between shells.
+if _dotfiles_generated_completion kubectl completion zsh; then
+  source "$REPLY"
 fi

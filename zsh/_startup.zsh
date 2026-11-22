@@ -147,6 +147,9 @@ else
   compinit -i
 fi
 
+# Topics whose CLI generates its completion reach the cache through this.
+source "$DOTFILES_ROOT/zsh/_generated-completion.zsh"
+
 for _dotfiles_file in "${_dotfiles_completion_files[@]}"; do
   source "$_dotfiles_file"
 done

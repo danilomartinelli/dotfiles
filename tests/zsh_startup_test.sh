@@ -167,6 +167,7 @@ cp "$REPOSITORY_ROOT/zsh/zshrc.symlink" "$FIXTURE/zsh/zshrc.symlink"
 cp "$REPOSITORY_ROOT/zsh/_startup.zsh" "$FIXTURE/zsh/_startup.zsh"
 cp "$REPOSITORY_ROOT/zsh/config.zsh" "$FIXTURE/zsh/config.zsh"
 cp "$REPOSITORY_ROOT/zsh/completion.zsh" "$FIXTURE/zsh/completion.zsh"
+cp "$REPOSITORY_ROOT/zsh/_generated-completion.zsh" "$FIXTURE/zsh/_generated-completion.zsh"
 cp "$REPOSITORY_ROOT/zsh/prompt.zsh" "$FIXTURE/zsh/prompt.zsh"
 cp "$REPOSITORY_ROOT/zsh/window.zsh" "$FIXTURE/zsh/window.zsh"
 cp "$REPOSITORY_ROOT/system/env.zsh" "$FIXTURE/system/env.zsh"
@@ -198,6 +199,7 @@ EOF
 scenario_write_executable "$BREW_PREFIX/bin/coolify" <<'EOF'
 #!/bin/sh
 [ "$*" = 'completion zsh' ] || exit 2
+printf '%s\n' coolify-generated >> "$SCENARIO_EVENT_LOG"
 printf '%s\n' '_coolify() { :; }' 'compdef _coolify coolify'
 EOF
 
@@ -361,7 +363,7 @@ assert_equal 'm:{a-z}={A-Z}' "${(j: :)matcher_style}" 'completion matcher style'
 assert_equal select "${(j: :)menu_style}" 'completion menu style'
 [[ $(bindkey '^[[Z') == *reverse-menu-complete* ]] || fail 'reverse completion binding is missing'
 
-[[ $PROMPT == *'$(battery_status)'* ]] || fail 'custom prompt is not active'
+[[ $PROMPT == *'${_prompt_git}'* ]] || fail 'custom prompt is not active'
 (( ${precmd_functions[(Ie)_dotfiles_prompt_window_title]} )) || \
   fail 'custom prompt hook is not registered'
 [[ -z ${functions[precmd]-} ]] || fail 'custom prompt must not override precmd directly'
@@ -458,6 +460,8 @@ test_startup_order_and_reload() {
   assert_count "$events" brew-prefix 2
   assert_count "$events" compinit 2
   assert_count "$events" coolify-completion 2
+  # The reload sources the completion the first startup generated.
+  assert_count "$events" coolify-generated 1
   assert_count "$events" syntax-highlighting 2
   assert_not_contains "$events" ignored-file
   assert_not_contains "$events" ignored-directory

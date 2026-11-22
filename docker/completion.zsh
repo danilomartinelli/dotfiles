@@ -1,4 +1,4 @@
-# Docker CLI completion (same pattern as kubectl/completion.zsh).
-if (( $+commands[docker] )); then
-  source <(docker completion zsh)
+# Docker CLI completion from the installed CLI, cached between shells.
+if _dotfiles_generated_completion docker completion zsh; then
+  source "$REPLY"
 fi
