@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Better Changes mod.json",
+  "description": "What Herdr reads from Better Changes's mod.json, and the settings it takes.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's schema, for editors."
+    },
+    "version": {
+      "type": "string",
+      "description": "The mod's version."
+    },
+    "title": {
+      "type": "string",
+      "description": "The mod's name, as Herdr shows it."
+    },
+    "place": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "none"
+      ],
+      "description": "Where Herdr first docks the mod. \"none\": only where a layout or another mod puts it."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Its first size, in pixels."
+    },
+    "focusable": {
+      "type": "boolean",
+      "description": "Lets pane.go give a shown copy the keyboard."
+    },
+    "overlay": {
+      "type": "object",
+      "description": "How mod.open shows it.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "dialog",
+            "popup",
+            "window"
+          ]
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "frame": {
+          "enum": [
+            "none"
+          ],
+          "description": "\"none\": no frame around it."
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Your changes. A setting left out uses its default.",
+      "additionalProperties": false,
+      "properties": {
+        "refresh": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "title": "Git refresh",
+              "description": "How often Git is read for changes.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "10s"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "files": {
+              "title": "Files shown",
+              "description": "The most files a list shows.",
+              "type": "integer",
+              "minimum": 1,
+              "x-step": 100,
+              "default": 1000
+            },
+            "diff_lines": {
+              "title": "Diff lines",
+              "description": "The most lines a diff shows, Full file included.",
+              "type": "integer",
+              "minimum": 1,
+              "x-step": 100,
+              "default": 1500
+            },
+            "line_length": {
+              "title": "Line length",
+              "description": "Longer lines in a diff are cut here.",
+              "type": "integer",
+              "minimum": 1,
+              "x-step": 500,
+              "default": 4000
+            },
+            "commits_per_page": {
+              "title": "Commits per page",
+              "description": "How many commits load at a time.",
+              "type": "integer",
+              "minimum": 1,
+              "x-step": 10,
+              "default": 50
+            }
+          }
+        },
+        "default": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "view": {
+              "title": "File list",
+              "description": "How file lists start, until you choose in the ⋮ menu.",
+              "type": "string",
+              "enum": [
+                "tree",
+                "flat"
+              ],
+              "x-labels": {
+                "tree": "Tree",
+                "flat": "Flat"
+              },
+              "default": "tree"
+            },
+            "diff": {
+              "title": "Diff",
+              "description": "How diffs start, until you choose in the ⋮ menu.",
+              "type": "string",
+              "enum": [
+                "inline",
+                "split"
+              ],
+              "x-labels": {
+                "inline": "Inline",
+                "split": "Side by side"
+              },
+              "default": "inline"
+            }
+          }
+        },
+        "panel": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "toggle": {
+              "title": "Key closes the panel",
+              "description": "Lets the panel key close an open panel, instead of leaving it alone.",
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

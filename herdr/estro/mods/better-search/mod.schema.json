@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Better Search mod.json",
+  "description": "What Herdr reads from Better Search's mod.json, and the settings it takes.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's schema, for editors."
+    },
+    "version": {
+      "type": "string",
+      "description": "The mod's version."
+    },
+    "title": {
+      "type": "string",
+      "description": "The mod's name, as Herdr shows it."
+    },
+    "place": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "none"
+      ],
+      "description": "Where Herdr first docks the mod. \"none\": only where a layout or another mod puts it."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Its first size, in pixels."
+    },
+    "focusable": {
+      "type": "boolean",
+      "description": "Lets pane.go give a shown copy the keyboard."
+    },
+    "overlay": {
+      "type": "object",
+      "description": "How mod.open shows it.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "dialog",
+            "popup",
+            "window"
+          ]
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "at": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Your changes. A setting left out uses its default.",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "description": "The key that opens Better Search, as keys.json spells it. A key Herdr already uses, such as cmd-p (its picker) or cmd-shift-p (its command palette), is taken over, and given back if you change this again.",
+          "type": "string",
+          "format": "key",
+          "x-action": "mod.open:better-search",
+          "pattern": "^\\S+$",
+          "default": "cmd-alt-p"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "title": "Most files",
+              "description": "How many of a space's files / searches, for very large repositories.",
+              "type": "integer",
+              "minimum": 1,
+              "default": 20000
+            }
+          }
+        }
+      }
+    }
+  }
+}

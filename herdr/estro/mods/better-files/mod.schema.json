@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Better Files mod.json",
+  "description": "What Herdr reads from Better Files's mod.json, and the settings it takes.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's schema, for editors."
+    },
+    "version": {
+      "type": "string",
+      "description": "The mod's version."
+    },
+    "title": {
+      "type": "string",
+      "description": "The mod's name, as Herdr shows it."
+    },
+    "place": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "none"
+      ],
+      "description": "Where Herdr first docks the mod. \"none\": only where a layout or another mod puts it."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Its first size, in pixels."
+    },
+    "focusable": {
+      "type": "boolean",
+      "description": "Lets pane.go give a shown copy the keyboard."
+    },
+    "overlay": {
+      "type": "object",
+      "description": "How mod.open shows it.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "dialog",
+            "popup",
+            "window"
+          ]
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Your changes. A setting left out uses its default.",
+      "additionalProperties": false,
+      "properties": {
+        "refresh": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tree": {
+              "title": "Tree refresh",
+              "description": "How often the tree rereads, on top of watching the folder. Never closer than 1 second.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "10s"
+            },
+            "file": {
+              "title": "File refresh",
+              "description": "How often an open file is checked for changes. Never closer than 500ms.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "2s"
+            }
+          }
+        },
+        "editors": {
+          "title": "More editors",
+          "description": "macOS app IDs to add to Open in, such as dev.zed.Zed. Shown only if installed.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "fileManager": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "title": "File manager's name",
+              "description": "What Show in and the folder menu's Open in call the file manager command below. Empty: file manager.",
+              "type": "string",
+              "default": ""
+            },
+            "command": {
+              "title": "File manager command",
+              "description": "A program for Show in and the folder menu's Open in, in place of Finder, Explorer or the desktop's file manager: the program and its first arguments, such as [\"nautilus\", \"--select\"]; the file or folder goes after them. This computer only. Empty: the platform's own.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "default": []
+            }
+          }
+        },
+        "gutter": {
+          "title": "Changed lines",
+          "description": "Tint changed lines. Off uses Herdr's own editor instead: selection, folding and a real grammar, but no line colours, and no TypeScript or Vue grammar.",
+          "type": "boolean",
+          "default": true
+        },
+        "markdown": {
+          "title": "Markdown opens as",
+          "description": "How a Markdown file first shows: Preview renders it, Code shows its text with changed lines. Each tab remembers the last choice from the toggle.",
+          "type": "string",
+          "enum": [
+            "preview",
+            "code"
+          ],
+          "default": "preview"
+        }
+      }
+    }
+  }
+}

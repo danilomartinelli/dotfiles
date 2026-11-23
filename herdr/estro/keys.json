@@ -1,0 +1,8 @@
+{
+  "layout:estro": {
+    "cmd-shift-e": "better-files.focus",
+    "cmd-shift-b": "better-sidebar.toggle-panel",
+    "cmd-alt-,": "mod.open:better-config",
+    "cmd-alt-p": "mod.open:better-search"
+  }
+}

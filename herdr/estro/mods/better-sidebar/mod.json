@@ -1,0 +1,6 @@
+{
+  "$schema": "./mod.schema.json",
+  "version": "3.10.0",
+  "place": "none",
+  "title": "Better Sidebar"
+}

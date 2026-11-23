@@ -70,6 +70,14 @@ test_each_agent_topic_links_its_settings() {
   local fixture
   fixture=$(installer_fixture)
   invoke_topic "$fixture" claude
+  cat >"$fixture/fake-bin/mise" <<'EOF'
+#!/bin/sh
+set -e
+[ "$1 $2 $3 $4 $5 $7 $8" = "exec go -- go -C build -o" ]
+printf '#!/bin/sh\n' >"$9"
+chmod +x "$9"
+EOF
+  chmod +x "$fixture/fake-bin/mise"
   invoke_topic "$fixture" herdr
   invoke_topic "$fixture" opencode
 
@@ -83,6 +91,22 @@ test_each_agent_topic_links_its_settings() {
     "$REPOSITORY_ROOT/herdr/programs.json"
   assert_links_to "$fixture/home/.config/herdr-app/themes/catppuccin-macchiato.json" \
     "$REPOSITORY_ROOT/herdr/themes/catppuccin-macchiato.json"
+  assert_links_to "$fixture/home/.config/herdr-app/layouts/estro.json" \
+    "$REPOSITORY_ROOT/herdr/layouts/estro.json"
+  local app_dir="$fixture/home/.config/herdr-app"
+  [ -f "$app_dir/mods/better-search/main.js" ] || scenario_fail 'Estro search was not installed'
+  [ -x "$app_dir/mods/branch-pr/bin/herdr-pr" ] || scenario_fail 'Estro PR helper was not built'
+  [ -x "$app_dir/mods/branch-issue/bin/herdr-linear" ] || scenario_fail 'Estro issue helper was not built'
+  printf 'personal settings\n' >"$app_dir/mods/better-search/mod.json"
+  ln -s "$(command -v jq)" "$fixture/fake-bin/jq"
+  printf '%s\n' '{"global":{"cmd-shift-b":"app.palette"}}' >"$app_dir/keys.json"
+  invoke_topic "$fixture" herdr
+  jq -e '
+    .global["cmd-shift-b"] == "app.palette"
+    and .["layout:estro"]["cmd-shift-b"] == null
+    and .["layout:estro"]["cmd-alt-p"] == "mod.open:better-search"
+  ' "$app_dir/keys.json" >/dev/null || scenario_fail 'Estro shortcut merge did not preserve existing bindings'
+  assert_equal 'personal settings' "$(cat "$app_dir/mods/better-search/mod.json")" 'existing mod configuration'
   assert_links_to "$fixture/home/.config/opencode/opencode.jsonc" \
     "$REPOSITORY_ROOT/opencode/opencode.jsonc"
   assert_links_to "$fixture/home/.config/opencode/tui.jsonc" \

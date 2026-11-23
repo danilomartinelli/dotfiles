@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Branch PR mod.json",
+  "description": "What Herdr reads from Branch PR's mod.json, and the settings it takes.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's schema, for editors."
+    },
+    "version": {
+      "type": "string",
+      "description": "The mod's version."
+    },
+    "title": {
+      "type": "string",
+      "description": "The mod's name, as Herdr shows it."
+    },
+    "place": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "none"
+      ],
+      "description": "Where Herdr first docks the mod. \"none\": only where a layout or another mod puts it."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Its first size, in pixels."
+    },
+    "focusable": {
+      "type": "boolean",
+      "description": "Lets pane.go give a shown copy the keyboard."
+    },
+    "overlay": {
+      "type": "object",
+      "description": "How mod.open shows it.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "dialog",
+            "popup",
+            "window"
+          ]
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Your changes. A setting left out uses its default.",
+      "additionalProperties": false,
+      "properties": {
+        "refresh": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "every": {
+              "title": "Refresh",
+              "description": "How often a visible panel rereads GitHub.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "60s"
+            },
+            "search_debounce": {
+              "title": "Search delay",
+              "description": "How long typing pauses before a search runs.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "450ms"
+            }
+          }
+        },
+        "list": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page_size": {
+              "title": "Page size",
+              "description": "How many pull requests load at a time.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "x-step": 5,
+              "default": 25
+            },
+            "default": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "tab": {
+                  "title": "First list",
+                  "description": "Which pull requests the Repo tab shows first, until a saved view exists.",
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "mine",
+                    "involved"
+                  ],
+                  "x-labels": {
+                    "all": "All PRs",
+                    "mine": "Created",
+                    "involved": "Involved"
+                  },
+                  "default": "all"
+                },
+                "state": {
+                  "title": "First state",
+                  "description": "The Repo tab's first state filter, until a saved view exists.",
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "draft",
+                    "merged",
+                    "closed",
+                    "all"
+                  ],
+                  "x-labels": {
+                    "open": "Open",
+                    "draft": "Draft",
+                    "merged": "Merged",
+                    "closed": "Closed",
+                    "all": "All"
+                  },
+                  "default": "open"
+                }
+              }
+            }
+          }
+        },
+        "worktrees": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "root": {
+              "title": "Worktree folder",
+              "description": "Fallback folder for New worktree when Herdr settings.json has no worktrees.directory.",
+              "type": "string",
+              "default": "~/.herdr/worktrees"
+            },
+            "open_with": {
+              "title": "Open with",
+              "description": "What a new worktree opens: terminal, or an installed agent's key such as claude.",
+              "type": "string",
+              "default": "terminal"
+            }
+          }
+        },
+        "logs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "keep_last": {
+              "title": "Failure output kept",
+              "description": "How much of a failed command's output is kept to show.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "size",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*([Bb]|[Kk][Bb]|[Mm][Bb])\\s*$",
+              "default": "60KB"
+            }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "github": {
+              "title": "GitHub CLI",
+              "description": "The gh command, or its full path.",
+              "type": "string",
+              "default": "gh"
+            }
+          }
+        }
+      }
+    }
+  }
+}

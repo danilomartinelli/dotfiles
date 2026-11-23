@@ -1,0 +1,13 @@
+{
+  "$schema": "./mod.schema.json",
+  "version": "0.1.0",
+  "place": "none",
+  "title": "Better Search",
+  "overlay": {
+    "kind": "popup",
+    "at": "top",
+    "offset": 40,
+    "width": 680,
+    "height": 0.8
+  }
+}

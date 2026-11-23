@@ -84,7 +84,7 @@ cask 'antigravity-cli'              # Google Antigravity terminal agent (`agy`)
 cask 'claude'                       # Anthropic desktop app, including Claude Code on the desktop
 cask 'cursor-cli'                   # Cursor terminal agent (`cursor-agent`)
 cask 'grok-build'                   # xAI Grok Build terminal agent (`grok`)
-cask 'herdr-app'                    # Desktop workspace for terminals and coding agents
+cask 'herdr-app'                    # Desktop workspace for terminals and coding agents with the Estro layout
 cask 'lens'                         # Kubernetes IDE
 cask 'postman'                      # API development and testing tool
 cask 'tableplus'                    # Database management tool

@@ -728,7 +728,7 @@ checkout's `bin/dot`, and `dot --help` should print the dotfiles management help
 | Neovim configuration   | `~/.config/nvim`                   | `init.lua` and the plugin lock linked; Neovim's own writes land as a diff      |
 | OpenCode config        | `~/.config/opencode`               | `opencode.jsonc` and `tui.jsonc` linked; the rest is OpenCode's own            |
 | Claude Code settings   | `~/.claude/settings.json`          | Tracked; Claude Code's own writes land as a diff                               |
-| Herdr settings         | `~/.config/herdr-app`              | Settings, programs and one theme linked; the rest is Herdr's own               |
+| Herdr settings         | `~/.config/herdr-app`              | Settings, programs, theme and Estro layout and mods                            |
 | btop settings          | `~/.config/btop`                   | `btop.conf` and the theme linked; btop's own writes land as a diff             |
 | Tool themes            | `~/.config`, `~/.atuin/themes`     | lazygit, eza and Atuin theme files linked from their topics                    |
 | Codex configuration    | `~/.codex/config.toml`             | Machine-local: Codex records project trust and plugin state in it              |
@@ -898,11 +898,12 @@ project's own instructions still take precedence.
   has no user-level settings or instruction file to link; it reads a project's
   `AGENTS.md`. Sign in with `cursor-agent login`.
 - **Herdr** is the `herdr-app` cask, a desktop workspace that runs these agents
-  side by side. `herdr/install.sh` links three files into `~/.config/herdr-app`
-  and leaves the rest of that directory, which Herdr rewrites on every start,
-  to the app. `settings.json` uses the terminal font and the Catppuccin
-  Macchiato palette for both appearances, and turns telemetry off; the
-  Settings window writes that file, so its changes land as a diff.
+  side by side. `herdr/install.sh` links settings, programs, the theme and the
+  Estro layout into `~/.config/herdr-app`. For the bundled mods, helpers and
+  shortcuts, see [Estro setup](herdr/README.md). `settings.json` uses the
+  terminal font and the Catppuccin Macchiato palette for both appearances and
+  turns telemetry off. Changes made in the Settings window appear in the
+  working tree.
   `programs.json` starts Cursor as `cursor-agent`, because Herdr's default
   `agent` is the name Grok Build also installs. Herdr needs `herdr-core`, which
   Homebrew does not package: accept the install Herdr offers on first launch.

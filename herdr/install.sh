@@ -11,8 +11,7 @@ installer_banner "setting up Herdr configuration"
 # Herdr rewrites most of ~/.config/herdr-app on every start, so the files are
 # linked one by one and the directory stays its own. The Settings window writes
 # settings.json, so a change made there lands here as a diff to keep or
-# discard. keys.json is left to the app: an untouched one receives the
-# shortcuts each release adds, and an edited one never does.
+# discard. Estro's installer merges shortcuts into the app's keys.json.
 installer_link_tool_config herdr-app "Herdr settings" settings.json
 installer_link_tool_config herdr-app "Herdr programs" programs.json
 
@@ -22,5 +21,7 @@ installer_link_tool_config herdr-app "Herdr theme" themes/catppuccin-macchiato.j
 installer_link_config --remove-owned --label "Herdr light theme" \
   "$TOPIC_DIR/themes/catppuccin-latte.json" \
   "$(installer_config_dir herdr-app)/themes/catppuccin-latte.json"
+
+sh "$TOPIC_DIR/_install-estro.sh"
 
 installer_success "Herdr configured"

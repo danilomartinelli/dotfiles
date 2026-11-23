@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Better Tabs mod.json",
+  "description": "What Herdr reads from Better Tabs's mod.json, and the settings it takes.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "This file's schema, for editors."
+    },
+    "version": {
+      "type": "string",
+      "description": "The mod's version."
+    },
+    "title": {
+      "type": "string",
+      "description": "The mod's name, as Herdr shows it."
+    },
+    "place": {
+      "enum": [
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "none"
+      ],
+      "description": "Where Herdr first docks the mod. \"none\": only where a layout or another mod puts it."
+    },
+    "size": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Its first size, in pixels."
+    },
+    "focusable": {
+      "type": "boolean",
+      "description": "Lets pane.go give a shown copy the keyboard."
+    },
+    "overlay": {
+      "type": "object",
+      "description": "How mod.open shows it.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "dialog",
+            "popup",
+            "window"
+          ]
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Your changes. A setting left out uses its default.",
+      "additionalProperties": false,
+      "properties": {
+        "tabs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_width": {
+              "title": "Tab width",
+              "description": "The widest a tab gets.",
+              "type": "integer",
+              "minimum": 60,
+              "x-step": 10,
+              "x-unit": "px",
+              "default": 170
+            },
+            "drag_delay": {
+              "title": "Drag delay",
+              "description": "How long a press must last before a tab can be dragged.",
+              "type": [
+                "string",
+                "integer"
+              ],
+              "format": "duration",
+              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(ms|s|m|h)\\s*$",
+              "default": "400ms"
+            },
+            "auto_name": {
+              "title": "Name tabs",
+              "description": "Tabs follow what runs in them: an agent's topic, else its name, a shell's folder, another program's name. Your own names stay; renaming a tab to nothing hands it back.",
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "menu": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "title": "Menu width",
+              "description": "The width of the ⋮ menu.",
+              "type": "integer",
+              "minimum": 120,
+              "x-step": 10,
+              "x-unit": "px",
+              "default": 240
+            }
+          }
+        }
+      }
+    }
+  }
+}

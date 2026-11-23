@@ -1,0 +1,6 @@
+{
+  "$schema": "./mod.schema.json",
+  "version": "2.5.0",
+  "place": "none",
+  "title": "Branch Issue"
+}
