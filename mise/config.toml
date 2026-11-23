@@ -27,6 +27,7 @@ node = "lts"                                                    # Node.js LTS
 "npm:neonctl" = "9.9.2"                                         # Neon CLI
 "npm:opencode-ai" = { version = "1", npm_args = "--ignore-scripts=false" } # OpenCode CLI
 "npm:skills" = "1.9.0"                                          # Agent skills CLI
+"npm:typescript-language-server" = { version = "6.1.0", npm_args = "typescript@6.0.3" } # TypeScript and JavaScript language server for Claude Code
 "npm:wrangler" = "4.166.0"                                      # Cloudflare Workers CLI
 # Bare mdformat mangles YAML frontmatter and GFM tables; both plugins are required.
 "pipx:mdformat" = { version = "latest", uvx_args = "--with mdformat-gfm==1.0.0 --with mdformat-frontmatter==2.2.0" } # Markdown formatter with GFM/frontmatter plugins

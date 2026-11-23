@@ -394,35 +394,36 @@ See [Mise maintenance](mise/README.md) for the policy interface and validation.
 
 <!-- generated: mise-tools -->
 
-| Tool                                        | Declared version | Role                                            |
-| ------------------------------------------- | ---------------- | ----------------------------------------------- |
-| `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                   |
-| `aqua:yarnpkg/berry`                        | `4.19.0`         | Yarn JavaScript package manager                 |
-| `bun`                                       | `1.4.5`          | JavaScript runtime and toolkit                  |
-| `elixir`                                    | `1.20`           | Elixir runtime                                  |
-| `erlang`                                    | `29`             | BEAM runtime                                    |
-| `go`                                        | `1.27.4`         | Go toolchain                                    |
-| `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                |
-| `java`                                      | `temurin-25`     | Java runtime                                    |
-| `node`                                      | `lts`            | Node.js LTS                                     |
-| `npm:@anthropic-ai/claude-code`             | `2.1.330`        | Claude Code CLI                                 |
-| `npm:@agentclientprotocol/claude-agent-acp` | `0.109.1`        | Claude ACP agent                                |
-| `npm:@agentclientprotocol/codex-acp`        | `2.9.0`          | Codex ACP agent                                 |
-| `npm:@colbymchenry/codegraph`               | `1.6.4`          | Repository code graph CLI                       |
-| `npm:@swmansion/argent`                     | `0.34.0`         | Device and simulator control MCP                |
-| `npm:@openai/codex`                         | `0.171.0`        | Codex CLI                                       |
-| `npm:eas-cli`                               | `27.11.0`        | Expo Application Services CLI                   |
-| `npm:neonctl`                               | `9.9.2`          | Neon CLI                                        |
-| `npm:opencode-ai`                           | `1`              | OpenCode CLI                                    |
-| `npm:skills`                                | `1.9.0`          | Agent skills CLI                                |
-| `npm:wrangler`                              | `4.166.0`        | Cloudflare Workers CLI                          |
-| `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins |
-| `pnpm`                                      | `12.21.0`        | JavaScript package manager                      |
-| `python`                                    | `3.15.2`         | Python runtime                                  |
-| `ruby`                                      | `4.0`            | Ruby runtime                                    |
-| `rust`                                      | `1.100.0`        | Rust toolchain                                  |
-| `terraform`                                 | `1.17.2`         | Infrastructure as code CLI                      |
-| `uv`                                        | `latest`         | Python package and environment manager          |
+| Tool                                        | Declared version | Role                                                      |
+| ------------------------------------------- | ---------------- | --------------------------------------------------------- |
+| `aqua:koalaman/shellcheck`                  | `latest`         | Shell linting                                             |
+| `aqua:yarnpkg/berry`                        | `4.19.0`         | Yarn JavaScript package manager                           |
+| `bun`                                       | `1.4.5`          | JavaScript runtime and toolkit                            |
+| `elixir`                                    | `1.20`           | Elixir runtime                                            |
+| `erlang`                                    | `29`             | BEAM runtime                                              |
+| `go`                                        | `1.27.4`         | Go toolchain                                              |
+| `go:mvdan.cc/sh/v3/cmd/shfmt`               | `latest`         | Shell formatting                                          |
+| `java`                                      | `temurin-25`     | Java runtime                                              |
+| `node`                                      | `lts`            | Node.js LTS                                               |
+| `npm:@anthropic-ai/claude-code`             | `2.1.330`        | Claude Code CLI                                           |
+| `npm:@agentclientprotocol/claude-agent-acp` | `0.109.1`        | Claude ACP agent                                          |
+| `npm:@agentclientprotocol/codex-acp`        | `2.9.0`          | Codex ACP agent                                           |
+| `npm:@colbymchenry/codegraph`               | `1.6.4`          | Repository code graph CLI                                 |
+| `npm:@swmansion/argent`                     | `0.34.0`         | Device and simulator control MCP                          |
+| `npm:@openai/codex`                         | `0.171.0`        | Codex CLI                                                 |
+| `npm:eas-cli`                               | `27.11.0`        | Expo Application Services CLI                             |
+| `npm:neonctl`                               | `9.9.2`          | Neon CLI                                                  |
+| `npm:opencode-ai`                           | `1`              | OpenCode CLI                                              |
+| `npm:skills`                                | `1.9.0`          | Agent skills CLI                                          |
+| `npm:typescript-language-server`            | `6.1.0`          | TypeScript and JavaScript language server for Claude Code |
+| `npm:wrangler`                              | `4.166.0`        | Cloudflare Workers CLI                                    |
+| `pipx:mdformat`                             | `latest`         | Markdown formatter with GFM/frontmatter plugins           |
+| `pnpm`                                      | `12.21.0`        | JavaScript package manager                                |
+| `python`                                    | `3.15.2`         | Python runtime                                            |
+| `ruby`                                      | `4.0`            | Ruby runtime                                              |
+| `rust`                                      | `1.100.0`        | Rust toolchain                                            |
+| `terraform`                                 | `1.17.2`         | Infrastructure as code CLI                                |
+| `uv`                                        | `latest`         | Python package and environment manager                    |
 
 <!-- generated-end -->
 

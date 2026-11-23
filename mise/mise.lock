@@ -463,6 +463,13 @@ npm_args = "--ignore-scripts=false"
 version = "1.9.0"
 backend = "npm:skills"
 
+[[tools."npm:typescript-language-server"]]
+version = "6.1.0"
+backend = "npm:typescript-language-server"
+
+[tools."npm:typescript-language-server".options]
+npm_args = "typescript@6.0.3"
+
 [[tools."npm:wrangler"]]
 version = "4.166.0"
 backend = "npm:wrangler"
