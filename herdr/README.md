@@ -4,6 +4,10 @@ The Estro layout and its eight mods come from
 [herdr-mods at `bad7512`](https://github.com/munza/herdr-mods/tree/bad7512b6148b7092068cd3a6478c45706731c18/estro).
 The bundled runtime sources and upstream notices live in `estro/`.
 
+Estro also includes the standalone
+[Skillshare panel at `dab6d4f`](https://github.com/runkids/skillshare/tree/dab6d4fe96f30ca1d49a6b5e5f8fa3682b010b24/herdr/skillshare-mod).
+Its files and MIT license live in `skillshare/`.
+
 ## Installation
 
 The topic installer links the layout and installs a copy of each missing mod
@@ -22,6 +26,11 @@ GitHub here, which lists the open issues of the active checkout and the ones
 linked to its branch, read-only. A mod installed before that change keeps its
 own setting: select GitHub in Mod settings. The `$` prefix in Search still
 asks Linear, because the bundled helper only speaks to it.
+
+Click **skillshare** beside the tabs to open or close its panel. It uses the
+Homebrew `skillshare` CLI to show global and project resources. On a new
+machine, run `skillshare init` to choose the source and agent targets before
+syncing. The panel can update its installed copy independently.
 
 The installer adds the Estro shortcuts to the keys file while preserving
 existing bindings. Symlinked keys files stay under their existing

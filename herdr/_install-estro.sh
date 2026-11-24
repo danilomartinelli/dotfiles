@@ -14,7 +14,7 @@ trap 'exit 1' HUP INT TERM
 
 # Herdr resolves mod assets inside its home and Better Config saves options
 # there. Install real directories and preserve any existing mod by name.
-for source in "$estro_dir"/mods/*; do
+for source in "$estro_dir"/mods/* "$TOPIC_DIR/skillshare/mods/skillshare"; do
   name=${source##*/}
   destination=$app_dir/mods/$name
   if [ -e "$destination" ] || [ -L "$destination" ]; then

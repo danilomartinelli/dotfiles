@@ -95,9 +95,16 @@ EOF
     "$REPOSITORY_ROOT/herdr/layouts/estro.json"
   local app_dir="$fixture/home/.config/herdr-app"
   [ -f "$app_dir/mods/better-search/main.js" ] || scenario_fail 'Estro search was not installed'
+  cmp "$REPOSITORY_ROOT/herdr/skillshare/mods/skillshare/main.js" "$app_dir/mods/skillshare/main.js" \
+    || scenario_fail 'Skillshare was not installed'
+  jq -e '
+    ([.. | objects | select(.id? == "tabs-row") | .children[] | select(.content.props.role? == "toggle") | .content.mod] == ["skillshare"])
+    and ([.. | objects | select(.id? == "work-body") | .children[] | select(.id == "skillshare-panel") | .children[].content.mod] == ["skillshare"])
+  ' "$app_dir/layouts/estro.json" >/dev/null || scenario_fail 'Estro must expose the Skillshare toggle and panel'
   [ -x "$app_dir/mods/branch-pr/bin/herdr-pr" ] || scenario_fail 'Estro PR helper was not built'
   [ -x "$app_dir/mods/branch-issue/bin/herdr-linear" ] || scenario_fail 'Estro issue helper was not built'
   printf 'personal settings\n' >"$app_dir/mods/better-search/mod.json"
+  printf 'installed update\n' >"$app_dir/mods/skillshare/version.js"
   ln -s "$(command -v jq)" "$fixture/fake-bin/jq"
   printf '%s\n' '{"global":{"cmd-shift-b":"app.palette"}}' >"$app_dir/keys.json"
   invoke_topic "$fixture" herdr
@@ -107,6 +114,7 @@ EOF
     and .["layout:estro"]["cmd-alt-p"] == "mod.open:better-search"
   ' "$app_dir/keys.json" >/dev/null || scenario_fail 'Estro shortcut merge did not preserve existing bindings'
   assert_equal 'personal settings' "$(cat "$app_dir/mods/better-search/mod.json")" 'existing mod configuration'
+  assert_equal 'installed update' "$(cat "$app_dir/mods/skillshare/version.js")" 'existing Skillshare version'
   assert_links_to "$fixture/home/.config/opencode/opencode.jsonc" \
     "$REPOSITORY_ROOT/opencode/opencode.jsonc"
   assert_links_to "$fixture/home/.config/opencode/tui.jsonc" \

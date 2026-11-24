@@ -293,6 +293,7 @@ options, and Mise declarations that span lines or list several versions. See the
 | `nixfmt`                             | Nix formatter                                                    |
 | `pandoc`                             | Document converter                                               |
 | `ripgrep`                            | Fast recursive text search                                       |
+| `skillshare`                         | Manage agent skills and power the Skillshare panel in Herdr      |
 | `sops`                               | Secrets encryption with age, KMS, or PGP                         |
 | `spaceman-diff`                      | Visual image diffs                                               |
 | `stern`                              | Multi-pod Kubernetes log tailing                                 |

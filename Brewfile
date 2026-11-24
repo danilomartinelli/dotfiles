@@ -63,6 +63,7 @@ brew 'neovim'                       # Terminal editor
 brew 'nixfmt'                       # Nix formatter
 brew 'pandoc'                       # Document converter
 brew 'ripgrep'                      # Fast recursive text search
+brew 'skillshare'                   # Manage agent skills and power the Skillshare panel in Herdr
 brew 'sops'                         # Secrets encryption with age, KMS, or PGP
 brew 'spaceman-diff'                # Visual image diffs
 brew 'stern'                        # Multi-pod Kubernetes log tailing
