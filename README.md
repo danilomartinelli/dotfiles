@@ -905,7 +905,11 @@ project's own instructions still take precedence.
   turns telemetry off. Changes made in the Settings window appear in the
   working tree.
   `programs.json` starts Cursor as `cursor-agent`, because Herdr's default
-  `agent` is the name Grok Build also installs. Herdr needs `herdr-core`, which
+  `agent` is the name Grok Build also installs. It starts Claude Code with
+  `--dangerously-skip-permissions` and Codex with
+  `--dangerously-bypass-approvals-and-sandbox`, so an agent Herdr starts runs
+  every command without asking; Codex keeps the `--no-daemon` Herdr itself
+  passes. Herdr needs `herdr-core`, which
   Homebrew does not package: accept the install Herdr offers on first launch.
 
 The installers of Grok, Antigravity and Cursor outside Homebrew append `PATH`

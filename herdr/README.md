@@ -16,9 +16,12 @@ including their settings.
 Select Estro in Herdr or run
 `herdr-app do layout.switch '{"name":"estro"}'`. Its shortcuts only apply
 while Estro is active. The right panel offers Files, Changes, Pull Requests,
-and Issues. The GitHub panels use authenticated `gh`. Branch Issue defaults
-to Linear and uses `LINEAR_API_KEY` when available. To browse GitHub Issues
-instead, select GitHub in Mod settings.
+and Issues. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
+defaults to Linear; `estro/mods/branch-issue/mod.json` sets its provider to
+GitHub here, which lists the open issues of the active checkout and the ones
+linked to its branch, read-only. A mod installed before that change keeps its
+own setting: select GitHub in Mod settings. The `$` prefix in Search still
+asks Linear, because the bundled helper only speaks to it.
 
 The installer adds the Estro shortcuts to the keys file while preserving
 existing bindings. Symlinked keys files stay under their existing

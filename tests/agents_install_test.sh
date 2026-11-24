@@ -211,6 +211,25 @@ test_herdr_starts_cursor_by_its_own_name_and_reports_nothing() {
     || scenario_fail 'herdr/settings.json must set telemetry to false'
 }
 
+# A `run` override replaces Herdr's own command, so Codex has to carry the
+# `--no-daemon` Herdr starts it with: a shared daemon ties later sessions to
+# the first terminal.
+test_herdr_starts_claude_code_and_codex_without_approval_prompts() {
+  jq -e '.programs.claude.run == ["claude", "--dangerously-skip-permissions"]' \
+    "$REPOSITORY_ROOT/herdr/programs.json" >/dev/null \
+    || scenario_fail 'herdr/programs.json must start Claude Code without permission prompts'
+  jq -e '.programs.codex.run
+    == ["codex", "--no-daemon", "--dangerously-bypass-approvals-and-sandbox"]' \
+    "$REPOSITORY_ROOT/herdr/programs.json" >/dev/null \
+    || scenario_fail 'herdr/programs.json must start Codex daemonless and without approvals'
+}
+
+test_estro_reads_issues_from_github() {
+  jq -e '.settings.provider == "github"' \
+    "$REPOSITORY_ROOT/herdr/estro/mods/branch-issue/mod.json" >/dev/null \
+    || scenario_fail 'Branch Issue must default to GitHub Issues'
+}
+
 scenario_run 'every agent reads the shared instructions' \
   test_every_agent_reads_the_shared_instructions
 scenario_run 'existing instructions are backed up once' \
@@ -237,5 +256,9 @@ scenario_run 'Grok Build leaves its version to Homebrew' \
   test_grok_build_leaves_its_version_to_homebrew
 scenario_run 'Herdr starts Cursor by its own name and reports nothing' \
   test_herdr_starts_cursor_by_its_own_name_and_reports_nothing
+scenario_run 'Herdr starts Claude Code and Codex without approval prompts' \
+  test_herdr_starts_claude_code_and_codex_without_approval_prompts
+scenario_run 'Estro reads issues from GitHub' \
+  test_estro_reads_issues_from_github
 
 scenario_finish
