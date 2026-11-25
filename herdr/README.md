@@ -20,7 +20,10 @@ including their settings.
 Select Estro in Herdr or run
 `herdr-app do layout.switch '{"name":"estro"}'`. Its shortcuts only apply
 while Estro is active. The right panel offers Files, Changes, Pull Requests,
-and Issues. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
+and Issues. Changes shows working tree edits and commits ahead of the tracked
+branch. A clean, fully pushed branch shows **No changes** and **Commits 0**.
+In PRs, **Branch** opens the pull request when the current branch has exactly
+one. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
 defaults to Linear; `estro/mods/branch-issue/mod.json` sets its provider to
 GitHub here, which lists the open issues of the active checkout and the ones
 linked to its branch, read-only. A mod installed before that change keeps its

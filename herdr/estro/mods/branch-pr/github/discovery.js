@@ -11,6 +11,7 @@ export const discoveryMethods = {
     this.browseKey = null;
     this.restoreSelection = null;
     this.pendingPR = null;
+    this.opening = null;
     this.lastUpdated = null;
     // Invalidate in-flight requests before clearing repository-specific state.
     this.spaceKey = key;

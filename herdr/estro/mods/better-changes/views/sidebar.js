@@ -188,7 +188,7 @@ export const sidebarMethods = {
     const staged = this.files.filter((f) => f.staged);
     const committed = this.committed?.total ? this.committed : null;
     if (!conflicts.length && !unstaged.length && !staged.length && !committed)
-      list.child(Message(this.loading || !this.root ? "Loading changes…" : "No changes"));
+      list.child(Message(this.root ? "No changes" : "Loading changes…"));
     this.groupsDrawn = 0;
     this.addGroup(list, "conflict", "Conflicts", conflicts);
     this.addGroup(list, "staged", "Staged", staged);
