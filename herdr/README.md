@@ -25,6 +25,19 @@ branch. A clean, fully pushed branch shows **No changes** and **Commits 0**.
 Changes groups bursts of local file activity into one refresh after the writes
 settle. While writes continue, the panel polls Git every 10 seconds by default.
 
+In **Spaces** and **Agents**, expand a Codex or Claude Code agent to see its
+active native subagents. Each row shows the agent type and a short identifier.
+The row disappears when the CLI reports that the subagent stopped. Native
+subagents share the parent chat. Children launched with `hc run` have their
+own terminals and can still be opened individually.
+
+Start a fresh local CLI session in Herdr after installing the hooks. In Codex,
+open `/hooks` and trust the Herdr hooks. The installer preserves an existing
+personal `~/.codex/hooks.json`. If you have custom hooks or use a different
+`CODEX_HOME`, merge the entries from
+[`codex-hooks.json`](codex-hooks.json) into it. For a remote terminal, the
+CLI hooks and `hc` run on the terminal's machine.
+
 In **Unstaged**, the arrow beside **+** discards a file's unstaged edits after
 confirmation. A partially staged file keeps its staged version. For a new,
 untracked file, the trash icon moves it to the checkout machine's Trash after

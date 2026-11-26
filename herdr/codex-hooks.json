@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" codex",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" codex",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" codex",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

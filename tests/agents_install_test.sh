@@ -89,6 +89,8 @@ EOF
     "$REPOSITORY_ROOT/herdr/settings.json"
   assert_links_to "$fixture/home/.config/herdr-app/programs.json" \
     "$REPOSITORY_ROOT/herdr/programs.json"
+  assert_links_to "$fixture/home/.config/herdr-app/subagent-hook" "$REPOSITORY_ROOT/herdr/subagent-hook"
+  assert_links_to "$fixture/home/.codex/hooks.json" "$REPOSITORY_ROOT/herdr/codex-hooks.json"
   assert_links_to "$fixture/home/.config/herdr-app/themes/catppuccin-macchiato.json" \
     "$REPOSITORY_ROOT/herdr/themes/catppuccin-macchiato.json"
   assert_links_to "$fixture/home/.config/herdr-app/layouts/estro.json" \
@@ -158,7 +160,8 @@ test_claude_code_leaves_its_version_to_mise() {
 # The hooks name the gate through $HOME: a checkout path or a user name in the
 # tracked file would point nowhere on another machine.
 test_claude_code_hooks_reach_impeccable_only_through_the_gate() {
-  jq -e '[.hooks[][].hooks[].command] | length > 0
+  jq -e '[.hooks | (.SessionStart, .PostToolUse, .Stop)[] | .hooks[].command
+    | select(contains("impeccable"))] | length == 3
     and all(. == "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"")' \
     "$REPOSITORY_ROOT/claude/settings.json" >/dev/null \
     || scenario_fail 'every Claude Code hook must run the linked Impeccable gate'

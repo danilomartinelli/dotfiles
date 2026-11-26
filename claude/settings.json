@@ -29,6 +29,15 @@
             "statusMessage": "Preparing build session"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" claude",
+            "timeout": 3
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -52,6 +61,28 @@
             "command": "[ ! -x \"$HOME/.claude/impeccable-hook.sh\" ] || \"$HOME/.claude/impeccable-hook.sh\"",
             "timeout": 30,
             "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" claude",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -z \"${HC_TERMINAL_ID:-}\" ] || [ ! -x \"$HOME/.config/herdr-app/subagent-hook\" ] || \"$HOME/.config/herdr-app/subagent-hook\" claude",
+            "timeout": 3
           }
         ]
       }

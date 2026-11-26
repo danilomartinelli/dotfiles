@@ -74,6 +74,26 @@ const kidStatus = (k, listed) => {
   const s = listed.get(k.address) ?? k.status;
   return s === "error" ? "blocked" : s === "done" ? "idle" : s;
 };
+
+// Native CLI workers share their parent's terminal. Their lifecycle hooks
+// label that terminal, so two agents in the same checkout stay independent.
+function nativeChildren(terminals, agents) {
+  const programs = new Map(agents.map((a) => [a.address, a.program]));
+  return terminals.flatMap((parent) => {
+    const program = programs.get(parent.address) ?? parent.program;
+    const provider = program?.key;
+    if (parent.state !== "live" || !["codex", "claude"].includes(provider)) return [];
+    const labels = parent.labels ?? {};
+    const session = labels[`estro.session.${provider}`];
+    if (!session) return [];
+    const prefix = `estro.child.${provider}.${session}.`;
+    return Object.entries(labels).filter(([key, role]) => key.startsWith(prefix) && role)
+      .map(([key, role]) => ({
+        parent: parent.address, address: `${parent.address}/${key}`, native: true,
+        name: `${role} · ${key.slice(-4)}`, program, state: "live", status: "working",
+      }));
+  });
+}
 const SORTS = [
   { id: "priority", label: "Priority", icon: "clock" },
   { id: "grouped", label: "Grouped by space", icon: "layers" },
@@ -309,12 +329,11 @@ export class Agents {
       .items_center()
       .text_size(12.5)
       .when(on, (el) => el.bg(t.raised))
-      .hover((s) => s.bg(t.hover))
-      .on_click(() =>
+      .when(!k.native, (el) => el.hover((s) => s.bg(t.hover)).on_click(() =>
         this.listed.has(k.address)
           ? run("pane.focus", { terminal: k.address })
           : this.peek(k.address),
-      )
+      ))
       .children(
         s.lines.map((l) =>
           div()
@@ -423,12 +442,13 @@ export class Agents {
   // Everything one render needs: the agents in order, in their groups.
   readView() {
     const sort = sortOf();
-    const all = terminals();
+    const core = terminals();
     const now = Date.now();
     const unordered = agents();
+    const all = [...core, ...nativeChildren(core, unordered)];
     this.listed = new Map(unordered.map((a) => [a.address, a.status]));
     this.track(unordered, now);
-    this.migratePins(all);
+    this.migratePins(core);
     // A kept sub-agent (one with a pane) is in agents() too: where a tree shows
     // it, it gets no row of its own, unless it's pinned.
     const nested = new Set(unordered.flatMap((a) => this.tree(all, a.address).map((s) => s.t.address)));

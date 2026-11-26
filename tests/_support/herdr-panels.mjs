@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 import test from "node:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,7 +18,12 @@ const host = {
     const values = new Map();
     export function setShared(key, value) { values.set(key, value); }
     export function shared(key) { return values.get(key); }
-    export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, knownAgents, run;`,
+    export const agents = () => fixtureParents, terminals = () => fixtureTerminals,
+      spaces = () => [{ id: "space", tabs: [{ id: "tab", name: "Chat" }] }],
+      panes = () => [], focused = () => ({}), layout = () => null, setAgentOrder = () => {};
+    let fixtureParents, fixtureTerminals;
+    export function setTerminals(parents, all) { fixtureParents = parents; fixtureTerminals = all; }
+    export let exec, settings, appHome, readTextFile, watchFolder, knownAgents, run, window, machines, openOverlay, hc;`,
   "gpui-kit": `
     export const text = [];
     export const clicks = new Map();
@@ -36,7 +41,7 @@ const host = {
       return element;
     }
     export { div as svg }; export let image;`,
-  "gpui-base": 'export { div as v_flex, div as h_flex } from "gpui-kit"; export let Popover, Input, Textarea, TextView;',
+  "gpui-base": 'export { div as v_flex, div as h_flex } from "gpui-kit"; export let Popover, Input, Textarea, TextView, ScrollHandle;',
 };
 registerHooks({
   resolve(name, context, next) {
@@ -49,6 +54,73 @@ registerHooks({
 const { discoveryMethods } = await import("../../herdr/estro/mods/branch-pr/github/discovery.js");
 const { sidebarMethods } = await import("../../herdr/estro/mods/better-changes/views/sidebar.js");
 const { text } = await import("gpui-kit");
+
+test("native CLI hook events update child rows in Spaces and Agents", async (t) => {
+  const { Agents } = await import("../../herdr/estro/mods/better-sidebar/views/agents.js");
+  const { Lists } = await import("../../herdr/estro/mods/better-sidebar/views/lists.js");
+  const { setTerminals, spaces } = await import("herdr");
+  const home = mkdtempSync(join(tmpdir(), "herdr native "));
+  t.after(() => rmSync(home, { recursive: true, force: true }));
+  const config = join(home, ".config", "herdr-app");
+  mkdirSync(config, { recursive: true });
+  symlinkSync(new URL("../../herdr/subagent-hook", import.meta.url), join(config, "subagent-hook"));
+  const capture = join(home, "args");
+  writeFileSync(join(home, "hc"), '#!/bin/sh\nprintf "%s\\n" "$@" > "$CAPTURE"\n', { mode: 0o755 });
+  const parents = ["codex", "claude"].map((key, i) => ({
+    address: "t" + i, labels: {}, program: { key }, space: "space", tab: "tab", state: "live", status: "idle",
+  }));
+  setTerminals(parents, parents);
+  function fire(parent, kind, agent, role, session = "session") {
+    const provider = parent.program.key;
+    const file = provider === "codex" ? "herdr/codex-hooks.json" : "claude/settings.json";
+    const hooks = JSON.parse(readFileSync(new URL("../../" + file, import.meta.url))).hooks[kind];
+    const hook = hooks.flatMap((group) => group.hooks).find((h) => h.command.includes("subagent-hook"));
+    rmSync(capture, { force: true });
+    const res = spawnSync("sh", ["-c", hook.command], { env: {
+      HOME: home, PATH: home + ":" + process.env.PATH, HC_TERMINAL_ID: parent.address, CAPTURE: capture,
+    }, input: JSON.stringify({ hook_event_name: kind, session_id: session, agent_id: agent, agent_type: role,
+      transcript_path: "/never/open", last_assistant_message: "private fixture" }), encoding: "utf8" });
+    assert.equal(res.status, 0, res.stderr);
+    assert.equal(res.stdout + res.stderr, "");
+    const [action, separator, target, ...labels] = readFileSync(capture, "utf8").trimEnd().split("\n");
+    assert.deepEqual([action, separator, target], ["label", "--", parent.address]);
+    for (const label of labels) {
+      assert.ok(!label.includes("private fixture"));
+      const [key, value] = label.split("=");
+      if (value) parent.labels[key] = value;
+      else delete parent.labels[key];
+    }
+  }
+  const lists = new Lists();
+  lists.agents = Object.assign(new Agents(), { changed: {}, pendingPins: [], folded: new Set(), track() {} });
+  lists.spaces = { settings: { combined: true }, collapsed: () => false,
+    body() { this.under({ w: spaces()[0] }); } };
+  lists.tabBar = () => {};
+  function assertRows(expected) {
+    for (const tab of ["spaces", "agents"]) {
+      lists.tab = tab;
+      text.length = 0;
+      lists.render();
+      assert.deepEqual(text.filter((s) => / · [0-9a-f]{4}$/.test(s)).map((s) => s.split(" · ")[0]).sort(), expected);
+    }
+  }
+  const [codex, claude] = parents;
+  fire(codex, "SessionStart");
+  fire(claude, "SessionStart");
+  fire(codex, "SubagentStart", "1", "explorer");
+  fire(codex, "SubagentStart", "2", "worker");
+  fire(claude, "SubagentStart", "1", "Explore");
+  assertRows(["Explore", "explorer", "worker"]);
+  lists.agents.folded.add(codex.address);
+  assertRows(["Explore"]);
+  lists.agents.folded.clear();
+  fire(codex, "SubagentStop", "1");
+  assertRows(["Explore", "worker"]);
+  fire(codex, "SessionStart", null, null, "new-session");
+  fire(codex, "SubagentStart", "late", "old-worker");
+  fire(claude, "SubagentStop", "1");
+  assertRows([]);
+});
 
 async function prSidebar(t) {
   const { PRStatusObserver, prAppearance, prPlaceKey } = await import("../../herdr/estro/mods/better-sidebar/git/pr-status.js");

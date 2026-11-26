@@ -14,6 +14,9 @@ installer_banner "setting up Herdr configuration"
 # discard. Estro's installer merges shortcuts into the app's keys.json.
 installer_link_tool_config herdr-app "Herdr settings" settings.json
 installer_link_tool_config herdr-app "Herdr programs" programs.json
+installer_link_tool_config herdr-app "Herdr subagent hook" subagent-hook
+installer_link_config --policy preserve-existing --label "Codex subagent hooks" \
+  "$TOPIC_DIR/codex-hooks.json" "$HOME/.codex/hooks.json"
 
 # The palette every other tool here uses, which Herdr does not ship.
 # settings.json names it for both appearances.
