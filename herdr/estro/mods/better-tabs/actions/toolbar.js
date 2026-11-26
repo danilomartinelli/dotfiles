@@ -20,7 +20,7 @@ function arrangedActions(entries, preferences) {
 export function toolbarPartition(entries, preferences, limit) {
   const saved = toolbarPreferences(preferences);
   const visible = arrangedActions(entries, saved)
-    .filter((entry) => !saved.hidden.includes(entry.id))
+    .filter((entry) => !saved.hidden.includes(entry.id) && (!entry.hiddenByDefault || saved.order.includes(entry.id)))
     .slice(0, Math.max(0, limit));
   // Overflow is the complement, not just the explicitly hidden IDs. This
   // keeps actions recoverable when hidden by configuration or a narrow window.
@@ -46,6 +46,8 @@ export function placeToolbarAction(entries, preferences, id, target = null, afte
   const saved = toolbarPreferences(preferences);
   if (target === id) return { ...saved, hidden: saved.hidden.filter((item) => item !== id) };
   const order = arrangedActions(entries, saved)
+    // Moving another action must not implicitly pin a new overflow action.
+    .filter((entry) => !entry.hiddenByDefault || entry.id === id || saved.order.includes(entry.id))
     .map((entry) => entry.id)
     .filter((item) => item !== id);
   const index = target ? order.indexOf(target) : 0;

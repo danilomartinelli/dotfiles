@@ -101,6 +101,9 @@ EOF
     ([.. | objects | select(.id? == "tabs-row") | .children[] | select(.content.props.role? == "toggle") | .content.mod] == ["skillshare"])
     and ([.. | objects | select(.id? == "work-body") | .children[] | select(.id == "skillshare-panel") | .children[].content.mod] == ["skillshare"])
   ' "$app_dir/layouts/estro.json" >/dev/null || scenario_fail 'Estro must expose the Skillshare toggle and panel'
+  for skill in code-review diagnosing-bugs; do
+    [ -s "$app_dir/mods/review-findings/skills/$skill/SKILL.md" ] || scenario_fail "Missing Herdr skill: $skill"
+  done
   [ -x "$app_dir/mods/branch-pr/bin/herdr-pr" ] || scenario_fail 'Estro PR helper was not built'
   [ -x "$app_dir/mods/branch-issue/bin/herdr-linear" ] || scenario_fail 'Estro issue helper was not built'
   printf 'personal settings\n' >"$app_dir/mods/better-search/mod.json"

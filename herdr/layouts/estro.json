@@ -123,6 +123,19 @@
                         "stack": "panel-body",
                         "target": "linear-issues"
                       }
+                    },
+                    {
+                      "id": "findings",
+                      "label": "Findings",
+                      "icon": "mods/better-changes/icons/check.svg",
+                      "group": "panels",
+                      "hiddenByDefault": true,
+                      "action": {
+                        "type": "panel",
+                        "container": "panel",
+                        "stack": "panel-body",
+                        "target": "review-findings"
+                      }
                     }
                   ]
                 }
@@ -227,6 +240,13 @@
                       "type": "block",
                       "content": {
                         "mod": "branch-issue"
+                      }
+                    },
+                    {
+                      "id": "review-findings",
+                      "type": "block",
+                      "content": {
+                        "mod": "review-findings"
                       }
                     }
                   ],
