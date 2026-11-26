@@ -43,6 +43,12 @@ diff. Choose Claude or Codex in the commit menu. Generation uses the selected
 CLI's local login, including for remote worktrees, and sends up to 48,000
 characters of the staged diff when clicked. Review the draft before committing.
 
+The PR badge beside a worktree shows pending or failed checks, conflicts, and
+whether its PR is ready, closed, or merged. After a merge, close, or reopen in
+the PR panel, the sidebar requests a fresh status from GitHub. For changes
+made elsewhere, it checks open PRs every 15 seconds and other checkouts
+every minute.
+
 In PRs, **Branch** opens the pull request when the current branch has exactly
 one. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
 defaults to Linear; `estro/mods/branch-issue/mod.json` sets its provider to

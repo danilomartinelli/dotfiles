@@ -15,8 +15,9 @@ const host = {
     export function setExec(fn) { exec = fn; }
     export const checking = () => false;
     export function setWatch(fn) { watchFolder = fn; }
-    export function setShared() {}
-    export function shared() {}
+    const values = new Map();
+    export function setShared(key, value) { values.set(key, value); }
+    export function shared(key) { return values.get(key); }
     export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, knownAgents, run;`,
   "gpui-kit": `
     export const text = [];
@@ -48,6 +49,83 @@ registerHooks({
 const { discoveryMethods } = await import("../../herdr/estro/mods/branch-pr/github/discovery.js");
 const { sidebarMethods } = await import("../../herdr/estro/mods/better-changes/views/sidebar.js");
 const { text } = await import("gpui-kit");
+
+async function prSidebar(t) {
+  const { PRStatusObserver, prAppearance, prPlaceKey } = await import("../../herdr/estro/mods/better-sidebar/git/pr-status.js");
+  const { setExec } = await import("herdr");
+  const observer = new PRStatusObserver();
+  const place = { folder: "/tree", branch: "topic" };
+  const repo = "owner/project";
+  const pr = { number: 7, state: "OPEN", headRefName: place.branch,
+    headRepository: { nameWithOwner: repo }, mergeStateStatus: "CLEAN" };
+  let now = 10000;
+  let hold;
+  t.mock.method(Date, "now", () => now);
+  setExec(async (cmd, args) => {
+    if (cmd === "gh") {
+      assert.deepEqual(args.slice(0, 4), ["pr", "list", "--repo", repo]);
+      const response = { code: 0, stdout: JSON.stringify([pr]) };
+      if (hold) await hold;
+      return response;
+    }
+    assert.equal(cmd, "git");
+    if (args.includes("symbolic-ref")) return { code: 0, stdout: place.branch };
+    if (args.includes("config")) return { code: 1, stdout: "" };
+    if (args.includes("get-url")) return { code: 0, stdout: "https://github.com/" + repo };
+    return { code: 0, stdout: "origin" };
+  });
+  const tasks = [];
+  const cx = { notify() {}, spawn(fn) { tasks.push(fn(cx)); } };
+  function refresh(ms) {
+    now += ms;
+    observer.refresh([place], cx);
+  }
+  async function tick(ms) {
+    refresh(ms);
+    await Promise.all(tasks.splice(0));
+    const entry = observer.entries.get(prPlaceKey(null, place.folder));
+    return prAppearance(entry.prs[0], {}).label;
+  }
+  assert.equal(await tick(0), "Ready to merge");
+  return { pr, repo, cx, tick, tasks, refresh, holdResponse(promise) { hold = promise; } };
+}
+
+test("external check failures and closure reach the sidebar on an idle checkout", async (t) => {
+  const { pr, tick } = await prSidebar(t);
+  pr.statusCheckRollup = [{ status: "IN_PROGRESS", conclusion: "" }, { conclusion: "SKIPPED" }];
+  assert.equal(await tick(15000), "Checks pending");
+  pr.statusCheckRollup = [{ status: "COMPLETED", conclusion: "FAILURE" }];
+  assert.equal(await tick(15000), "Checks failed");
+  pr.state = "CLOSED";
+  assert.equal(await tick(15000), "Closed");
+});
+
+test("merging from Branch PR refreshes the sidebar on the next tick", async (t) => {
+  const { changeMethods } = await import("../../herdr/estro/mods/branch-pr/actions/changes.js");
+  const { pr, repo, cx, tick, tasks } = await prSidebar(t);
+  const panel = { spaceKey: "tree", stateChange: { repo, number: pr.number, event: "merge" },
+    api: async () => { pr.state = "MERGED"; }, openPR() {} };
+  changeMethods.changeState.call(panel, cx);
+  await Promise.all(tasks.splice(0));
+  assert.equal(await tick(250), "Merged");
+});
+
+test("an in-flight lookup cannot mask a close after navigating away from Branch PR", async (t) => {
+  const { changeMethods } = await import("../../herdr/estro/mods/branch-pr/actions/changes.js");
+  const { pr, repo, cx, tick, tasks, refresh, holdResponse } = await prSidebar(t);
+  const slow = Promise.withResolvers();
+  holdResponse(slow.promise);
+  refresh(15000);
+  const [oldRead] = tasks.splice(0);
+  await new Promise((done) => setImmediate(done));
+  const panel = { spaceKey: "tree", stateChange: { repo, number: pr.number, event: "close" },
+    api: async () => { pr.state = "CLOSED"; panel.spaceKey = "other"; }, openPR() {} };
+  changeMethods.changeState.call(panel, cx);
+  await Promise.all(tasks.splice(0));
+  slow.resolve();
+  await oldRead;
+  assert.equal(await tick(250), "Closed");
+});
 
 test("switching spaces while a PR opens allows the new branch PR to open", () => {
   const opened = [];

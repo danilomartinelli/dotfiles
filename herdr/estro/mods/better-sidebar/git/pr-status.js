@@ -1,8 +1,10 @@
 // Read-only PR discovery for each [machine, checkout]. This observer is separate
 // from space rendering so frequent redraws never launch Git or GitHub commands.
-import { exec } from "herdr";
+import { exec, shared } from "herdr";
 
 export const PR_POLL_MS = 60000;
+const OPEN_PR_POLL_MS = 15000;
+const MAX_LOOKUPS = 4;
 export const prPlaceKey = (machine, folder) => JSON.stringify([machine ?? null, folder]);
 const PR_FIELDS =
   "id,number,title,url,state,isDraft,headRefName,headRepository,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus";
@@ -12,15 +14,16 @@ export function prAppearance(pr, colors) {
   if (pr.state === "MERGED") return { icon: "merged", color: colors.ansi5, label: "Merged" };
   if (pr.state === "CLOSED") return { icon: "closed", color: colors.ansi1, label: "Closed" };
   if (pr.isDraft) return { icon: "draft", color: colors.dim, label: "Draft" };
-  const failed = (pr.statusCheckRollup ?? []).some((check) =>
-    ["FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"].includes(
-      String(check.conclusion || check.state || check.status).toUpperCase(),
-    ),
+  const checks = (pr.statusCheckRollup ?? []).map((check) =>
+    String(check.conclusion || check.state || check.status).toUpperCase(),
   );
   const open = (color, label, ready = false) => ({ icon: "pull-request", color, label, ready });
   if (pr.mergeStateStatus === "DIRTY") return open(colors.ansi1, "Conflicts");
-  if (failed) return open(colors.ansi1, "Checks failed");
+  if (checks.some((state) => ["FAILURE", "ERROR", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"].includes(state)))
+    return open(colors.ansi1, "Checks failed");
   if (pr.reviewDecision === "CHANGES_REQUESTED") return open(colors.ansi3, "Changes requested");
+  if (checks.some((state) => ["EXPECTED", "PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING"].includes(state)))
+    return open(colors.ansi3, "Checks pending");
   // CLEAN is GitHub's own "mergeable now": an empty decision means no review is required.
   if (pr.mergeStateStatus === "CLEAN" && (pr.reviewDecision === "APPROVED" || !pr.reviewDecision))
     return open(colors.ansi2, "Ready to merge", true);
@@ -44,7 +47,7 @@ export class PRStatusObserver {
     this.places = new Map(); // Current checkout snapshots, replaced on refresh.
     this.checked = new Map(); // Checkout key -> last attempt time and branch.
     this.entries = new Map(); // Checkout key -> last published PRs or error.
-    this.cache = new Map(); // gh argument list -> short-lived response cache.
+    this.reading = new Set(); // At most one lookup per checkout.
   }
 
   refresh(places, cx) {
@@ -55,46 +58,44 @@ export class PRStatusObserver {
     );
     for (const key of this.entries.keys()) if (!this.places.has(key)) this.entries.delete(key);
     for (const key of this.checked.keys()) if (!this.places.has(key)) this.checked.delete(key);
-    for (const [key, value] of this.cache)
-      if (Date.now() - value.at >= PR_POLL_MS) this.cache.delete(key);
-    if (this.busy) return;
-
-    const due = [...this.places].filter(([key, place]) => {
+    const queries = new Map(); // Share identical gh calls only within this batch.
+    for (const [key, place] of this.places) {
+      if (this.reading.size >= MAX_LOOKUPS) break;
+      if (this.reading.has(key)) continue;
+      const prs = this.entries.get(key)?.prs ?? [];
+      const interval = prs.some((pr) => pr.state === "OPEN") ? OPEN_PR_POLL_MS : PR_POLL_MS;
+      const revision = prs.reduce((sum, pr) =>
+        sum + (shared(`branch-pr.changed:${pr.repository.toLowerCase()}#${pr.number}`) ?? 0), 0);
       const last = this.checked.get(key);
-      return !last || last.branch !== place.branch || Date.now() - last.at >= PR_POLL_MS;
-    });
-    // checkNew runs frequently. Do not spawn tasks or redraw on cache hits.
-    if (!due.length) return;
-    this.busy = true;
-    cx.spawn(async (cx) => {
-      try {
-        for (const [key, place] of due) {
-          if (!this.isCurrent(key, place)) continue;
-          this.checked.set(key, { at: Date.now(), branch: place.branch });
-          try {
-            const prs = await this.lookup(place);
-            if (this.isCurrent(key, place)) {
-              this.entries.set(key, { prs, branch: place.branch, updated: Date.now() });
-            }
-          } catch (error) {
-            if (this.isCurrent(key, place)) {
-              const previous = this.entries.get(key);
-              // Retain last-good status on a network error, but never carry a
-              // previous branch's PR across a branch switch.
-              this.entries.set(key, {
-                prs: previous?.branch === place.branch ? previous.prs : [],
-                branch: place.branch,
-                error: error.message,
-                updated: previous?.updated,
-              });
-            }
+      if (last && last.branch === place.branch && last.revision === revision &&
+          Date.now() - last.at < interval) continue;
+
+      this.reading.add(key);
+      cx.spawn(async (cx) => {
+        try {
+          const prs = await this.lookup(place, queries);
+          if (this.isCurrent(key, place))
+            this.entries.set(key, { prs, branch: place.branch, updated: Date.now() });
+        } catch (error) {
+          if (this.isCurrent(key, place)) {
+            const previous = this.entries.get(key);
+            this.entries.set(key, {
+              prs: previous?.branch === place.branch ? previous.prs : [],
+              branch: place.branch,
+              error: error.message,
+              updated: previous?.updated,
+            });
           }
+        } finally {
+          this.reading.delete(key);
+          // Record the revision from before the read. A merge during the
+          // request must trigger another lookup even if the old answer arrives last.
+          if (this.isCurrent(key, place))
+            this.checked.set(key, { at: Date.now(), branch: place.branch, revision });
           cx.notify();
         }
-      } finally {
-        this.busy = false;
-      }
-    });
+      });
+    }
   }
 
   // A lookup may finish after navigation or a branch switch. Publish only if
@@ -103,9 +104,9 @@ export class PRStatusObserver {
     return this.places.has(key) && this.places.get(key).branch === place.branch;
   }
 
-  async lookup(place) {
+  async lookup(place, queries) {
     const git = (args) =>
-      exec("git", ["--no-optional-locks", ...args], { cwd: place.folder, on: place.machine });
+      exec("git", ["--no-optional-locks", ...args], { cwd: place.folder, on: place.machine, timeout: 10000 });
     const head = await git(["symbolic-ref", "--quiet", "--short", "HEAD"]);
     if (head.code !== 0) {
       if (head.code === 1 || /not a git repository/i.test(head.stderr ?? "")) return [];
@@ -119,7 +120,7 @@ export class PRStatusObserver {
       throw new Error("Cannot read PR association");
     const binding = /^([\w.-]+\/[\w.-]+)#([1-9][0-9]*)$/.exec(association.stdout?.trim() ?? "");
     if (binding) {
-      const pr = await this.query([
+      const pr = await this.query(queries, [
         "pr",
         "view",
         binding[2],
@@ -144,7 +145,7 @@ export class PRStatusObserver {
     const candidates = [];
     const knownHeads = new Set([...repositories].map((repo) => repo.toLowerCase()));
     for (const repository of repositories) {
-      const found = await this.query([
+      const found = await this.query(queries, [
         "pr",
         "list",
         "--repo",
@@ -177,17 +178,15 @@ export class PRStatusObserver {
     return open.length ? open : matches.slice(0, 1);
   }
 
-  async query(args) {
+  query(queries, args) {
     const key = JSON.stringify(args);
-    const cached = this.cache.get(key);
-    if (cached && Date.now() - cached.at < PR_POLL_MS) return cached.data;
-    // Stamp when the call started, like the poll does, so the next poll never lands on this entry.
-    const at = Date.now();
-    const result = await exec("gh", args);
-    if (result.code !== 0)
-      throw new Error((result.stderr || "GitHub unavailable; check gh auth login").trim());
-    const data = JSON.parse(result.stdout);
-    this.cache.set(key, { at, data });
-    return data;
+    if (!queries.has(key)) {
+      queries.set(key, exec("gh", args, { timeout: 20000 }).then((result) => {
+        if (result.code !== 0)
+          throw new Error((result.stderr || "GitHub unavailable; check gh auth login").trim());
+        return JSON.parse(result.stdout);
+      }));
+    }
+    return queries.get(key);
   }
 }

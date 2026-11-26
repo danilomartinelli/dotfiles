@@ -1,5 +1,6 @@
 // What this panel writes to GitHub, always from an explicit click: merging and
 // closing, re-requesting a review, and comments, replies and resolving.
+import { shared, setShared } from "herdr";
 import { STATE_CHANGES } from "../github/model.js";
 
 export const changeMethods = {
@@ -42,6 +43,8 @@ export const changeMethods = {
             ? { method: this.pr.mergeMethods?.[0] ?? "merge", id: this.pr.id }
             : {}),
         });
+        const revision = `branch-pr.changed:${change.repo.toLowerCase()}#${change.number}`;
+        setShared(revision, (shared(revision) ?? 0) + 1);
         if (key !== this.spaceKey) return;
         this.stateChange = null;
         this.notice = STATE_CHANGES[change.event].done;
