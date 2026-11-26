@@ -1,5 +1,5 @@
 import { View } from "gpui-kit";
-import { appHome, checking, exec, knownAgents, panes, readTextFile, run, spaces } from "herdr";
+import { appHome, checking, exec, knownAgents, panes, readTextFile, run, setShared, shared, spaces } from "herdr";
 import { importReport, selectedFindings } from "./report.js";
 import { panel } from "./panel.js";
 
@@ -72,7 +72,12 @@ export default class ReviewFindings extends View {
         if (!this.current(checkout)) return;
         const agents = known.filter((agent) => agent.installed && agent.run?.length);
         this.agents = agents;
-        this.agent = agents.find((agent) => agent.key === localStorage.getItem(this.preference())) ?? agents[0];
+        let preferred = shared(this.preference());
+        if (!preferred) {
+          preferred = localStorage.getItem("review-agent:" + JSON.stringify(checkout.machine));
+          if (preferred) setShared(this.preference(), preferred);
+        }
+        this.agent = agents.find((agent) => agent.key === preferred) ?? agents[0];
         if (!this.agent) this.error = "No installed chat agent is available on this machine.";
       } catch (error) {
         if (this.current(checkout)) this.error = error.message;
@@ -82,7 +87,7 @@ export default class ReviewFindings extends View {
   }
 
   preference() {
-    return "review-agent:" + JSON.stringify(this.checkout.machine);
+    return "estro.chat-agent:" + JSON.stringify(this.checkout.machine);
   }
 
   save() {
@@ -129,7 +134,7 @@ export default class ReviewFindings extends View {
   choose(agent, cx) {
     this.agent = agent;
     this.menu = false;
-    localStorage.setItem(this.preference(), agent.key);
+    setShared(this.preference(), agent.key);
     cx.notify();
   }
 

@@ -15,7 +15,7 @@ const host = {
     export function setExec(fn) { exec = fn; }
     export function setShared() {}
     export function shared() {}
-    export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, checking;`,
+    export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, checking, knownAgents, run;`,
   "gpui-kit": `
     export const text = [];
     export const clicks = new Map();
@@ -138,14 +138,14 @@ test("GitHub issue shortcut creates a tracking worktree and reopens it after a t
   assert.equal(developments, 2);
 });
 
-test("linked and open issue rows each offer a separate checkout button", async () => {
+test("linked and open issue rows distinguish the issue link, checkout and implementation chat", async () => {
   const { clicks, div } = await import("gpui-kit");
   const { renderGitHubPanel } = await import("../../herdr/estro/mods/branch-issue/github/panel.js");
   const issue = { number: 7, repository: "owner/app", title: "Fix menu", url: "https://github.com/owner/app/issues/7" };
   const data = { repository: "owner/app", linked: [issue], items: [issue] };
   const actions = [];
   renderGitHubPanel(div(), { key: "space", data }, [], {
-    open: (item, repository, key) => actions.push([item, repository, key]),
+    open: (item, repository, key, _cx, implement) => actions.push([item, repository, key, implement]),
   });
   const urls = [];
   const cx = { open_url: (url) => urls.push(url), stop_propagation() {} };
@@ -153,9 +153,10 @@ test("linked and open issue rows each offer a separate checkout button", async (
     const id = group + "-owner/app#7";
     clicks.get(id)(null, cx);
     clicks.get(id + "-worktree")(null, cx);
+    clicks.get(id + "-implement")(null, cx);
   }
   assert.deepEqual(urls, [issue.url, issue.url]);
-  assert.deepEqual(actions, [[issue, "owner/app", "space"], [issue, "owner/app", "space"]]);
+  assert.deepEqual(actions, [false, true, false, true].map((mode) => [issue, "owner/app", "space", mode]));
 });
 
 test("commit preference, rejected push and push-only retry use the same local commit", async (t) => {

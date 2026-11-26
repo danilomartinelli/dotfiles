@@ -1,11 +1,29 @@
 // gh uses this computer's GitHub login. Git operates on the checkout's machine.
-import { exec } from "herdr";
+import { exec, knownAgents, run, shared, spaces } from "herdr";
 import { checkout } from "./reads.js";
 
 async function output(command) {
   const result = await command;
   if (result.code !== 0) throw new Error(result.stderr?.trim() || "The worktree command failed.");
   return result.stdout.trimEnd();
+}
+
+export async function implementationChat(issue, machine) {
+  const installed = (await knownAgents({ on: machine })).filter((agent) => agent.installed && agent.run?.length);
+  const preferred = shared("estro.chat-agent:" + JSON.stringify(machine ?? null));
+  const agent = installed.find((entry) => entry.key === preferred) ?? installed[0];
+  if (!agent) throw new Error("No installed chat agent is available on this machine.");
+  return {
+    argv: agent.run,
+    task: `Implement GitHub issue ${issue.repository}#${issue.number}: ${issue.title}\n${issue.url}\n\nRead the issue requirements, implement the change in this worktree, and run the relevant tests.`,
+  };
+}
+
+export function showIssueWorktree(machine, folder, chat) {
+  const space = spaces().find((s) => s.folder === folder && (s.machine ?? null) === (machine ?? null));
+  if (!space) return run("space.new", { folder, machine: machine ?? "", ...chat });
+  if (chat) return run("tab.new", { space: space.id, folder, ...chat });
+  return run("space.select", { id: space.id });
 }
 
 export async function issueWorktree(sp, repository, issue, root) {

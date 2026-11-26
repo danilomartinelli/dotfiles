@@ -40,6 +40,8 @@ globalThis.fixture = {
 };
 const mocks = {
   herdr: `export const {read: readTextFile, spaces, exec} = fixture;
+    const prefs = new Map();
+    export const shared = (key) => prefs.get(key), setShared = (key, value) => prefs.set(key, value);
     export const appHome = () => fixture.estro, checking = () => false, panes = () => [],
     theme = () => ({}), knownAgents = async () => fixture.agents,
     run = (name,args) => {fixture.chats.push({command: name,...args})};`,
@@ -53,6 +55,7 @@ registerHooks({ resolve(name, context, next) {
   return next(name, context);
 } });
 const { default: View } = await import("../../herdr/estro/mods/review-findings/main.js");
+const { implementationChat, showIssueWorktree } = await import("../../herdr/estro/mods/branch-issue/github/worktree.js");
 const { toolbarPartition, placeToolbarAction, hideToolbarAction } =
   await import("../../herdr/estro/mods/better-tabs/actions/toolbar.js");
 
@@ -71,6 +74,32 @@ test("the layout opens Findings from overflow until that action is pinned", asyn
   prefs = placeToolbarAction(entries, prefs, entry.id);
   assert.ok(toolbarPartition(entries, prefs, 100).visible.includes(entry));
   assert.ok(toolbarPartition(entries, hideToolbarAction(prefs, entry.id), 100).overflow.includes(entry));
+});
+
+test("the issue action opens the default agent on the worktree machine with the issue as its first message", async () => {
+  const { setShared } = await import("herdr");
+  const issue = { repository: "source/repo", number: 12, title: "Fix the menu",
+    url: "https://github.com/source/repo/issues/12" };
+  checkout = { folder: "/tree", machine: "other" };
+  setShared('estro.chat-agent:"builder"', "b");
+  const chat = await implementationChat(issue, "builder");
+  assert.deepEqual(chat.argv, agents[1].run);
+  assert.match(chat.task, /^Implement GitHub issue source\/repo#12: Fix the menu/);
+  assert.ok(chat.task.includes(issue.url));
+  showIssueWorktree("builder", "/tree", chat);
+  assert.deepEqual(chats.at(-1), { command: "space.new", folder: "/tree", machine: "builder", ...chat });
+  checkout.machine = "builder";
+  showIssueWorktree("builder", "/tree", chat);
+  assert.deepEqual(chats.at(-1), { command: "tab.new", folder: "/tree", space: "space", ...chat });
+  showIssueWorktree("builder", "/tree", null);
+  assert.deepEqual(chats.at(-1), { command: "space.select", id: "space" });
+  assert.deepEqual((await implementationChat(issue, null)).argv, agents[0].run);
+  globalThis.fixture.agents = [];
+  try {
+    await assert.rejects(implementationChat(issue, "builder"), /No installed chat agent/);
+  } finally {
+    globalThis.fixture.agents = agents;
+  }
 });
 
 test("review, triage, resumed report and fix through the panel controls", async (t) => {
@@ -118,6 +147,8 @@ test("review, triage, resumed report and fix through the panel controls", async 
   await click("ignore-2");
   await click("choose-agent");
   await click("agent-b");
+  const { shared } = await import("herdr");
+  assert.equal(shared('estro.chat-agent:"machine"'), "b");
   await reopen();
   await click("fix");
   const fix = chats.at(-1);

@@ -47,7 +47,11 @@ GitHub here, which lists the open issues of the active checkout and the ones
 linked to its branch. Click an issue title to open it on GitHub. The checkout
 icon beside each title creates a branch named from the issue number and title,
 links it to the issue with `gh issue develop`, and opens its worktree in a
-Herdr space. Click again to return to the same worktree. The branch lives in
+Herdr space. Click again to return to the same worktree. The robot icon beside
+it creates or reopens that same worktree and starts a fresh chat with the
+default agent. The first message asks it to implement the issue and includes
+the repository, issue number, title and link. Choose the agent in **Findings**
+using the arrow beside **Diagnose & Fix**. The branch lives in
 the active checkout's GitHub repository, including for issues linked from
 another repository. A mod installed before the provider change keeps its
 own setting: select GitHub in Mod settings. The `$` prefix in Search still

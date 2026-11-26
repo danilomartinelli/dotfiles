@@ -15,13 +15,21 @@ function issueSection(list, id, label, issues, repository, empty, key, actions) 
       .child(div().flex_none().text_color(t.muted).child(`${prefix}#${issue.number}`))
       .child(div().flex_1().min_w(0).truncate().child(issue.title))
       .child(Icon("external", 12));
+    const busy = actions.work?.pending && actions.work.url === issue.url;
     return h_flex().items_center().child(link).child(IconButton({
       id: `${rowId}-worktree`,
       icon: "checkout",
       label: `Create or open a worktree for ${issue.repository}#${issue.number}`,
-      spinning: actions.work?.pending && actions.work.url === issue.url,
+      spinning: busy && !actions.work.implement,
       disabled: actions.work?.pending,
-      onClick: (cx) => actions.open(issue, repository, key, cx),
+      onClick: (cx) => actions.open(issue, repository, key, cx, false),
+    })).child(IconButton({
+      id: `${rowId}-implement`,
+      icon: "agent",
+      label: `Implement ${issue.repository}#${issue.number} in its worktree with the default agent`,
+      spinning: busy && actions.work.implement,
+      disabled: actions.work?.pending,
+      onClick: (cx) => actions.open(issue, repository, key, cx, true),
     }));
   }));
 }

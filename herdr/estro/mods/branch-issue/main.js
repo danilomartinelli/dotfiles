@@ -13,7 +13,7 @@
 // reads LINEAR_API_KEY; the mod never sees the key.
 import { View } from "gpui-kit";
 import { InputState, TextareaState } from "gpui-base";
-import { spaces, panes, nextCommand, layout, shared, run } from "herdr";
+import { spaces, panes, nextCommand, layout, shared } from "herdr";
 import { loadSettings, duration } from "./settings.js";
 import { savedMethods } from "./state/saved.js";
 import { discoveryMethods } from "./linear/discovery.js";
@@ -29,7 +29,7 @@ import { worktreeViewMethods } from "./views/worktrees.js";
 import { keyProblem, panelShown } from "./linear/model.js";
 import { Busy, Panel } from "./views/ui.js";
 import { readGitHubIssues } from "./github/reads.js";
-import { issueWorktree } from "./github/worktree.js";
+import { implementationChat, issueWorktree, showIssueWorktree } from "./github/worktree.js";
 import { renderGitHubPanel } from "./github/panel.js";
 
 const CONTEXT_POLL_MS = 1000;
@@ -159,20 +159,20 @@ class LinearIssues extends View {
     });
   }
 
-  openGitHubWorktree(issue, repository, key, cx) {
+  openGitHubWorktree(issue, repository, key, cx, implement) {
     const sp = activeSpace();
     if (this.githubWork?.pending || spaceContextKey(sp) !== key) return;
-    const work = { key, url: issue.url, pending: true };
+    const work = { key, url: issue.url, pending: true, implement };
     this.githubWork = work;
     cx.notify();
     cx.spawn(async (cx) => {
       try {
+        const chat = implement ? await implementationChat(issue, sp.machine) : null;
         const root = await worktreeRoot(await this.homeOf(sp), this.settings.worktrees.root);
+        if (spaceContextKey(activeSpace()) !== key) return;
         const path = await issueWorktree(sp, repository, issue, root);
         if (spaceContextKey(activeSpace()) !== key) return;
-        const space = spaces().find((s) => s.folder === path && (s.machine ?? null) === (sp.machine ?? null));
-        if (space) run("space.select", { id: space.id });
-        else run("space.new", { folder: path, machine: sp.machine ?? "" });
+        showIssueWorktree(sp.machine, path, chat);
       } catch (error) {
         work.error = `Could not open the worktree for ${issue.repository}#${issue.number}: ${error.message}`;
       } finally {
@@ -271,7 +271,7 @@ class LinearIssues extends View {
     if (this.settings.provider === "github")
       return renderGitHubPanel(root, this.github, this.settingsProblems, {
         refresh: (cx) => this.refreshGitHub(cx),
-        open: (issue, repository, key, cx) => this.openGitHubWorktree(issue, repository, key, cx),
+        open: (issue, repository, key, cx, implement) => this.openGitHubWorktree(issue, repository, key, cx, implement),
         work: this.githubWork,
       });
     const problem = keyProblem(this.error);
