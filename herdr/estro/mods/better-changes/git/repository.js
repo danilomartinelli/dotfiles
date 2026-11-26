@@ -1,6 +1,8 @@
 // The mod's Git state: following the repository, changing the index, history,
 // commit and amend. The reads themselves are in git-reads.js.
 import { spaces, panes, focused, exec, watchFolder, shared, setShared, checking } from "herdr";
+import { readPushTarget, pushBranch } from "./push.js";
+import { generateMessage } from "../commit-message.js";
 import {
   readStatus,
   readBranchAndRepo,
@@ -92,6 +94,7 @@ export const gitMethods = {
   // Forget everything about the last repository, including diffs still loading.
   startNewContext(context) {
     this.context = context;
+    this.discardRequest = null;
     this.root = null;
     this.files = [];
     this.committed = null;
@@ -105,9 +108,11 @@ export const gitMethods = {
     this.stopWatching();
     this.resetCommits();
     if (this.input) {
+      this.generation = null;
+      this.pushTarget = null;
       this.message = "";
       this.input.set_value("");
-      this.commitMode = "commit";
+      this.commitMode = this.preferredCommitMode;
       this.commitMenuOpen = false;
       this.amendToken++;
       this.amendLoading = false;
@@ -146,6 +151,10 @@ export const gitMethods = {
     this.hasHead = hasHead;
     this.total = files.length;
     this.allFiles = files;
+    const pending = this.discardRequest?.file;
+    if (pending && !files.some((f) => f.path === pending.path && f.fresh === pending.fresh &&
+        f.stagedStatus === pending.stagedStatus && f.unstagedStatus === pending.unstagedStatus))
+      this.discardRequest = null;
     this.files = files.slice(0, this.settings.limits.files);
     this.stagedCount = files.filter((f) => f.staged).length;
     this.conflictPaths = files.filter((f) => f.conflict).map((f) => f.path);
@@ -155,9 +164,10 @@ export const gitMethods = {
 
   async readSidebarState(git, context, cx) {
     const committed = await readCommitted(git, this.committed, this.settings.limits.files);
-    const { branch, repo } = await readBranchAndRepo(git);
+    const [{ branch, repo }, target] = await Promise.all([readBranchAndRepo(git), readPushTarget(git)]);
     if (!this.isCurrent(context)) return;
     this.committed = committed;
+    this.pushTarget = target;
     this.branch = branch;
     this.repo = repo;
     if (this.tab === "commit") this.loadCommits(cx);
@@ -324,12 +334,17 @@ export const gitMethods = {
     )
       return;
     // Leaving Amend takes back the message it loaded, unless it was edited.
-    if (mode === "commit" && this.amendLoaded && this.message === this.amendLoaded) {
+    if (mode !== "amend" && this.amendLoaded && this.message === this.amendLoaded) {
       this.message = "";
       this.input.set_value("");
     }
     this.amendLoaded = null;
+    this.generation = null;
     this.commitMode = mode;
+    if (mode !== "amend") {
+      this.preferredCommitMode = mode;
+      localStorage.setItem("commit-mode", mode);
+    }
     this.commitMenuOpen = false;
     this.note = null;
     this.amendHead = null;
@@ -367,10 +382,53 @@ export const gitMethods = {
     });
   },
 
+  pushOnly() {
+    return this.commitMode !== "amend" && this.total === 0 && Boolean(this.pushTarget?.pending);
+  },
+
+  selectProvider(provider, cx) {
+    this.messageProvider = provider;
+    this.commitMenuOpen = false;
+    this.generation = null;
+    localStorage.setItem("message-provider", provider);
+    cx.notify();
+  },
+
+  generateDraft(cx) {
+    if (!this.root || !this.stagedCount || this.conflicts || this.busy || this.generation ||
+        this.commitMode === "amend" || !this.isCurrent(this.context)) return;
+    const { context, root, on, messageRevision, messageProvider } = this;
+    const request = {};
+    this.generation = request;
+    this.note = null;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      const git = (args) => this.git(args, root, on);
+      const current = () => this.isCurrent(context) && this.generation === request;
+      try {
+        const snapshot = () => git(["diff", "--cached", "--raw", "--no-abbrev", "-z", "--no-renames"]);
+        const before = await snapshot();
+        if (before.code !== 0) throw Error("Cannot read the index.");
+        const draft = await generateMessage(messageProvider, git);
+        if (!current() || this.messageRevision !== messageRevision) return;
+        const after = await snapshot();
+        if (!current() || this.messageRevision !== messageRevision) return;
+        if (after.code !== 0 || before.stdout !== after.stdout)
+          throw Error("Staged changes changed. Generate a new message.");
+        this.message = draft;
+        this.input.set_value(draft);
+      } catch (error) {
+        if (current()) this.note = error.message;
+      } finally {
+        if (this.generation === request) this.generation = null;
+        cx.notify();
+      }
+    });
+  },
+
   canCommit() {
     if (
       !this.input ||
-      !this.message.trim() ||
       !this.root ||
       this.busy ||
       this.loading ||
@@ -378,6 +436,8 @@ export const gitMethods = {
       this.contextKey() !== this.context
     )
       return false;
+    if (this.pushOnly()) return true;
+    if (!this.message.trim() || (this.commitMode === "commit-push" && !this.pushTarget)) return false;
     // A message-only amend is valid; a new commit needs something staged.
     return Boolean(
       this.commitMode === "amend"
@@ -388,19 +448,35 @@ export const gitMethods = {
 
   // Both use the index as it is, never `-a`. A failure keeps the draft, and a
   // success keeps anything typed while it ran.
-  commit(cx) {
-    if (!this.canCommit()) return;
+  commit(cx, pushPending = false) {
+    if (pushPending) {
+      if (!this.pushTarget?.pending || this.busy || this.loading || !this.isCurrent(this.context)) return;
+    } else if (!this.canCommit()) return;
     const { root, on, context } = this;
     const draft = this.message;
     const amend = this.commitMode === "amend";
     const expected = this.amendHead;
+    const pushOnly = pushPending || this.pushOnly();
+    const target = pushOnly || this.commitMode === "commit-push" ? this.pushTarget : null;
+    this.generation = null;
     this.busy = true;
-    this.operation = amend ? "amend" : "commit";
+    this.operation = pushOnly ? "push" : amend ? "amend" : "commit";
     this.commitMenuOpen = false;
     this.note = null;
     cx.notify();
     cx.spawn(async (cx) => {
+      const git = (args) => this.git(args, root, on);
+      let committed = false;
       try {
+        if (pushOnly) {
+          await pushBranch(git, target);
+          return;
+        }
+        if (target) {
+          const branch = await git(["symbolic-ref", "--quiet", "--short", "HEAD"]);
+          if (branch.code !== 0 || branch.stdout.trim() !== target.branch)
+            throw Error("The branch changed. Refresh and try again.");
+        }
         if (amend) {
           // Another tool may have moved HEAD since Amend was chosen.
           const head = await this.git(["rev-parse", "--verify", "HEAD"], root, on);
@@ -413,20 +489,28 @@ export const gitMethods = {
           on,
         );
         if (result.code !== 0) throw Error((result.stderr || result.stdout).trim());
-        this.reload = Date.now();
-        setShared("better-changes.reload", { root, on: on ?? null, at: this.reload });
+        committed = true;
         if (this.isCurrent(context)) {
           if (this.message === draft) {
             this.message = "";
             this.input.set_value("");
           }
-          this.commitMode = "commit";
+          this.commitMode = this.preferredCommitMode;
           this.amendHead = null;
         }
+        if (target) {
+          this.operation = "push";
+          cx.notify();
+          await pushBranch(git, target);
+        }
       } catch (error) {
-        if (this.isCurrent(context))
-          this.note = `${amend ? "Amend" : "Commit"} failed: ${error.message}`;
+        const action = committed ? "Committed locally. Push" : pushOnly ? "Push" : amend ? "Amend" : "Commit";
+        if (this.isCurrent(context)) this.note = `${action} failed: ${error.message}`;
       } finally {
+        if (committed || pushOnly) {
+          this.reload = Date.now();
+          setShared("better-changes.reload", { root, on: on ?? null, at: this.reload });
+        }
         this.busy = false;
         this.operation = null;
         this.refresh(cx);

@@ -22,6 +22,24 @@ Select Estro in Herdr or run
 while Estro is active. The right panel offers Files, Changes, Pull Requests,
 and Issues. Changes shows working tree edits and commits ahead of the tracked
 branch. A clean, fully pushed branch shows **No changes** and **Commits 0**.
+
+In **Unstaged**, the arrow beside **+** discards a file's unstaged edits after
+confirmation. A partially staged file keeps its staged version. For a new,
+untracked file, the trash icon moves it to the checkout machine's Trash after
+confirmation using `trash` or `gio trash`.
+
+In Changes, stage the files for the commit and enter a message. The commit
+menu remembers your choice of **Commit** or **Commit & Push**. A clean branch
+with unpublished commits shows **Push**. With other edits still present,
+choose **Push pending commits** from the menu. Push sends only the current
+branch to the same branch name on its push remote and sets up tracking on
+first publication when needed. **Amend** applies to one commit.
+
+**Generate with Codex** drafts an editable English message from the staged
+diff. Choose Claude or Codex in the commit menu. Generation uses the selected
+CLI's local login, including for remote worktrees, and sends up to 48,000
+characters of the staged diff when clicked. Review the draft before committing.
+
 In PRs, **Branch** opens the pull request when the current branch has exactly
 one. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
 defaults to Linear; `estro/mods/branch-issue/mod.json` sets its provider to

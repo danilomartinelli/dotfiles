@@ -41,6 +41,7 @@ export const sidebarMethods = {
   // ── Preferences ───────────────────────────────────────────────────────────
 
   setTab(tab, cx) {
+    this.discardRequest = null;
     this.tab = tab;
     localStorage.setItem("tab", tab);
     if (tab === "commit") this.loadCommits(cx);
@@ -227,14 +228,20 @@ export const sidebarMethods = {
             .child(this.note ?? ""),
         ),
       )
-      .child(
-        TextBox({
-          id: "commit-message",
-          state: this.input,
-          focused: this.typing,
-          label: "Commit message",
-        }),
-      )
+      .when(!this.pushOnly(), (el) => el.child(TextBox({
+        id: "commit-message",
+        state: this.input,
+        focused: this.typing,
+        label: "Commit message",
+      })))
+      .when(this.commitMode !== "amend" && this.stagedCount > 0 && !this.conflicts, (el) => {
+        const provider = this.messageProvider === "claude" ? "Claude" : "Codex";
+        return el.child(TextButton({
+          id: "generate-commit-message",
+          label: this.generation ? "Generating…" : `Generate with ${provider}`,
+          onClick: (cx) => this.generateDraft(cx),
+        }).self_start());
+      })
       .child(this.renderCommitButton())
       .when(Boolean(hint), (el) =>
         el.child(
@@ -248,6 +255,8 @@ export const sidebarMethods = {
   },
 
   commitBoxHint() {
+    if (this.commitMode === "commit-push" && !this.pushTarget && !this.loading)
+      return "Select a branch with a Git remote to commit and push.";
     if (this.amendLoading) return "Loading the latest commit…";
     if (this.conflicts) return "Resolve conflicts and stage the files before committing.";
     if (this.commitMode === "amend") {
@@ -257,8 +266,11 @@ export const sidebarMethods = {
   },
 
   commitButtonLabel() {
+    if (this.operation === "push") return "Pushing…";
     if (this.operation === "commit") return "Committing…";
     if (this.operation === "amend") return "Amending…";
+    if (this.pushOnly()) return "Push";
+    if (this.commitMode === "commit-push") return "Commit & Push";
     return this.commitMode === "amend" ? "Amend" : "Commit";
   },
 
@@ -283,8 +295,15 @@ export const sidebarMethods = {
         id: "mode-commit",
         icon: "commit",
         label: "Commit",
-        selected: !amend,
+        selected: this.commitMode === "commit",
         onClick: choose("commit"),
+      }),
+      MenuOption({
+        id: "mode-commit-push",
+        icon: "commit",
+        label: "Commit & Push",
+        selected: this.commitMode === "commit-push",
+        onClick: choose("commit-push"),
       }),
     ];
     if (this.hasHead) {
@@ -297,6 +316,24 @@ export const sidebarMethods = {
           onClick: choose("amend"),
         }),
       );
+    }
+    if (this.pushTarget?.pending && !this.pushOnly()) {
+      options.push(MenuOption({
+        id: "push-pending",
+        icon: "commit",
+        label: "Push pending commits",
+        onClick: (cx) => this.commit(cx, true),
+      }));
+    }
+    options.push(MenuDivider(), MenuLabel("Generate message with"));
+    for (const [provider, label] of [["codex", "Codex"], ["claude", "Claude"]]) {
+      options.push(MenuOption({
+        id: `message-provider-${provider}`,
+        icon: "file",
+        label,
+        selected: this.messageProvider === provider,
+        onClick: (cx) => this.selectProvider(provider, cx),
+      }));
     }
     return Menu({
       id: "commit-menu",
@@ -426,7 +463,7 @@ export const sidebarMethods = {
         div().flex_none().text_size(TEXT.caption).text_color(t.ansi1).child(file.conflictKind),
       );
     else row.child(DiffStat(stats)).child(StatusLetter(status));
-    if (scope === "unstaged")
+    if (scope === "unstaged") {
       row.child(
         IconButton({
           id: `stage-${file.path}`,
@@ -436,6 +473,19 @@ export const sidebarMethods = {
           onClick: (cx) => this.indexAction("stage", file.path, cx),
         }),
       );
+      if (!file.path.endsWith("/")) {
+        row.child(IconButton({
+          id: `discard-${file.path}`,
+          icon: file.fresh ? "trash" : "discard",
+          label: file.fresh ? "Move file to Trash" : "Discard unstaged changes",
+          small: true,
+          disabled: this.busy,
+          onClick: (cx) => this.askDiscard(file, cx),
+        }));
+      }
+      if (this.discardRequest?.file.path === file.path)
+        return v_flex().flex_none().child(row).child(this.discardConfirmation(this.discardRequest));
+    }
     if (scope === "staged")
       row.child(
         IconButton({
@@ -447,6 +497,24 @@ export const sidebarMethods = {
         }),
       );
     return row;
+  },
+
+  discardConfirmation(request) {
+    const { file } = request;
+    const version = file.staged ? "staged" : "committed";
+    const question = file.fresh ? `Move “${file.path}” to the Trash?`
+      : `Restore the ${version} version of “${file.path}”? This discards its unstaged changes.`;
+    return v_flex().flex_none().px(10).py(6)
+      .child(div().text_size(TEXT.small).whitespace_normal().child(question))
+      .child(h_flex().justify_end().gap(6)
+        .child(TextButton({
+          id: "cancel-discard", label: "Cancel",
+          onClick: (cx) => { this.discardRequest = null; cx.notify(); },
+        }))
+        .child(TextButton({
+          id: "confirm-discard", label: file.fresh ? "Move to Trash" : "Discard changes",
+          onClick: (cx) => this.confirmDiscard(request, cx),
+        })));
   },
 
   renderHistory() {

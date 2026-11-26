@@ -13,6 +13,7 @@ import { props, shared, setShared, nextCommand, layout, run, notify, closeOverla
 import { loadSettings, duration } from "./settings.js";
 import { followFileIcons } from "./file-icons.js";
 import { panelCommands } from "./panel.js";
+import { discardMethods } from "./git/discard.js";
 import { gitMethods } from "./git/repository.js";
 import { sidebarMethods } from "./views/sidebar.js";
 import { diffMethods } from "./views/diff.js";
@@ -110,7 +111,9 @@ class BetterChanges extends View {
   initCommitBox(cx) {
     this.message = "";
     this.messageRevision = 0;
-    this.commitMode = "commit";
+    this.preferredCommitMode = localStorage.getItem("commit-mode") === "commit-push" ? "commit-push" : "commit";
+    this.commitMode = this.preferredCommitMode;
+    this.messageProvider = localStorage.getItem("message-provider") === "claude" ? "claude" : "codex";
     this.commitMenuOpen = false;
     this.commitMenuFocus = cx.focus_handle();
     this.amendToken = 0;
@@ -203,6 +206,6 @@ class BetterChanges extends View {
   }
 }
 
-Object.assign(BetterChanges.prototype, gitMethods, sidebarMethods, diffMethods, paneHeaderMethods);
+Object.assign(BetterChanges.prototype, gitMethods, discardMethods, sidebarMethods, diffMethods, paneHeaderMethods);
 
 export default BetterChanges;
