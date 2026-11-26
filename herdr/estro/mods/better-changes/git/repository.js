@@ -22,6 +22,7 @@ const READ_ONLY = [
   "diff.autoRefreshIndex=false",
 ];
 const BULK_PATHS = 200; // Per command, to stay under the system's argument limit.
+const WATCH_QUIET_MS = 500;
 
 // The active terminal's folder, or the repository saved for our own diff tab,
 // since a mod pane has no terminal folder.
@@ -77,18 +78,18 @@ export const gitMethods = {
     if (context !== this.context) this.startNewContext(context);
     if (!cwd) return;
 
-    this.loading = true;
-    cx.notify();
-    cx.spawn(async (cx) => {
+    this.loading = new Promise((done) => cx.spawn(async (cx) => {
       try {
         await this.readRepository(cwd, on, context, cx);
       } catch (error) {
         if (this.isCurrent(context)) this.error = error.message;
       } finally {
         this.loading = false;
+        done();
         cx.notify();
       }
-    });
+    }));
+    cx.notify();
   },
 
   // Forget everything about the last repository, including diffs still loading.
@@ -182,10 +183,17 @@ export const gitMethods = {
     cx.spawn(async (cx) => {
       try {
         while (this.watchState === state) {
-          await state.request;
+          const paths = await state.request;
           if (this.watchState !== state) return;
-          this.refresh(cx);
-          if (this.watchState !== state) return;
+          if (paths.length) {
+            // Builds and test output arrive in bursts. The regular status poll
+            // still runs when the checkout never gets a quiet interval.
+            state.timer?.cancel();
+            state.timer = cx.timer.after(WATCH_QUIET_MS, (cx) => {
+              state.timer = null;
+              if (this.watchState === state) this.refresh(cx);
+            });
+          }
           state.request = watchFolder(root);
         }
       } catch {
@@ -198,6 +206,7 @@ export const gitMethods = {
     const state = this.watchState;
     this.watchState = null;
     this.watched = null;
+    state?.timer?.cancel();
     state?.request?.cancel?.();
   },
 
@@ -431,12 +440,12 @@ export const gitMethods = {
       !this.input ||
       !this.root ||
       this.busy ||
-      this.loading ||
       this.conflicts ||
       this.contextKey() !== this.context
     )
       return false;
     if (this.pushOnly()) return true;
+    if (this.loading) return false;
     if (!this.message.trim() || (this.commitMode === "commit-push" && !this.pushTarget)) return false;
     // A message-only amend is valid; a new commit needs something staged.
     return Boolean(
@@ -450,7 +459,7 @@ export const gitMethods = {
   // success keeps anything typed while it ran.
   commit(cx, pushPending = false) {
     if (pushPending) {
-      if (!this.pushTarget?.pending || this.busy || this.loading || !this.isCurrent(this.context)) return;
+      if (!this.pushTarget?.pending || this.busy || !this.isCurrent(this.context)) return;
     } else if (!this.canCommit()) return;
     const { root, on, context } = this;
     const draft = this.message;
@@ -458,6 +467,7 @@ export const gitMethods = {
     const expected = this.amendHead;
     const pushOnly = pushPending || this.pushOnly();
     const target = pushOnly || this.commitMode === "commit-push" ? this.pushTarget : null;
+    const read = this.loading;
     this.generation = null;
     this.busy = true;
     this.operation = pushOnly ? "push" : amend ? "amend" : "commit";
@@ -469,6 +479,10 @@ export const gitMethods = {
       let committed = false;
       try {
         if (pushOnly) {
+          if (read) {
+            await read;
+            if (!this.isCurrent(context) || this.root !== root || this.error || !this.pushTarget?.pending) return;
+          }
           await pushBranch(git, target);
           return;
         }

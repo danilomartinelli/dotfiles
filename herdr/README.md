@@ -22,6 +22,8 @@ Select Estro in Herdr or run
 while Estro is active. The right panel offers Files, Changes, Pull Requests,
 and Issues. Changes shows working tree edits and commits ahead of the tracked
 branch. A clean, fully pushed branch shows **No changes** and **Commits 0**.
+Changes groups bursts of local file activity into one refresh after the writes
+settle. While writes continue, the panel polls Git every 10 seconds by default.
 
 In **Unstaged**, the arrow beside **+** discards a file's unstaged edits after
 confirmation. A partially staged file keeps its staged version. For a new,
@@ -30,7 +32,8 @@ confirmation using `trash` or `gio trash`.
 
 In Changes, stage the files for the commit and enter a message. The commit
 menu remembers your choice of **Commit** or **Commit & Push**. A clean branch
-with unpublished commits shows **Push**. With other edits still present,
+with unpublished commits shows **Push**. A click during a status refresh waits
+for that read to finish before checking the push target. With other edits still present,
 choose **Push pending commits** from the menu. Push sends only the current
 branch to the same branch name on its push remote and sets up tracking on
 first publication when needed. **Amend** applies to one commit.

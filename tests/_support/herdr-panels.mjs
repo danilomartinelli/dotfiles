@@ -13,9 +13,11 @@ const host = {
     export const writeTextFile = (path, value) => writeFile(path, value, { flag: "wx" });
     export const theme = () => ({});
     export function setExec(fn) { exec = fn; }
+    export const checking = () => false;
+    export function setWatch(fn) { watchFolder = fn; }
     export function setShared() {}
     export function shared() {}
-    export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, checking, knownAgents, run;`,
+    export let exec, settings, appHome, readTextFile, watchFolder, spaces, panes, focused, knownAgents, run;`,
   "gpui-kit": `
     export const text = [];
     export const clicks = new Map();
@@ -85,6 +87,40 @@ test("a clean checkout stays visible while its status refreshes", () => {
   assert.deepEqual(renderText(), ["Loading changes…"]);
   panel.root = "/checkout";
   assert.deepEqual(renderText(), ["No changes"]);
+});
+
+test("a burst of filesystem events triggers one Changes refresh after it settles", async () => {
+  const { gitMethods } = await import("../../herdr/estro/mods/better-changes/git/repository.js");
+  const { setWatch } = await import("herdr");
+  let emit, job, refreshes = 0;
+  setWatch(() => {
+    const pending = new Promise((resolve) => { emit = resolve; });
+    pending.cancel = () => emit([]);
+    return pending;
+  });
+  const timers = new Set();
+  const cx = {
+    spawn(fn) { job = fn(cx); },
+    timer: { after(_ms, fn) {
+      timers.add(fn);
+      return { cancel: () => timers.delete(fn) };
+    } },
+  };
+  const panel = { ...gitMethods, refresh() { refreshes++; } };
+  panel.watch("/checkout", cx);
+  for (let i = 0; i < 8; i++) {
+    emit(["/checkout/output"]);
+    await Promise.resolve();
+  }
+  assert.equal(refreshes, 0);
+  assert.equal(timers.size, 1);
+  for (const timer of timers) { timers.delete(timer); timer(cx); }
+  assert.equal(refreshes, 1);
+  emit(["/checkout/file"]);
+  await Promise.resolve();
+  panel.stopWatching();
+  await job;
+  assert.equal(timers.size, 0);
 });
 
 test("GitHub issue shortcut creates a tracking worktree and reopens it after a title edit", async (t) => {
@@ -225,9 +261,26 @@ test("commit preference, rejected push and push-only retry use the same local co
   panel.pushTarget = await readPushTarget(git);
   assert.equal(sidebarMethods.commitButtonLabel.call(panel), "Push");
   rmSync(hook);
+  // Click Push during a poll. It must stay available, wait for that read,
+  // then refresh the checkout again after the push finishes.
+  const resumeRead = Promise.withResolvers();
+  panel.location = () => ({ cwd: repo });
+  panel.readRepository = () => resumeRead.promise;
+  let refreshesAfterPush = 0;
+  panel.refresh = () => { refreshesAfterPush++; };
+  gitMethods.refresh.call(panel, cx);
+  const read = operation;
+  assert.equal(panel.canCommit(), true);
   panel.commit(cx);
+  assert.equal(panel.busy, true);
+  assert.equal(panel.canCommit(), false);
+  await new Promise((done) => setImmediate(done));
+  assert.equal(git(["show-ref", "--verify", "--quiet", "refs/heads/topic"], remote).code, 1);
+  resumeRead.resolve();
+  await read;
   await operation;
   assert.equal(panel.note, null);
+  assert.equal(refreshesAfterPush, 1);
   assert.equal(ok(["rev-parse", "topic"], remote), committed);
   assert.equal(ok(["rev-parse", "main"], remote), mainHead);
   panel.pushTarget = await readPushTarget(git);
