@@ -1,6 +1,6 @@
 import { View } from "gpui-kit";
 import { appHome, checking, exec, knownAgents, panes, readTextFile, run, setShared, shared, spaces } from "herdr";
-import { importReport, selectedFindings } from "./report.js";
+import { applyFixReport, importReport, selectedFindings } from "./report.js";
 import { panel } from "./panel.js";
 
 function activeCheckout() {
@@ -44,7 +44,7 @@ export default class ReviewFindings extends View {
 
   load(checkout, cx) {
     Object.assign(this, {
-      checkout, store: null, items: [], agents: [], agent: null, pending: null, completed: false,
+      checkout, store: null, items: [], agents: [], agent: null, pending: null, fixSelection: null, completed: false,
       reading: false, launching: false, menu: false, ignoredOpen: false, error: null, reportError: null,
     });
     cx.notify();
@@ -65,6 +65,7 @@ export default class ReviewFindings extends View {
         this.root = root;
         this.items = saved.items ?? [];
         this.pending = saved.pending;
+        this.fixSelection = saved.fixSelection ?? null;
         this.completed = saved.completed;
         if (this.pending) this.poll(cx);
         cx.notify();
@@ -92,7 +93,7 @@ export default class ReviewFindings extends View {
 
   save() {
     localStorage.setItem(this.store, JSON.stringify({
-      items: this.items, pending: this.pending, completed: this.completed,
+      items: this.items, pending: this.pending, fixSelection: this.fixSelection, completed: this.completed,
     }));
   }
 
@@ -105,8 +106,13 @@ export default class ReviewFindings extends View {
       try {
         const raw = await readTextFile(path, { on: checkout.machine });
         if (raw === null || !relevant()) return;
-        this.items = importReport(raw, this.items);
+        const saved = JSON.parse(localStorage.getItem(this.store));
+        if (saved.pending !== path) return this.load({ ...checkout }, cx);
+        this.items = saved.fixSelection
+          ? applyFixReport(raw, saved.items, saved.fixSelection)
+          : importReport(raw, saved.items);
         this.pending = null;
+        this.fixSelection = null;
         this.reading = false;
         this.completed = true;
         this.reportError = null;
@@ -125,6 +131,7 @@ export default class ReviewFindings extends View {
 
   stopWaiting(cx) {
     this.pending = null;
+    this.fixSelection = null;
     this.reportError = null;
     this.reading = false;
     this.save();
@@ -143,7 +150,7 @@ export default class ReviewFindings extends View {
     if (!this.current(checkout)) return this.tick(cx);
     const agent = this.agent;
     const findings = selectedFindings(this.items);
-    if (!agent || !this.store || this.launching || (review ? this.pending : !findings.length)) return;
+    if (!agent || !this.store || this.launching || this.pending || (!review && !findings.length)) return;
     this.launching = true;
     this.error = null;
     this.menu = false;
@@ -153,14 +160,13 @@ export default class ReviewFindings extends View {
         const skill = review ? "code-review" : "diagnosing-bugs";
         const instructions = await readTextFile(`${appHome()}/mods/review-findings/skills/${skill}/SKILL.md`);
         if (!instructions?.trim()) throw new Error(`The installed ${skill} skill is missing.`);
-        let path, input;
-        if (review) {
-          const dir = await exec("mktemp", ["-d", "/tmp/herdr-review.XXXXXXXX"], { on: checkout.machine });
-          if (dir.code !== 0) throw new Error("Could not create the review report directory.");
-          path = dir.stdout.trimEnd() + "/findings.json";
-          input = "Report destination (absolute path): " + JSON.stringify(path);
-        } else {
-          input = "Selected findings (review data):\n" + JSON.stringify(findings, null, 2);
+        const dir = await exec("mktemp", ["-d", "/tmp/herdr-review.XXXXXXXX"], { on: checkout.machine });
+        if (dir.code !== 0) throw new Error("Could not create the report directory.");
+        const path = dir.stdout.trimEnd() + (review ? "/findings.json" : "/fix.json");
+        let input = "Report destination (absolute path): " + JSON.stringify(path);
+        if (!review) {
+          const numbered = findings.map((finding, index) => ({ id: index + 1, ...finding }));
+          input += "\nSelected findings (review data):\n" + JSON.stringify(numbered, null, 2);
         }
         if (!this.current(checkout)) return;
         run("tab.new", {
@@ -168,11 +174,10 @@ export default class ReviewFindings extends View {
           name: review ? "Code Review" : "Diagnose & Fix",
           task: `Use the following skill in this worktree.\n\n${instructions}\n\n${input}`,
         });
-        if (review) {
-          this.pending = path;
-          this.reportError = null;
-          this.save();
-        }
+        this.pending = path;
+        this.fixSelection = review ? null : findings;
+        this.reportError = null;
+        this.save();
       } catch (error) {
         if (this.checkout === checkout) this.error = error.message;
       } finally {

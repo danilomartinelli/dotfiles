@@ -63,15 +63,20 @@ asks Linear, because the bundled helper only speaks to it.
 Open **⋮ → Findings → Code Review** to start a review chat for the active
 worktree. The agent receives the review skill and publishes comments and
 repository-relative paths through a private temporary directory on the
-checkout machine. Reopen Findings to see the report. **Stop waiting** detaches
-the panel from that report and lets you start another review.
+checkout machine. Reopen Findings to see the report.
 
 Each finding starts checked. Uncheck one to skip it for this fix, or use
 **Ignore** to hide it. **Show ignored** lets you restore it. The panel remembers
 the report and selection per worktree and branch. **Diagnose & Fix** opens a
-new chat with the diagnosis skill and the selected findings. Its arrow chooses
-the agent for both actions. The initial choice is Herdr's most frequently
-picked installed agent, and the panel remembers your choice per machine.
+new chat with the diagnosis skill and the selected findings. When the agent
+publishes its fix report, the panel removes each finding verified as fixed.
+Unresolved findings keep their selection. You can reopen the panel or switch
+branches while waiting. **Stop waiting** detaches the panel from the current
+review or fix report and keeps the findings available for another run.
+
+The arrow beside **Diagnose & Fix** chooses the agent for both actions. The
+initial choice is Herdr's most frequently picked installed agent, and the
+panel remembers your choice per machine.
 
 Click **skillshare** beside the tabs to open or close its panel. It uses the
 Homebrew `skillshare` CLI to show global and project resources. On a new

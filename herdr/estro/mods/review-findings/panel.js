@@ -40,16 +40,17 @@ export function panel(view) {
   const t = theme();
   const root = v_flex().id("review-findings").size_full().min_w(0).min_h(0)
     .rounded(10).border_1().border_color(t.border).bg(t.background).text_color(t.foreground).text_size(13);
-  const ready = Boolean(view.agent && view.store && !view.launching);
+  const ready = Boolean(view.agent && view.store && !view.launching && !view.pending);
   root.child(h_flex().items_center().flex_none().p(8).gap(6).border_b(1).border_color(t.border)
     .child(div().flex_1().font_medium().child("Findings"))
     .child(button("run-review", "Code Review", (cx) => view.launch(true, cx),
-      { disabled: !ready || Boolean(view.pending), label: "Start a code review in a new chat" })));
+      { disabled: !ready, label: "Start a code review in a new chat" })));
   const list = v_flex().id("findings-list").flex_1().min_h(0).overflow_y_scrollbar().px(10).py(6).gap(4);
   if (view.error) list.child(div().whitespace_normal().child(view.error))
     .child(button("retry-load", "Reload", (cx) => view.load({ ...view.checkout }, cx)));
   if (view.pending) {
-    list.child(div().whitespace_normal().text_color(t.muted).child("Waiting for the review report…"))
+    list.child(div().whitespace_normal().text_color(t.muted)
+      .child(view.fixSelection ? "Waiting for the fix report…" : "Waiting for the review report…"))
       .child(button("stop-waiting", "Stop waiting", (cx) => view.stopWaiting(cx)));
     if (view.reportError) list.child(div().whitespace_normal().child(view.reportError));
   }
