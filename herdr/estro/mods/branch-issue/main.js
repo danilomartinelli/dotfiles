@@ -13,14 +13,14 @@
 // reads LINEAR_API_KEY; the mod never sees the key.
 import { View } from "gpui-kit";
 import { InputState, TextareaState } from "gpui-base";
-import { spaces, panes, nextCommand, layout, shared } from "herdr";
+import { spaces, panes, nextCommand, layout, shared, run } from "herdr";
 import { loadSettings, duration } from "./settings.js";
 import { savedMethods } from "./state/saved.js";
 import { discoveryMethods } from "./linear/discovery.js";
 import { readMethods } from "./linear/reads.js";
 import { changeMethods } from "./actions/changes.js";
 import { agentMethods } from "./actions/agents.js";
-import { worktreeMethods } from "./actions/worktrees.js";
+import { worktreeMethods, worktreeRoot } from "./actions/worktrees.js";
 import { menuMethods } from "./actions/menus.js";
 import { listMethods } from "./views/list.js";
 import { detailMethods } from "./views/detail.js";
@@ -29,6 +29,7 @@ import { worktreeViewMethods } from "./views/worktrees.js";
 import { keyProblem, panelShown } from "./linear/model.js";
 import { Busy, Panel } from "./views/ui.js";
 import { readGitHubIssues } from "./github/reads.js";
+import { issueWorktree } from "./github/worktree.js";
 import { renderGitHubPanel } from "./github/panel.js";
 
 const CONTEXT_POLL_MS = 1000;
@@ -158,6 +159,29 @@ class LinearIssues extends View {
     });
   }
 
+  openGitHubWorktree(issue, repository, key, cx) {
+    const sp = activeSpace();
+    if (this.githubWork?.pending || spaceContextKey(sp) !== key) return;
+    const work = { key, url: issue.url, pending: true };
+    this.githubWork = work;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      try {
+        const root = await worktreeRoot(await this.homeOf(sp), this.settings.worktrees.root);
+        const path = await issueWorktree(sp, repository, issue, root);
+        if (spaceContextKey(activeSpace()) !== key) return;
+        const space = spaces().find((s) => s.folder === path && (s.machine ?? null) === (sp.machine ?? null));
+        if (space) run("space.select", { id: space.id });
+        else run("space.new", { folder: path, machine: sp.machine ?? "" });
+      } catch (error) {
+        work.error = `Could not open the worktree for ${issue.repository}#${issue.number}: ${error.message}`;
+      } finally {
+        work.pending = false;
+        cx.notify();
+      }
+    });
+  }
+
   // Better Search's ask, looked for often so the panel turns to it at once.
   takeAsk(cx) {
     const ask = shared("branch-issue.open");
@@ -245,7 +269,11 @@ class LinearIssues extends View {
     const root = Panel({ id: "issue-root" });
     if (!this.settingsReady) return root.child(Busy("Loading issue settings…"));
     if (this.settings.provider === "github")
-      return renderGitHubPanel(root, this.github, this.settingsProblems, (cx) => this.refreshGitHub(cx));
+      return renderGitHubPanel(root, this.github, this.settingsProblems, {
+        refresh: (cx) => this.refreshGitHub(cx),
+        open: (issue, repository, key, cx) => this.openGitHubWorktree(issue, repository, key, cx),
+        work: this.githubWork,
+      });
     const problem = keyProblem(this.error);
     if (problem) return this.renderKeyProblem(root, problem);
     if (this.issue) return this.renderDetail(root);

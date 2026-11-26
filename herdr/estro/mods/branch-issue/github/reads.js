@@ -96,7 +96,7 @@ function graph(repository, query, fields) {
     "-f", `owner=${owner}`, "-f", `name=${name}`, ...fields]);
 }
 
-async function checkout(sp) {
+export async function checkout(sp) {
   if (!sp?.folder) throw new Error("No Git checkout is selected.");
   const options = { cwd: sp.folder, on: sp.machine };
   const git = (args) => exec("git", args, options);
@@ -121,10 +121,11 @@ async function checkout(sp) {
     })),
   ]);
   const byName = new Map(entries);
-  const repository = [tracking, "origin", "upstream", ...names].map((name) => byName.get(name)).find(Boolean);
+  const remote = [tracking, "origin", "upstream", ...names].find((name) => byName.get(name));
+  const repository = byName.get(remote);
   if (!repository) throw new Error("No supported github.com remote was found for this checkout.");
   const repositories = new Map(entries.filter(([, repo]) => repo).map(([, repo]) => [repo.toLowerCase(), repo]));
-  return { branch, git, config, repository, repositories, trackingRepo: byName.get(tracking) };
+  return { branch, git, config, remote, repository, repositories, trackingRepo: byName.get(tracking) };
 }
 
 async function branchPRs({ branch, git, config, trackingRepo, repositories }) {
@@ -173,10 +174,14 @@ async function openIssues(repository) {
   return rows.map((issue) => issueItem(repository, issue));
 }
 
-async function branchIssues(branch, known) {
+async function branchIssues(context, known) {
   const pattern = new RegExp(`(?:^|[/\\(])(${REPO})#([1-9][0-9]*)(?=$|[/_()\\-])`, "gi");
   const references = new Map();
-  for (const [, repository, digits] of branch.matchAll(pattern)) {
+  const binding = await context.config("herdr-github-issue");
+  const match = new RegExp(`^(${REPO})#([1-9][0-9]*)$`, "i").exec(binding);
+  const matches = [...context.branch.matchAll(pattern)];
+  if (match) matches.push(match);
+  for (const [, repository, digits] of matches) {
     const number = Number(digits);
     if (validRepository(repository) && validNumber(number))
       references.set(keyOf(repository, number), { repository, number });
@@ -190,7 +195,7 @@ async function branchIssues(branch, known) {
 
 export async function readGitHubIssues(sp) {
   const context = await checkout(sp);
-  const { repository, branch } = context;
+  const { repository } = context;
   let linkedWarning;
   const readLinked = (promise) => promise.catch((error) => {
     linkedWarning ??= error.message;
@@ -198,7 +203,7 @@ export async function readGitHubIssues(sp) {
   });
   const [items, closing] = await Promise.all([openIssues(repository), readLinked(closingIssues(context))]);
   const known = new Map([...items, ...closing].map((issue) => [keyOf(issue.repository, issue.number), issue]));
-  const explicit = await readLinked(branchIssues(branch, known));
+  const explicit = await readLinked(branchIssues(context, known));
   const linked = [...new Map([...explicit, ...closing].map((issue) => [keyOf(issue.repository, issue.number), issue])).values()];
   return linkedWarning ? { repository, items, linked, linkedWarning } : { repository, items, linked };
 }

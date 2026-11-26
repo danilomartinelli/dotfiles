@@ -7,7 +7,7 @@ const BRANCH_LIMIT = 100;
 const DEFAULT_WORKTREE_ROOT = "~/.herdr/worktrees";
 const WORKTREE_TIMEOUT_MS = 600_000;
 
-async function worktreeRoot(user, fallback) {
+export async function worktreeRoot(user, fallback) {
   const raw = await readTextFile(`${appHome()}/settings.json`);
   const settings = raw === null ? {} : JSON.parse(raw);
   const directory = settings?.worktrees?.directory ?? fallback ?? DEFAULT_WORKTREE_ROOT;

@@ -26,7 +26,12 @@ In PRs, **Branch** opens the pull request when the current branch has exactly
 one. The GitHub panels use authenticated `gh`. Upstream's Branch Issue
 defaults to Linear; `estro/mods/branch-issue/mod.json` sets its provider to
 GitHub here, which lists the open issues of the active checkout and the ones
-linked to its branch, read-only. A mod installed before that change keeps its
+linked to its branch. Click an issue title to open it on GitHub. The checkout
+icon beside each title creates a branch named from the issue number and title,
+links it to the issue with `gh issue develop`, and opens its worktree in a
+Herdr space. Click again to return to the same worktree. The branch lives in
+the active checkout's GitHub repository, including for issues linked from
+another repository. A mod installed before the provider change keeps its
 own setting: select GitHub in Mod settings. The `$` prefix in Search still
 asks Linear, because the bundled helper only speaks to it.
 
